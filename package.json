@@ -17,14 +17,20 @@
     "test:watch": "tsc --watch & node --test --watch --test-only dist/**/*.test.js",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "build:web": "esbuild web/main.ts --bundle --outfile=web/dist/bundle.js --format=esm --target=es2020",
+    "dev:web": "esbuild web/main.ts --bundle --outfile=web/dist/bundle.js --format=esm --target=es2020 --watch --servedir=web"
   },
   "keywords": ["compiler", "expression", "multi-target"],
   "author": "",
   "license": "MIT",
+  "dependencies": {
+    "@hotwired/stimulus": "^3.2.2"
+  },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/pg": "^8.10.0",
+    "esbuild": "^0.24.0",
     "pg": "^8.11.0",
     "typescript": "^5.3.0"
   }

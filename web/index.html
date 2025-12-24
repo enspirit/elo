@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Try Klang</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="logo">Klang</div>
+    <nav>
+      <a href="#" class="active">Try</a>
+      <a href="#">Doc</a>
+    </nav>
+  </header>
+
+  <main data-controller="playground">
+    <section class="editor-panel">
+      <div class="panel-header">
+        <span>Klang</span>
+      </div>
+      <textarea
+        data-playground-target="input"
+        data-action="input->playground#compile"
+        placeholder="Write Klang code here..."
+        spellcheck="false"
+      >let x = 12, y = 13 in assert(x + y == 25)</textarea>
+    </section>
+
+    <section class="output-panel">
+      <div class="panel-header">
+        <select
+          data-playground-target="language"
+          data-action="change->playground#compile"
+        >
+          <option value="javascript">JavaScript</option>
+          <option value="ruby">Ruby</option>
+          <option value="sql">SQL</option>
+        </select>
+      </div>
+      <pre data-playground-target="output"></pre>
+      <div class="error" data-playground-target="error"></div>
+    </section>
+  </main>
+
+  <script type="module" src="dist/bundle.js"></script>
+</body>
+</html>
