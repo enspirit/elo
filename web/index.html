@@ -221,6 +221,22 @@ result;</pre>
 
   <!-- Doc Panel -->
   <main data-tabs-target="panel" data-panel="doc" class="doc-panel hidden" data-controller="doc">
+    <nav class="doc-toc">
+      <div class="toc-title">Contents</div>
+      <ul>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#arithmetic">Arithmetic</a></li>
+        <li><a href="#strings">Strings</a></li>
+        <li><a href="#comparisons">Comparisons & Booleans</a></li>
+        <li><a href="#variables">Local Variables</a></li>
+        <li><a href="#dates">Dates & Times</a></li>
+        <li><a href="#durations">Durations</a></li>
+        <li><a href="#assertions">Assertions</a></li>
+        <li><a href="#ranges">Range Membership</a></li>
+        <li><a href="#modes">Compilation Modes</a></li>
+        <li><a href="#examples">Real-World Examples</a></li>
+      </ul>
+    </nav>
     <article class="doc-content">
       <h1>The K Language</h1>
       <p class="intro">
@@ -228,7 +244,7 @@ result;</pre>
         <strong>Ruby</strong>, and <strong>SQL</strong>. Write once, run anywhere.
       </p>
 
-      <section class="doc-section">
+      <section class="doc-section" id="getting-started">
         <h2>Getting Started</h2>
         <p>
           K expressions compile to equivalent code in all three target languages.
@@ -242,7 +258,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="arithmetic">
         <h2>Arithmetic</h2>
         <p>K supports the usual arithmetic operators, plus a power operator.</p>
 
@@ -268,7 +284,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="strings">
         <h2>Strings</h2>
         <p>K supports single-quoted string literals.</p>
 
@@ -291,7 +307,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="comparisons">
         <h2>Comparisons &amp; Booleans</h2>
         <p>Compare values and combine conditions with logical operators.</p>
 
@@ -314,7 +330,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="variables">
         <h2>Local Variables</h2>
         <p>Use <code>let ... in</code> expressions to bind local variables.</p>
 
@@ -337,7 +353,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="dates">
         <h2>Dates &amp; Times</h2>
         <p>K has first-class support for temporal values with intuitive literals.</p>
 
@@ -373,7 +389,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="durations">
         <h2>Durations</h2>
         <p>Express time spans using ISO 8601 duration syntax.</p>
 
@@ -402,7 +418,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="assertions">
         <h2>Assertions</h2>
         <p>Use <code>assert()</code> to validate conditions at runtime.</p>
 
@@ -419,7 +435,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="ranges">
         <h2>Range Membership</h2>
         <p>Check if a value falls within a range using the <code>in</code> operator.</p>
 
@@ -454,7 +470,7 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
+      <section class="doc-section" id="modes">
         <h2>Compilation Modes</h2>
         <p>K supports two compilation modes for temporal expressions:</p>
 
@@ -478,8 +494,8 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section">
-        <h2>Real-World Example</h2>
+      <section class="doc-section" id="examples">
+        <h2>Real-World Examples</h2>
         <p>Putting it all together:</p>
 
         <div class="example" data-action="click->doc#tryExample">
