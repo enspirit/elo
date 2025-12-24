@@ -182,13 +182,31 @@ class Lexer {
 
   private readDuration(): string {
     // Read ISO8601 duration: P1D, PT1H30M, P1Y2M3DT4H5M6S, P2W, etc.
+    // Date components (Y, M, W, D) come before T
+    // Time components (H, M, S) must come after T
     let duration = '';
     duration += this.current; // P
     this.advance();
 
+    let seenT = false;
+
     // Read date part (Y, M, W, D) and/or time part (T followed by H, M, S)
     while (this.current && /[0-9YMWDTHMS.]/.test(this.current)) {
-      duration += this.current;
+      const char = this.current;
+
+      // Track when we see T (time separator)
+      if (char === 'T') {
+        seenT = true;
+      }
+
+      // H and S are only valid after T (time components)
+      // M after T means minutes, M before T means months
+      if ((char === 'H' || char === 'S') && !seenT) {
+        // Invalid: H or S without T prefix - stop reading duration here
+        break;
+      }
+
+      duration += char;
       this.advance();
     }
 

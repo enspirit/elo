@@ -19,7 +19,7 @@ describe('Temporal - Date Literals', () => {
 
   it('should compile date to JavaScript', () => {
     const ast = dateLiteral('2024-01-15');
-    assert.strictEqual(compileToJavaScript(ast), "new Date('2024-01-15')");
+    assert.strictEqual(compileToJavaScript(ast), "dayjs('2024-01-15')");
   });
 
   it('should compile date to SQL', () => {
@@ -44,7 +44,7 @@ describe('Temporal - DateTime Literals', () => {
 
   it('should compile datetime to JavaScript', () => {
     const ast = dateTimeLiteral('2024-01-15T10:30:00Z');
-    assert.strictEqual(compileToJavaScript(ast), "new Date('2024-01-15T10:30:00Z')");
+    assert.strictEqual(compileToJavaScript(ast), "dayjs('2024-01-15T10:30:00Z')");
   });
 
   it('should compile datetime to SQL', () => {
@@ -93,7 +93,7 @@ describe('Temporal - Duration Literals', () => {
 
   it('should compile duration to JavaScript', () => {
     const ast = durationLiteral('P1D');
-    assert.strictEqual(compileToJavaScript(ast), "Duration.parse('P1D')");
+    assert.strictEqual(compileToJavaScript(ast), "dayjs.duration('P1D')");
   });
 
   it('should compile duration to SQL', () => {
@@ -121,7 +121,7 @@ describe('Temporal - Date Arithmetic', () => {
     );
     assert.strictEqual(
       compileToJavaScript(ast),
-      "Duration.parse('P1D').addTo(new Date('2024-01-15'))"
+      "dayjs('2024-01-15').add(dayjs.duration('P1D'))"
     );
     assert.strictEqual(
       compileToSQL(ast),
@@ -157,7 +157,7 @@ describe('Temporal - Date Comparisons', () => {
     );
     assert.strictEqual(
       compileToJavaScript(ast),
-      "new Date('2024-01-15') < new Date('2024-12-31')"
+      "dayjs('2024-01-15') < dayjs('2024-12-31')"
     );
     assert.strictEqual(
       compileToSQL(ast),
@@ -232,22 +232,22 @@ describe('Temporal - Temporal Keywords', () => {
 
   it('should compile NOW to JavaScript', () => {
     const ast = parse('NOW');
-    assert.strictEqual(compileToJavaScript(ast), 'new Date()');
+    assert.strictEqual(compileToJavaScript(ast), 'dayjs()');
   });
 
   it('should compile TODAY to JavaScript', () => {
     const ast = parse('TODAY');
-    assert.strictEqual(compileToJavaScript(ast), 'new Date(new Date().setHours(0, 0, 0, 0))');
+    assert.strictEqual(compileToJavaScript(ast), "dayjs().startOf('day')");
   });
 
   it('should compile TOMORROW to JavaScript', () => {
     const ast = parse('TOMORROW');
-    assert.strictEqual(compileToJavaScript(ast), 'new Date(new Date().setHours(24, 0, 0, 0))');
+    assert.strictEqual(compileToJavaScript(ast), "dayjs().startOf('day').add(1, 'day')");
   });
 
   it('should compile YESTERDAY to JavaScript', () => {
     const ast = parse('YESTERDAY');
-    assert.strictEqual(compileToJavaScript(ast), 'new Date(new Date().setHours(-24, 0, 0, 0))');
+    assert.strictEqual(compileToJavaScript(ast), "dayjs().startOf('day').subtract(1, 'day')");
   });
 
   it('should compile NOW to Ruby', () => {
@@ -555,6 +555,67 @@ describe('Temporal - Period Boundary Keywords', () => {
       assert.strictEqual(ast.operator, '<');
       assert.strictEqual(ast.left.type, 'temporal_keyword');
       assert.strictEqual(ast.right.type, 'temporal_keyword');
+    }
+  });
+});
+
+describe('Temporal - Invalid Duration Formats (missing T for time components)', () => {
+  it('should not parse P2H - hours require T prefix', () => {
+    // P2H is invalid ISO 8601 - time components require T prefix (PT2H)
+    // Parser reads P2 as duration, then H becomes an unexpected identifier
+    assert.throws(() => parse('P2H'), /Expected EOF but got IDENTIFIER/);
+  });
+
+  it('should not parse P30M - minutes require T prefix', () => {
+    // P30M is ambiguous - M after P means months, not minutes
+    // For 30 minutes, use PT30M
+    const ast = parse('P30M');
+    // This parses as 30 months, not 30 minutes
+    assert.strictEqual(ast.type, 'duration');
+    if (ast.type === 'duration') {
+      assert.strictEqual(ast.value, 'P30M'); // 30 months
+    }
+  });
+
+  it('should not parse P1H30M - hours require T prefix', () => {
+    // P1H30M is invalid - should be PT1H30M
+    assert.throws(() => parse('P1H30M'), /Expected EOF but got IDENTIFIER/);
+  });
+
+  it('should not parse P2H30M - hours require T prefix', () => {
+    // P2H30M is invalid - should be PT2H30M
+    assert.throws(() => parse('P2H30M'), /Expected EOF but got IDENTIFIER/);
+  });
+
+  it('should not parse P1S - seconds require T prefix', () => {
+    // P1S is invalid - should be PT1S
+    assert.throws(() => parse('P1S'), /Expected EOF but got IDENTIFIER/);
+  });
+
+  it('should parse PT2H correctly', () => {
+    // Correct format with T prefix
+    const ast = parse('PT2H');
+    assert.strictEqual(ast.type, 'duration');
+    if (ast.type === 'duration') {
+      assert.strictEqual(ast.value, 'PT2H');
+    }
+  });
+
+  it('should parse PT2H30M correctly', () => {
+    // Correct format with T prefix
+    const ast = parse('PT2H30M');
+    assert.strictEqual(ast.type, 'duration');
+    if (ast.type === 'duration') {
+      assert.strictEqual(ast.value, 'PT2H30M');
+    }
+  });
+
+  it('should parse P1DT2H correctly - days then time', () => {
+    // Correct format: 1 day and 2 hours
+    const ast = parse('P1DT2H');
+    assert.strictEqual(ast.type, 'duration');
+    if (ast.type === 'duration') {
+      assert.strictEqual(ast.value, 'P1DT2H');
     }
   });
 });

@@ -127,7 +127,7 @@ Examples:
   kc -e "2 + 3 * 4" -t sql
 
   # Compile with prelude (includes required libraries)
-  kc -e "NOW + P2H" -t ruby -p
+  kc -e "NOW + PT2H" -t ruby -p
 
   # Compile in testable mode (for deterministic testing)
   kc -e "TODAY == D2025-01-01" -t ruby -m testable -p
