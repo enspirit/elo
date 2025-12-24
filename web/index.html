@@ -6,16 +6,17 @@
   <title>Try K</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-controller="tabs">
   <header>
     <div class="logo">K</div>
     <nav>
-      <a href="#" class="active">Try</a>
-      <a href="#">Doc</a>
+      <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try" class="active">Try</a>
+      <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="doc">Doc</a>
     </nav>
   </header>
 
-  <main data-controller="playground">
+  <!-- Try Panel (Playground) -->
+  <main data-tabs-target="panel" data-panel="try" data-controller="playground">
     <section class="editor-panel">
       <div class="panel-header">
         <span>K</span>
@@ -63,6 +64,243 @@
       <div class="result" data-playground-target="result"></div>
       <div class="error" data-playground-target="error"></div>
     </section>
+  </main>
+
+  <!-- Doc Panel -->
+  <main data-tabs-target="panel" data-panel="doc" class="doc-panel hidden" data-controller="doc">
+    <article class="doc-content">
+      <h1>The K Language</h1>
+      <p class="intro">
+        K is a small expression language that compiles to <strong>JavaScript</strong>,
+        <strong>Ruby</strong>, and <strong>SQL</strong>. Write once, run anywhere.
+      </p>
+
+      <section class="doc-section">
+        <h2>Getting Started</h2>
+        <p>
+          K expressions compile to equivalent code in all three target languages.
+          Click any example to try it in the playground.
+        </p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Hello, Math!</div>
+          <pre class="example-code">2 + 3 * 4</pre>
+          <p class="example-desc">Basic arithmetic follows standard precedence rules.</p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Arithmetic</h2>
+        <p>K supports the usual arithmetic operators, plus a power operator.</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Basic Operations</div>
+          <pre class="example-code">(10 + 5) * 2 - 8 / 4</pre>
+          <p class="example-desc">Addition, subtraction, multiplication, and division.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Power Operator</div>
+          <pre class="example-code">2 ^ 10</pre>
+          <p class="example-desc">
+            Compiles to <code>Math.pow()</code> in JS, <code>**</code> in Ruby,
+            and <code>POWER()</code> in SQL.
+          </p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Modulo</div>
+          <pre class="example-code">17 % 5</pre>
+          <p class="example-desc">The remainder operator works across all targets.</p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Comparisons &amp; Booleans</h2>
+        <p>Compare values and combine conditions with logical operators.</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Comparison Operators</div>
+          <pre class="example-code">10 > 5 and 3 <= 3</pre>
+          <p class="example-desc">Use <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>==</code>, <code>!=</code>.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Logical Operators</div>
+          <pre class="example-code">true and false or not false</pre>
+          <p class="example-desc">Combine booleans with <code>and</code>, <code>or</code>, and <code>not</code>.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Complex Conditions</div>
+          <pre class="example-code">(5 > 3 and 2 < 4) or not (1 == 2)</pre>
+          <p class="example-desc">Group conditions with parentheses.</p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Local Variables</h2>
+        <p>Use <code>let ... in</code> expressions to bind local variables.</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Simple Binding</div>
+          <pre class="example-code">let x = 10 in x * 2</pre>
+          <p class="example-desc">Bind a value to a name, then use it in an expression.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Multiple Bindings</div>
+          <pre class="example-code">let width = 5, height = 3 in width * height</pre>
+          <p class="example-desc">Bind multiple variables separated by commas.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Nested Let</div>
+          <pre class="example-code">let a = 2 in let b = a * 3 in b + 1</pre>
+          <p class="example-desc">Variables can reference earlier bindings.</p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Dates &amp; Times</h2>
+        <p>K has first-class support for temporal values with intuitive literals.</p>
+
+        <h3>Date &amp; Time Literals</h3>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Date Literal</div>
+          <pre class="example-code">D2025-12-25</pre>
+          <p class="example-desc">ISO date format with <code>D</code> prefix.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">DateTime Literal</div>
+          <pre class="example-code">T2025-12-31T23:59:59</pre>
+          <p class="example-desc">Full timestamp with <code>T</code> prefix.</p>
+        </div>
+
+        <h3>Temporal Keywords</h3>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">NOW and TODAY</div>
+          <pre class="example-code">TODAY &lt; NOW</pre>
+          <p class="example-desc">
+            <code>NOW</code> is the current timestamp, <code>TODAY</code> is midnight today.
+          </p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Period Boundaries</div>
+          <pre class="example-code">SOY &lt;= TODAY and TODAY &lt;= EOY</pre>
+          <p class="example-desc">
+            Start/End of Year (<code>SOY</code>/<code>EOY</code>), Quarter (<code>SOQ</code>/<code>EOQ</code>),
+            Month (<code>SOM</code>/<code>EOM</code>), Week (<code>SOW</code>/<code>EOW</code>).
+          </p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Durations</h2>
+        <p>Express time spans using ISO 8601 duration syntax.</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Duration Literal</div>
+          <pre class="example-code">P1Y2M3D</pre>
+          <p class="example-desc">1 year, 2 months, 3 days. Use <code>P</code> prefix.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Time Durations</div>
+          <pre class="example-code">P2H30M</pre>
+          <p class="example-desc">2 hours and 30 minutes.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Date Arithmetic</div>
+          <pre class="example-code">TODAY + P7D</pre>
+          <p class="example-desc">Add 7 days to today. Works with all temporal values.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Complex Duration</div>
+          <pre class="example-code">NOW - P1M + P2H30M</pre>
+          <p class="example-desc">One month ago, plus 2.5 hours.</p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Assertions</h2>
+        <p>Use <code>assert()</code> to validate conditions at runtime.</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Simple Assert</div>
+          <pre class="example-code">assert(2 + 2 == 4)</pre>
+          <p class="example-desc">Throws an error if the condition is false.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Assert with Let</div>
+          <pre class="example-code">let price = 100, tax = 0.2 in assert(price * (1 + tax) == 120)</pre>
+          <p class="example-desc">Combine assertions with local variables for readable tests.</p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Compilation Modes</h2>
+        <p>K supports two compilation modes for temporal expressions:</p>
+
+        <h3>Production Mode (default)</h3>
+        <p>
+          Uses native temporal functions: <code>dayjs()</code> in JavaScript,
+          <code>DateTime.now</code> in Ruby, <code>CURRENT_TIMESTAMP</code> in SQL.
+        </p>
+
+        <h3>Testable Mode</h3>
+        <p>
+          Uses injectable functions (<code>klang.now()</code>, <code>Klang.now</code>, <code>klang_now()</code>)
+          that can be mocked for deterministic testing. Set the <code>KLANG_NOW</code> environment variable
+          to freeze time.
+        </p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Try Both Modes</div>
+          <pre class="example-code">NOW &gt;= TODAY</pre>
+          <p class="example-desc">Toggle between Production and Testable mode to see the difference.</p>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Real-World Example</h2>
+        <p>Putting it all together:</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Subscription Check</div>
+          <pre class="example-code">let
+  signup_date = D2024-01-15,
+  trial_period = P30D,
+  trial_end = signup_date + trial_period
+in
+  assert(TODAY > trial_end)</pre>
+          <p class="example-desc">Check if a 30-day trial has expired.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Quarterly Report Window</div>
+          <pre class="example-code">let
+  report_due = EOQ + P5D,
+  days_left = report_due - TODAY
+in
+  TODAY &lt;= report_due</pre>
+          <p class="example-desc">Reports are due 5 days after end of quarter.</p>
+        </div>
+      </section>
+
+      <footer class="doc-footer">
+        <p>
+          K compiles to semantically equivalent code in JavaScript, Ruby, and SQL.
+          <br>
+          <a href="https://github.com/klang-lang/klang" target="_blank">View on GitHub</a>
+        </p>
+      </footer>
+    </article>
   </main>
 
   <script type="module" src="dist/bundle.js"></script>

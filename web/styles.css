@@ -241,10 +241,162 @@ select:focus {
   display: block;
 }
 
+/* Hidden utility */
+.hidden {
+  display: none !important;
+}
+
+/* Documentation Panel */
+.doc-panel {
+  display: block;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
+.doc-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.doc-content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.doc-content .intro {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.doc-content .intro strong {
+  color: var(--accent);
+}
+
+.doc-section {
+  margin-bottom: 2.5rem;
+}
+
+.doc-section h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  color: var(--text-secondary);
+}
+
+.doc-section > p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.doc-section code {
+  background: var(--bg-panel);
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: var(--accent);
+}
+
+/* Example cards */
+.example {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.example:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.example-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.example-code {
+  background: var(--bg-panel);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.example-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0;
+  line-height: 1.5;
+}
+
+.example-desc code {
+  background: var(--bg-panel);
+  padding: 0.125rem 0.25rem;
+  border-radius: 2px;
+  font-size: 0.8125rem;
+}
+
+/* Doc footer */
+.doc-footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.doc-footer p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+
+.doc-footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.doc-footer a:hover {
+  text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
-  main {
+  main:not(.doc-panel) {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;
+  }
+
+  .doc-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .doc-content h1 {
+    font-size: 1.5rem;
   }
 }
