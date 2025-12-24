@@ -10,13 +10,169 @@
   <header>
     <div class="logo">K</div>
     <nav>
-      <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try" class="active">Try</a>
+      <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="home" class="active">Home</a>
+      <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try">Try</a>
       <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="doc">Doc</a>
     </nav>
   </header>
 
+  <!-- Home Panel (Landing Page) -->
+  <main data-tabs-target="panel" data-panel="home" class="home-panel">
+    <div class="home-content">
+      <section class="hero">
+        <h1>The K Language</h1>
+        <p class="tagline">The first programming language entirely designed and implemented by <strong>Claude Code</strong></p>
+        <p class="subtitle">A small expression language that compiles to JavaScript, Ruby, and SQL. Write temporal logic once, run it everywhere.</p>
+        <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try" class="cta-button">Try it now</a>
+      </section>
+
+      <section class="features">
+        <div class="feature-card">
+          <div class="feature-icon">AI</div>
+          <h3>AI-Native Design</h3>
+          <p>K was conceived, designed, and implemented entirely by Claude Code. From lexer to compilers, every line emerged from AI-human collaboration.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">3x</div>
+          <h3>Write Once, Run Anywhere</h3>
+          <p>A single K expression compiles to semantically equivalent JavaScript, Ruby, and SQL. Perfect for full-stack applications.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">T</div>
+          <h3>Temporal First</h3>
+          <p>First-class support for dates, times, and durations with intuitive syntax. Date arithmetic that actually makes sense.</p>
+        </div>
+      </section>
+
+      <section class="comparison">
+        <h2>Temporal Expressions: K vs JavaScript</h2>
+        <p class="comparison-intro">See why K makes temporal logic painless</p>
+
+        <div class="comparison-grid">
+          <div class="comparison-example">
+            <div class="comparison-header">
+              <span class="lang-badge k-badge">K</span>
+              <span class="comparison-title">Is today within this quarter?</span>
+            </div>
+            <pre class="comparison-code">TODAY in SOQ..EOQ</pre>
+          </div>
+          <div class="comparison-example js-example">
+            <div class="comparison-header">
+              <span class="lang-badge js-badge">JavaScript</span>
+              <span class="comparison-title">The same thing...</span>
+            </div>
+            <pre class="comparison-code">const now = new Date();
+const quarter = Math.floor(now.getMonth() / 3);
+const startOfQuarter = new Date(
+  now.getFullYear(),
+  quarter * 3,
+  1
+);
+const endOfQuarter = new Date(
+  now.getFullYear(),
+  quarter * 3 + 3,
+  0,
+  23, 59, 59, 999
+);
+now >= startOfQuarter && now <= endOfQuarter;</pre>
+          </div>
+        </div>
+
+        <div class="comparison-grid">
+          <div class="comparison-example">
+            <div class="comparison-header">
+              <span class="lang-badge k-badge">K</span>
+              <span class="comparison-title">30-day trial expiration check</span>
+            </div>
+            <pre class="comparison-code">let
+  signup = D2024-01-15,
+  trial = P30D
+in
+  TODAY > signup + trial</pre>
+          </div>
+          <div class="comparison-example js-example">
+            <div class="comparison-header">
+              <span class="lang-badge js-badge">JavaScript</span>
+              <span class="comparison-title">The same thing...</span>
+            </div>
+            <pre class="comparison-code">const signup = new Date('2024-01-15');
+const trialDays = 30;
+const trialEnd = new Date(signup);
+trialEnd.setDate(trialEnd.getDate() + trialDays);
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+today > trialEnd;</pre>
+          </div>
+        </div>
+
+        <div class="comparison-grid">
+          <div class="comparison-example">
+            <div class="comparison-header">
+              <span class="lang-badge k-badge">K</span>
+              <span class="comparison-title">Add 1 month and 2 hours to now</span>
+            </div>
+            <pre class="comparison-code">NOW + P1M + PT2H</pre>
+          </div>
+          <div class="comparison-example js-example">
+            <div class="comparison-header">
+              <span class="lang-badge js-badge">JavaScript</span>
+              <span class="comparison-title">The same thing...</span>
+            </div>
+            <pre class="comparison-code">const now = new Date();
+const result = new Date(now);
+result.setMonth(result.getMonth() + 1);
+// But wait, what if the day overflows?
+// Jan 31 + 1 month = Feb 31 = March 3rd?
+result.setHours(result.getHours() + 2);
+result;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="targets-section">
+        <h2>One Expression, Three Targets</h2>
+        <p class="targets-intro">K compiles to idiomatic code in each target language</p>
+
+        <div class="targets-demo">
+          <div class="target-input">
+            <span class="lang-badge k-badge">K</span>
+            <pre>2 ^ 10 > 1000 and TODAY >= SOY</pre>
+          </div>
+          <div class="targets-output">
+            <div class="target-card">
+              <span class="lang-badge js-badge">JavaScript</span>
+              <pre>Math.pow(2, 10) > 1000 && dayjs().startOf('day') >= dayjs().startOf('year')</pre>
+            </div>
+            <div class="target-card">
+              <span class="lang-badge ruby-badge">Ruby</span>
+              <pre>2 ** 10 > 1000 && Date.today >= Date.today.beginning_of_year</pre>
+            </div>
+            <div class="target-card">
+              <span class="lang-badge sql-badge">SQL</span>
+              <pre>POWER(2, 10) > 1000 AND CURRENT_DATE >= DATE_TRUNC('year', CURRENT_DATE)</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-section">
+        <h2>Ready to try K?</h2>
+        <p>Jump into the playground and start writing temporal expressions that just work.</p>
+        <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try" class="cta-button">Open Playground</a>
+      </section>
+
+      <footer class="home-footer">
+        <p>
+          K is an open-source project created with Claude Code
+          <br>
+          <a href="https://github.com/klang-lang/klang" target="_blank">View on GitHub</a>
+        </p>
+      </footer>
+    </div>
+  </main>
+
   <!-- Try Panel (Playground) -->
-  <main data-tabs-target="panel" data-panel="try" data-controller="playground">
+  <main data-tabs-target="panel" data-panel="try" data-controller="playground" class="hidden">
     <section class="editor-panel">
       <div class="panel-header">
         <span>K</span>
@@ -232,7 +388,7 @@
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Time Durations</div>
-          <pre class="example-code">P2H30M</pre>
+          <pre class="example-code">PT2H30M</pre>
           <p class="example-desc">2 hours and 30 minutes.</p>
         </div>
 
@@ -244,7 +400,7 @@
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Complex Duration</div>
-          <pre class="example-code">NOW - P1M + P2H30M</pre>
+          <pre class="example-code">NOW - P1M + PT2H30M</pre>
           <p class="example-desc">One month ago, plus 2.5 hours.</p>
         </div>
       </section>
