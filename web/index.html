@@ -38,8 +38,14 @@
           <option value="ruby">Ruby</option>
           <option value="sql">SQL</option>
         </select>
+        <button
+          data-playground-target="runButton"
+          data-action="click->playground#run"
+          class="run-button"
+        >Run</button>
       </div>
       <pre data-playground-target="output"></pre>
+      <div class="result" data-playground-target="result"></div>
       <div class="error" data-playground-target="error"></div>
     </section>
   </main>

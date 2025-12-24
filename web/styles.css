@@ -137,6 +137,33 @@ textarea::placeholder {
   word-break: break-word;
 }
 
+.panel-header {
+  gap: 0.5rem;
+}
+
+/* Run button */
+.run-button {
+  margin-left: auto;
+  padding: 0.375rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.run-button:hover {
+  background: var(--accent-hover);
+}
+
+.run-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Language selector */
 select {
   appearance: none;
@@ -161,6 +188,21 @@ select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Result display */
+.result {
+  display: none;
+  padding: 0.75rem 1rem;
+  background: rgba(34, 197, 94, 0.1);
+  border-top: 1px solid var(--border);
+  color: var(--success);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.result.visible {
+  display: block;
 }
 
 /* Error display */
