@@ -6,7 +6,7 @@
 set -e
 
 TEST_DIR="${1:-test/fixtures}"
-PRELUDE_FILE="src/preludes/prelude.sql"
+PRELUDE_FILE="src/preludes/prelude.testable.sql"
 FAILED=0
 PASSED=0
 SKIPPED=0

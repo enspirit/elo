@@ -3,20 +3,26 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { parse } from './parser';
-import { compileToRuby } from './compilers/ruby';
-import { compileToJavaScript } from './compilers/javascript';
-import { compileToSQL } from './compilers/sql';
+import { compileToRuby, RubyCompileOptions } from './compilers/ruby';
+import { compileToJavaScript, JavaScriptCompileOptions } from './compilers/javascript';
+import { compileToSQL, SQLCompileOptions } from './compilers/sql';
+
+type Target = 'ruby' | 'js' | 'sql';
+type Mode = 'production' | 'testable';
 
 // Load preludes from source files
-function loadPrelude(target: 'ruby' | 'js' | 'sql'): string {
-  const preludeMap = {
-    'ruby': 'prelude.rb',
-    'js': 'prelude.js',
-    'sql': 'prelude.sql'
+function loadPrelude(target: Target, mode: Mode): string {
+  const preludeMap: Record<Target, string> = {
+    'ruby': 'rb',
+    'js': 'js',
+    'sql': 'sql'
   };
 
+  const ext = preludeMap[target];
+  const filename = `prelude.${mode}.${ext}`;
+
   // From dist/src/cli.js, go back to src/preludes/
-  const preludePath = join(__dirname, '../../src/preludes', preludeMap[target]);
+  const preludePath = join(__dirname, '../../src/preludes', filename);
   return readFileSync(preludePath, 'utf-8').trim();
 }
 
@@ -24,13 +30,15 @@ interface Options {
   expression?: string;
   inputFile?: string;
   outputFile?: string;
-  target: 'ruby' | 'js' | 'sql';
+  target: Target;
+  mode: Mode;
   prelude?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
   const options: Options = {
-    target: 'js' // default target
+    target: 'js',        // default target
+    mode: 'production'   // default mode
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -55,6 +63,16 @@ function parseArgs(args: string[]): Options {
           process.exit(1);
         }
         options.target = target;
+        break;
+
+      case '-m':
+      case '--mode':
+        const mode = args[++i];
+        if (mode !== 'production' && mode !== 'testable') {
+          console.error(`Invalid mode: ${mode}. Must be one of: production, testable`);
+          process.exit(1);
+        }
+        options.mode = mode;
         break;
 
       case '-p':
@@ -93,9 +111,16 @@ Usage:
 Options:
   -e, --expression <expr>   Expression to compile (like ruby -e)
   -t, --target <lang>       Target language: ruby, js (default), sql
+  -m, --mode <mode>         Compilation mode: production (default), testable
   -p, --prelude             Include necessary library imports/requires
   -f, --file <path>         Output to file instead of stdout
   -h, --help                Show this help message
+
+Modes:
+  production   Uses native temporal functions (Date.today, dayjs(), CURRENT_DATE)
+               Minimal prelude with just library imports
+  testable     Uses injectable temporal functions (Klang.today, klang.today(), klang_today())
+               Full prelude with time injection support via KLANG_NOW env var
 
 Examples:
   # Compile expression to JavaScript (default)
@@ -108,7 +133,10 @@ Examples:
   kc -e "2 + 3 * 4" -t sql
 
   # Compile with prelude (includes required libraries)
-  kc -e "NOW + PT2H" -t ruby -p
+  kc -e "NOW + P2H" -t ruby -p
+
+  # Compile in testable mode (for deterministic testing)
+  kc -e "TODAY == D2025-01-01" -t ruby -m testable -p
 
   # Compile from file
   kc input.klang -t ruby
@@ -121,24 +149,31 @@ Examples:
 `);
 }
 
-function compile(source: string, target: 'ruby' | 'js' | 'sql', prelude: boolean = false): string {
+function compile(source: string, target: Target, mode: Mode, includePrelude: boolean = false): string {
   const ast = parse(source);
+  const temporalMode = mode;
 
   let result: string;
   switch (target) {
-    case 'ruby':
-      result = compileToRuby(ast);
+    case 'ruby': {
+      const options: RubyCompileOptions = { temporalMode };
+      result = compileToRuby(ast, options);
       break;
-    case 'js':
-      result = compileToJavaScript(ast);
+    }
+    case 'js': {
+      const options: JavaScriptCompileOptions = { temporalMode };
+      result = compileToJavaScript(ast, options);
       break;
-    case 'sql':
-      result = compileToSQL(ast);
+    }
+    case 'sql': {
+      const options: SQLCompileOptions = { temporalMode };
+      result = compileToSQL(ast, options);
       break;
+    }
   }
 
-  if (prelude) {
-    const preludeContent = loadPrelude(target);
+  if (includePrelude) {
+    const preludeContent = loadPrelude(target, mode);
     if (preludeContent) {
       result = `${preludeContent}\n\n${result}`;
     }
@@ -177,7 +212,7 @@ function main() {
   // Compile the expression
   let output: string;
   try {
-    output = compile(source, options.target, options.prelude);
+    output = compile(source, options.target, options.mode, options.prelude);
   } catch (error) {
     console.error(`Compilation error: ${error}`);
     process.exit(1);

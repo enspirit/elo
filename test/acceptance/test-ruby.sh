@@ -5,7 +5,7 @@
 set -e
 
 TEST_DIR="${1:-test/fixtures}"
-PRELUDE="src/preludes/prelude.rb"
+PRELUDE="src/preludes/prelude.testable.rb"
 FAILED=0
 PASSED=0
 SKIPPED=0
