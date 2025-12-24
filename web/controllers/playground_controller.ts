@@ -22,6 +22,19 @@ dayjs.extend(quarterOfYear);
 // Make dayjs available globally for eval
 (window as any).dayjs = dayjs;
 
+// Make klang runtime helpers available globally for eval
+(window as any).klang = {
+  add(left: any, right: any) {
+    if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.add(right);
+    if (dayjs.isDuration(left) && dayjs.isDayjs(right)) return right.add(left);
+    return left + right;
+  },
+  subtract(left: any, right: any) {
+    if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.subtract(right);
+    return left - right;
+  }
+};
+
 type TargetLanguage = 'ruby' | 'javascript' | 'sql';
 type TemporalMode = 'production' | 'testable';
 
