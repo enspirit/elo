@@ -38,97 +38,18 @@ npm run build
 
 ## Testing
 
-Klang has a three-tier test strategy:
-
-### 1. Unit Tests
-
-Test core compiler abstractions (parser, AST, individual compilers).
-
-```bash
-npm run test:unit
-```
-
-**Coverage:**
-- Parser and lexer functionality (literals, operators, precedence)
-- AST construction and helper functions
-- Individual compiler units (Ruby, JavaScript, SQL)
-- Temporal types (dates, datetimes, durations, keywords)
-- Edge cases and error handling
-
-**Files:** `*.unit.test.ts`
-
-### 2. Integration Tests
-
-Compare expected vs. actual compilation output across all targets.
-
-```bash
-npm run test:integration
-```
-
-**Coverage:**
-- Compilation of Klang test fixtures to Ruby, JavaScript, and SQL
-- Expected output validation using `.expected.{js,ruby,sql}` files
-- Full end-to-end compiler workflow
-
-**Files:** `*.integration.test.ts`
-
-### 3. Acceptance Tests
-
-Validate compiled code actually executes correctly in real runtimes.
-
-```bash
-npm run test:acceptance
-```
-
-**Architecture:**
-- **Shell-based test runner**: Executes compiled `.expected.{ruby,js,sql}` files directly
-- **Ruby runtime**: Tests via system Ruby installation
-- **Node.js runtime**: Tests via system Node.js installation
-- **PostgreSQL database** (optional): Tests SQL compilation if PostgreSQL is available
-
-**Prerequisites:**
-- Ruby (for Ruby tests)
-- Node.js (for JavaScript tests)
-- PostgreSQL (optional, for SQL tests - gracefully skipped if unavailable)
-
-**Test coverage:**
-- 9 test suites across 3 runtime languages
-- Arithmetic, boolean, temporal operations, and real-world expressions
-- Skipped: `member-access` and `variables` suites (require variable injection - will be addressed later)
-
-**Running tests:**
-
-```bash
-# Run all acceptance tests (Ruby + JavaScript + SQL)
-npm run test:acceptance
-
-# Run specific language tests
-./test/acceptance/test-ruby.sh
-./test/acceptance/test-js.sh
-./test/acceptance/test-sql.sh
-```
-
-**PostgreSQL setup (optional for SQL tests):**
-
-```bash
-# Start PostgreSQL with Docker
-npm run docker:up
-
-# Or install PostgreSQL locally and ensure it's running on port 5432
-# with user: klang, password: klang, database: klang
-```
-
-**Files:** `test/acceptance/test-{local,ruby,js,sql}.sh`
-
-### Run All Tests
-
 ```bash
 npm test
 ```
 
-Runs all three test stages in sequence: unit → integration → acceptance.
+Klang uses a comprehensive test suite that verifies:
+- **Unit tests**: Parser, AST, and compiler components
+- **Integration tests**: End-to-end compilation output
+- **Acceptance tests**: Compiled code execution in real runtimes (Ruby, Node.js, PostgreSQL)
 
-**Current results:** 190 tests passing (125 unit + 65 integration + shell acceptance tests)
+**Current status**: 190 tests passing
+
+For detailed testing documentation and development guidelines, see [CLAUDE.md](CLAUDE.md).
 
 ## Usage
 
@@ -287,59 +208,22 @@ primary    -> NUMBER | BOOLEAN | DATE | DATETIME | DURATION | IDENTIFIER | '(' e
 
 ```
 klang/
-├── src/
-│   ├── ast.ts                       # AST node type definitions
-│   ├── parser.ts                    # Lexer and parser for infix expressions
-│   ├── index.ts                     # Main exports
-│   ├── ast.unit.test.ts             # AST helper unit tests
-│   ├── parser.unit.test.ts          # Parser and lexer unit tests
-│   ├── temporal.unit.test.ts        # Temporal feature unit tests
-│   ├── compiler.integration.test.ts # Integration tests (expected output)
-│   ├── acceptance.test.ts           # Acceptance tests (Docker-based)
-│   ├── preludes/                    # Runtime library code
-│   │   ├── prelude.rb               # Ruby prelude (requires)
-│   │   ├── prelude.js               # JavaScript prelude (Duration class)
-│   │   └── prelude.sql              # SQL prelude
-│   └── compilers/
-│       ├── ruby.ts                  # Ruby code generator
-│       ├── ruby.unit.test.ts        # Ruby compiler unit tests
-│       ├── javascript.ts            # JavaScript code generator
-│       ├── javascript.unit.test.ts  # JavaScript compiler unit tests
-│       ├── sql.ts                   # PostgreSQL code generator
-│       └── sql.unit.test.ts         # SQL compiler unit tests
-├── test/
-│   ├── fixtures/                    # Test fixtures
-│   │   ├── *.klang                  # Klang test expressions
-│   │   ├── *.expected.js            # Expected JavaScript output
-│   │   ├── *.expected.ruby          # Expected Ruby output
-│   │   └── *.expected.sql           # Expected SQL output
-│   ├── unit/                        # Unit tests
-│   │   ├── ast.unit.test.ts
-│   │   ├── parser.unit.test.ts
-│   │   ├── temporal.unit.test.ts
-│   │   └── compilers/
-│   │       ├── javascript.unit.test.ts
-│   │       ├── ruby.unit.test.ts
-│   │       └── sql.unit.test.ts
-│   ├── integration/
-│   │   └── compiler.integration.test.ts
-│   └── acceptance/
-│       ├── test-local.sh            # Run all acceptance tests
-│       ├── test-ruby.sh             # Test Ruby runtime
-│       ├── test-js.sh               # Test JavaScript runtime
-│       └── test-sql.sh              # Test SQL runtime
-├── bin/
-│   └── kc                           # Klang compiler CLI
-├── examples/
-│   ├── basic.ts                     # Arithmetic expression examples
-│   ├── boolean.ts                   # Boolean expression examples
-│   ├── temporal.ts                  # Temporal expression examples
-│   └── demo.ts                      # Quick demo
-├── docker-compose.yml               # PostgreSQL for SQL testing
-├── package.json
-├── tsconfig.json
-└── README.md
+├── src/              # Compiler source code
+│   ├── parser.ts     # Lexer and parser
+│   ├── ast.ts        # AST definitions
+│   ├── compilers/    # Code generators (Ruby, JavaScript, SQL)
+│   └── preludes/     # Runtime support libraries
+├── test/             # Test suite
+│   ├── fixtures/     # Test cases
+│   ├── unit/         # Component tests
+│   ├── integration/  # Compilation tests
+│   └── acceptance/   # Runtime execution tests
+├── examples/         # Usage examples
+├── bin/kc            # CLI tool
+└── CLAUDE.md         # Developer guide
 ```
+
+For detailed architecture documentation, see [CLAUDE.md](CLAUDE.md).
 
 ## Roadmap
 
@@ -353,4 +237,15 @@ Future enhancements could include:
 - **Optimization**: Constant folding, expression simplification, dead code elimination
 - **Additional targets**: Python, Go, Rust code generation
 - **Timezone support**: Explicit timezone handling for datetime operations
+
+## Contributing
+
+Klang follows a strict test-driven development methodology to ensure semantic equivalence across all three target languages (Ruby, JavaScript, SQL).
+
+**For developers and AI assistants**: See [CLAUDE.md](CLAUDE.md) for:
+- Test-driven development workflow
+- Three-stage test methodology (unit → integration → acceptance)
+- How to add new features and operators
+- Architecture documentation
+- Troubleshooting guide
 
