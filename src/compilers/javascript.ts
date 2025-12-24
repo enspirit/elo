@@ -2,6 +2,7 @@ import { Expr } from '../ast';
 
 /**
  * Compiles Klang expressions to JavaScript code
+ * Uses dayjs for temporal operations
  */
 export function compileToJavaScript(expr: Expr): string {
   switch (expr.type) {
@@ -9,25 +10,24 @@ export function compileToJavaScript(expr: Expr): string {
       return expr.value.toString();
 
     case 'date':
-      return `new Date('${expr.value}')`;
+      return `dayjs('${expr.value}')`;
 
     case 'datetime':
-      return `new Date('${expr.value}')`;
+      return `dayjs('${expr.value}')`;
 
     case 'duration':
-      // Duration as ISO8601 string - requires a library like dayjs or moment
-      return `Duration.parse('${expr.value}')`;
+      return `dayjs.duration('${expr.value}')`;
 
     case 'temporal_keyword':
       switch (expr.keyword) {
         case 'NOW':
-          return 'new Date()';
+          return 'dayjs()';
         case 'TODAY':
-          return 'new Date(new Date().setHours(0, 0, 0, 0))';
+          return 'dayjs().startOf(\'day\')';
         case 'TOMORROW':
-          return 'new Date(new Date().setHours(24, 0, 0, 0))';
+          return 'dayjs().startOf(\'day\').add(1, \'day\')';
         case 'YESTERDAY':
-          return 'new Date(new Date().setHours(-24, 0, 0, 0))';
+          return 'dayjs().startOf(\'day\').subtract(1, \'day\')';
       }
 
     case 'variable':
@@ -79,15 +79,15 @@ export function compileToJavaScript(expr: Expr): string {
       if ((expr.operator === '+' || expr.operator === '-') &&
           (expr.left.type === 'date' || expr.left.type === 'datetime' || expr.left.type === 'temporal_keyword') &&
           expr.right.type === 'duration') {
-        const method = expr.operator === '+' ? 'addTo' : 'subtractFrom';
-        return `${right}.${method}(${left})`;
+        const method = expr.operator === '+' ? 'add' : 'subtract';
+        return `${left}.${method}(${right})`;
       }
 
       // Handle duration + date/temporal (commutative addition)
       if (expr.operator === '+' &&
           expr.left.type === 'duration' &&
           (expr.right.type === 'date' || expr.right.type === 'datetime' || expr.right.type === 'temporal_keyword')) {
-        return `${left}.addTo(${right})`;
+        return `${right}.add(${left})`;
       }
 
       // Add parentheses for nested expressions to preserve precedence

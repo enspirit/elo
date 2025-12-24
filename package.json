@@ -25,7 +25,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@hotwired/stimulus": "^3.2.2"
+    "@hotwired/stimulus": "^3.2.2",
+    "dayjs": "^1.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

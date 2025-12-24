@@ -1,48 +1,15 @@
 import { Controller } from '@hotwired/stimulus';
+import dayjs from 'dayjs';
+import duration from 'dayjs/plugin/duration';
 import { parse, compileToRuby, compileToJavaScript, compileToSQL } from '../../src/index';
 
+// Enable dayjs duration plugin
+dayjs.extend(duration);
+
+// Make dayjs available globally for eval
+(window as any).dayjs = dayjs;
+
 type TargetLanguage = 'ruby' | 'javascript' | 'sql';
-
-// Duration class for JavaScript runtime support
-class Duration {
-  milliseconds: number;
-
-  constructor(milliseconds: number) {
-    this.milliseconds = milliseconds;
-  }
-
-  static parse(iso8601: string): Duration {
-    const regex = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
-    const match = iso8601.match(regex);
-
-    if (!match) {
-      throw new Error(`Invalid ISO 8601 duration: ${iso8601}`);
-    }
-
-    const [, years, months, days, hours, minutes, seconds] = match;
-
-    let ms = 0;
-    if (years) ms += parseInt(years) * 365.25 * 24 * 60 * 60 * 1000;
-    if (months) ms += parseInt(months) * 30 * 24 * 60 * 60 * 1000;
-    if (days) ms += parseInt(days) * 24 * 60 * 60 * 1000;
-    if (hours) ms += parseInt(hours) * 60 * 60 * 1000;
-    if (minutes) ms += parseInt(minutes) * 60 * 1000;
-    if (seconds) ms += parseFloat(seconds) * 1000;
-
-    return new Duration(ms);
-  }
-
-  addTo(date: Date): Date {
-    return new Date(date.getTime() + this.milliseconds);
-  }
-
-  subtractFrom(date: Date): Date {
-    return new Date(date.getTime() - this.milliseconds);
-  }
-}
-
-// Make Duration available globally for eval
-(window as any).Duration = Duration;
 
 export default class PlaygroundController extends Controller {
   static targets = ['input', 'output', 'language', 'error', 'result', 'runButton'];
@@ -118,6 +85,10 @@ export default class PlaygroundController extends Controller {
     }
     if (typeof value === 'boolean') {
       return value ? 'true' : 'false';
+    }
+    // Handle dayjs objects
+    if (value && typeof value === 'object' && value.$d instanceof Date) {
+      return value.format();
     }
     if (value instanceof Date) {
       return value.toISOString();
