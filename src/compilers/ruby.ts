@@ -27,6 +27,10 @@ export function compileToRuby(expr: Expr): string {
           return 'Date.today + 1';
         case 'YESTERDAY':
           return 'Date.today - 1';
+        case 'SOW':
+          return 'Date.today.beginning_of_week';
+        case 'EOW':
+          return 'Date.today.end_of_week';
       }
 
     case 'variable':

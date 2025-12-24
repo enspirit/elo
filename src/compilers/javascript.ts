@@ -28,6 +28,10 @@ export function compileToJavaScript(expr: Expr): string {
           return 'dayjs().startOf(\'day\').add(1, \'day\')';
         case 'YESTERDAY':
           return 'dayjs().startOf(\'day\').subtract(1, \'day\')';
+        case 'SOW':
+          return 'dayjs().startOf(\'isoWeek\')';
+        case 'EOW':
+          return 'dayjs().endOf(\'isoWeek\')';
       }
 
     case 'variable':

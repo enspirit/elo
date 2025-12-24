@@ -37,11 +37,11 @@ export interface DurationLiteral {
 }
 
 /**
- * Temporal keyword (NOW, TODAY, TOMORROW, YESTERDAY)
+ * Temporal keyword (NOW, TODAY, TOMORROW, YESTERDAY, SOW, EOW)
  */
 export interface TemporalKeyword {
   type: 'temporal_keyword';
-  keyword: 'NOW' | 'TODAY' | 'TOMORROW' | 'YESTERDAY';
+  keyword: 'NOW' | 'TODAY' | 'TOMORROW' | 'YESTERDAY' | 'SOW' | 'EOW';
 }
 
 /**

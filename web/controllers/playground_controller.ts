@@ -1,10 +1,12 @@
 import { Controller } from '@hotwired/stimulus';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
+import isoWeek from 'dayjs/plugin/isoWeek';
 import { parse, compileToRuby, compileToJavaScript, compileToSQL } from '../../src/index';
 
-// Enable dayjs duration plugin
+// Enable dayjs plugins
 dayjs.extend(duration);
+dayjs.extend(isoWeek);
 
 // Make dayjs available globally for eval
 (window as any).dayjs = dayjs;

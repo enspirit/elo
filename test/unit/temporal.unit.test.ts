@@ -300,6 +300,91 @@ describe('Temporal - Temporal Keywords', () => {
   });
 });
 
+describe('Temporal - Week Boundary Keywords (SOW/EOW)', () => {
+  // Parsing tests
+  it('should parse SOW keyword', () => {
+    const ast = parse('SOW');
+    assert.strictEqual(ast.type, 'temporal_keyword');
+    if (ast.type === 'temporal_keyword') {
+      assert.strictEqual(ast.keyword, 'SOW');
+    }
+  });
+
+  it('should parse EOW keyword', () => {
+    const ast = parse('EOW');
+    assert.strictEqual(ast.type, 'temporal_keyword');
+    if (ast.type === 'temporal_keyword') {
+      assert.strictEqual(ast.keyword, 'EOW');
+    }
+  });
+
+  // JavaScript compilation tests
+  it('should compile SOW to JavaScript', () => {
+    const ast = parse('SOW');
+    assert.strictEqual(compileToJavaScript(ast), "dayjs().startOf('isoWeek')");
+  });
+
+  it('should compile EOW to JavaScript', () => {
+    const ast = parse('EOW');
+    assert.strictEqual(compileToJavaScript(ast), "dayjs().endOf('isoWeek')");
+  });
+
+  // Ruby compilation tests
+  it('should compile SOW to Ruby', () => {
+    const ast = parse('SOW');
+    assert.strictEqual(compileToRuby(ast), 'Date.today.beginning_of_week');
+  });
+
+  it('should compile EOW to Ruby', () => {
+    const ast = parse('EOW');
+    assert.strictEqual(compileToRuby(ast), 'Date.today.end_of_week');
+  });
+
+  // SQL compilation tests
+  it('should compile SOW to SQL', () => {
+    const ast = parse('SOW');
+    assert.strictEqual(compileToSQL(ast), "date_trunc('week', CURRENT_DATE)");
+  });
+
+  it('should compile EOW to SQL', () => {
+    const ast = parse('EOW');
+    assert.strictEqual(compileToSQL(ast), "date_trunc('week', CURRENT_DATE) + INTERVAL '6 days'");
+  });
+
+  // Expression tests
+  it('should use SOW in expressions', () => {
+    const ast = parse('SOW <= TODAY');
+    assert.strictEqual(ast.type, 'binary');
+    if (ast.type === 'binary') {
+      assert.strictEqual(ast.left.type, 'temporal_keyword');
+      if (ast.left.type === 'temporal_keyword') {
+        assert.strictEqual(ast.left.keyword, 'SOW');
+      }
+    }
+  });
+
+  it('should use EOW in expressions', () => {
+    const ast = parse('EOW >= TODAY');
+    assert.strictEqual(ast.type, 'binary');
+    if (ast.type === 'binary') {
+      assert.strictEqual(ast.left.type, 'temporal_keyword');
+      if (ast.left.type === 'temporal_keyword') {
+        assert.strictEqual(ast.left.keyword, 'EOW');
+      }
+    }
+  });
+
+  it('should compare SOW and EOW', () => {
+    const ast = parse('SOW < EOW');
+    assert.strictEqual(ast.type, 'binary');
+    if (ast.type === 'binary') {
+      assert.strictEqual(ast.operator, '<');
+      assert.strictEqual(ast.left.type, 'temporal_keyword');
+      assert.strictEqual(ast.right.type, 'temporal_keyword');
+    }
+  });
+});
+
 describe('Temporal - Edge Cases', () => {
   it('should handle datetime with milliseconds', () => {
     const ast = parse('D2024-01-15T10:30:00.123Z');

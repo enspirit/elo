@@ -34,6 +34,10 @@ export function compileToSQL(expr: Expr): string {
           return 'CURRENT_DATE + INTERVAL \'1 day\'';
         case 'YESTERDAY':
           return 'CURRENT_DATE - INTERVAL \'1 day\'';
+        case 'SOW':
+          return 'date_trunc(\'week\', CURRENT_DATE)';
+        case 'EOW':
+          return 'date_trunc(\'week\', CURRENT_DATE) + INTERVAL \'6 days\'';
       }
 
     case 'variable':
