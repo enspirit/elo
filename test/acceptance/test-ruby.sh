@@ -5,10 +5,13 @@
 set -e
 
 TEST_DIR="${1:-test/fixtures}"
-PRELUDE="src/preludes/prelude.testable.rb"
+KC="./bin/kc"
 FAILED=0
 PASSED=0
 SKIPPED=0
+
+# Get prelude using kc --prelude-only
+PRELUDE=$($KC --prelude-only -t ruby -m testable)
 
 # Files that require variables - skip for local testing
 SKIP_FILES=("member-access" "variables")
@@ -51,8 +54,8 @@ for file in "$TEST_DIR"/*.expected.ruby; do
     # Check if this file needs time mocking
     mock_time=$(get_mock_time "$file") || mock_time=""
 
-    # Load prelude to provide Date, DateTime, and Duration support
-    if KLANG_NOW="$mock_time" ruby -r "./$PRELUDE" "$file" 2>/dev/null; then
+    # Combine prelude with test file and run
+    if { echo "$PRELUDE"; cat "$file"; } | KLANG_NOW="$mock_time" ruby - 2>/dev/null; then
         echo "  ✓ $(basename "$file")"
         ((PASSED++)) || true
     else

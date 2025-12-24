@@ -1,29 +1,17 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
 import { parse } from './parser';
 import { compileToRuby, RubyCompileOptions } from './compilers/ruby';
 import { compileToJavaScript, JavaScriptCompileOptions } from './compilers/javascript';
 import { compileToSQL, SQLCompileOptions } from './compilers/sql';
+import { getPrelude, Target as PreludeTarget, Mode } from './preludes';
 
 type Target = 'ruby' | 'js' | 'sql';
-type Mode = 'production' | 'testable';
 
-// Load preludes from source files
-function loadPrelude(target: Target, mode: Mode): string {
-  const preludeMap: Record<Target, string> = {
-    'ruby': 'rb',
-    'js': 'js',
-    'sql': 'sql'
-  };
-
-  const ext = preludeMap[target];
-  const filename = `prelude.${mode}.${ext}`;
-
-  // From dist/src/cli.js, go back to src/preludes/
-  const preludePath = join(__dirname, '../../src/preludes', filename);
-  return readFileSync(preludePath, 'utf-8').trim();
+// Map CLI target names to prelude target names
+function toPreludeTarget(target: Target): PreludeTarget {
+  return target === 'js' ? 'javascript' : target;
 }
 
 interface Options {
@@ -33,6 +21,7 @@ interface Options {
   target: Target;
   mode: Mode;
   prelude?: boolean;
+  preludeOnly?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
@@ -80,6 +69,10 @@ function parseArgs(args: string[]): Options {
         options.prelude = true;
         break;
 
+      case '--prelude-only':
+        options.preludeOnly = true;
+        break;
+
       case '-h':
       case '--help':
         printHelp();
@@ -113,6 +106,7 @@ Options:
   -t, --target <lang>       Target language: ruby, js (default), sql
   -m, --mode <mode>         Compilation mode: production (default), testable
   -p, --prelude             Include necessary library imports/requires
+  --prelude-only            Output only the prelude (no expression needed)
   -f, --file <path>         Output to file instead of stdout
   -h, --help                Show this help message
 
@@ -173,7 +167,7 @@ function compile(source: string, target: Target, mode: Mode, includePrelude: boo
   }
 
   if (includePrelude) {
-    const preludeContent = loadPrelude(target, mode);
+    const preludeContent = getPrelude(toPreludeTarget(target), mode);
     if (preludeContent) {
       result = `${preludeContent}\n\n${result}`;
     }
@@ -191,6 +185,13 @@ function main() {
   }
 
   const options = parseArgs(args);
+
+  // Handle --prelude-only: just output the prelude and exit
+  if (options.preludeOnly) {
+    const prelude = getPrelude(toPreludeTarget(options.target), options.mode);
+    console.log(prelude);
+    return;
+  }
 
   // Get the source expression
   let source: string;

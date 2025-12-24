@@ -5,10 +5,13 @@
 set -e
 
 TEST_DIR="${1:-test/fixtures}"
-PRELUDE="src/preludes/prelude.testable.js"
+KC="./bin/kc"
 FAILED=0
 PASSED=0
 SKIPPED=0
+
+# Get prelude using kc --prelude-only
+PRELUDE=$($KC --prelude-only -t js -m testable)
 
 # Files that require variables - skip for local testing
 SKIP_FILES=("member-access" "variables")
@@ -54,7 +57,7 @@ for file in "$TEST_DIR"/*.expected.js; do
     # Run each line separately to avoid IIFE issues
     # Prepend prelude to provide Duration class
     if while IFS= read -r line; do
-        [ -n "$line" ] && { cat "$PRELUDE"; echo "$line"; } | KLANG_NOW="$mock_time" node - || exit 1
+        [ -n "$line" ] && { echo "$PRELUDE"; echo "$line"; } | KLANG_NOW="$mock_time" node - || exit 1
     done < "$file" 2>/dev/null; then
         echo "  ✓ $(basename "$file")"
         ((PASSED++)) || true

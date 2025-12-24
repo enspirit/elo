@@ -1,2 +1,0 @@
--- No prelude needed for production SQL mode
--- All temporal expressions use native PostgreSQL functions

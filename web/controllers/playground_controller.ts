@@ -12,7 +12,7 @@ import {
   JavaScriptCompileOptions,
   SQLCompileOptions
 } from '../../src/index';
-import { getPreludes } from './preludes';
+import { getPrelude, Target as PreludeTarget } from '../../src/preludes';
 
 // Enable dayjs plugins
 dayjs.extend(duration);
@@ -65,7 +65,8 @@ export default class PlaygroundController extends Controller {
       let output = this.compileToLanguage(ast, language, mode);
 
       if (includePrelude) {
-        const prelude = getPreludes(language, mode);
+        const preludeTarget: PreludeTarget = language === 'javascript' ? 'javascript' : language as PreludeTarget;
+        const prelude = getPrelude(preludeTarget, mode);
         if (prelude) {
           output = `${prelude}\n\n${output}`;
         }

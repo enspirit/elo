@@ -1,17 +1,12 @@
 /**
- * Prelude content for web frontend
- *
- * These are inlined versions of the src/preludes/*.{js,rb,sql} files.
- * The CLI loads preludes from disk at runtime, but the web bundle
- * cannot use fs, so the content is inlined here.
- *
- * IMPORTANT: Keep these in sync with src/preludes/ files.
+ * Prelude content for all target languages and compilation modes.
+ * This is the single source of truth for preludes used by both CLI and web.
  */
 
-type TargetLanguage = 'ruby' | 'javascript' | 'sql';
-type TemporalMode = 'production' | 'testable';
+export type Target = 'javascript' | 'ruby' | 'sql';
+export type Mode = 'production' | 'testable';
 
-const preludes: Record<TargetLanguage, Record<TemporalMode, string>> = {
+const preludes: Record<Target, Record<Mode, string>> = {
   javascript: {
     production: `const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
@@ -163,6 +158,9 @@ $$ LANGUAGE plpgsql;`
   }
 };
 
-export function getPreludes(language: TargetLanguage, mode: TemporalMode): string {
-  return preludes[language][mode];
+/**
+ * Get the prelude content for a given target language and mode.
+ */
+export function getPrelude(target: Target, mode: Mode): string {
+  return preludes[target][mode];
 }

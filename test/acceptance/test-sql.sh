@@ -6,7 +6,7 @@
 set -e
 
 TEST_DIR="${1:-test/fixtures}"
-PRELUDE_FILE="src/preludes/prelude.testable.sql"
+KC="./bin/kc"
 FAILED=0
 PASSED=0
 SKIPPED=0
@@ -53,11 +53,10 @@ if ! psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1" >/dev/null 2>
 fi
 
 # Load the prelude to install klang_now/klang_today functions
-if [ -f "$PRELUDE_FILE" ]; then
-    if ! psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -f "$PRELUDE_FILE" >/dev/null 2>&1; then
-        echo "⚠ Failed to load SQL prelude"
-        exit 1
-    fi
+PRELUDE=$($KC --prelude-only -t sql -m testable)
+if ! echo "$PRELUDE" | psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" >/dev/null 2>&1; then
+    echo "⚠ Failed to load SQL prelude"
+    exit 1
 fi
 
 for file in "$TEST_DIR"/*.expected.sql; do
