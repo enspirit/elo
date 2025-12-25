@@ -69,6 +69,8 @@ export function typeGeneralizations(argTypes: KlangType[]): KlangType[][] {
 export interface EmitContext<T> {
   emit: (ir: IRExpr) => T;
   emitWithParens: (ir: IRExpr, parentOp: string, side: 'left' | 'right') => T;
+  /** Track a required helper function (e.g., 'kAdd', 'kSub') */
+  requireHelper?: (name: string) => void;
 }
 
 /**
@@ -197,5 +199,17 @@ export function fnCall(fnName: string): FunctionEmitter<string> {
   return (args, ctx) => {
     const emittedArgs = args.map(a => ctx.emit(a)).join(', ');
     return `${fnName}(${emittedArgs})`;
+  };
+}
+
+/**
+ * Helper for runtime helper function call (tracks the helper as required)
+ * Used for dynamically-typed operations that need runtime support.
+ */
+export function helperCall(helperName: string): FunctionEmitter<string> {
+  return (args, ctx) => {
+    ctx.requireHelper?.(helperName);
+    const emittedArgs = args.map(a => ctx.emit(a)).join(', ');
+    return `${helperName}(${emittedArgs})`;
   };
 }

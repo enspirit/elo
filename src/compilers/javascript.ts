@@ -3,6 +3,7 @@ import { IRExpr, IRCall } from '../ir';
 import { transform } from '../transform';
 import { EmitContext } from '../stdlib';
 import { createJavaScriptBinding, isNativeBinaryOp } from '../bindings/javascript';
+import { JS_HELPERS } from '../runtime';
 
 /**
  * JavaScript compilation options
@@ -12,16 +13,48 @@ export interface JavaScriptCompileOptions {
 }
 
 /**
+ * Result of JavaScript emission including required helpers
+ */
+interface EmitResult {
+  code: string;
+  requiredHelpers: Set<string>;
+}
+
+/**
  * Compiles Klang expressions to JavaScript code
  * Uses dayjs for temporal operations
  *
  * This compiler works in two phases:
  * 1. Transform AST to typed IR
- * 2. Emit JavaScript from IR
+ * 2. Emit JavaScript from IR (tracking required helpers)
+ * 3. Wrap in IIFE with helper definitions if needed
  */
 export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptions): string {
   const ir = transform(expr);
-  return emitJS(ir);
+  const result = emitJSWithHelpers(ir);
+
+  // If no helpers needed, return clean output
+  if (result.requiredHelpers.size === 0) {
+    return result.code;
+  }
+
+  // Wrap in IIFE with required helper definitions (sorted for deterministic output)
+  // Output is single-line for consistency with line-by-line fixture tests
+  const helperDefs = Array.from(result.requiredHelpers)
+    .sort()
+    .map(name => JS_HELPERS[name].replace(/\n\s*/g, ' '))
+    .join(' ');
+
+  return `(function() { ${helperDefs} return ${result.code}; })()`;
+}
+
+/**
+ * Emit JavaScript with helper tracking
+ */
+function emitJSWithHelpers(ir: IRExpr): EmitResult {
+  const requiredHelpers = new Set<string>();
+  const code = emitJS(ir, requiredHelpers);
+  return { code, requiredHelpers };
 }
 
 /**
@@ -70,16 +103,17 @@ const jsLib = createJavaScriptBinding();
 /**
  * Emit JavaScript code from IR
  */
-function emitJS(ir: IRExpr): string {
+function emitJS(ir: IRExpr, requiredHelpers?: Set<string>): string {
   const ctx: EmitContext<string> = {
-    emit: emitJS,
+    emit: (child) => emitJS(child, requiredHelpers),
     emitWithParens: (child, parentOp, side) => {
-      const emitted = emitJS(child);
+      const emitted = emitJS(child, requiredHelpers);
       if (needsParens(child, parentOp, side)) {
         return `(${emitted})`;
       }
       return emitted;
     },
+    requireHelper: requiredHelpers ? (name) => requiredHelpers.add(name) : undefined,
   };
 
   switch (ir.type) {
@@ -103,7 +137,7 @@ function emitJS(ir: IRExpr): string {
       return `dayjs.duration('${ir.value}')`;
 
     case 'object_literal': {
-      const props = ir.properties.map(p => `${p.key}: ${emitJS(p.value)}`).join(', ');
+      const props = ir.properties.map(p => `${p.key}: ${ctx.emit(p.value)}`).join(', ');
       // Wrap in parens to avoid parsing ambiguity with blocks
       return `({${props}})`;
     }
@@ -112,7 +146,7 @@ function emitJS(ir: IRExpr): string {
       return ir.name;
 
     case 'member_access': {
-      const object = emitJS(ir.object);
+      const object = ctx.emit(ir.object);
       const needsParensForMember = ir.object.type === 'call';
       const objectExpr = needsParensForMember ? `(${object})` : object;
       return `${objectExpr}.${ir.property}`;
@@ -120,8 +154,8 @@ function emitJS(ir: IRExpr): string {
 
     case 'let': {
       const params = ir.bindings.map(b => b.name).join(', ');
-      const args = ir.bindings.map(b => emitJS(b.value)).join(', ');
-      const body = emitJS(ir.body);
+      const args = ir.bindings.map(b => ctx.emit(b.value)).join(', ');
+      const body = ctx.emit(ir.body);
       return `((${params}) => ${body})(${args})`;
     }
 
@@ -129,21 +163,21 @@ function emitJS(ir: IRExpr): string {
       return jsLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
 
     case 'if': {
-      const cond = emitJS(ir.condition);
-      const thenBranch = emitJS(ir.then);
-      const elseBranch = emitJS(ir.else);
+      const cond = ctx.emit(ir.condition);
+      const thenBranch = ctx.emit(ir.then);
+      const elseBranch = ctx.emit(ir.else);
       return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
     }
 
     case 'lambda': {
       const params = ir.params.map(p => p.name).join(', ');
-      const body = emitJS(ir.body);
+      const body = ctx.emit(ir.body);
       return `(${params}) => ${body}`;
     }
 
     case 'apply': {
-      const fn = emitJS(ir.fn);
-      const args = ir.args.map(emitJS).join(', ');
+      const fn = ctx.emit(ir.fn);
+      const args = ir.args.map(a => ctx.emit(a)).join(', ');
       return `${fn}(${args})`;
     }
   }

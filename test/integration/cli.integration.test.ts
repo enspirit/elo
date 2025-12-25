@@ -113,7 +113,7 @@ describe('CLI - Prelude inclusion', () => {
     assert.ok(result.includes("require('dayjs')"));
     assert.ok(result.includes('dayjs.extend(duration)'));
     assert.ok(result.includes("dayjs().startOf('day')"));
-    assert.ok(result.includes('const klang'));
+    // Note: klang helpers are now embedded in the expression as needed, not in prelude
   });
 
   it('should include minimal SQL prelude', () => {

@@ -11,7 +11,6 @@ import {
   compileToSQL
 } from '../../src/index';
 import { getPrelude, Target as PreludeTarget } from '../../src/preludes';
-import { createKlangRuntime } from '../../src/runtime';
 
 // Enable dayjs plugins
 dayjs.extend(duration);
@@ -19,9 +18,8 @@ dayjs.extend(isoWeek);
 dayjs.extend(quarterOfYear);
 dayjs.extend(utc);
 
-// Make dayjs and klang runtime available globally for eval
+// Make dayjs available globally for eval (used by compiled IIFE helpers)
 (window as any).dayjs = dayjs;
-(window as any).klang = createKlangRuntime(dayjs);
 
 type TargetLanguage = 'ruby' | 'javascript' | 'sql';
 

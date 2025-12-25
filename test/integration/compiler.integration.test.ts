@@ -73,17 +73,15 @@ function loadTestSuites(): TestSuite[] {
 const testSuites = loadTestSuites();
 
 // Validate fixture file completeness - ensure expected files have the same number of lines as klang files
+// Note: JavaScript is skipped because IIFE-wrapped output can be multi-line for a single expression
 describe('Fixture file completeness', () => {
   for (const suite of testSuites) {
     const klangLineCount = suite.klang.length;
 
+    // Skip JavaScript line count check - IIFE wrapping makes output multi-line
     if (suite.expectedJS) {
-      it(`${suite.name}.expected.js should have same line count as .klang`, () => {
-        assert.strictEqual(
-          suite.expectedJS!.length,
-          klangLineCount,
-          `${suite.name}.expected.js has ${suite.expectedJS!.length} lines but ${suite.name}.klang has ${klangLineCount} lines`
-        );
+      it(`${suite.name}.expected.js should exist`, () => {
+        assert.ok(suite.expectedJS!.length > 0, `${suite.name}.expected.js should not be empty`);
       });
     }
 

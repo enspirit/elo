@@ -34,3 +34,9 @@ Of course, we would only have one such function and klang declaration globally.
 Propose a plan to track what klang functions are needed for the compiled expression,
 with static analysis of the IR. Then use the info to generate the prelude dynamically
 as proposed above.
+
+## Post plan discussion
+
+* Yep. One more thing though: I think we can see those old `klang.{add,sub,mul,...}` functions as special cases in the stdlib. I would
+ register kAdd, kSub, kMul, etc. to the stdlib and reuse the emit mechanism of the Stdlib class helper. This would help us remove
+KLANG_ARITHMETIC_HELPERS completely.

@@ -7,7 +7,7 @@
 
 import { IRExpr } from '../ir';
 import { Types } from '../types';
-import { StdLib, simpleBinaryOp, nullary, fnCall } from '../stdlib';
+import { StdLib, simpleBinaryOp, nullary, fnCall, helperCall } from '../stdlib';
 
 /**
  * Check if a call will be emitted as a native JS binary operator
@@ -223,10 +223,34 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('hour', [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.utc().hour()`);
   jsLib.register('minute', [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.utc().minute()`);
 
-  // Fallback for unknown functions - use klang. namespace for runtime helpers
+  // Runtime helpers for unknown types (dynamic dispatch)
+  // These use kAdd, kSub, etc. helper functions that handle temporal/numeric operations at runtime
+  jsLib.register('add', [Types.any, Types.any], helperCall('kAdd'));
+  jsLib.register('sub', [Types.any, Types.any], helperCall('kSub'));
+  jsLib.register('mul', [Types.any, Types.any], helperCall('kMul'));
+  jsLib.register('div', [Types.any, Types.any], helperCall('kDiv'));
+  jsLib.register('mod', [Types.any, Types.any], helperCall('kMod'));
+  jsLib.register('pow', [Types.any, Types.any], helperCall('kPow'));
+
+  // Unary operators for unknown types
+  jsLib.register('neg', [Types.any], (args, ctx) => {
+    ctx.requireHelper?.('kNeg');
+    return `kNeg(${ctx.emit(args[0])})`;
+  });
+  jsLib.register('pos', [Types.any], (args, ctx) => {
+    ctx.requireHelper?.('kPos');
+    return `kPos(${ctx.emit(args[0])})`;
+  });
+  jsLib.register('not', [Types.any], (args, ctx) => {
+    const operand = ctx.emit(args[0]);
+    if (isNativeBinaryOp(args[0])) return `!(${operand})`;
+    return `!${operand}`;
+  });
+
+  // Fallback for truly unknown functions
   jsLib.registerFallback((name, args, _argTypes, ctx) => {
     const emittedArgs = args.map(a => ctx.emit(a)).join(', ');
-    return `klang.${name}(${emittedArgs})`;
+    return `${name}(${emittedArgs})`;
   });
 
   return jsLib;

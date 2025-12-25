@@ -1,9 +1,11 @@
 /**
  * Prelude content for all target languages.
  * This is the single source of truth for preludes used by both CLI and web.
+ *
+ * Note: JavaScript prelude only contains library requires.
+ * Runtime helpers (kAdd, kSub, etc.) are now embedded directly in the
+ * compiled output as needed, wrapped in an IIFE.
  */
-
-import { KLANG_ARITHMETIC_HELPERS } from '../runtime';
 
 export type Target = 'javascript' | 'ruby' | 'sql';
 
@@ -15,11 +17,7 @@ const utc = require('dayjs/plugin/utc');
 dayjs.extend(duration);
 dayjs.extend(isoWeek);
 dayjs.extend(quarterOfYear);
-dayjs.extend(utc);
-
-const klang = {
-${KLANG_ARITHMETIC_HELPERS}
-};`;
+dayjs.extend(utc);`;
 
 const rubyPrelude = `require 'date'
 require 'active_support/all'`;

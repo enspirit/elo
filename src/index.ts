@@ -7,4 +7,4 @@ export * from './parser';
 export { compileToRuby, RubyCompileOptions } from './compilers/ruby';
 export { compileToJavaScript, JavaScriptCompileOptions } from './compilers/javascript';
 export { compileToSQL, SQLCompileOptions } from './compilers/sql';
-export { createKlangRuntime, KlangRuntime, DayjsLike, KLANG_ARITHMETIC_HELPERS } from './runtime';
+export { createKlangRuntime, KlangRuntime, DayjsLike, JS_HELPERS } from './runtime';

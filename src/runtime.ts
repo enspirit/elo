@@ -4,7 +4,7 @@
  *
  * This module provides:
  * 1. A factory function for creating the runtime (used by web frontend)
- * 2. String snippets for embedding in preludes (used by CLI)
+ * 2. Individual helper snippets for dynamic prelude generation
  */
 
 export interface DayjsLike {
@@ -13,12 +13,14 @@ export interface DayjsLike {
 }
 
 export interface KlangRuntime {
-  add(left: any, right: any): any;
-  sub(left: any, right: any): any;
-  mul(left: any, right: any): any;
-  div(left: any, right: any): any;
-  mod(left: any, right: any): any;
-  pow(left: any, right: any): any;
+  kAdd(left: any, right: any): any;
+  kSub(left: any, right: any): any;
+  kMul(left: any, right: any): any;
+  kDiv(left: any, right: any): any;
+  kMod(left: any, right: any): any;
+  kPow(left: any, right: any): any;
+  kNeg(value: any): any;
+  kPos(value: any): any;
 }
 
 /**
@@ -27,53 +29,54 @@ export interface KlangRuntime {
  */
 export function createKlangRuntime(dayjs: DayjsLike): KlangRuntime {
   return {
-    add(left: any, right: any): any {
+    kAdd(left: any, right: any): any {
       if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.add(right);
       if (dayjs.isDuration(left) && dayjs.isDayjs(right)) return right.add(left);
       return left + right;
     },
-    sub(left: any, right: any): any {
+    kSub(left: any, right: any): any {
       if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.subtract(right);
       return left - right;
     },
-    mul(left: any, right: any): any {
+    kMul(left: any, right: any): any {
       return left * right;
     },
-    div(left: any, right: any): any {
+    kDiv(left: any, right: any): any {
       return left / right;
     },
-    mod(left: any, right: any): any {
+    kMod(left: any, right: any): any {
       return left % right;
     },
-    pow(left: any, right: any): any {
+    kPow(left: any, right: any): any {
       return Math.pow(left, right);
+    },
+    kNeg(value: any): any {
+      return -value;
+    },
+    kPos(value: any): any {
+      return +value;
     }
   };
 }
 
 /**
- * JavaScript source code for the arithmetic helpers.
- * This is embedded in preludes to avoid code duplication.
+ * Individual JavaScript helper function snippets.
+ * Each helper is a standalone function that can be included in the output.
  */
-export const KLANG_ARITHMETIC_HELPERS = `
-  add(left, right) {
-    if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.add(right);
-    if (dayjs.isDuration(left) && dayjs.isDayjs(right)) return right.add(left);
-    return left + right;
-  },
-  sub(left, right) {
-    if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.subtract(right);
-    return left - right;
-  },
-  mul(left, right) {
-    return left * right;
-  },
-  div(left, right) {
-    return left / right;
-  },
-  mod(left, right) {
-    return left % right;
-  },
-  pow(left, right) {
-    return Math.pow(left, right);
-  }`;
+export const JS_HELPERS: Record<string, string> = {
+  kAdd: `function kAdd(l, r) {
+  if (dayjs.isDayjs(l) && dayjs.isDuration(r)) return l.add(r);
+  if (dayjs.isDuration(l) && dayjs.isDayjs(r)) return r.add(l);
+  return l + r;
+}`,
+  kSub: `function kSub(l, r) {
+  if (dayjs.isDayjs(l) && dayjs.isDuration(r)) return l.subtract(r);
+  return l - r;
+}`,
+  kMul: `function kMul(l, r) { return l * r; }`,
+  kDiv: `function kDiv(l, r) { return l / r; }`,
+  kMod: `function kMod(l, r) { return l % r; }`,
+  kPow: `function kPow(l, r) { return Math.pow(l, r); }`,
+  kNeg: `function kNeg(v) { return -v; }`,
+  kPos: `function kPos(v) { return +v; }`,
+};
