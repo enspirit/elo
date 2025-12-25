@@ -8,3 +8,6 @@
 ->(item) { item[:price] + item[:tax] }
 ->(x) { ->(doubled) { doubled + 1 }.call(x * 2) }
 ->(x) { (x > 0) ? (x) : (0 - x) }
+->(double) { double.call(5) }.call(->(x) { x * 2 })
+->(add) { add.call(3, 4) }.call(->(x, y) { x + y })
+->(double) { (raise "Assertion failed" unless double.call(2) == 4; true) }.call(->(x) { x * 2 })

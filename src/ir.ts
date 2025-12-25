@@ -24,6 +24,7 @@ export type IRExpr =
   | IRDurationLiteral
   | IRVariable
   | IRCall
+  | IRApply
   | IRLet
   | IRMemberAccess
   | IRIf
@@ -104,6 +105,20 @@ export interface IRVariable {
 export interface IRCall {
   type: 'call';
   fn: string;
+  args: IRExpr[];
+  argTypes: KlangType[];
+  resultType: KlangType;
+}
+
+/**
+ * Lambda application (calling a lambda stored in a variable)
+ *
+ * Unlike IRCall which dispatches to stdlib functions, IRApply calls
+ * a lambda expression that's been bound to a variable.
+ */
+export interface IRApply {
+  type: 'apply';
+  fn: IRExpr;  // The lambda expression or variable holding a lambda
   args: IRExpr[];
   argTypes: KlangType[];
   resultType: KlangType;
@@ -203,6 +218,10 @@ export function irCall(fn: string, args: IRExpr[], argTypes: KlangType[], result
   return { type: 'call', fn, args, argTypes, resultType };
 }
 
+export function irApply(fn: IRExpr, args: IRExpr[], argTypes: KlangType[], resultType: KlangType = Types.any): IRApply {
+  return { type: 'apply', fn, args, argTypes, resultType };
+}
+
 export function irLet(bindings: IRLetBinding[], body: IRExpr): IRLet {
   return { type: 'let', bindings, body };
 }
@@ -242,6 +261,8 @@ export function inferType(ir: IRExpr): KlangType {
       return ir.inferredType;
     case 'call':
       return ir.resultType;
+    case 'apply':
+      return ir.resultType;
     case 'let':
       return inferType(ir.body);
     case 'member_access':
@@ -249,6 +270,6 @@ export function inferType(ir: IRExpr): KlangType {
     case 'if':
       return inferType(ir.then);
     case 'lambda':
-      return Types.any;  // Lambda is a function type, represented as any for now
+      return Types.fn;  // Lambda is a function type
   }
 }

@@ -825,4 +825,30 @@ describe('Parser - Lambda Expressions', () => {
   it('should throw on lambda without opening paren', () => {
     assert.throws(() => parse('fn x | x )'), /Expected LPAREN/);
   });
+
+  it('should parse lambda invocation in let', () => {
+    const ast = parse('let f = fn( x | x * 2 ) in f(5)');
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.bindings[0].name, 'f');
+      assert.strictEqual(ast.bindings[0].value.type, 'lambda');
+      assert.strictEqual(ast.body.type, 'function_call');
+      if (ast.body.type === 'function_call') {
+        assert.strictEqual(ast.body.name, 'f');
+        assert.strictEqual(ast.body.args.length, 1);
+      }
+    }
+  });
+
+  it('should parse lambda invocation with multiple args', () => {
+    const ast = parse('let add = fn( x, y | x + y ) in add(3, 4)');
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.body.type, 'function_call');
+      if (ast.body.type === 'function_call') {
+        assert.strictEqual(ast.body.name, 'add');
+        assert.strictEqual(ast.body.args.length, 2);
+      }
+    }
+  });
 });

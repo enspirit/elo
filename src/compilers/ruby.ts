@@ -139,5 +139,11 @@ function emitRuby(ir: IRExpr): string {
       const body = emitRuby(ir.body);
       return `->(${params}) { ${body} }`;
     }
+
+    case 'apply': {
+      const fn = emitRuby(ir.fn);
+      const args = ir.args.map(emitRuby).join(', ');
+      return `${fn}.call(${args})`;
+    }
   }
 }

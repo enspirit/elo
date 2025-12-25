@@ -462,6 +462,21 @@ result;</pre>
           <p class="example-desc">Use local variables inside the lambda body for complex expressions.</p>
         </div>
 
+        <h3>Invoking Lambdas</h3>
+        <p>Bind a lambda to a name with <code>let</code>, then call it like a function.</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Call a Lambda</div>
+          <pre class="example-code">let double = fn( x | x * 2 ) in double(5)</pre>
+          <p class="example-desc">Bind a lambda to <code>double</code>, then call it with an argument. Returns 10.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Lambda with Assert</div>
+          <pre class="example-code">let add = fn( x, y | x + y ) in assert(add(3, 4) == 7)</pre>
+          <p class="example-desc">Test your lambdas with assertions.</p>
+        </div>
+
         <p class="note"><strong>Note:</strong> Lambdas compile to JavaScript and Ruby only. SQL does not support lambda expressions.</p>
       </section>
 

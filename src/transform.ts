@@ -21,6 +21,7 @@ import {
   irDuration,
   irVariable,
   irCall,
+  irApply,
   irLet,
   irMemberAccess,
   irIf,
@@ -198,10 +199,23 @@ function transformTemporalKeyword(keyword: string): IRExpr {
 
 /**
  * Transform a function call
+ *
+ * If the function name is a variable in the environment (i.e., a lambda),
+ * we emit an 'apply' node. Otherwise, we emit a 'call' to the stdlib.
  */
 function transformFunctionCall(name: string, args: Expr[], env: TypeEnv): IRExpr {
   const argsIR = args.map((arg) => transform(arg, env));
   const argTypes = argsIR.map(inferType);
+
+  // Check if the name is a variable holding a lambda
+  const varType = env.get(name);
+  if (varType && varType.kind === 'fn') {
+    // Lambda application: emit irApply
+    const fnVar = irVariable(name, varType);
+    return irApply(fnVar, argsIR, argTypes, Types.any);
+  }
+
+  // stdlib function call
   const resultType = klangTypeDefs.lookup(name, argTypes);
   return irCall(name, argsIR, argTypes, resultType);
 }

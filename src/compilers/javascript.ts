@@ -134,5 +134,11 @@ function emitJS(ir: IRExpr): string {
       const body = emitJS(ir.body);
       return `(${params}) => ${body}`;
     }
+
+    case 'apply': {
+      const fn = emitJS(ir.fn);
+      const args = ir.args.map(emitJS).join(', ');
+      return `${fn}(${args})`;
+    }
   }
 }

@@ -8,3 +8,6 @@
 (item) => klang.add(item.price, item.tax)
 (x) => ((doubled) => klang.add(doubled, 1))(klang.mul(x, 2))
 (x) => (x > 0) ? (x) : (klang.sub(0, x))
+((double) => double(5))((x) => klang.mul(x, 2))
+((add) => add(3, 4))((x, y) => klang.add(x, y))
+((double) => (function() { if (!(double(2) == 4)) throw new Error("Assertion failed"); return true; })())((x) => klang.mul(x, 2))

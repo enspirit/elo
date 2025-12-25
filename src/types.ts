@@ -8,7 +8,7 @@
 /**
  * Primitive type kinds in Klang
  */
-export type TypeKind = 'int' | 'float' | 'bool' | 'string' | 'date' | 'datetime' | 'duration' | 'any';
+export type TypeKind = 'int' | 'float' | 'bool' | 'string' | 'date' | 'datetime' | 'duration' | 'fn' | 'any';
 
 /**
  * A Klang type
@@ -28,6 +28,7 @@ export const Types = {
   date: { kind: 'date' } as KlangType,
   datetime: { kind: 'datetime' } as KlangType,
   duration: { kind: 'duration' } as KlangType,
+  fn: { kind: 'fn' } as KlangType,
   any: { kind: 'any' } as KlangType,
 } as const;
 
