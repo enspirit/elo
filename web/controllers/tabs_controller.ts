@@ -1,14 +1,12 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class TabsController extends Controller {
-  static targets = ['tab', 'panel', 'nav', 'docToc'];
+  static targets = ['tab', 'panel', 'nav'];
 
   declare tabTargets: HTMLAnchorElement[];
   declare panelTargets: HTMLElement[];
   declare navTarget: HTMLElement;
   declare hasNavTarget: boolean;
-  declare docTocTarget: HTMLElement;
-  declare hasDocTocTarget: boolean;
 
   connect() {
     // Handle initial hash on page load
@@ -85,19 +83,6 @@ export default class TabsController extends Controller {
   closeMobileMenu() {
     if (this.hasNavTarget) {
       this.navTarget.classList.remove('mobile-open');
-    }
-  }
-
-  // Mobile TOC for doc panel
-  openMobileToc() {
-    if (this.hasDocTocTarget) {
-      this.docTocTarget.classList.add('mobile-open');
-    }
-  }
-
-  closeMobileToc() {
-    if (this.hasDocTocTarget) {
-      this.docTocTarget.classList.remove('mobile-open');
     }
   }
 }

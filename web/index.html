@@ -15,8 +15,28 @@
     <nav data-tabs-target="nav">
       <a href="#home" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="home" class="active">Home</a>
       <a href="#try" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try">Try</a>
-      <a href="#doc" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="doc">Reference</a>
-      <a href="#stdlib" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="stdlib">Stdlib</a>
+      <div class="nav-group">
+        <a href="#doc" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="doc">Reference</a>
+        <div class="nav-submenu">
+          <a href="#doc/getting-started" data-action="click->tabs#switch" data-tab="doc">Getting Started</a>
+          <a href="#doc/literals" data-action="click->tabs#switch" data-tab="doc">Literals</a>
+          <a href="#doc/operators" data-action="click->tabs#switch" data-tab="doc">Operators</a>
+          <a href="#doc/variables" data-action="click->tabs#switch" data-tab="doc">Variables</a>
+          <a href="#doc/conditionals" data-action="click->tabs#switch" data-tab="doc">Conditionals</a>
+          <a href="#doc/lambdas" data-action="click->tabs#switch" data-tab="doc">Lambdas</a>
+          <a href="#doc/ranges" data-action="click->tabs#switch" data-tab="doc">Ranges</a>
+          <a href="#doc/assertions" data-action="click->tabs#switch" data-tab="doc">Assertions</a>
+          <a href="#doc/examples" data-action="click->tabs#switch" data-tab="doc">Examples</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <a href="#stdlib" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="stdlib">Stdlib</a>
+        <div class="nav-submenu">
+          <a href="#stdlib/stdlib-numeric" data-action="click->tabs#switch" data-tab="stdlib">Numeric</a>
+          <a href="#stdlib/stdlib-temporal" data-action="click->tabs#switch" data-tab="stdlib">Temporal</a>
+          <a href="#stdlib/stdlib-string" data-action="click->tabs#switch" data-tab="stdlib">String</a>
+        </div>
+      </div>
     </nav>
   </header>
 
@@ -218,27 +238,6 @@ result;</pre>
 
   <!-- Doc Panel -->
   <main data-tabs-target="panel" data-panel="doc" class="doc-panel hidden" data-controller="doc">
-    <nav class="doc-toc" data-tabs-target="docToc">
-      <div class="toc-header">
-        <div class="toc-title">Language Reference</div>
-        <button class="toc-close" data-action="click->tabs#closeMobileToc" aria-label="Close menu">&times;</button>
-      </div>
-      <ul>
-        <li><a href="#doc/getting-started" data-action="click->tabs#closeMobileToc">Getting Started</a></li>
-        <li><a href="#doc/literals" data-action="click->tabs#closeMobileToc">Literals</a></li>
-        <li><a href="#doc/operators" data-action="click->tabs#closeMobileToc">Operators</a></li>
-        <li><a href="#doc/variables" data-action="click->tabs#closeMobileToc">Local Variables</a></li>
-        <li><a href="#doc/conditionals" data-action="click->tabs#closeMobileToc">Conditionals</a></li>
-        <li><a href="#doc/lambdas" data-action="click->tabs#closeMobileToc">Lambda Expressions</a></li>
-        <li><a href="#doc/ranges" data-action="click->tabs#closeMobileToc">Range Membership</a></li>
-        <li><a href="#doc/assertions" data-action="click->tabs#closeMobileToc">Assertions</a></li>
-        <li><a href="#doc/examples" data-action="click->tabs#closeMobileToc">Real-World Examples</a></li>
-      </ul>
-    </nav>
-    <button class="mobile-toc-toggle" data-action="click->tabs#openMobileToc" aria-label="Open table of contents">
-      <span class="toc-icon">&#9776;</span>
-      <span>Contents</span>
-    </button>
     <article class="doc-content">
       <h1>The K Language</h1>
       <p class="intro">

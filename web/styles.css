@@ -79,6 +79,37 @@ nav a.active {
   background: rgba(99, 102, 241, 0.1);
 }
 
+/* Nav groups for two-level menu */
+.nav-group {
+  display: flex;
+  align-items: center;
+}
+
+.nav-group > a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.nav-group > a:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-group > a.active {
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* Hide submenu on desktop */
+.nav-submenu {
+  display: none;
+}
+
 /* Main layout */
 main {
   flex: 1;
@@ -254,64 +285,15 @@ select:focus {
 
 /* Documentation Panel */
 .doc-panel {
-  display: flex;
+  display: block;
   overflow-y: auto;
   background: var(--bg-primary);
 }
 
-/* Table of Contents */
-.doc-toc {
-  display: flex;
-  flex-direction: column;
-  width: 220px;
-  min-width: 220px;
-  padding: 2rem 1.5rem;
-  position: sticky;
-  top: 0;
-  height: fit-content;
-  max-height: 100vh;
-  overflow-y: auto;
-  border-right: 1px solid var(--border);
-}
-
-.toc-title {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  margin-bottom: 1rem;
-  padding-left: 0.5rem;
-}
-
-.doc-toc ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.doc-toc li {
-  margin-bottom: 0.125rem;
-}
-
-.doc-toc a {
-  display: block;
-  padding: 0.375rem 0.5rem;
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  transition: all 0.15s ease;
-}
-
-.doc-toc a:hover {
-  color: var(--accent);
-  border-left-color: var(--accent);
-}
-
 .doc-content {
-  flex: 1;
-  padding: 2rem 3rem 2rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 
 .doc-content h1 {
@@ -761,58 +743,6 @@ select:focus {
   text-decoration: underline;
 }
 
-/* Additional TOC title styling */
-.doc-toc .toc-title:not(:first-child) {
-  margin-top: 1.5rem;
-}
-
-/* TOC Search */
-.toc-search {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-  position: relative;
-}
-
-.toc-search input {
-  width: 100%;
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-primary);
-  font-size: 0.8125rem;
-  font-family: var(--font-sans);
-}
-
-.toc-search input::placeholder {
-  color: var(--text-secondary);
-}
-
-.toc-search input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-.toc-search-clear {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0.25rem;
-  display: none;
-}
-
-.toc-search-clear:hover {
-  color: var(--text-primary);
-}
-
 /* Standard Library Section */
 .stdlib-section {
   margin-bottom: 3rem;
@@ -1067,61 +997,6 @@ select:focus {
   top: 7px;
 }
 
-/* Mobile TOC toggle button */
-.mobile-toc-toggle {
-  display: none;
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 50px;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 100;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.mobile-toc-toggle:hover {
-  background: var(--accent-hover);
-}
-
-.toc-icon {
-  font-size: 1rem;
-}
-
-/* TOC header with close button */
-.toc-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.toc-header .toc-title {
-  margin-bottom: 0;
-}
-
-.toc-close {
-  display: none;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0.25rem;
-  line-height: 1;
-}
-
-.toc-close:hover {
-  color: var(--text-primary);
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   /* Mobile menu toggle visible */
@@ -1147,9 +1022,34 @@ select:focus {
     display: flex;
   }
 
-  header nav a {
-    padding: 0.75rem 1.5rem;
+  header nav > a,
+  header nav .nav-group > a {
+    padding: 0.75rem 1rem;
     border-radius: 0;
+  }
+
+  /* Two-level nav on mobile */
+  header nav .nav-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  header nav .nav-submenu {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-primary);
+  }
+
+  header nav .nav-submenu a {
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border-radius: 0;
+  }
+
+  header nav .nav-submenu a:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
   }
 
   header {
@@ -1160,40 +1060,6 @@ select:focus {
   main:not(.doc-panel):not(.home-panel):not(.stdlib-panel) {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;
-  }
-
-  .doc-panel {
-    display: block;
-    position: relative;
-  }
-
-  /* Mobile TOC button visible */
-  .mobile-toc-toggle {
-    display: flex;
-  }
-
-  /* TOC hidden by default, slides in when opened */
-  .doc-toc {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    max-width: 100%;
-    background: var(--bg-secondary);
-    z-index: 200;
-    padding: 1.5rem;
-    overflow-y: auto;
-  }
-
-  .doc-toc.mobile-open {
-    display: flex;
-  }
-
-  .toc-close {
-    display: block;
   }
 
   .doc-content {
