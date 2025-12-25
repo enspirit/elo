@@ -5,6 +5,8 @@
 A simple, well-designed, portable and safe data expression language that
 compiles/translates to Ruby, Javascript and PostgreSQL.
 
+**[Try K online](https://enspirit.github.io/k/)** - Interactive playground and documentation
+
 ## Why ?
 
 No-Code tools like Klaro Cards generally require an expression language for user
