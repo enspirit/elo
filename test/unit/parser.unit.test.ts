@@ -667,3 +667,78 @@ describe('Parser - Range Membership', () => {
     assert.throws(() => parse('5 in ..10'), /Unexpected token/);
   });
 });
+
+describe('Parser - Comments', () => {
+  it('should ignore single-line comment at end of line', () => {
+    const ast = parse('42 # this is a comment');
+    assert.deepStrictEqual(ast, {
+      type: 'literal',
+      value: 42
+    });
+  });
+
+  it('should ignore comment-only lines before expression', () => {
+    const ast = parse('# comment\n42');
+    assert.deepStrictEqual(ast, {
+      type: 'literal',
+      value: 42
+    });
+  });
+
+  it('should ignore multiple comment lines', () => {
+    const ast = parse('# first comment\n# second comment\n42');
+    assert.deepStrictEqual(ast, {
+      type: 'literal',
+      value: 42
+    });
+  });
+
+  it('should handle comment between tokens', () => {
+    const ast = parse('1 + # comment\n2');
+    assert.strictEqual(ast.type, 'binary');
+    if (ast.type === 'binary') {
+      assert.strictEqual(ast.operator, '+');
+    }
+  });
+
+  it('should handle comment after expression', () => {
+    const ast = parse('1 + 2 # result is 3');
+    assert.strictEqual(ast.type, 'binary');
+    if (ast.type === 'binary') {
+      assert.strictEqual(ast.operator, '+');
+    }
+  });
+
+  it('should handle empty comment', () => {
+    const ast = parse('#\n42');
+    assert.deepStrictEqual(ast, {
+      type: 'literal',
+      value: 42
+    });
+  });
+
+  it('should handle comment with special characters', () => {
+    const ast = parse('42 # !@#$%^&*()');
+    assert.deepStrictEqual(ast, {
+      type: 'literal',
+      value: 42
+    });
+  });
+
+  it('should not treat # inside string as comment', () => {
+    const ast = parse("'hello # world'");
+    assert.deepStrictEqual(ast, {
+      type: 'string',
+      value: 'hello # world'
+    });
+  });
+
+  it('should handle multiline expression with comments', () => {
+    const input = `
+      # Arithmetic test
+      1 + 2 # addition
+    `;
+    const ast = parse(input);
+    assert.strictEqual(ast.type, 'binary');
+  });
+});

@@ -76,7 +76,28 @@ class Lexer {
   }
 
   private skipWhitespace(): void {
-    while (this.current && /\s/.test(this.current)) {
+    while (this.current) {
+      // Skip whitespace
+      if (/\s/.test(this.current)) {
+        this.advance();
+        continue;
+      }
+      // Skip comments (# to end of line)
+      if (this.current === '#') {
+        this.skipComment();
+        continue;
+      }
+      break;
+    }
+  }
+
+  private skipComment(): void {
+    // Skip everything until end of line or end of input
+    while (this.current && this.current !== '\n') {
+      this.advance();
+    }
+    // Skip the newline itself if present
+    if (this.current === '\n') {
       this.advance();
     }
   }
