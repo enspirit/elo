@@ -2,7 +2,7 @@
  * AST node types for Klang expressions
  */
 
-export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr;
+export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr;
 
 /**
  * Literal value (number or boolean)
@@ -126,6 +126,16 @@ export interface LetExpr {
 }
 
 /**
+ * If expression: if condition then consequent else alternative
+ */
+export interface IfExpr {
+  type: 'if';
+  condition: Expr;
+  then: Expr;
+  else: Expr;
+}
+
+/**
  * Helper functions to create AST nodes
  */
 export function literal(value: number | boolean): Literal {
@@ -191,4 +201,11 @@ export function letExpr(bindings: LetBinding[], body: Expr): LetExpr {
   const [first, ...rest] = bindings;
   const nestedBody = letExpr(rest, body);
   return { type: 'let', bindings: [first], body: nestedBody };
+}
+
+/**
+ * Creates an if expression: if condition then consequent else alternative
+ */
+export function ifExpr(condition: Expr, thenBranch: Expr, elseBranch: Expr): IfExpr {
+  return { type: 'if', condition, then: thenBranch, else: elseBranch };
 }

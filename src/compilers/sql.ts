@@ -120,5 +120,12 @@ function emitSQL(ir: IRExpr): string {
 
     case 'call':
       return sqlLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
+
+    case 'if': {
+      const cond = emitSQL(ir.condition);
+      const thenBranch = emitSQL(ir.then);
+      const elseBranch = emitSQL(ir.else);
+      return `CASE WHEN ${cond} THEN ${thenBranch} ELSE ${elseBranch} END`;
+    }
   }
 }

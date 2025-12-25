@@ -1,4 +1,4 @@
-import { Expr, literal, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, LetBinding } from './ast';
+import { Expr, literal, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, LetBinding } from './ast';
 
 /**
  * Token types
@@ -34,6 +34,9 @@ type TokenType =
   | 'NOT'
   | 'LET'
   | 'IN'
+  | 'IF'
+  | 'THEN'
+  | 'ELSE'
   | 'ASSIGN'
   | 'EOF';
 
@@ -292,6 +295,15 @@ class Lexer {
       if (id === 'in') {
         return { type: 'IN', value: id, position: pos };
       }
+      if (id === 'if') {
+        return { type: 'IF', value: id, position: pos };
+      }
+      if (id === 'then') {
+        return { type: 'THEN', value: id, position: pos };
+      }
+      if (id === 'else') {
+        return { type: 'ELSE', value: id, position: pos };
+      }
       if (id === 'and') {
         return { type: 'AND', value: id, position: pos };
       }
@@ -517,6 +529,11 @@ export class Parser {
     // Handle let expressions (can appear anywhere an expression is expected)
     if (token.type === 'LET') {
       return this.letExpr();
+    }
+
+    // Handle if expressions (can appear anywhere an expression is expected)
+    if (token.type === 'IF') {
+      return this.ifExprParse();
     }
 
     throw new Error(`Unexpected token ${token.type} at position ${token.position}`);
@@ -806,10 +823,23 @@ export class Parser {
     return letExpr(bindings, body);
   }
 
+  private ifExprParse(): Expr {
+    this.eat('IF');
+    const condition = this.expr();
+    this.eat('THEN');
+    const thenBranch = this.expr();
+    this.eat('ELSE');
+    const elseBranch = this.expr();
+    return ifExpr(condition, thenBranch, elseBranch);
+  }
+
   private expr(): Expr {
-    // Let expressions have lowest precedence
+    // Let and if expressions have lowest precedence
     if (this.currentToken.type === 'LET') {
       return this.letExpr();
+    }
+    if (this.currentToken.type === 'IF') {
+      return this.ifExprParse();
     }
     return this.logical_or();
   }

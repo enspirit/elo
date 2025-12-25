@@ -221,6 +221,7 @@ result;</pre>
         <li><a href="#literals">Literals</a></li>
         <li><a href="#operators">Operators</a></li>
         <li><a href="#variables">Local Variables</a></li>
+        <li><a href="#conditionals">Conditionals</a></li>
         <li><a href="#ranges">Range Membership</a></li>
         <li><a href="#assertions">Assertions</a></li>
         <li><a href="#examples">Real-World Examples</a></li>
@@ -394,6 +395,35 @@ result;</pre>
           <div class="example-header">Nested Let</div>
           <pre class="example-code">let a = 2 in let b = a * 3 in b + 1</pre>
           <p class="example-desc">Variables can reference earlier bindings.</p>
+        </div>
+      </section>
+
+      <section class="doc-section" id="conditionals">
+        <h2>Conditionals</h2>
+        <p>Use <code>if ... then ... else</code> expressions to branch based on conditions.</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Simple Conditional</div>
+          <pre class="example-code">if 5 > 3 then 'yes' else 'no'</pre>
+          <p class="example-desc">Returns 'yes' if the condition is true, 'no' otherwise.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Chained Conditionals</div>
+          <pre class="example-code">if x > 0 then 'positive' else if x < 0 then 'negative' else 'zero'</pre>
+          <p class="example-desc">Chain multiple conditions for if-else-if logic.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Conditional with Arithmetic</div>
+          <pre class="example-code">if 10 > 5 then 100 + 1 else 200 - 1</pre>
+          <p class="example-desc">Branches can contain any expression.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Conditional with Let</div>
+          <pre class="example-code">let x = 10 in if x > 5 then 'big' else 'small'</pre>
+          <p class="example-desc">Combine conditionals with local variables.</p>
         </div>
       </section>
 

@@ -23,6 +23,7 @@ import {
   irCall,
   irLet,
   irMemberAccess,
+  irIf,
   inferType,
 } from './ir';
 import { KlangType, Types } from './types';
@@ -73,6 +74,13 @@ export function transform(expr: Expr, env: TypeEnv = new Map()): IRExpr {
 
     case 'let':
       return transformLet(expr.bindings, expr.body, env);
+
+    case 'if':
+      return irIf(
+        transform(expr.condition, env),
+        transform(expr.then, env),
+        transform(expr.else, env)
+      );
   }
 }
 

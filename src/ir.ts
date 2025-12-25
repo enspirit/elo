@@ -25,7 +25,8 @@ export type IRExpr =
   | IRVariable
   | IRCall
   | IRLet
-  | IRMemberAccess;
+  | IRMemberAccess
+  | IRIf;
 
 /**
  * Integer literal
@@ -134,6 +135,16 @@ export interface IRMemberAccess {
 }
 
 /**
+ * If expression: if condition then consequent else alternative
+ */
+export interface IRIf {
+  type: 'if';
+  condition: IRExpr;
+  then: IRExpr;
+  else: IRExpr;
+}
+
+/**
  * Factory functions for creating IR nodes
  */
 
@@ -181,6 +192,10 @@ export function irMemberAccess(object: IRExpr, property: string): IRMemberAccess
   return { type: 'member_access', object, property };
 }
 
+export function irIf(condition: IRExpr, thenBranch: IRExpr, elseBranch: IRExpr): IRIf {
+  return { type: 'if', condition, then: thenBranch, else: elseBranch };
+}
+
 /**
  * Infer the type of an IR expression
  */
@@ -208,5 +223,7 @@ export function inferType(ir: IRExpr): KlangType {
       return inferType(ir.body);
     case 'member_access':
       return Types.any;
+    case 'if':
+      return inferType(ir.then);
   }
 }

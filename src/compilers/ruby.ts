@@ -126,5 +126,12 @@ function emitRuby(ir: IRExpr): string {
 
     case 'call':
       return rubyLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
+
+    case 'if': {
+      const cond = emitRuby(ir.condition);
+      const thenBranch = emitRuby(ir.then);
+      const elseBranch = emitRuby(ir.else);
+      return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
+    }
   }
 }

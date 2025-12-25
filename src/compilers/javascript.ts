@@ -121,5 +121,12 @@ function emitJS(ir: IRExpr): string {
 
     case 'call':
       return jsLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
+
+    case 'if': {
+      const cond = emitJS(ir.condition);
+      const thenBranch = emitJS(ir.then);
+      const elseBranch = emitJS(ir.else);
+      return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
+    }
   }
 }
