@@ -1,0 +1,10 @@
+->(x) { x }
+->(x) { x * 2 }
+->(x, y) { x + y }
+->(a, b, c) { a + b + c }
+->(x) { x * x + 1 }
+->(price) { price * 1.21 }
+->(_) { _[:budget] * 1.21 }
+->(item) { item[:price] + item[:tax] }
+->(x) { ->(doubled) { doubled + 1 }.call(x * 2) }
+->(x) { (x > 0) ? (x) : (0 - x) }

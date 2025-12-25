@@ -222,6 +222,7 @@ result;</pre>
         <li><a href="#operators">Operators</a></li>
         <li><a href="#variables">Local Variables</a></li>
         <li><a href="#conditionals">Conditionals</a></li>
+        <li><a href="#lambdas">Lambda Expressions</a></li>
         <li><a href="#ranges">Range Membership</a></li>
         <li><a href="#assertions">Assertions</a></li>
         <li><a href="#examples">Real-World Examples</a></li>
@@ -425,6 +426,43 @@ result;</pre>
           <pre class="example-code">let x = 10 in if x > 5 then 'big' else 'small'</pre>
           <p class="example-desc">Combine conditionals with local variables.</p>
         </div>
+      </section>
+
+      <section class="doc-section" id="lambdas">
+        <h2>Lambda Expressions</h2>
+        <p>Use <code>fn( params | body )</code> to create anonymous functions (lambdas).</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Simple Lambda</div>
+          <pre class="example-code">fn( x | x * 2 )</pre>
+          <p class="example-desc">A function that doubles its input. Compiles to arrow functions in JS, procs in Ruby.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Multiple Parameters</div>
+          <pre class="example-code">fn( x, y | x + y )</pre>
+          <p class="example-desc">Lambdas can take multiple parameters, separated by commas.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">With Member Access</div>
+          <pre class="example-code">fn( _ | _.price * 1.21 )</pre>
+          <p class="example-desc">Common pattern: use <code>_</code> as a placeholder to access object properties.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Lambda with Conditional</div>
+          <pre class="example-code">fn( x | if x > 0 then x else 0 - x )</pre>
+          <p class="example-desc">The body can contain any expression, including conditionals.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Lambda with Let</div>
+          <pre class="example-code">fn( x | let doubled = x * 2 in doubled + 1 )</pre>
+          <p class="example-desc">Use local variables inside the lambda body for complex expressions.</p>
+        </div>
+
+        <p class="note"><strong>Note:</strong> Lambdas compile to JavaScript and Ruby only. SQL does not support lambda expressions.</p>
       </section>
 
       <section class="doc-section" id="assertions">

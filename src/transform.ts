@@ -24,6 +24,7 @@ import {
   irLet,
   irMemberAccess,
   irIf,
+  irLambda,
   inferType,
 } from './ir';
 import { KlangType, Types } from './types';
@@ -81,6 +82,9 @@ export function transform(expr: Expr, env: TypeEnv = new Map()): IRExpr {
         transform(expr.then, env),
         transform(expr.else, env)
       );
+
+    case 'lambda':
+      return transformLambda(expr.params, expr.body, env);
   }
 }
 
@@ -221,6 +225,22 @@ function transformLet(
 
   const bodyIR = transform(body, newEnv);
   return irLet(irBindings, bodyIR);
+}
+
+/**
+ * Transform a lambda expression
+ */
+function transformLambda(params: string[], body: Expr, env: TypeEnv): IRExpr {
+  // Build a new environment with params as 'any' type
+  const newEnv = new Map(env);
+  const irParams = params.map((name) => {
+    newEnv.set(name, Types.any);
+    return { name, inferredType: Types.any };
+  });
+
+  const bodyIR = transform(body, newEnv);
+  const resultType = inferType(bodyIR);
+  return irLambda(irParams, bodyIR, resultType);
 }
 
 /**

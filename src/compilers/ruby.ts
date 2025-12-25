@@ -133,5 +133,11 @@ function emitRuby(ir: IRExpr): string {
       const elseBranch = emitRuby(ir.else);
       return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
     }
+
+    case 'lambda': {
+      const params = ir.params.map(p => p.name).join(', ');
+      const body = emitRuby(ir.body);
+      return `->(${params}) { ${body} }`;
+    }
   }
 }

@@ -742,3 +742,87 @@ describe('Parser - Comments', () => {
     assert.strictEqual(ast.type, 'binary');
   });
 });
+
+describe('Parser - Lambda Expressions', () => {
+  it('should parse simple lambda with one parameter', () => {
+    const ast = parse('fn( x | x )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['x']);
+      assert.deepStrictEqual(ast.body, { type: 'variable', name: 'x' });
+    }
+  });
+
+  it('should parse lambda with expression body', () => {
+    const ast = parse('fn( x | x * 2 )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['x']);
+      assert.strictEqual(ast.body.type, 'binary');
+    }
+  });
+
+  it('should parse lambda with multiple parameters', () => {
+    const ast = parse('fn( x, y | x + y )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['x', 'y']);
+      assert.strictEqual(ast.body.type, 'binary');
+    }
+  });
+
+  it('should parse lambda with three parameters', () => {
+    const ast = parse('fn( a, b, c | a + b + c )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['a', 'b', 'c']);
+    }
+  });
+
+  it('should parse lambda with member access in body', () => {
+    const ast = parse('fn( _ | _.budget )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['_']);
+      assert.strictEqual(ast.body.type, 'member_access');
+    }
+  });
+
+  it('should parse lambda with let expression in body', () => {
+    const ast = parse('fn( x | let y = x * 2 in y + 1 )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['x']);
+      assert.strictEqual(ast.body.type, 'let');
+    }
+  });
+
+  it('should parse lambda with if expression in body', () => {
+    const ast = parse('fn( x | if x > 0 then x else 0 )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['x']);
+      assert.strictEqual(ast.body.type, 'if');
+    }
+  });
+
+  it('should parse lambda with underscore parameter name', () => {
+    const ast = parse('fn( _ | _.price * 1.21 )');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.deepStrictEqual(ast.params, ['_']);
+    }
+  });
+
+  it('should throw on lambda without pipe', () => {
+    assert.throws(() => parse('fn( x x )'), /Expected PIPE/);
+  });
+
+  it('should throw on lambda without closing paren', () => {
+    assert.throws(() => parse('fn( x | x'), /Expected RPAREN/);
+  });
+
+  it('should throw on lambda without opening paren', () => {
+    assert.throws(() => parse('fn x | x )'), /Expected LPAREN/);
+  });
+});

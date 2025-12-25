@@ -13,8 +13,8 @@ SKIPPED=0
 # Get prelude using kc --prelude-only
 PRELUDE=$($KC --prelude-only -t ruby)
 
-# Files that require variables - skip for local testing
-SKIP_FILES=("member-access" "variables")
+# Files that require variables or produce non-executable code (e.g., lambdas)
+SKIP_FILES=("member-access" "variables" "lambda")
 
 should_skip() {
     local file=$1

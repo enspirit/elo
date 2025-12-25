@@ -26,7 +26,8 @@ export type IRExpr =
   | IRCall
   | IRLet
   | IRMemberAccess
-  | IRIf;
+  | IRIf
+  | IRLambda;
 
 /**
  * Integer literal
@@ -145,6 +146,24 @@ export interface IRIf {
 }
 
 /**
+ * Lambda parameter with inferred type
+ */
+export interface IRLambdaParam {
+  name: string;
+  inferredType: KlangType;
+}
+
+/**
+ * Lambda expression: fn( params | body )
+ */
+export interface IRLambda {
+  type: 'lambda';
+  params: IRLambdaParam[];
+  body: IRExpr;
+  resultType: KlangType;  // Type of the body
+}
+
+/**
  * Factory functions for creating IR nodes
  */
 
@@ -196,6 +215,10 @@ export function irIf(condition: IRExpr, thenBranch: IRExpr, elseBranch: IRExpr):
   return { type: 'if', condition, then: thenBranch, else: elseBranch };
 }
 
+export function irLambda(params: IRLambdaParam[], body: IRExpr, resultType: KlangType): IRLambda {
+  return { type: 'lambda', params, body, resultType };
+}
+
 /**
  * Infer the type of an IR expression
  */
@@ -225,5 +248,7 @@ export function inferType(ir: IRExpr): KlangType {
       return Types.any;
     case 'if':
       return inferType(ir.then);
+    case 'lambda':
+      return Types.any;  // Lambda is a function type, represented as any for now
   }
 }

@@ -127,5 +127,8 @@ function emitSQL(ir: IRExpr): string {
       const elseBranch = emitSQL(ir.else);
       return `CASE WHEN ${cond} THEN ${thenBranch} ELSE ${elseBranch} END`;
     }
+
+    case 'lambda':
+      throw new Error('Lambda expressions are not supported in SQL target');
   }
 }

@@ -128,5 +128,11 @@ function emitJS(ir: IRExpr): string {
       const elseBranch = emitJS(ir.else);
       return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
     }
+
+    case 'lambda': {
+      const params = ir.params.map(p => p.name).join(', ');
+      const body = emitJS(ir.body);
+      return `(${params}) => ${body}`;
+    }
   }
 }

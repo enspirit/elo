@@ -2,7 +2,7 @@
  * AST node types for Klang expressions
  */
 
-export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr;
+export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr | Lambda;
 
 /**
  * Literal value (number or boolean)
@@ -136,6 +136,15 @@ export interface IfExpr {
 }
 
 /**
+ * Lambda expression: fn( params | body )
+ */
+export interface Lambda {
+  type: 'lambda';
+  params: string[];
+  body: Expr;
+}
+
+/**
  * Helper functions to create AST nodes
  */
 export function literal(value: number | boolean): Literal {
@@ -208,4 +217,11 @@ export function letExpr(bindings: LetBinding[], body: Expr): LetExpr {
  */
 export function ifExpr(condition: Expr, thenBranch: Expr, elseBranch: Expr): IfExpr {
   return { type: 'if', condition, then: thenBranch, else: elseBranch };
+}
+
+/**
+ * Creates a lambda expression: fn( params | body )
+ */
+export function lambda(params: string[], body: Expr): Lambda {
+  return { type: 'lambda', params, body };
 }

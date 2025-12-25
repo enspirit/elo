@@ -1,0 +1,10 @@
+(x) => x
+(x) => klang.mul(x, 2)
+(x, y) => klang.add(x, y)
+(a, b, c) => klang.add(klang.add(a, b), c)
+(x) => klang.add(klang.mul(x, x), 1)
+(price) => klang.mul(price, 1.21)
+(_) => klang.mul(_.budget, 1.21)
+(item) => klang.add(item.price, item.tax)
+(x) => ((doubled) => klang.add(doubled, 1))(klang.mul(x, 2))
+(x) => (x > 0) ? (x) : (klang.sub(0, x))

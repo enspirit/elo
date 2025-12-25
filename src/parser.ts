@@ -1,4 +1,4 @@
-import { Expr, literal, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, LetBinding } from './ast';
+import { Expr, literal, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding } from './ast';
 
 /**
  * Token types
@@ -21,6 +21,7 @@ type TokenType =
   | 'RPAREN'
   | 'COMMA'
   | 'DOT'
+  | 'PIPE'
   | 'RANGE_INCL'
   | 'RANGE_EXCL'
   | 'LT'
@@ -37,6 +38,7 @@ type TokenType =
   | 'IF'
   | 'THEN'
   | 'ELSE'
+  | 'FN'
   | 'ASSIGN'
   | 'EOF';
 
@@ -313,6 +315,9 @@ class Lexer {
       if (id === 'not') {
         return { type: 'NOT', value: id, position: pos };
       }
+      if (id === 'fn') {
+        return { type: 'FN', value: id, position: pos };
+      }
       const temporalKeywords = ['NOW', 'TODAY', 'TOMORROW', 'YESTERDAY',
         'SOD', 'EOD', 'SOW', 'EOW', 'SOM', 'EOM', 'SOQ', 'EOQ', 'SOY', 'EOY'];
       if (temporalKeywords.includes(id)) {
@@ -356,10 +361,15 @@ class Lexer {
       this.advance();
       return { type: 'AND', value: '&&', position: pos };
     }
-    if (char === '|' && next === '|') {
+    if (char === '|') {
+      if (next === '|') {
+        this.advance();
+        this.advance();
+        return { type: 'OR', value: '||', position: pos };
+      }
+      // Single pipe for lambda syntax: fn( x | body )
       this.advance();
-      this.advance();
-      return { type: 'OR', value: '||', position: pos };
+      return { type: 'PIPE', value: '|', position: pos };
     }
     // Range operators: .. (inclusive) and ... (exclusive)
     if (char === '.' && next === '.') {
@@ -534,6 +544,11 @@ export class Parser {
     // Handle if expressions (can appear anywhere an expression is expected)
     if (token.type === 'IF') {
       return this.ifExprParse();
+    }
+
+    // Handle lambda expressions: fn( x | body ) or fn( x, y | body )
+    if (token.type === 'FN') {
+      return this.lambdaParse();
     }
 
     throw new Error(`Unexpected token ${token.type} at position ${token.position}`);
@@ -831,6 +846,35 @@ export class Parser {
     this.eat('ELSE');
     const elseBranch = this.expr();
     return ifExpr(condition, thenBranch, elseBranch);
+  }
+
+  /**
+   * Parse lambda expression: fn( x | body ) or fn( x, y | body )
+   */
+  private lambdaParse(): Expr {
+    this.eat('FN');
+    this.eat('LPAREN');
+
+    const params: string[] = [];
+
+    // Parse first parameter
+    const firstName = this.currentToken.value;
+    this.eat('IDENTIFIER');
+    params.push(firstName);
+
+    // Parse additional parameters
+    while (this.currentToken.type === 'COMMA') {
+      this.eat('COMMA');
+      const name = this.currentToken.value;
+      this.eat('IDENTIFIER');
+      params.push(name);
+    }
+
+    this.eat('PIPE');
+    const body = this.expr();
+    this.eat('RPAREN');
+
+    return lambda(params, body);
   }
 
   private expr(): Expr {
