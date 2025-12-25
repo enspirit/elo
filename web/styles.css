@@ -311,8 +311,7 @@ select:focus {
 
 .doc-content {
   flex: 1;
-  max-width: 800px;
-  padding: 2rem 2rem 2rem 1rem;
+  padding: 2rem 3rem 2rem 2rem;
 }
 
 .doc-content h1 {
@@ -760,6 +759,90 @@ select:focus {
 
 .home-footer a:hover {
   text-decoration: underline;
+}
+
+/* Additional TOC title styling */
+.doc-toc .toc-title:not(:first-child) {
+  margin-top: 1.5rem;
+}
+
+/* Standard Library Section */
+.stdlib-section {
+  margin-bottom: 2.5rem;
+}
+
+.stdlib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.stdlib-fn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stdlib-fn:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.fn-name {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.125rem;
+}
+
+.fn-sig {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.fn-example {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-panel);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+
+.fn-example code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: none;
+  padding: 0;
+}
+
+.fn-result {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--success);
+  margin-left: auto;
+}
+
+.fn-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.fn-desc code {
+  background: var(--bg-panel);
+  padding: 0.125rem 0.25rem;
+  border-radius: 2px;
+  font-size: 0.75rem;
 }
 
 /* Responsive */

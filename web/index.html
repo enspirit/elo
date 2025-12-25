@@ -8,7 +8,7 @@
 </head>
 <body data-controller="tabs">
   <header>
-    <a href="#" class="logo" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="home">K</a>
+    <a href="#" class="logo" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="home">K, a portable expression language</a>
     <nav>
       <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="home" class="active">Home</a>
       <a href="#" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try">Try</a>
@@ -215,18 +215,19 @@ result;</pre>
   <!-- Doc Panel -->
   <main data-tabs-target="panel" data-panel="doc" class="doc-panel hidden" data-controller="doc">
     <nav class="doc-toc">
-      <div class="toc-title">Contents</div>
+      <div class="toc-title">Language</div>
       <ul>
         <li><a href="#getting-started">Getting Started</a></li>
-        <li><a href="#arithmetic">Arithmetic</a></li>
-        <li><a href="#strings">Strings & Functions</a></li>
-        <li><a href="#comparisons">Comparisons & Booleans</a></li>
+        <li><a href="#literals">Literals</a></li>
+        <li><a href="#operators">Operators</a></li>
         <li><a href="#variables">Local Variables</a></li>
-        <li><a href="#dates">Dates & Times</a></li>
-        <li><a href="#durations">Durations</a></li>
-        <li><a href="#assertions">Assertions</a></li>
         <li><a href="#ranges">Range Membership</a></li>
+        <li><a href="#assertions">Assertions</a></li>
         <li><a href="#examples">Real-World Examples</a></li>
+      </ul>
+      <div class="toc-title">Standard Library</div>
+      <ul>
+        <li><a href="#stdlib-string">String Functions</a></li>
       </ul>
     </nav>
     <article class="doc-content">
@@ -250,113 +251,116 @@ result;</pre>
         </div>
       </section>
 
-      <section class="doc-section" id="arithmetic">
-        <h2>Arithmetic</h2>
-        <p>K supports the usual arithmetic operators, plus a power operator.</p>
+      <section class="doc-section" id="literals">
+        <h2>Literals</h2>
+        <p>K supports numbers, booleans, strings, dates, and durations as first-class values.</p>
 
+        <h3>Numbers</h3>
         <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Basic Operations</div>
-          <pre class="example-code">(10 + 5) * 2 - 8 / 4</pre>
-          <p class="example-desc">Addition, subtraction, multiplication, and division.</p>
+          <div class="example-header">Integers &amp; Floats</div>
+          <pre class="example-code">42 + 3.14</pre>
+          <p class="example-desc">Numbers include integers and floating-point values.</p>
+        </div>
+
+        <h3>Booleans</h3>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Boolean Literals</div>
+          <pre class="example-code">true and not false</pre>
+          <p class="example-desc"><code>true</code> and <code>false</code> are boolean literals.</p>
+        </div>
+
+        <h3>Strings</h3>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">String Literal</div>
+          <pre class="example-code">'hello world'</pre>
+          <p class="example-desc">Strings use single quotes. Escape with backslash: <code>'it\'s working'</code>.</p>
+        </div>
+
+        <h3>Dates &amp; Times</h3>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Date Literal</div>
+          <pre class="example-code">D2025-12-25</pre>
+          <p class="example-desc">ISO date format with <code>D</code> prefix.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Power Operator</div>
-          <pre class="example-code">2 ^ 10</pre>
+          <div class="example-header">DateTime Literal</div>
+          <pre class="example-code">T2025-12-31T23:59:59</pre>
+          <p class="example-desc">Full timestamp with <code>T</code> prefix.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Temporal Keywords</div>
+          <pre class="example-code">TODAY &lt; NOW</pre>
           <p class="example-desc">
-            Compiles to <code>Math.pow()</code> in JS, <code>**</code> in Ruby,
-            and <code>POWER()</code> in SQL.
+            <code>NOW</code> is the current timestamp, <code>TODAY</code> is midnight today.
           </p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Modulo</div>
-          <pre class="example-code">17 % 5</pre>
-          <p class="example-desc">The remainder operator works across all targets.</p>
+          <div class="example-header">Period Boundaries</div>
+          <pre class="example-code">SOY &lt;= TODAY and TODAY &lt;= EOY</pre>
+          <p class="example-desc">
+            Start/End of Year (<code>SOY</code>/<code>EOY</code>), Quarter (<code>SOQ</code>/<code>EOQ</code>),
+            Month (<code>SOM</code>/<code>EOM</code>), Week (<code>SOW</code>/<code>EOW</code>).
+          </p>
+        </div>
+
+        <h3>Durations</h3>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Duration Literal</div>
+          <pre class="example-code">P1Y2M3D</pre>
+          <p class="example-desc">1 year, 2 months, 3 days. Use <code>P</code> prefix (ISO 8601).</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Time Durations</div>
+          <pre class="example-code">PT2H30M</pre>
+          <p class="example-desc">2 hours and 30 minutes. Use <code>PT</code> for time-only durations.</p>
         </div>
       </section>
 
-      <section class="doc-section" id="strings">
-        <h2>Strings</h2>
-        <p>K supports single-quoted string literals and a comprehensive set of string functions.</p>
+      <section class="doc-section" id="operators">
+        <h2>Operators</h2>
+        <p>K provides arithmetic, comparison, and logical operators.</p>
 
-        <h3>String Literals</h3>
+        <h3>Arithmetic</h3>
         <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">String Literal</div>
-          <pre class="example-code">'hello world'</pre>
-          <p class="example-desc">Simple strings use single quotes.</p>
+          <div class="example-header">Basic Operations</div>
+          <pre class="example-code">(10 + 5) * 2 - 8 / 4</pre>
+          <p class="example-desc">Addition <code>+</code>, subtraction <code>-</code>, multiplication <code>*</code>, division <code>/</code>.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Escaped Quotes</div>
-          <pre class="example-code">'it\'s working'</pre>
-          <p class="example-desc">Escape single quotes with backslash.</p>
+          <div class="example-header">Power &amp; Modulo</div>
+          <pre class="example-code">2 ^ 10 + 17 % 5</pre>
+          <p class="example-desc">Power <code>^</code> and remainder <code>%</code> operators.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">String Concatenation</div>
           <pre class="example-code">'hello' + ' ' + 'world'</pre>
-          <p class="example-desc">Use <code>+</code> operator or <code>concat()</code> function.</p>
-        </div>
-
-        <h3>String Functions</h3>
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Length &amp; Case</div>
-          <pre class="example-code">assert(length('hello') == 5 and upper('hello') == 'HELLO')</pre>
-          <p class="example-desc"><code>length(s)</code>, <code>upper(s)</code>, <code>lower(s)</code></p>
+          <p class="example-desc">The <code>+</code> operator concatenates strings.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Trim &amp; Padding</div>
-          <pre class="example-code">assert(trim('  hi  ') == 'hi' and padStart('42', 5, '0') == '00042')</pre>
-          <p class="example-desc"><code>trim(s)</code>, <code>padStart(s, len, pad)</code>, <code>padEnd(s, len, pad)</code></p>
+          <div class="example-header">Date Arithmetic</div>
+          <pre class="example-code">TODAY + P7D</pre>
+          <p class="example-desc">Add durations to dates. Subtract with <code>-</code>.</p>
         </div>
 
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Search Functions</div>
-          <pre class="example-code">assert(startsWith('hello', 'he') and contains('hello', 'ell'))</pre>
-          <p class="example-desc"><code>startsWith(s, prefix)</code>, <code>endsWith(s, suffix)</code>, <code>contains(s, sub)</code></p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Index &amp; Substring</div>
-          <pre class="example-code">assert(indexOf('hello', 'l') == 2 and substring('hello', 1, 3) == 'ell')</pre>
-          <p class="example-desc"><code>indexOf(s, sub)</code> returns -1 if not found. <code>substring(s, start, len)</code> is 0-based.</p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Replace</div>
-          <pre class="example-code">assert(replace('abab', 'ab', 'x') == 'xab' and replaceAll('abab', 'ab', 'x') == 'xx')</pre>
-          <p class="example-desc"><code>replace(s, search, repl)</code> replaces first, <code>replaceAll()</code> replaces all.</p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Empty Check</div>
-          <pre class="example-code">assert(isEmpty('') and !isEmpty('hello'))</pre>
-          <p class="example-desc"><code>isEmpty(s)</code> returns true for empty strings.</p>
-        </div>
-      </section>
-
-      <section class="doc-section" id="comparisons">
-        <h2>Comparisons &amp; Booleans</h2>
-        <p>Compare values and combine conditions with logical operators.</p>
-
+        <h3>Comparison</h3>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Comparison Operators</div>
           <pre class="example-code">10 > 5 and 3 <= 3</pre>
           <p class="example-desc">Use <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>==</code>, <code>!=</code>.</p>
         </div>
 
+        <h3>Logical</h3>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Logical Operators</div>
-          <pre class="example-code">true and false or not false</pre>
-          <p class="example-desc">Combine booleans with <code>and</code>, <code>or</code>, and <code>not</code>.</p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Complex Conditions</div>
           <pre class="example-code">(5 > 3 and 2 < 4) or not (1 == 2)</pre>
-          <p class="example-desc">Group conditions with parentheses.</p>
+          <p class="example-desc">Combine conditions with <code>and</code>, <code>or</code>, and <code>not</code>.</p>
         </div>
       </section>
 
@@ -380,71 +384,6 @@ result;</pre>
           <div class="example-header">Nested Let</div>
           <pre class="example-code">let a = 2 in let b = a * 3 in b + 1</pre>
           <p class="example-desc">Variables can reference earlier bindings.</p>
-        </div>
-      </section>
-
-      <section class="doc-section" id="dates">
-        <h2>Dates &amp; Times</h2>
-        <p>K has first-class support for temporal values with intuitive literals.</p>
-
-        <h3>Date &amp; Time Literals</h3>
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Date Literal</div>
-          <pre class="example-code">D2025-12-25</pre>
-          <p class="example-desc">ISO date format with <code>D</code> prefix.</p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">DateTime Literal</div>
-          <pre class="example-code">T2025-12-31T23:59:59</pre>
-          <p class="example-desc">Full timestamp with <code>T</code> prefix.</p>
-        </div>
-
-        <h3>Temporal Keywords</h3>
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">NOW and TODAY</div>
-          <pre class="example-code">TODAY &lt; NOW</pre>
-          <p class="example-desc">
-            <code>NOW</code> is the current timestamp, <code>TODAY</code> is midnight today.
-          </p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Period Boundaries</div>
-          <pre class="example-code">SOY &lt;= TODAY and TODAY &lt;= EOY</pre>
-          <p class="example-desc">
-            Start/End of Year (<code>SOY</code>/<code>EOY</code>), Quarter (<code>SOQ</code>/<code>EOQ</code>),
-            Month (<code>SOM</code>/<code>EOM</code>), Week (<code>SOW</code>/<code>EOW</code>).
-          </p>
-        </div>
-      </section>
-
-      <section class="doc-section" id="durations">
-        <h2>Durations</h2>
-        <p>Express time spans using ISO 8601 duration syntax.</p>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Duration Literal</div>
-          <pre class="example-code">P1Y2M3D</pre>
-          <p class="example-desc">1 year, 2 months, 3 days. Use <code>P</code> prefix.</p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Time Durations</div>
-          <pre class="example-code">PT2H30M</pre>
-          <p class="example-desc">2 hours and 30 minutes.</p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Date Arithmetic</div>
-          <pre class="example-code">TODAY + P7D</pre>
-          <p class="example-desc">Add 7 days to today. Works with all temporal values.</p>
-        </div>
-
-        <div class="example" data-action="click->doc#tryExample">
-          <div class="example-header">Complex Duration</div>
-          <pre class="example-code">NOW - P1M + PT2H30M</pre>
-          <p class="example-desc">One month ago, plus 2.5 hours.</p>
         </div>
       </section>
 
@@ -511,7 +450,7 @@ result;</pre>
   trial_period = P30D,
   trial_end = signup_date + trial_period
 in
-  assert(TODAY > trial_end)</pre>
+  TODAY > trial_end</pre>
           <p class="example-desc">Check if a 30-day trial has expired.</p>
         </div>
 
@@ -523,6 +462,119 @@ in
 in
   TODAY &lt;= report_due</pre>
           <p class="example-desc">Reports are due 5 days after end of quarter.</p>
+        </div>
+      </section>
+
+      <!-- Standard Library -->
+      <section class="doc-section stdlib-section" id="stdlib-string">
+        <h2>String Functions</h2>
+        <p>K provides a comprehensive set of string manipulation functions.</p>
+
+        <div class="stdlib-grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">length</div>
+            <div class="fn-sig">(s: String) → Int</div>
+            <p class="fn-desc">Returns the number of characters in the string.</p>
+            <div class="fn-example"><code class="example-code">length('hello')</code><span class="fn-result">→ 5</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">upper</div>
+            <div class="fn-sig">(s: String) → String</div>
+            <p class="fn-desc">Converts all characters to uppercase.</p>
+            <div class="fn-example"><code class="example-code">upper('hello')</code><span class="fn-result">→ 'HELLO'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">lower</div>
+            <div class="fn-sig">(s: String) → String</div>
+            <p class="fn-desc">Converts all characters to lowercase.</p>
+            <div class="fn-example"><code class="example-code">lower('HELLO')</code><span class="fn-result">→ 'hello'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">trim</div>
+            <div class="fn-sig">(s: String) → String</div>
+            <p class="fn-desc">Removes leading and trailing whitespace.</p>
+            <div class="fn-example"><code class="example-code">trim('  hi  ')</code><span class="fn-result">→ 'hi'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">concat</div>
+            <div class="fn-sig">(a: String, b: String) → String</div>
+            <p class="fn-desc">Concatenates two strings (same as <code>+</code>).</p>
+            <div class="fn-example"><code class="example-code">concat('hello', ' world')</code><span class="fn-result">→ 'hello world'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">substring</div>
+            <div class="fn-sig">(s: String, start: Int, len: Int) → String</div>
+            <p class="fn-desc">Extracts a substring starting at <code>start</code> (0-indexed) with length <code>len</code>.</p>
+            <div class="fn-example"><code class="example-code">substring('hello', 1, 3)</code><span class="fn-result">→ 'ell'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">indexOf</div>
+            <div class="fn-sig">(s: String, sub: String) → Int</div>
+            <p class="fn-desc">Returns the index of the first occurrence, or -1 if not found.</p>
+            <div class="fn-example"><code class="example-code">indexOf('hello', 'l')</code><span class="fn-result">→ 2</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">replace</div>
+            <div class="fn-sig">(s: String, search: String, repl: String) → String</div>
+            <p class="fn-desc">Replaces the first occurrence of <code>search</code> with <code>repl</code>.</p>
+            <div class="fn-example"><code class="example-code">replace('abab', 'ab', 'x')</code><span class="fn-result">→ 'xab'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">replaceAll</div>
+            <div class="fn-sig">(s: String, search: String, repl: String) → String</div>
+            <p class="fn-desc">Replaces all occurrences of <code>search</code> with <code>repl</code>.</p>
+            <div class="fn-example"><code class="example-code">replaceAll('abab', 'ab', 'x')</code><span class="fn-result">→ 'xx'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">startsWith</div>
+            <div class="fn-sig">(s: String, prefix: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string starts with the given prefix.</p>
+            <div class="fn-example"><code class="example-code">startsWith('hello', 'he')</code><span class="fn-result">→ true</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">endsWith</div>
+            <div class="fn-sig">(s: String, suffix: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string ends with the given suffix.</p>
+            <div class="fn-example"><code class="example-code">endsWith('hello', 'lo')</code><span class="fn-result">→ true</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">contains</div>
+            <div class="fn-sig">(s: String, sub: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string contains the given substring.</p>
+            <div class="fn-example"><code class="example-code">contains('hello', 'ell')</code><span class="fn-result">→ true</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">isEmpty</div>
+            <div class="fn-sig">(s: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string is empty (length 0).</p>
+            <div class="fn-example"><code class="example-code">isEmpty('')</code><span class="fn-result">→ true</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">padStart</div>
+            <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
+            <p class="fn-desc">Pads the start of the string to reach the target length.</p>
+            <div class="fn-example"><code class="example-code">padStart('42', 5, '0')</code><span class="fn-result">→ '00042'</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">padEnd</div>
+            <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
+            <p class="fn-desc">Pads the end of the string to reach the target length.</p>
+            <div class="fn-example"><code class="example-code">padEnd('hi', 5, '.')</code><span class="fn-result">→ 'hi...'</span></div>
+          </div>
         </div>
       </section>
 
