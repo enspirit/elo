@@ -2,3 +2,6 @@
 (function() { if (!(dayjs('2024-01-15').add(dayjs.duration('P1D')) < dayjs('2024-01-17'))) throw new Error("Assertion failed"); return true; })()
 (function() { if (!(dayjs('2024-01-15').subtract(dayjs.duration('P1D')) < dayjs('2024-01-15'))) throw new Error("Assertion failed"); return true; })()
 (function() { if (!(dayjs('2024-01-15').subtract(dayjs.duration('P1D')) > dayjs('2024-01-13'))) throw new Error("Assertion failed"); return true; })()
+(function() { if (!(+dayjs('2024-01-01').add(dayjs.duration(dayjs.duration('P1D').asMilliseconds() * 2)) === +dayjs('2024-01-03'))) throw new Error("Assertion failed"); return true; })()
+(function() { if (!(+dayjs('2024-01-01').add(dayjs.duration(dayjs.duration('P1D').asMilliseconds() * 2)) === +dayjs('2024-01-03'))) throw new Error("Assertion failed"); return true; })()
+(function() { if (!(+dayjs('2024-01-01').add(dayjs.duration(dayjs.duration('P2D').asMilliseconds() / 2)) === +dayjs('2024-01-02'))) throw new Error("Assertion failed"); return true; })()

@@ -332,6 +332,19 @@ function inferBinaryResultType(op: string, left: KlangType, right: KlangType): K
       return op === '/' ? Types.float : Types.int;
     }
 
+    // duration * number -> duration (scaling) - check before float catch-all
+    if (left.kind === 'duration' && (right.kind === 'int' || right.kind === 'float') && op === '*') {
+      return Types.duration;
+    }
+    if ((left.kind === 'int' || left.kind === 'float') && right.kind === 'duration' && op === '*') {
+      return Types.duration;
+    }
+
+    // duration / number -> duration (scaling) - check before float catch-all
+    if (left.kind === 'duration' && (right.kind === 'int' || right.kind === 'float') && op === '/') {
+      return Types.duration;
+    }
+
     // float involved -> float
     if (left.kind === 'float' || right.kind === 'float') {
       return Types.float;
