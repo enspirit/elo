@@ -59,27 +59,27 @@ describe('JavaScript Compiler - Arithmetic Operators', () => {
 
   it('should compile multiplication', () => {
     const ast = binary('*', literal(4), literal(3));
-    assert.strictEqual(compileToJavaScript(ast), '4 * 3');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.multiply(4, 3)');
   });
 
   it('should compile division', () => {
     const ast = binary('/', literal(10), literal(2));
-    assert.strictEqual(compileToJavaScript(ast), '10 / 2');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.divide(10, 2)');
   });
 
   it('should compile modulo', () => {
     const ast = binary('%', literal(10), literal(3));
-    assert.strictEqual(compileToJavaScript(ast), '10 % 3');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.modulo(10, 3)');
   });
 
-  it('should compile power to Math.pow()', () => {
+  it('should compile power to klang.power()', () => {
     const ast = binary('^', literal(2), literal(3));
-    assert.strictEqual(compileToJavaScript(ast), 'Math.pow(2, 3)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.power(2, 3)');
   });
 
   it('should compile power with variables', () => {
     const ast = binary('^', variable('x'), variable('y'));
-    assert.strictEqual(compileToJavaScript(ast), 'Math.pow(x, y)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.power(x, y)');
   });
 
   it('should compile power with expressions', () => {
@@ -88,7 +88,7 @@ describe('JavaScript Compiler - Arithmetic Operators', () => {
       binary('+', literal(1), literal(2)),
       literal(3)
     );
-    assert.strictEqual(compileToJavaScript(ast), 'Math.pow(klang.add(1, 2), 3)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.power(klang.add(1, 2), 3)');
   });
 });
 
@@ -161,23 +161,23 @@ describe('JavaScript Compiler - Unary Operators', () => {
 describe('JavaScript Compiler - Operator Precedence', () => {
   it('should handle multiplication before addition', () => {
     const ast = binary('+', literal(2), binary('*', literal(3), literal(4)));
-    assert.strictEqual(compileToJavaScript(ast), 'klang.add(2, 3 * 4)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.add(2, klang.multiply(3, 4))');
   });
 
   it('should add parentheses when needed', () => {
     const ast = binary('*', binary('+', literal(2), literal(3)), literal(4));
-    // klang.add() is a function call - no parens needed since function calls have higher precedence
-    assert.strictEqual(compileToJavaScript(ast), 'klang.add(2, 3) * 4');
+    // All arithmetic uses klang helpers - no parens needed since function calls have higher precedence
+    assert.strictEqual(compileToJavaScript(ast), 'klang.multiply(klang.add(2, 3), 4)');
   });
 
   it('should handle power with addition', () => {
     const ast = binary('+', binary('^', literal(2), literal(3)), literal(1));
-    assert.strictEqual(compileToJavaScript(ast), 'klang.add(Math.pow(2, 3), 1)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.add(klang.power(2, 3), 1)');
   });
 
   it('should handle complex power expression', () => {
     const ast = binary('*', literal(2), binary('^', literal(3), literal(4)));
-    assert.strictEqual(compileToJavaScript(ast), '2 * Math.pow(3, 4)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.multiply(2, klang.power(3, 4))');
   });
 });
 
@@ -188,7 +188,7 @@ describe('JavaScript Compiler - Complex Expressions', () => {
       binary('+', variable('a'), variable('b')),
       variable('c')
     );
-    assert.strictEqual(compileToJavaScript(ast), 'klang.add(a, b) * c');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.multiply(klang.add(a, b), c)');
   });
 
   it('should compile price * quantity - discount', () => {
@@ -197,7 +197,7 @@ describe('JavaScript Compiler - Complex Expressions', () => {
       binary('*', variable('price'), variable('quantity')),
       variable('discount')
     );
-    assert.strictEqual(compileToJavaScript(ast), 'klang.subtract(price * quantity, discount)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.subtract(klang.multiply(price, quantity), discount)');
   });
 
   it('should compile x > 0 && x < 100', () => {
@@ -219,7 +219,7 @@ describe('JavaScript Compiler - Complex Expressions', () => {
       ),
       literal(2)
     );
-    assert.strictEqual(compileToJavaScript(ast), 'klang.add(x, 5) * klang.subtract(y, 3) / 2');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.divide(klang.multiply(klang.add(x, 5), klang.subtract(y, 3)), 2)');
   });
 
   it('should compile mixed arithmetic and boolean', () => {
@@ -228,18 +228,18 @@ describe('JavaScript Compiler - Complex Expressions', () => {
       binary('*', variable('total'), literal(1.1)),
       literal(1000)
     );
-    assert.strictEqual(compileToJavaScript(ast), 'total * 1.1 > 1000');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.multiply(total, 1.1) > 1000');
   });
 });
 
 describe('JavaScript Compiler - Edge Cases', () => {
-  it('should handle nested Math.pow calls', () => {
+  it('should handle nested klang.power calls', () => {
     const ast = binary(
       '^',
       literal(2),
       binary('^', literal(3), literal(2))
     );
-    assert.strictEqual(compileToJavaScript(ast), 'Math.pow(2, Math.pow(3, 2))');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.power(2, klang.power(3, 2))');
   });
 
   it('should handle power in complex expression', () => {
@@ -248,7 +248,7 @@ describe('JavaScript Compiler - Edge Cases', () => {
       binary('*', literal(2), binary('^', literal(3), literal(2))),
       literal(1)
     );
-    assert.strictEqual(compileToJavaScript(ast), 'klang.add(2 * Math.pow(3, 2), 1)');
+    assert.strictEqual(compileToJavaScript(ast), 'klang.add(klang.multiply(2, klang.power(3, 2)), 1)');
   });
 
   it('should handle multiple unary operators', () => {
@@ -337,6 +337,6 @@ describe('JavaScript Compiler - Let Expressions', () => {
       [{ name: 'x', value: binary('+', literal(1), literal(2)) }],
       binary('*', variable('x'), literal(3))
     );
-    assert.strictEqual(compileToJavaScript(ast), '((x) => x * 3)(klang.add(1, 2))');
+    assert.strictEqual(compileToJavaScript(ast), '((x) => klang.multiply(x, 3))(klang.add(1, 2))');
   });
 });

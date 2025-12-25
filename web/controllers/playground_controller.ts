@@ -23,6 +23,7 @@ dayjs.extend(quarterOfYear);
 (window as any).dayjs = dayjs;
 
 // Make klang runtime helpers available globally for eval
+// All arithmetic is routed through these for extensibility and correctness
 (window as any).klang = {
   add(left: any, right: any) {
     if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.add(right);
@@ -32,6 +33,18 @@ dayjs.extend(quarterOfYear);
   subtract(left: any, right: any) {
     if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.subtract(right);
     return left - right;
+  },
+  multiply(left: any, right: any) {
+    return left * right;
+  },
+  divide(left: any, right: any) {
+    return left / right;
+  },
+  modulo(left: any, right: any) {
+    return left % right;
+  },
+  power(left: any, right: any) {
+    return Math.pow(left, right);
   }
 };
 

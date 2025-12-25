@@ -16,7 +16,8 @@ dayjs.extend(duration);
 dayjs.extend(isoWeek);
 dayjs.extend(quarterOfYear);
 
-// Klang runtime helpers for dynamic temporal arithmetic
+// Klang runtime helpers
+// All arithmetic is routed through these for extensibility and correctness
 const klang = {
   add(left, right) {
     if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.add(right);
@@ -26,6 +27,18 @@ const klang = {
   subtract(left, right) {
     if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.subtract(right);
     return left - right;
+  },
+  multiply(left, right) {
+    return left * right;
+  },
+  divide(left, right) {
+    return left / right;
+  },
+  modulo(left, right) {
+    return left % right;
+  },
+  power(left, right) {
+    return Math.pow(left, right);
   }
 };`,
 
@@ -72,7 +85,7 @@ const klang = {
     return this.fixedTime ? this.fixedTime.startOf('day') : dayjs().startOf('day');
   },
 
-  // Runtime helpers for dynamic temporal arithmetic
+  // Runtime helpers - all arithmetic routed through these for extensibility
   add(left, right) {
     if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.add(right);
     if (dayjs.isDuration(left) && dayjs.isDayjs(right)) return right.add(left);
@@ -82,6 +95,22 @@ const klang = {
   subtract(left, right) {
     if (dayjs.isDayjs(left) && dayjs.isDuration(right)) return left.subtract(right);
     return left - right;
+  },
+
+  multiply(left, right) {
+    return left * right;
+  },
+
+  divide(left, right) {
+    return left / right;
+  },
+
+  modulo(left, right) {
+    return left % right;
+  },
+
+  power(left, right) {
+    return Math.pow(left, right);
   }
 };`
   },

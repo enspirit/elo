@@ -46,12 +46,12 @@ describe('CLI - Basic compilation', () => {
 
   it('should handle complex expressions', () => {
     const result = kc('-e "2 + 3 * 4"');
-    assert.strictEqual(result, 'klang.add(2, 3 * 4)');
+    assert.strictEqual(result, 'klang.add(2, klang.multiply(3, 4))');
   });
 
   it('should handle power operator in JavaScript', () => {
     const result = kc('-e "2 ^ 3" -t js');
-    assert.strictEqual(result, 'Math.pow(2, 3)');
+    assert.strictEqual(result, 'klang.power(2, 3)');
   });
 
   it('should handle power operator in Ruby', () => {
@@ -190,7 +190,7 @@ describe('CLI - File input', () => {
 
     try {
       const result = kc(`${inputFile}`);
-      assert.strictEqual(result, 'klang.add(2, 3 * 4)');
+      assert.strictEqual(result, 'klang.add(2, klang.multiply(3, 4))');
     } finally {
       unlinkSync(inputFile);
     }

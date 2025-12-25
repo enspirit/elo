@@ -132,20 +132,22 @@ export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptio
       const left = compileToJavaScript(expr.left, options);
       const right = compileToJavaScript(expr.right, options);
 
-      // Handle power operator specially
-      if (expr.operator === '^') {
-        return `Math.pow(${left}, ${right})`;
-      }
-
-      // Use klang runtime helpers for +/- operators
-      // This ensures correctness for all operand types (numbers, dates, durations)
+      // Use klang runtime helpers for arithmetic operators
+      // This ensures correctness for all operand types and keeps K extensible
       // Type inference can optimize this later when we're 100% sure of operand types
-      if (expr.operator === '+') {
-        return `klang.add(${left}, ${right})`;
-      }
-
-      if (expr.operator === '-') {
-        return `klang.subtract(${left}, ${right})`;
+      switch (expr.operator) {
+        case '+':
+          return `klang.add(${left}, ${right})`;
+        case '-':
+          return `klang.subtract(${left}, ${right})`;
+        case '*':
+          return `klang.multiply(${left}, ${right})`;
+        case '/':
+          return `klang.divide(${left}, ${right})`;
+        case '%':
+          return `klang.modulo(${left}, ${right})`;
+        case '^':
+          return `klang.power(${left}, ${right})`;
       }
 
       // Handle date/temporal equality/inequality comparisons using valueOf()
@@ -181,9 +183,10 @@ export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptio
 function needsParens(expr: Expr, parentOp: string, side: 'left' | 'right'): boolean {
   if (expr.type !== 'binary') return false;
 
-  // +, -, ^ are compiled as function calls (klang.add, klang.subtract, Math.pow)
+  // Arithmetic operators are compiled as function calls (klang.add, klang.multiply, etc.)
   // Function calls don't need parentheses for precedence
-  if (expr.operator === '+' || expr.operator === '-' || expr.operator === '^') {
+  const arithmeticOps = ['+', '-', '*', '/', '%', '^'];
+  if (arithmeticOps.includes(expr.operator)) {
     return false;
   }
 
@@ -192,7 +195,6 @@ function needsParens(expr: Expr, parentOp: string, side: 'left' | 'right'): bool
     '&&': 1,
     '==': 2, '!=': 2,
     '<': 3, '>': 3, '<=': 3, '>=': 3,
-    '*': 5, '/': 5, '%': 5,
   };
 
   const parentPrec = precedence[parentOp] || 0;
@@ -200,11 +202,6 @@ function needsParens(expr: Expr, parentOp: string, side: 'left' | 'right'): bool
 
   // Lower precedence always needs parens
   if (childPrec < parentPrec) return true;
-
-  // Right side of certain operators needs parens if same precedence
-  if (childPrec === parentPrec && side === 'right' && (parentOp === '-' || parentOp === '/')) {
-    return true;
-  }
 
   return false;
 }
