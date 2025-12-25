@@ -72,6 +72,43 @@ function loadTestSuites(): TestSuite[] {
 
 const testSuites = loadTestSuites();
 
+// Validate fixture file completeness - ensure expected files have the same number of lines as klang files
+describe('Fixture file completeness', () => {
+  for (const suite of testSuites) {
+    const klangLineCount = suite.klang.length;
+
+    if (suite.expectedJS) {
+      it(`${suite.name}.expected.js should have same line count as .klang`, () => {
+        assert.strictEqual(
+          suite.expectedJS!.length,
+          klangLineCount,
+          `${suite.name}.expected.js has ${suite.expectedJS!.length} lines but ${suite.name}.klang has ${klangLineCount} lines`
+        );
+      });
+    }
+
+    if (suite.expectedRuby) {
+      it(`${suite.name}.expected.ruby should have same line count as .klang`, () => {
+        assert.strictEqual(
+          suite.expectedRuby!.length,
+          klangLineCount,
+          `${suite.name}.expected.ruby has ${suite.expectedRuby!.length} lines but ${suite.name}.klang has ${klangLineCount} lines`
+        );
+      });
+    }
+
+    if (suite.expectedSQL) {
+      it(`${suite.name}.expected.sql should have same line count as .klang`, () => {
+        assert.strictEqual(
+          suite.expectedSQL!.length,
+          klangLineCount,
+          `${suite.name}.expected.sql has ${suite.expectedSQL!.length} lines but ${suite.name}.klang has ${klangLineCount} lines`
+        );
+      });
+    }
+  }
+});
+
 for (const suite of testSuites) {
   describe(`Compiler - ${suite.name}`, () => {
     for (let i = 0; i < suite.klang.length; i++) {

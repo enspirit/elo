@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import quarterOfYear from 'dayjs/plugin/quarterOfYear';
+import utc from 'dayjs/plugin/utc';
 import {
   parse,
   compileToRuby,
@@ -16,6 +17,7 @@ import { createKlangRuntime } from '../../src/runtime';
 dayjs.extend(duration);
 dayjs.extend(isoWeek);
 dayjs.extend(quarterOfYear);
+dayjs.extend(utc);
 
 // Make dayjs and klang runtime available globally for eval
 (window as any).dayjs = dayjs;
