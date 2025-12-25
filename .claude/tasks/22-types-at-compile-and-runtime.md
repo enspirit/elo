@@ -22,3 +22,8 @@ implementation and in the language itself ?
 
 What do you think ? Apply an acceptance-driven methodology, where you start
 by writing one or two acceptance tests before moving to the implementation.
+
+## Post implementation discussion
+
+* Document typeOf in web. Also add additional acceptance tests that prove that various date(time) arithmetic expressions return an
+value of the expected type

@@ -36,6 +36,7 @@
           <a href="#stdlib/stdlib-numeric" data-action="click->tabs#switch" data-tab="stdlib">Numeric</a>
           <a href="#stdlib/stdlib-temporal" data-action="click->tabs#switch" data-tab="stdlib">Temporal</a>
           <a href="#stdlib/stdlib-string" data-action="click->tabs#switch" data-tab="stdlib">String</a>
+          <a href="#stdlib/stdlib-introspection" data-action="click->tabs#switch" data-tab="stdlib">Introspection</a>
         </div>
       </div>
     </nav>
@@ -623,6 +624,7 @@ in
         <a href="#stdlib/stdlib-numeric" data-action="click->tabs#switch" data-tab="stdlib">Numeric</a>
         <a href="#stdlib/stdlib-temporal" data-action="click->tabs#switch" data-tab="stdlib">Temporal</a>
         <a href="#stdlib/stdlib-string" data-action="click->tabs#switch" data-tab="stdlib">String</a>
+        <a href="#stdlib/stdlib-introspection" data-action="click->tabs#switch" data-tab="stdlib">Introspection</a>
       </nav>
     </aside>
     <div class="stdlib-content">
@@ -831,6 +833,50 @@ in
             <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
             <p class="fn-desc">Pads the end of the string to reach the target length.</p>
             <div class="fn-example"><code class="example-code">padEnd('hi', 5, '.')</code><span class="fn-result">→ 'hi...'</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stdlib-section" id="stdlib-introspection" data-stdlib-search-target="section">
+        <h2>Type Introspection</h2>
+        <p>Functions to inspect the runtime type of values.</p>
+
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">typeOf</div>
+            <div class="fn-sig">(value: Any) → String</div>
+            <p class="fn-desc">Returns the type name of the value as a string.</p>
+            <div class="fn-example"><code class="example-code">typeOf(42)</code><span class="fn-result">→ 'int'</span></div>
+          </div>
+        </div>
+
+        <h3>Type Names</h3>
+        <p>The <code>typeOf</code> function returns one of these type names:</p>
+        <ul class="type-list">
+          <li><code>'int'</code> — Integer values like <code>42</code></li>
+          <li><code>'float'</code> — Floating-point values like <code>3.14</code></li>
+          <li><code>'bool'</code> — Boolean values <code>true</code> or <code>false</code></li>
+          <li><code>'string'</code> — String values like <code>'hello'</code></li>
+          <li><code>'duration'</code> — Duration values like <code>P1D</code> or <code>PT2H</code></li>
+          <li><code>'datetime'</code> — Date and datetime values like <code>D2024-01-15</code> or <code>NOW</code></li>
+          <li><code>'fn'</code> — Lambda functions</li>
+          <li><code>'object'</code> — Object values</li>
+        </ul>
+
+        <h3>Examples</h3>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">Type checking</div>
+            <div class="fn-sig">Verify expression types at runtime</div>
+            <p class="fn-desc">Use <code>typeOf</code> with assertions to verify types.</p>
+            <div class="fn-example"><code class="example-code">assert(typeOf(P1D + P1D) == 'duration')</code><span class="fn-result">→ true</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">Date arithmetic types</div>
+            <div class="fn-sig">Adding duration to date returns datetime</div>
+            <p class="fn-desc">Temporal arithmetic preserves type semantics.</p>
+            <div class="fn-example"><code class="example-code">assert(typeOf(TODAY + P1D) == 'datetime')</code><span class="fn-result">→ true</span></div>
           </div>
         </div>
       </section>

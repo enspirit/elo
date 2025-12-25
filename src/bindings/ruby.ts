@@ -92,6 +92,18 @@ export function createRubyBinding(): StdLib<string> {
 
   // datetime - duration uses the same operator, covered by any,any registration
 
+  // Duration + Date/DateTime needs operand swap (Ruby doesn't support Duration + Date)
+  rubyLib.register('add', [Types.duration, Types.date], (args, ctx) => {
+    const left = ctx.emitWithParens(args[1], '+', 'left');
+    const right = ctx.emitWithParens(args[0], '+', 'right');
+    return `${left} + ${right}`;
+  });
+  rubyLib.register('add', [Types.duration, Types.datetime], (args, ctx) => {
+    const left = ctx.emitWithParens(args[1], '+', 'left');
+    const right = ctx.emitWithParens(args[0], '+', 'right');
+    return `${left} + ${right}`;
+  });
+
   // Comparison operators - Ruby's operator overloading handles all types
   // Type generalization will match any concrete type combination
   rubyLib.register('lt', [Types.any, Types.any], simpleBinaryOp('<'));
