@@ -212,12 +212,10 @@ inRange && passing;</pre>
   <!-- Try Panel (Playground) -->
   <main data-tabs-target="panel" data-panel="try" data-controller="playground" class="hidden">
     <section class="editor-panel">
-      <textarea
-        data-playground-target="input"
-        data-action="input->playground#compile"
-        placeholder="Write Elo code here..."
-        spellcheck="false"
-      >let x = 12, y = 13 in assert(x + y == 25)</textarea>
+      <div
+        data-playground-target="editor"
+        data-initial-code="let x = 12, y = 13 in assert(x + y == 25)"
+      ></div>
     </section>
 
     <section class="output-panel">

@@ -8,6 +8,9 @@ import { highlightAll, highlightAllJS } from './highlighter';
 // Start Stimulus application
 const application = Application.start();
 
+// Expose Stimulus for cross-controller communication
+(window as any).Stimulus = application;
+
 // Register controllers
 application.register('playground', PlaygroundController);
 application.register('tabs', TabsController);

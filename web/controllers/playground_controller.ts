@@ -1,4 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
+import { EditorView, keymap } from '@codemirror/view';
+import { EditorState } from '@codemirror/state';
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { bracketMatching } from '@codemirror/language';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -11,6 +15,9 @@ import {
   compileToSQL
 } from '../../src/index';
 import { getPrelude, Target as PreludeTarget } from '../../src/preludes';
+import { elo } from '../codemirror/elo-language';
+import { eloTheme } from '../codemirror/elo-theme';
+import { highlightJS, highlightRuby, highlightSQL } from '../highlighter';
 
 // Enable dayjs plugins
 dayjs.extend(duration);
@@ -24,9 +31,9 @@ dayjs.extend(utc);
 type TargetLanguage = 'ruby' | 'javascript' | 'sql';
 
 export default class PlaygroundController extends Controller {
-  static targets = ['input', 'output', 'language', 'prelude', 'error', 'result', 'runButton'];
+  static targets = ['editor', 'output', 'language', 'prelude', 'error', 'result', 'runButton'];
 
-  declare inputTarget: HTMLTextAreaElement;
+  declare editorTarget: HTMLDivElement;
   declare outputTarget: HTMLPreElement;
   declare languageTarget: HTMLSelectElement;
   declare preludeTarget: HTMLInputElement;
@@ -34,13 +41,57 @@ export default class PlaygroundController extends Controller {
   declare resultTarget: HTMLDivElement;
   declare runButtonTarget: HTMLButtonElement;
 
+  private editorView: EditorView | null = null;
+
   connect() {
+    // Initialize CodeMirror
+    const initialCode = this.editorTarget.dataset.initialCode || '';
+
+    this.editorView = new EditorView({
+      state: EditorState.create({
+        doc: initialCode,
+        extensions: [
+          history(),
+          bracketMatching(),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          elo(),
+          ...eloTheme,
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              this.compile();
+            }
+          }),
+          EditorView.lineWrapping
+        ]
+      }),
+      parent: this.editorTarget
+    });
+
     // Compile on initial load
     this.compile();
   }
 
+  disconnect() {
+    if (this.editorView) {
+      this.editorView.destroy();
+      this.editorView = null;
+    }
+  }
+
+  getCode(): string {
+    return this.editorView?.state.doc.toString() || '';
+  }
+
+  setCode(code: string) {
+    if (this.editorView) {
+      this.editorView.dispatch({
+        changes: { from: 0, to: this.editorView.state.doc.length, insert: code }
+      });
+    }
+  }
+
   compile() {
-    const input = this.inputTarget.value;
+    const input = this.getCode();
     const language = this.languageTarget.value as TargetLanguage;
     const includePrelude = this.preludeTarget.checked;
 
@@ -68,16 +119,17 @@ export default class PlaygroundController extends Controller {
         }
       }
 
-      this.outputTarget.textContent = output;
+      // Apply syntax highlighting based on language
+      this.outputTarget.innerHTML = this.highlightOutput(output, language);
       this.hideError();
     } catch (error) {
-      this.outputTarget.textContent = '';
+      this.outputTarget.innerHTML = '';
       this.showError(error instanceof Error ? error.message : String(error));
     }
   }
 
   run() {
-    const input = this.inputTarget.value;
+    const input = this.getCode();
 
     if (!input.trim()) {
       return;
@@ -129,6 +181,19 @@ export default class PlaygroundController extends Controller {
         return compileToSQL(ast);
       default:
         return '';
+    }
+  }
+
+  private highlightOutput(code: string, language: TargetLanguage): string {
+    switch (language) {
+      case 'javascript':
+        return highlightJS(code);
+      case 'ruby':
+        return highlightRuby(code);
+      case 'sql':
+        return highlightSQL(code);
+      default:
+        return code;
     }
   }
 

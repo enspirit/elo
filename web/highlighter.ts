@@ -437,3 +437,357 @@ export function highlightAllJS(selector: string): void {
     el.innerHTML = highlightJS(code);
   });
 }
+
+// =============================================================================
+// Ruby Highlighter
+// =============================================================================
+
+type RubyCategory =
+  | 'keyword'
+  | 'boolean'
+  | 'number'
+  | 'string'
+  | 'comment'
+  | 'operator'
+  | 'punctuation'
+  | 'function'
+  | 'variable'
+  | 'constant'
+  | 'symbol';
+
+interface RubyToken {
+  category: RubyCategory;
+  text: string;
+}
+
+const RUBY_KEYWORDS = new Set([
+  'def', 'end', 'class', 'module', 'if', 'elsif', 'else', 'unless',
+  'case', 'when', 'while', 'until', 'for', 'do', 'begin', 'rescue',
+  'ensure', 'raise', 'return', 'yield', 'break', 'next', 'redo',
+  'retry', 'self', 'super', 'then', 'and', 'or', 'not', 'in',
+  'require', 'require_relative', 'include', 'extend', 'attr_accessor',
+  'attr_reader', 'attr_writer', 'private', 'protected', 'public', 'lambda'
+]);
+
+const RUBY_CONSTANTS = new Set([
+  'true', 'false', 'nil', 'Date', 'Time', 'DateTime', 'ActiveSupport',
+  'Math', 'Integer', 'Float', 'String', 'Array', 'Hash'
+]);
+
+/**
+ * Tokenize Ruby source code
+ */
+function tokenizeRuby(source: string): RubyToken[] {
+  const tokens: RubyToken[] = [];
+  let pos = 0;
+
+  const peek = (offset = 0) => source[pos + offset] || '';
+  const advance = () => source[pos++] || '';
+  const match = (pattern: RegExp) => {
+    const rest = source.slice(pos);
+    const m = rest.match(pattern);
+    return m && m.index === 0 ? m[0] : null;
+  };
+
+  while (pos < source.length) {
+    const ch = peek();
+
+    // Whitespace
+    const ws = match(/^\s+/);
+    if (ws) {
+      tokens.push({ category: 'variable', text: ws });
+      pos += ws.length;
+      continue;
+    }
+
+    // Comments
+    if (ch === '#') {
+      let comment = '';
+      while (pos < source.length && peek() !== '\n') {
+        comment += advance();
+      }
+      tokens.push({ category: 'comment', text: comment });
+      continue;
+    }
+
+    // String literals (single and double quotes)
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      let str = advance();
+      while (pos < source.length && peek() !== quote) {
+        if (peek() === '\\') str += advance();
+        str += advance();
+      }
+      if (peek() === quote) str += advance();
+      tokens.push({ category: 'string', text: str });
+      continue;
+    }
+
+    // Symbol
+    if (ch === ':' && /[a-zA-Z_]/.test(peek(1))) {
+      let sym = advance(); // :
+      const idMatch = match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
+      if (idMatch) {
+        sym += idMatch;
+        pos += idMatch.length;
+      }
+      tokens.push({ category: 'symbol', text: sym });
+      continue;
+    }
+
+    // Numbers
+    const numMatch = match(/^\d+(\.\d+)?/);
+    if (numMatch) {
+      tokens.push({ category: 'number', text: numMatch });
+      pos += numMatch.length;
+      continue;
+    }
+
+    // Identifiers and keywords
+    const idMatch = match(/^[a-zA-Z_][a-zA-Z0-9_]*[?!]?/);
+    if (idMatch) {
+      let category: RubyCategory = 'variable';
+      if (RUBY_KEYWORDS.has(idMatch)) {
+        category = 'keyword';
+      } else if (RUBY_CONSTANTS.has(idMatch)) {
+        category = 'constant';
+      } else if (peek() === '(' || peek() === '.') {
+        category = 'function';
+      } else if (/^[A-Z]/.test(idMatch)) {
+        category = 'constant';
+      }
+      tokens.push({ category, text: idMatch });
+      pos += idMatch.length;
+      continue;
+    }
+
+    // Multi-character operators
+    const ops = ['**', '<=>', '<=', '>=', '==', '!=', '&&', '||', '..', '::'];
+    let foundOp = false;
+    for (const op of ops) {
+      if (source.slice(pos, pos + op.length) === op) {
+        tokens.push({ category: 'operator', text: op });
+        pos += op.length;
+        foundOp = true;
+        break;
+      }
+    }
+    if (foundOp) continue;
+
+    // Single-character operators
+    if ('+-*/%<>=!&|^~'.includes(ch)) {
+      tokens.push({ category: 'operator', text: advance() });
+      continue;
+    }
+
+    // Punctuation
+    if ('(){}[],.;:@$'.includes(ch)) {
+      tokens.push({ category: 'punctuation', text: advance() });
+      continue;
+    }
+
+    // Unknown
+    tokens.push({ category: 'variable', text: advance() });
+  }
+
+  return tokens;
+}
+
+/**
+ * Highlight Ruby source code
+ */
+export function highlightRuby(source: string): string {
+  const tokens = tokenizeRuby(source);
+  return tokens.map(token => {
+    const escaped = escapeHtml(token.text);
+    if (token.category === 'variable' && /^\s*$/.test(token.text)) {
+      return escaped;
+    }
+    if (token.category === 'variable') {
+      return `<span class="hl-ruby-var">${escaped}</span>`;
+    }
+    return `<span class="hl-ruby-${token.category}">${escaped}</span>`;
+  }).join('');
+}
+
+// =============================================================================
+// SQL Highlighter
+// =============================================================================
+
+type SQLCategory =
+  | 'keyword'
+  | 'function'
+  | 'number'
+  | 'string'
+  | 'comment'
+  | 'operator'
+  | 'punctuation'
+  | 'variable';
+
+interface SQLToken {
+  category: SQLCategory;
+  text: string;
+}
+
+const SQL_KEYWORDS = new Set([
+  'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'BETWEEN',
+  'LIKE', 'IS', 'NULL', 'TRUE', 'FALSE', 'AS', 'ON', 'JOIN',
+  'LEFT', 'RIGHT', 'INNER', 'OUTER', 'FULL', 'CROSS', 'NATURAL',
+  'ORDER', 'BY', 'ASC', 'DESC', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
+  'UNION', 'INTERSECT', 'EXCEPT', 'ALL', 'DISTINCT', 'CASE', 'WHEN',
+  'THEN', 'ELSE', 'END', 'CAST', 'INSERT', 'UPDATE', 'DELETE', 'INTO',
+  'VALUES', 'SET', 'CREATE', 'TABLE', 'INDEX', 'VIEW', 'DROP', 'ALTER',
+  'ADD', 'COLUMN', 'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES', 'CONSTRAINT',
+  'DEFAULT', 'CHECK', 'UNIQUE', 'EXISTS', 'ANY', 'SOME',
+  // Types
+  'INTEGER', 'INT', 'BIGINT', 'SMALLINT', 'DECIMAL', 'NUMERIC', 'REAL',
+  'DOUBLE', 'PRECISION', 'FLOAT', 'BOOLEAN', 'CHAR', 'VARCHAR', 'TEXT',
+  'DATE', 'TIME', 'TIMESTAMP', 'INTERVAL', 'ARRAY'
+]);
+
+const SQL_FUNCTIONS = new Set([
+  'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'COALESCE', 'NULLIF',
+  'POWER', 'ABS', 'ROUND', 'FLOOR', 'CEIL', 'CEILING', 'MOD',
+  'EXTRACT', 'DATE_TRUNC', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_TIMESTAMP',
+  'NOW', 'LENGTH', 'UPPER', 'LOWER', 'TRIM', 'LTRIM', 'RTRIM',
+  'SUBSTRING', 'CONCAT', 'REPLACE', 'POSITION', 'OVERLAY', 'SPLIT_PART',
+  'TO_CHAR', 'TO_DATE', 'TO_TIMESTAMP', 'TO_NUMBER'
+]);
+
+/**
+ * Tokenize SQL source code
+ */
+function tokenizeSQL(source: string): SQLToken[] {
+  const tokens: SQLToken[] = [];
+  let pos = 0;
+
+  const peek = (offset = 0) => source[pos + offset] || '';
+  const advance = () => source[pos++] || '';
+  const match = (pattern: RegExp) => {
+    const rest = source.slice(pos);
+    const m = rest.match(pattern);
+    return m && m.index === 0 ? m[0] : null;
+  };
+
+  while (pos < source.length) {
+    const ch = peek();
+
+    // Whitespace
+    const ws = match(/^\s+/);
+    if (ws) {
+      tokens.push({ category: 'variable', text: ws });
+      pos += ws.length;
+      continue;
+    }
+
+    // Single-line comment
+    if (ch === '-' && peek(1) === '-') {
+      let comment = '';
+      while (pos < source.length && peek() !== '\n') {
+        comment += advance();
+      }
+      tokens.push({ category: 'comment', text: comment });
+      continue;
+    }
+
+    // Multi-line comment
+    if (ch === '/' && peek(1) === '*') {
+      let comment = advance() + advance(); // /*
+      while (pos < source.length && !(peek() === '*' && peek(1) === '/')) {
+        comment += advance();
+      }
+      if (pos < source.length) {
+        comment += advance() + advance(); // */
+      }
+      tokens.push({ category: 'comment', text: comment });
+      continue;
+    }
+
+    // String literals
+    if (ch === "'") {
+      let str = advance();
+      while (pos < source.length) {
+        if (peek() === "'" && peek(1) === "'") {
+          str += advance() + advance(); // escaped quote
+        } else if (peek() === "'") {
+          str += advance();
+          break;
+        } else {
+          str += advance();
+        }
+      }
+      tokens.push({ category: 'string', text: str });
+      continue;
+    }
+
+    // Numbers
+    const numMatch = match(/^\d+(\.\d+)?/);
+    if (numMatch) {
+      tokens.push({ category: 'number', text: numMatch });
+      pos += numMatch.length;
+      continue;
+    }
+
+    // Identifiers and keywords
+    const idMatch = match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
+    if (idMatch) {
+      const upper = idMatch.toUpperCase();
+      let category: SQLCategory = 'variable';
+      if (SQL_KEYWORDS.has(upper)) {
+        category = 'keyword';
+      } else if (SQL_FUNCTIONS.has(upper)) {
+        category = 'function';
+      }
+      tokens.push({ category, text: idMatch });
+      pos += idMatch.length;
+      continue;
+    }
+
+    // Multi-character operators
+    const ops = ['<=', '>=', '<>', '!=', '||', '::'];
+    let foundOp = false;
+    for (const op of ops) {
+      if (source.slice(pos, pos + op.length) === op) {
+        tokens.push({ category: 'operator', text: op });
+        pos += op.length;
+        foundOp = true;
+        break;
+      }
+    }
+    if (foundOp) continue;
+
+    // Single-character operators
+    if ('+-*/%<>=!|&^~'.includes(ch)) {
+      tokens.push({ category: 'operator', text: advance() });
+      continue;
+    }
+
+    // Punctuation
+    if ('(),.;:'.includes(ch)) {
+      tokens.push({ category: 'punctuation', text: advance() });
+      continue;
+    }
+
+    // Unknown
+    tokens.push({ category: 'variable', text: advance() });
+  }
+
+  return tokens;
+}
+
+/**
+ * Highlight SQL source code
+ */
+export function highlightSQL(source: string): string {
+  const tokens = tokenizeSQL(source);
+  return tokens.map(token => {
+    const escaped = escapeHtml(token.text);
+    if (token.category === 'variable' && /^\s*$/.test(token.text)) {
+      return escaped;
+    }
+    if (token.category === 'variable') {
+      return `<span class="hl-sql-var">${escaped}</span>`;
+    }
+    return `<span class="hl-sql-${token.category}">${escaped}</span>`;
+  }).join('');
+}

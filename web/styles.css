@@ -155,25 +155,20 @@ main {
   color: var(--text-secondary);
 }
 
-/* Editor textarea */
-textarea {
+/* CodeMirror Editor */
+.editor-panel > div {
   flex: 1;
   width: 100%;
-  padding: 1rem;
-  background: var(--bg-panel);
-  color: var(--text-primary);
-  border: none;
-  outline: none;
-  resize: none;
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  line-height: 1.6;
-  tab-size: 2;
+  min-height: 0;
+  overflow: hidden;
 }
 
-textarea::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.5;
+.editor-panel .cm-editor {
+  height: 100%;
+}
+
+.editor-panel .cm-scroller {
+  overflow: auto;
 }
 
 /* Output */
@@ -557,6 +552,84 @@ select:focus {
 }
 
 .hl-js-punctuation {
+  color: var(--text-secondary);
+}
+
+/* Ruby syntax highlighting */
+.hl-ruby-keyword {
+  color: #c792ea;
+  font-weight: 500;
+}
+
+.hl-ruby-constant {
+  color: #ffcb6b;
+}
+
+.hl-ruby-number {
+  color: #f78c6c;
+}
+
+.hl-ruby-string {
+  color: #c3e88d;
+}
+
+.hl-ruby-symbol {
+  color: #82aaff;
+}
+
+.hl-ruby-comment {
+  color: #546e7a;
+  font-style: italic;
+}
+
+.hl-ruby-operator {
+  color: #89ddff;
+}
+
+.hl-ruby-function {
+  color: #82aaff;
+}
+
+.hl-ruby-var {
+  color: var(--text-primary);
+}
+
+.hl-ruby-punctuation {
+  color: var(--text-secondary);
+}
+
+/* SQL syntax highlighting */
+.hl-sql-keyword {
+  color: #c792ea;
+  font-weight: 500;
+}
+
+.hl-sql-function {
+  color: #82aaff;
+}
+
+.hl-sql-number {
+  color: #f78c6c;
+}
+
+.hl-sql-string {
+  color: #c3e88d;
+}
+
+.hl-sql-comment {
+  color: #546e7a;
+  font-style: italic;
+}
+
+.hl-sql-operator {
+  color: #89ddff;
+}
+
+.hl-sql-var {
+  color: var(--text-primary);
+}
+
+.hl-sql-punctuation {
   color: var(--text-secondary);
 }
 

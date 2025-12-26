@@ -26,7 +26,11 @@
     "build:web": "esbuild web/main.ts --bundle --outfile=web/dist/bundle.js --format=esm --target=es2020",
     "dev:web": "esbuild web/main.ts --bundle --outfile=web/dist/bundle.js --format=esm --target=es2020 --watch --servedir=web"
   },
-  "keywords": ["compiler", "expression", "multi-target"],
+  "keywords": [
+    "compiler",
+    "expression",
+    "multi-target"
+  ],
   "author": "",
   "license": "MIT",
   "repository": {
@@ -41,12 +45,19 @@
     "access": "public"
   },
   "dependencies": {
-    "@hotwired/stimulus": "^3.2.2",
     "dayjs": "^1.11.0"
   },
   "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/commands": "^6.10.1",
+    "@codemirror/language": "^6.12.1",
+    "@codemirror/state": "^6.5.3",
+    "@codemirror/view": "^6.39.7",
+    "@hotwired/stimulus": "^3.2.2",
+    "@lezer/highlight": "^1.2.3",
     "@types/node": "^20.10.0",
     "@types/pg": "^8.10.0",
+    "codemirror": "^6.0.2",
     "esbuild": "^0.24.0",
     "pg": "^8.11.0",
     "typescript": "^5.3.0"
