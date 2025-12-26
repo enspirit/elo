@@ -456,6 +456,58 @@ select:focus {
   white-space: pre-wrap;
 }
 
+/* Syntax highlighting colors */
+.hl-keyword {
+  color: #c792ea;
+  font-weight: 500;
+}
+
+.hl-boolean {
+  color: #ff9cac;
+}
+
+.hl-temporal {
+  color: #82aaff;
+  font-weight: 500;
+}
+
+.hl-number {
+  color: #f78c6c;
+}
+
+.hl-string {
+  color: #c3e88d;
+}
+
+.hl-date,
+.hl-datetime {
+  color: #89ddff;
+}
+
+.hl-duration {
+  color: #ffcb6b;
+}
+
+.hl-operator {
+  color: #89ddff;
+}
+
+.hl-function {
+  color: #82aaff;
+}
+
+.hl-property {
+  color: #f07178;
+}
+
+.hl-var {
+  color: var(--text-primary);
+}
+
+.hl-punctuation {
+  color: var(--text-secondary);
+}
+
 .example-desc {
   font-size: 0.8125rem;
   color: var(--text-secondary);
