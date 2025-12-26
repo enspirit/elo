@@ -1,9 +1,13 @@
 {
-  "name": "klang",
+  "name": "@enspirit/k",
   "version": "0.1.0",
   "description": "A small expression language that compiles to Ruby, Javascript and PostgreSQL",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "files": [
+    "dist/src",
+    "bin"
+  ],
   "bin": {
     "kc": "./bin/kc"
   },
@@ -25,6 +29,17 @@
   "keywords": ["compiler", "expression", "multi-target"],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enspirit/k.git"
+  },
+  "homepage": "https://github.com/enspirit/k#readme",
+  "bugs": {
+    "url": "https://github.com/enspirit/k/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@hotwired/stimulus": "^3.2.2",
     "dayjs": "^1.11.0"
