@@ -175,8 +175,9 @@ export function createRubyBinding(): StdLib<string> {
     `${ctx.emit(args[0])}[${ctx.emit(args[1])}, ${ctx.emit(args[2])}]`);
   rubyLib.register('concat', [Types.string, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.concat(${ctx.emit(args[1])})`);
+  // indexOf returns nil when not found (Ruby's index already does this)
   rubyLib.register('indexOf', [Types.string, Types.string], (args, ctx) =>
-    `(${ctx.emit(args[0])}.index(${ctx.emit(args[1])}) || -1)`);
+    `${ctx.emit(args[0])}.index(${ctx.emit(args[1])})`);
   rubyLib.register('replace', [Types.string, Types.string, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.sub(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   rubyLib.register('replaceAll', [Types.string, Types.string, Types.string], (args, ctx) =>

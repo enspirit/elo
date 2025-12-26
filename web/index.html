@@ -873,8 +873,8 @@ in
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">indexOf</div>
-            <div class="fn-sig">(s: String, sub: String) → Int</div>
-            <p class="fn-desc">Returns the index of the first occurrence, or -1 if not found.</p>
+            <div class="fn-sig">(s: String, sub: String) → Int | NoVal</div>
+            <p class="fn-desc">Returns the index of the first occurrence, or <code>NoVal</code> (null) if not found. Use <code>isVal()</code> or <code>orVal()</code> to handle the not-found case.</p>
             <div class="fn-example"><code class="example-code">indexOf('hello', 'l')</code><span class="fn-result">→ 2</span></div>
           </div>
 

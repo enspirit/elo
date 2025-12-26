@@ -171,9 +171,10 @@ export function createSQLBinding(): StdLib<string> {
     `SUBSTRING(${ctx.emit(args[0])} FROM ${ctx.emit(args[1])} + 1 FOR ${ctx.emit(args[2])})`);
   sqlLib.register('concat', [Types.string, Types.string], (args, ctx) =>
     `CONCAT(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
-  // PostgreSQL POSITION is 1-based, return 0-based index (-1 if not found)
+  // indexOf returns NULL when not found, 0-based index otherwise
+  // POSITION returns 1-based (or 0 if not found), NULLIF converts 0 to NULL
   sqlLib.register('indexOf', [Types.string, Types.string], (args, ctx) =>
-    `(POSITION(${ctx.emit(args[1])} IN ${ctx.emit(args[0])}) - 1)`);
+    `(NULLIF(POSITION(${ctx.emit(args[1])} IN ${ctx.emit(args[0])}), 0) - 1)`);
   sqlLib.register('replace', [Types.string, Types.string, Types.string], (args, ctx) =>
     `REGEXP_REPLACE(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   sqlLib.register('replaceAll', [Types.string, Types.string, Types.string], (args, ctx) =>

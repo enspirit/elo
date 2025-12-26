@@ -207,8 +207,10 @@ export function createJavaScriptBinding(): StdLib<string> {
   });
   jsLib.register('concat', [Types.string, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.concat(${ctx.emit(args[1])})`);
+  // indexOf returns null when not found (not -1)
   jsLib.register('indexOf', [Types.string, Types.string], (args, ctx) =>
-    `${ctx.emit(args[0])}.indexOf(${ctx.emit(args[1])})`);
+    `(i => i === -1 ? null : i)(${ctx.emit(args[0])}.indexOf(${ctx.emit(args[1])}))`);
+
   jsLib.register('replace', [Types.string, Types.string, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   jsLib.register('replaceAll', [Types.string, Types.string, Types.string], (args, ctx) =>

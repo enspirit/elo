@@ -206,7 +206,7 @@ export function createTypeDefs(): TypeDefs {
   defs.register('isEmpty', [Types.string], Types.bool);
   defs.register('substring', [Types.string, Types.int, Types.int], Types.string);
   defs.register('concat', [Types.string, Types.string], Types.string);
-  defs.register('indexOf', [Types.string, Types.string], Types.int);
+  defs.register('indexOf', [Types.string, Types.string], Types.any); // Int or NoVal
   defs.register('replace', [Types.string, Types.string, Types.string], Types.string);
   defs.register('replaceAll', [Types.string, Types.string, Types.string], Types.string);
   defs.register('padStart', [Types.string, Types.int, Types.string], Types.string);
