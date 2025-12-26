@@ -110,6 +110,21 @@ nav a.active {
   display: none;
 }
 
+.submenu-section {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  padding: 0.75rem 1rem 0.25rem 1rem;
+  opacity: 0.6;
+}
+
+.submenu-section:first-child {
+  padding-top: 0.25rem;
+}
+
 /* Main layout */
 main {
   flex: 1;
@@ -326,6 +341,22 @@ select:focus {
 .doc-toc nav a.active {
   color: var(--accent);
   background: rgba(99, 102, 241, 0.1);
+}
+
+.toc-section {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  padding: 0.75rem 0.75rem 0.25rem;
+  margin-top: 0.5rem;
+  opacity: 0.7;
+}
+
+.toc-section:first-child {
+  margin-top: 0;
 }
 
 .doc-content {

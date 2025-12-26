@@ -18,6 +18,7 @@
       <div class="nav-group">
         <a href="#doc" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="doc">Reference</a>
         <div class="nav-submenu">
+          <span class="submenu-section">Language</span>
           <a href="#doc/getting-started" data-action="click->tabs#switch" data-tab="doc">Getting Started</a>
           <a href="#doc/types" data-action="click->tabs#switch" data-tab="doc">Types</a>
           <a href="#doc/literals" data-action="click->tabs#switch" data-tab="doc">Literals</a>
@@ -28,7 +29,9 @@
           <a href="#doc/lambdas" data-action="click->tabs#switch" data-tab="doc">Lambdas</a>
           <a href="#doc/ranges" data-action="click->tabs#switch" data-tab="doc">Ranges</a>
           <a href="#doc/assertions" data-action="click->tabs#switch" data-tab="doc">Assertions</a>
+          <span class="submenu-section">Tools</span>
           <a href="#doc/examples" data-action="click->tabs#switch" data-tab="doc">Examples</a>
+          <a href="#doc/javascript-api" data-action="click->tabs#switch" data-tab="doc">JavaScript API</a>
         </div>
       </div>
       <div class="nav-group">
@@ -236,6 +239,7 @@ inRange && passing;</pre>
   <main data-tabs-target="panel" data-panel="doc" class="doc-panel hidden" data-controller="doc">
     <aside class="doc-toc">
       <nav>
+        <span class="toc-section">Language</span>
         <a href="#doc/getting-started" data-action="click->tabs#switch" data-tab="doc">Getting Started</a>
         <a href="#doc/types" data-action="click->tabs#switch" data-tab="doc">Types</a>
         <a href="#doc/literals" data-action="click->tabs#switch" data-tab="doc">Literals</a>
@@ -246,7 +250,9 @@ inRange && passing;</pre>
         <a href="#doc/lambdas" data-action="click->tabs#switch" data-tab="doc">Lambdas</a>
         <a href="#doc/ranges" data-action="click->tabs#switch" data-tab="doc">Ranges</a>
         <a href="#doc/assertions" data-action="click->tabs#switch" data-tab="doc">Assertions</a>
+        <span class="toc-section">Tools</span>
         <a href="#doc/examples" data-action="click->tabs#switch" data-tab="doc">Examples</a>
+        <a href="#doc/javascript-api" data-action="click->tabs#switch" data-tab="doc">JavaScript API</a>
       </nav>
     </aside>
     <article class="doc-content">
@@ -704,6 +710,86 @@ in
   TODAY &lt;= report_due</pre>
           <p class="example-desc">Reports are due 5 days after end of quarter.</p>
         </div>
+      </section>
+
+      <section class="doc-section" id="javascript-api">
+        <h2>JavaScript API</h2>
+        <p>Elo provides a JavaScript/TypeScript API for compiling expressions programmatically. Install with <code>npm install @enspirit/elo</code>.</p>
+
+        <h3>compile()</h3>
+        <p>The <code>compile()</code> function creates a callable JavaScript function from an Elo lambda expression:</p>
+
+        <pre class="code-block">import { compile } from '@enspirit/elo';
+import dayjs from 'dayjs';
+import duration from 'dayjs/plugin/duration';
+import isoWeek from 'dayjs/plugin/isoWeek';
+import quarterOfYear from 'dayjs/plugin/quarterOfYear';
+
+// Configure dayjs with required plugins
+dayjs.extend(duration);
+dayjs.extend(isoWeek);
+dayjs.extend(quarterOfYear);
+
+// Compile a lambda to a callable function
+const double = compile&lt;(x: number) =&gt; number&gt;(
+  'fn(x ~&gt; x * 2)',
+  { runtime: { dayjs } }
+);
+double(21); // =&gt; 42
+
+// Temporal expressions work too
+const inThisWeek = compile&lt;(d: unknown) =&gt; boolean&gt;(
+  'fn(d ~&gt; d in SOW ... EOW)',
+  { runtime: { dayjs } }
+);
+inThisWeek(dayjs()); // =&gt; true or false</pre>
+
+        <p>The <code>runtime</code> option injects dependencies into the compiled function. Currently, <code>dayjs</code> is required for temporal operations.</p>
+
+        <h3>Lower-Level API</h3>
+        <p>For more control, you can use the lower-level parsing and compilation functions:</p>
+
+        <pre class="code-block">import { parse, compileToJavaScript, compileToRuby, compileToSQL } from '@enspirit/elo';
+
+// Parse an expression to an AST
+const ast = parse('2 + 3 * 4');
+
+// Compile to different targets
+compileToJavaScript(ast); // =&gt; "2 + 3 * 4"
+compileToRuby(ast);       // =&gt; "2 + 3 * 4"
+compileToSQL(ast);        // =&gt; "2 + 3 * 4"</pre>
+
+        <h3>API Reference</h3>
+        <table class="type-table">
+          <thead>
+            <tr>
+              <th>Function</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>compile(source, options?)</code></td>
+              <td>Compiles an Elo lambda to a callable JS function</td>
+            </tr>
+            <tr>
+              <td><code>parse(source)</code></td>
+              <td>Parses Elo source code to an AST</td>
+            </tr>
+            <tr>
+              <td><code>compileToJavaScript(ast)</code></td>
+              <td>Compiles an AST to JavaScript code string</td>
+            </tr>
+            <tr>
+              <td><code>compileToRuby(ast)</code></td>
+              <td>Compiles an AST to Ruby code string</td>
+            </tr>
+            <tr>
+              <td><code>compileToSQL(ast)</code></td>
+              <td>Compiles an AST to PostgreSQL code string</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <footer class="doc-footer">

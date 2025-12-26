@@ -61,10 +61,45 @@ npm run test:integration
 npm run test:acceptance
 ```
 
-## Parsing and Compiling Expressions
+## Using Elo in JavaScript/TypeScript
+
+The simplest way to use Elo is with the `compile()` function, which creates a callable JavaScript function from an Elo lambda expression:
 
 ```typescript
-import { parse, compileToRuby, compileToJavaScript, compileToSQL } from './src';
+import { compile } from '@enspirit/elo';
+import dayjs from 'dayjs';
+import duration from 'dayjs/plugin/duration';
+import isoWeek from 'dayjs/plugin/isoWeek';
+import quarterOfYear from 'dayjs/plugin/quarterOfYear';
+
+// Configure dayjs with required plugins
+dayjs.extend(duration);
+dayjs.extend(isoWeek);
+dayjs.extend(quarterOfYear);
+
+// Compile a lambda to a callable function
+const double = compile<(x: number) => number>(
+  'fn(x ~> x * 2)',
+  { runtime: { dayjs } }
+);
+double(21); // => 42
+
+// Temporal expressions work too
+const inThisWeek = compile<(d: unknown) => boolean>(
+  'fn(d ~> d in SOW ... EOW)',
+  { runtime: { dayjs } }
+);
+inThisWeek(dayjs()); // => true or false
+```
+
+The `runtime` option injects dependencies (like `dayjs`) into the compiled function. This avoids global variables and keeps the compiled code portable.
+
+## Lower-Level API
+
+For more control, you can use the lower-level parsing and compilation functions:
+
+```typescript
+import { parse, compileToRuby, compileToJavaScript, compileToSQL } from '@enspirit/elo';
 
 // Parse an expression
 const ast = parse(`
