@@ -11,7 +11,7 @@ import { compileToSQL } from '../../src/compilers/sql';
  * Compiler tests using test fixtures from test/ directory.
  *
  * Each test suite has:
- * - <name>.klang - Klang expressions, one per line
+ * - <name>.elo - Elo expressions, one per line
  * - <name>.expected.js - Expected JavaScript compilation (optional)
  * - <name>.expected.ruby - Expected Ruby compilation (optional)
  * - <name>.expected.sql - Expected SQL compilation (optional)
@@ -24,7 +24,7 @@ const TEST_DIR = join(__dirname, '../../../test/fixtures');
 
 interface TestSuite {
   name: string;
-  klang: string[];
+  elo: string[];
   expectedJS: string[] | null;
   expectedRuby: string[] | null;
   expectedSQL: string[] | null;
@@ -40,27 +40,27 @@ function tryReadFile(path: string): string[] | null {
 function loadTestSuites(): TestSuite[] {
   const suites: TestSuite[] = [];
 
-  // Find all .klang files
+  // Find all .elo files
   const files = readdirSync(TEST_DIR);
-  const klangFiles = files.filter(f => f.endsWith('.klang'));
+  const eloFiles = files.filter(f => f.endsWith('.elo'));
 
-  for (const klangFile of klangFiles) {
-    const name = klangFile.replace('.klang', '');
+  for (const eloFile of eloFiles) {
+    const name = eloFile.replace('.elo', '');
 
     // Read all related files (expected files are optional)
-    const klangPath = join(TEST_DIR, `${name}.klang`);
+    const eloPath = join(TEST_DIR, `${name}.elo`);
     const jsPath = join(TEST_DIR, `${name}.expected.js`);
     const rubyPath = join(TEST_DIR, `${name}.expected.ruby`);
     const sqlPath = join(TEST_DIR, `${name}.expected.sql`);
 
-    const klang = readFileSync(klangPath, 'utf-8').split('\n');
+    const elo = readFileSync(eloPath, 'utf-8').split('\n');
     const expectedJS = tryReadFile(jsPath);
     const expectedRuby = tryReadFile(rubyPath);
     const expectedSQL = tryReadFile(sqlPath);
 
     suites.push({
       name,
-      klang,
+      elo,
       expectedJS,
       expectedRuby,
       expectedSQL
@@ -72,11 +72,11 @@ function loadTestSuites(): TestSuite[] {
 
 const testSuites = loadTestSuites();
 
-// Validate fixture file completeness - ensure expected files have the same number of lines as klang files
+// Validate fixture file completeness - ensure expected files have the same number of lines as elo files
 // Note: JavaScript is skipped because IIFE-wrapped output can be multi-line for a single expression
 describe('Fixture file completeness', () => {
   for (const suite of testSuites) {
-    const klangLineCount = suite.klang.length;
+    const eloLineCount = suite.elo.length;
 
     // Skip JavaScript line count check - IIFE wrapping makes output multi-line
     if (suite.expectedJS) {
@@ -86,21 +86,21 @@ describe('Fixture file completeness', () => {
     }
 
     if (suite.expectedRuby) {
-      it(`${suite.name}.expected.ruby should have same line count as .klang`, () => {
+      it(`${suite.name}.expected.ruby should have same line count as .elo`, () => {
         assert.strictEqual(
           suite.expectedRuby!.length,
-          klangLineCount,
-          `${suite.name}.expected.ruby has ${suite.expectedRuby!.length} lines but ${suite.name}.klang has ${klangLineCount} lines`
+          eloLineCount,
+          `${suite.name}.expected.ruby has ${suite.expectedRuby!.length} lines but ${suite.name}.elo has ${eloLineCount} lines`
         );
       });
     }
 
     if (suite.expectedSQL) {
-      it(`${suite.name}.expected.sql should have same line count as .klang`, () => {
+      it(`${suite.name}.expected.sql should have same line count as .elo`, () => {
         assert.strictEqual(
           suite.expectedSQL!.length,
-          klangLineCount,
-          `${suite.name}.expected.sql has ${suite.expectedSQL!.length} lines but ${suite.name}.klang has ${klangLineCount} lines`
+          eloLineCount,
+          `${suite.name}.expected.sql has ${suite.expectedSQL!.length} lines but ${suite.name}.elo has ${eloLineCount} lines`
         );
       });
     }
@@ -109,8 +109,8 @@ describe('Fixture file completeness', () => {
 
 for (const suite of testSuites) {
   describe(`Compiler - ${suite.name}`, () => {
-    for (let i = 0; i < suite.klang.length; i++) {
-      const expr = suite.klang[i].trim();
+    for (let i = 0; i < suite.elo.length; i++) {
+      const expr = suite.elo[i].trim();
 
       // Skip empty lines
       if (!expr) continue;

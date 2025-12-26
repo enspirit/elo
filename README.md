@@ -1,11 +1,11 @@
-# What is K ?
+# What is Elo ?
 
-[![CI](https://github.com/enspirit/k/actions/workflows/ci.yml/badge.svg)](https://github.com/enspirit/k/actions/workflows/ci.yml)
+[![CI](https://github.com/enspirit/elo/actions/workflows/ci.yml/badge.svg)](https://github.com/enspirit/elo/actions/workflows/ci.yml)
 
 A simple, well-designed, portable and safe data expression language that
 compiles/translates to Ruby, Javascript and PostgreSQL.
 
-**[Try K online](https://enspirit.github.io/k/)** - Interactive playground and documentation
+**[Try Elo online](https://elo-lang.org/)** - Interactive playground and documentation
 
 ## Why ?
 
@@ -50,7 +50,7 @@ npm run build
 
 ## Testing
 
-Klang uses a comprehensive test suite that verifies:
+Elo uses a comprehensive test suite that verifies:
 - **Unit tests**: Parser, AST, and compiler components
 - **Integration tests**: End-to-end compilation output
 - **Acceptance tests**: Compiled code execution in real runtimes (Ruby, Node.js, PostgreSQL)
@@ -109,7 +109,7 @@ node dist/examples/demo.js      # Quick demo
 ## Project Structure
 
 ```
-klang/
+elo/
 ├── src/              # Compiler source code
 │   ├── parser.ts     # Lexer and parser
 │   ├── ast.ts        # AST definitions
@@ -125,7 +125,7 @@ klang/
 │   ├── integration/  # Compilation tests
 │   └── acceptance/   # Runtime execution tests
 ├── examples/         # Usage examples
-├── bin/kc            # CLI tool
+├── bin/eloc          # CLI tool
 └── CLAUDE.md         # Developer guide
 ```
 
@@ -140,6 +140,8 @@ In many cases, observe that we require compiling expressions that amount to a
 single function evaluating on a context object, sometimes a scalar (Finitio),
 sometimes a current Tuple (Bmg), sometimes json data received from an API
 (Webspicy), or a current Card (Klaro Cards, similar to Bmg's Tuple).
+
+See https://elo-lang.org for more documentation.
 
 ### Finitio
 
@@ -192,7 +194,7 @@ See https://klaro.cards
 
 ## Contributing
 
-Klang follows a strict test-driven development methodology to ensure semantic equivalence across all three target languages (Ruby, JavaScript, SQL).
+Elo follows a strict test-driven development methodology to ensure semantic equivalence across all three target languages (Ruby, JavaScript, SQL).
 
 **For developers and AI assistants**: See [CLAUDE.md](CLAUDE.md) for:
 - Test-driven development workflow

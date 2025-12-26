@@ -84,10 +84,10 @@ function parseArgs(args: string[]): Options {
 
 function printHelp() {
   console.log(`
-Klang Compiler (kc) - Compile Klang expressions to Ruby, JavaScript, or SQL
+Elo Compiler (eloc) - Compile Elo expressions to Ruby, JavaScript, or SQL
 
 Usage:
-  kc [options] [input-file]
+  eloc [options] [input-file]
 
 Options:
   -e, --expression <expr>   Expression to compile (like ruby -e)
@@ -99,25 +99,25 @@ Options:
 
 Examples:
   # Compile expression to JavaScript (default)
-  kc -e "2 + 3 * 4"
+  eloc -e "2 + 3 * 4"
 
   # Compile expression to Ruby
-  kc -e "2 + 3 * 4" -t ruby
+  eloc -e "2 + 3 * 4" -t ruby
 
   # Compile expression to SQL
-  kc -e "2 + 3 * 4" -t sql
+  eloc -e "2 + 3 * 4" -t sql
 
   # Compile with prelude (includes required libraries)
-  kc -e "NOW + PT2H" -t ruby -p
+  eloc -e "NOW + PT2H" -t ruby -p
 
   # Compile from file
-  kc input.klang -t ruby
+  eloc input.elo -t ruby
 
   # Compile to file
-  kc -e "2 + 3" -t ruby -f output.rb
+  eloc -e "2 + 3" -t ruby -f output.rb
 
   # Compile file to file
-  kc input.klang -t js -f output.js
+  eloc input.elo -t js -f output.js
 `);
 }
 

@@ -21,7 +21,7 @@ interface EmitResult {
 }
 
 /**
- * Compiles Klang expressions to JavaScript code
+ * Compiles Elo expressions to JavaScript code
  * Uses dayjs for temporal operations
  *
  * This compiler works in two phases:

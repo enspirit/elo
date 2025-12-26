@@ -13,9 +13,9 @@ SKIPPED=0
 # PostgreSQL connection settings (for Docker)
 PGHOST="${PGHOST:-localhost}"
 PGPORT="${PGPORT:-5432}"
-PGUSER="${PGUSER:-klang}"
-PGPASSWORD="${PGPASSWORD:-klang}"
-PGDATABASE="${PGDATABASE:-klang}"
+PGUSER="${PGUSER:-elo}"
+PGPASSWORD="${PGPASSWORD:-elo}"
+PGDATABASE="${PGDATABASE:-elo}"
 export PGPASSWORD
 
 # Files that require variables - cannot be executed standalone

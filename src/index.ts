@@ -1,5 +1,5 @@
 /**
- * Klang - A small expression language that compiles to Ruby, JavaScript and PostgreSQL
+ * Elo - A small expression language that compiles to Ruby, JavaScript and PostgreSQL
  */
 
 export * from './ast';

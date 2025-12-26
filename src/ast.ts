@@ -1,5 +1,5 @@
 /**
- * AST node types for Klang expressions
+ * AST node types for Elo expressions
  */
 
 export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr | Lambda | Predicate | ObjectLiteral;

@@ -1,5 +1,5 @@
 /**
- * Klang runtime helpers for JavaScript execution.
+ * Elo runtime helpers for JavaScript execution.
  *
  * These helper function snippets are embedded directly in compiled output
  * when needed, wrapped in an IIFE for encapsulation.

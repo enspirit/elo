@@ -1,35 +1,35 @@
 /**
- * Type Definitions for Klang
+ * Type Definitions for Elo
  *
- * This module defines the type signatures for Klang's stdlib functions and operators.
+ * This module defines the type signatures for Elo's stdlib functions and operators.
  * It provides a central registry for looking up result types based on function name
  * and argument types.
  *
  * This information is language-agnostic and used by the transform phase for type inference.
  */
 
-import { KlangType, Types, typeEquals } from './types';
+import { EloType, Types, typeEquals } from './types';
 import { signatureKey, typeGeneralizations } from './stdlib';
 
 /**
  * A type signature definition: maps argument types to result type
  */
 export interface TypeSignature {
-  argTypes: KlangType[];
-  resultType: KlangType;
+  argTypes: EloType[];
+  resultType: EloType;
 }
 
 /**
  * Registry of type definitions for functions and operators
  */
 export class TypeDefs {
-  private signatures: Map<string, KlangType> = new Map();
-  private fallback: ((name: string, argTypes: KlangType[]) => KlangType) | null = null;
+  private signatures: Map<string, EloType> = new Map();
+  private fallback: ((name: string, argTypes: EloType[]) => EloType) | null = null;
 
   /**
    * Register a type signature for a function
    */
-  register(name: string, argTypes: KlangType[], resultType: KlangType): this {
+  register(name: string, argTypes: EloType[], resultType: EloType): this {
     const key = signatureKey(name, argTypes);
     this.signatures.set(key, resultType);
     return this;
@@ -38,7 +38,7 @@ export class TypeDefs {
   /**
    * Register a fallback for unmatched signatures
    */
-  registerFallback(handler: (name: string, argTypes: KlangType[]) => KlangType): this {
+  registerFallback(handler: (name: string, argTypes: EloType[]) => EloType): this {
     this.fallback = handler;
     return this;
   }
@@ -47,7 +47,7 @@ export class TypeDefs {
    * Look up the result type for a function call.
    * Tries progressively more general type signatures before falling back.
    */
-  lookup(name: string, argTypes: KlangType[]): KlangType {
+  lookup(name: string, argTypes: EloType[]): EloType {
     for (const generalized of typeGeneralizations(argTypes)) {
       const key = signatureKey(name, generalized);
       const resultType = this.signatures.get(key);
@@ -62,7 +62,7 @@ export class TypeDefs {
   /**
    * Check if a function signature is registered
    */
-  has(name: string, argTypes: KlangType[]): boolean {
+  has(name: string, argTypes: EloType[]): boolean {
     for (const generalized of typeGeneralizations(argTypes)) {
       const key = signatureKey(name, generalized);
       if (this.signatures.has(key)) return true;
@@ -72,7 +72,7 @@ export class TypeDefs {
 }
 
 /**
- * Create the standard Klang type definitions
+ * Create the standard Elo type definitions
  */
 export function createTypeDefs(): TypeDefs {
   const defs = new TypeDefs();
@@ -248,4 +248,4 @@ export function createTypeDefs(): TypeDefs {
 /**
  * Default type definitions instance
  */
-export const klangTypeDefs = createTypeDefs();
+export const eloTypeDefs = createTypeDefs();

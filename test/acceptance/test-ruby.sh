@@ -5,13 +5,13 @@
 set -e
 
 TEST_DIR="${1:-test/fixtures}"
-KC="./bin/kc"
+ELOC="./bin/eloc"
 FAILED=0
 PASSED=0
 SKIPPED=0
 
-# Get prelude using kc --prelude-only
-PRELUDE=$($KC --prelude-only -t ruby)
+# Get prelude using eloc --prelude-only
+PRELUDE=$($ELOC --prelude-only -t ruby)
 
 # Files that require variables - cannot be executed standalone
 SKIP_FILES=("member-access" "variables")

@@ -1,7 +1,7 @@
 /**
- * Ruby stdlib binding for Klang
+ * Ruby stdlib binding for Elo
  *
- * This module defines how Klang IR functions are emitted as Ruby code.
+ * This module defines how Elo IR functions are emitted as Ruby code.
  */
 
 import { IRExpr } from '../ir';

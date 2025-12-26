@@ -1,7 +1,7 @@
 /**
- * SQL (PostgreSQL) stdlib binding for Klang
+ * SQL (PostgreSQL) stdlib binding for Elo
  *
- * This module defines how Klang IR functions are emitted as PostgreSQL SQL code.
+ * This module defines how Elo IR functions are emitted as PostgreSQL SQL code.
  */
 
 import { IRExpr } from '../ir';
@@ -166,7 +166,7 @@ export function createSQLBinding(): StdLib<string> {
     `(${ctx.emit(args[0])} LIKE '%' || ${ctx.emit(args[1])})`);
   sqlLib.register('contains', [Types.string, Types.string], (args, ctx) =>
     `(POSITION(${ctx.emit(args[1])} IN ${ctx.emit(args[0])}) > 0)`);
-  // PostgreSQL SUBSTRING is 1-based, Klang is 0-based
+  // PostgreSQL SUBSTRING is 1-based, Elo is 0-based
   sqlLib.register('substring', [Types.string, Types.int, Types.int], (args, ctx) =>
     `SUBSTRING(${ctx.emit(args[0])} FROM ${ctx.emit(args[1])} + 1 FOR ${ctx.emit(args[2])})`);
   sqlLib.register('concat', [Types.string, Types.string], (args, ctx) =>

@@ -691,7 +691,7 @@ select:focus {
   letter-spacing: 0.5px;
 }
 
-.k-badge {
+.elo-badge {
   background: rgba(99, 102, 241, 0.2);
   color: var(--accent);
 }

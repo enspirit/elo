@@ -49,7 +49,7 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
 const sqlLib = createSQLBinding();
 
 /**
- * Compiles Klang expressions to PostgreSQL SQL
+ * Compiles Elo expressions to PostgreSQL SQL
  *
  * This compiler works in two phases:
  * 1. Transform AST to typed IR

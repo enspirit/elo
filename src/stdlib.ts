@@ -1,12 +1,12 @@
 /**
- * Standard Library for Klang
+ * Standard Library for Elo
  *
  * Provides a type-based dispatch system for function implementations.
  * Each target compiler (JS, Ruby, SQL) defines its own implementations
  * that are looked up by function name and argument types.
  */
 
-import { KlangType, Types, typeName, typeEquals } from './types';
+import { EloType, Types, typeName, typeEquals } from './types';
 import { IRExpr } from './ir';
 
 /**
@@ -14,14 +14,14 @@ import { IRExpr } from './ir';
  */
 export interface FunctionSignature {
   name: string;
-  argTypes: KlangType[];
+  argTypes: EloType[];
 }
 
 /**
  * Create a signature key for lookup
  * e.g., "add:int,int" or "neg:float"
  */
-export function signatureKey(name: string, argTypes: KlangType[]): string {
+export function signatureKey(name: string, argTypes: EloType[]): string {
   const typeNames = argTypes.map(typeName).join(',');
   return typeNames ? `${name}:${typeNames}` : name;
 }
@@ -34,7 +34,7 @@ export function signatureKey(name: string, argTypes: KlangType[]): string {
  * For [int, float]: returns [int,float], [any,float], [int,any], [any,any]
  * Types that are already 'any' don't generate additional combinations.
  */
-export function typeGeneralizations(argTypes: KlangType[]): KlangType[][] {
+export function typeGeneralizations(argTypes: EloType[]): EloType[][] {
   if (argTypes.length === 0) return [[]];
 
   // Find indices of non-any types
@@ -47,7 +47,7 @@ export function typeGeneralizations(argTypes: KlangType[]): KlangType[][] {
 
   // Generate all subsets of concrete indices to replace with 'any'
   // Start with empty subset (most specific) to full subset (most general)
-  const result: KlangType[][] = [];
+  const result: EloType[][] = [];
   const numSubsets = 1 << concreteIndices.length;
 
   for (let mask = 0; mask < numSubsets; mask++) {
@@ -83,12 +83,12 @@ export type FunctionEmitter<T> = (args: IRExpr[], ctx: EmitContext<T>) => T;
  */
 export class StdLib<T> {
   private implementations: Map<string, FunctionEmitter<T>> = new Map();
-  private fallback: ((name: string, args: IRExpr[], argTypes: KlangType[], ctx: EmitContext<T>) => T) | null = null;
+  private fallback: ((name: string, args: IRExpr[], argTypes: EloType[], ctx: EmitContext<T>) => T) | null = null;
 
   /**
    * Register an implementation for a specific signature
    */
-  register(name: string, argTypes: KlangType[], emitter: FunctionEmitter<T>): this {
+  register(name: string, argTypes: EloType[], emitter: FunctionEmitter<T>): this {
     const key = signatureKey(name, argTypes);
     this.implementations.set(key, emitter);
     return this;
@@ -97,7 +97,7 @@ export class StdLib<T> {
   /**
    * Register a fallback for unmatched signatures
    */
-  registerFallback(handler: (name: string, args: IRExpr[], argTypes: KlangType[], ctx: EmitContext<T>) => T): this {
+  registerFallback(handler: (name: string, args: IRExpr[], argTypes: EloType[], ctx: EmitContext<T>) => T): this {
     this.fallback = handler;
     return this;
   }
@@ -108,7 +108,7 @@ export class StdLib<T> {
    * For example, for add(int, float), tries:
    *   add(int, float) -> add(any, float) -> add(int, any) -> add(any, any)
    */
-  lookup(name: string, argTypes: KlangType[]): FunctionEmitter<T> | undefined {
+  lookup(name: string, argTypes: EloType[]): FunctionEmitter<T> | undefined {
     for (const generalized of typeGeneralizations(argTypes)) {
       const key = signatureKey(name, generalized);
       const impl = this.implementations.get(key);
@@ -120,7 +120,7 @@ export class StdLib<T> {
   /**
    * Emit code for a function call
    */
-  emit(name: string, args: IRExpr[], argTypes: KlangType[], ctx: EmitContext<T>): T {
+  emit(name: string, args: IRExpr[], argTypes: EloType[], ctx: EmitContext<T>): T {
     const impl = this.lookup(name, argTypes);
     if (impl) {
       return impl(args, ctx);

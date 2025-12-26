@@ -30,13 +30,13 @@ import {
   irPredicate,
   inferType,
 } from './ir';
-import { KlangType, Types } from './types';
-import { klangTypeDefs } from './typedefs';
+import { EloType, Types } from './types';
+import { eloTypeDefs } from './typedefs';
 
 /**
  * Type environment: maps variable names to their inferred types
  */
-export type TypeEnv = Map<string, KlangType>;
+export type TypeEnv = Map<string, EloType>;
 
 /**
  * Transform an AST expression into IR
@@ -134,7 +134,7 @@ function transformBinaryOp(
   if (!fn) {
     throw new Error(`Unknown binary operator: ${operator}`);
   }
-  const resultType = klangTypeDefs.lookup(fn, [leftType, rightType]);
+  const resultType = eloTypeDefs.lookup(fn, [leftType, rightType]);
 
   return irCall(fn, [leftIR, rightIR], [leftType, rightType], resultType);
 }
@@ -150,7 +150,7 @@ function transformUnaryOp(operator: string, operand: Expr, env: TypeEnv): IRExpr
   if (!fn) {
     throw new Error(`Unknown unary operator: ${operator}`);
   }
-  const resultType = klangTypeDefs.lookup(fn, [operandType]);
+  const resultType = eloTypeDefs.lookup(fn, [operandType]);
 
   return irCall(fn, [operandIR], [operandType], resultType);
 }
@@ -229,7 +229,7 @@ function transformFunctionCall(name: string, args: Expr[], env: TypeEnv): IRExpr
   }
 
   // stdlib function call
-  const resultType = klangTypeDefs.lookup(name, argTypes);
+  const resultType = eloTypeDefs.lookup(name, argTypes);
   return irCall(name, argsIR, argTypes, resultType);
 }
 

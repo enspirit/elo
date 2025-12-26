@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Try K</title>
+  <title>Try Elo</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-controller="tabs">
   <header>
-    <a href="#home" class="logo" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="home">K — The expression language for No-Code</a>
+    <a href="#home" class="logo" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="home">Elo — The expression language for No-Code</a>
     <button class="mobile-menu-toggle" data-action="click->tabs#toggleMobileMenu" aria-label="Toggle menu">
       <span class="hamburger-icon"></span>
     </button>
@@ -48,9 +48,9 @@
   <main data-tabs-target="panel" data-panel="home" class="home-panel" data-controller="doc">
     <div class="home-content">
       <section class="hero">
-        <h1>The K Language</h1>
+        <h1>The Elo Language</h1>
         <p class="tagline">A simple, well-designed, portable, and safe data expression language</p>
-        <p class="subtitle">K compiles to JavaScript, Ruby, and SQL. Built for No-Code tools where non-technical users need to manipulate data easily and safely.</p>
+        <p class="subtitle">Elo compiles to JavaScript, Ruby, and SQL. Built for No-Code tools where non-technical users need to manipulate data easily and safely.</p>
         <a href="#try" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try" class="cta-button">Try it now</a>
       </section>
 
@@ -73,13 +73,13 @@
       </section>
 
       <section class="comparison">
-        <h2>K vs JavaScript</h2>
-        <p class="comparison-intro">See how K simplifies common data expressions</p>
+        <h2>Elo vs JavaScript</h2>
+        <p class="comparison-intro">See how Elo simplifies common data expressions</p>
 
         <div class="comparison-grid">
           <div class="comparison-example clickable" data-action="click->doc#tryExample">
             <div class="comparison-header">
-              <span class="lang-badge k-badge">K</span>
+              <span class="lang-badge elo-badge">Elo</span>
               <span class="comparison-title">Has the 30-day trial expired?</span>
             </div>
             <pre class="comparison-code example-code">let
@@ -104,7 +104,7 @@ today > trialEnd;</pre>
         <div class="comparison-grid">
           <div class="comparison-example clickable" data-action="click->doc#tryExample">
             <div class="comparison-header">
-              <span class="lang-badge k-badge">K</span>
+              <span class="lang-badge elo-badge">Elo</span>
               <span class="comparison-title">Range validation</span>
             </div>
             <pre class="comparison-code example-code">let
@@ -127,7 +127,7 @@ inRange && passing;</pre>
         <div class="comparison-grid">
           <div class="comparison-example clickable" data-action="click->doc#tryExample">
             <div class="comparison-header">
-              <span class="lang-badge k-badge">K</span>
+              <span class="lang-badge elo-badge">Elo</span>
               <span class="comparison-title">Data transformation lambda</span>
             </div>
             <pre class="comparison-code example-code">fn( item ~> item.price * 1.21 )</pre>
@@ -138,7 +138,7 @@ inRange && passing;</pre>
               <span class="comparison-title">The same thing...</span>
             </div>
             <pre class="comparison-code">// Works in JS, but what about Ruby? SQL?
-// K compiles to all three targets.
+// Elo compiles to all three targets.
 (item) => item.price * 1.21</pre>
           </div>
         </div>
@@ -146,11 +146,11 @@ inRange && passing;</pre>
 
       <section class="targets-section">
         <h2>One Expression, Three Targets</h2>
-        <p class="targets-intro">K compiles to idiomatic code in each target language</p>
+        <p class="targets-intro">Elo compiles to idiomatic code in each target language</p>
 
         <div class="targets-demo">
           <div class="target-input clickable" data-action="click->doc#tryExample">
-            <span class="lang-badge k-badge">K</span>
+            <span class="lang-badge elo-badge">Elo</span>
             <pre class="example-code">2 ^ 10 > 1000 and TODAY >= SOY</pre>
           </div>
           <div class="targets-output">
@@ -171,21 +171,21 @@ inRange && passing;</pre>
       </section>
 
       <section class="cta-section">
-        <h2>Ready to try K?</h2>
+        <h2>Ready to try Elo?</h2>
         <p>Jump into the playground and start writing temporal expressions that just work.</p>
         <a href="#try" data-tabs-target="tab" data-action="click->tabs#switch" data-tab="try" class="cta-button">Open Playground</a>
       </section>
 
       <section class="ai-native-section">
         <h2>Built with AI</h2>
-        <p>K was conceived, designed, and implemented entirely with <strong>Claude Code</strong>. From lexer to compilers, every line emerged from AI-human collaboration — a demonstration of what's possible when humans and AI build together.</p>
+        <p>Elo was conceived, designed, and implemented entirely with <strong>Claude Code</strong>. From lexer to compilers, every line emerged from AI-human collaboration — a demonstration of what's possible when humans and AI build together.</p>
       </section>
 
       <footer class="home-footer">
         <p>
-          K is an open-source project created with Claude Code
+          Elo is an open-source project created with Claude Code
           <br>
-          <a href="https://github.com/enspirit/k" target="_blank">View on GitHub</a>
+          <a href="https://github.com/enspirit/elo" target="_blank">View on GitHub</a>
         </p>
       </footer>
     </div>
@@ -197,7 +197,7 @@ inRange && passing;</pre>
       <textarea
         data-playground-target="input"
         data-action="input->playground#compile"
-        placeholder="Write K code here..."
+        placeholder="Write Elo code here..."
         spellcheck="false"
       >let x = 12, y = 13 in assert(x + y == 25)</textarea>
     </section>
@@ -250,16 +250,16 @@ inRange && passing;</pre>
       </nav>
     </aside>
     <article class="doc-content">
-      <h1>The K Language</h1>
+      <h1>The Elo Language</h1>
       <p class="intro">
-        K is a small expression language that compiles to <strong>JavaScript</strong>,
+        Elo is a small expression language that compiles to <strong>JavaScript</strong>,
         <strong>Ruby</strong>, and <strong>SQL</strong>. Write once, run anywhere.
       </p>
 
       <section class="doc-section" id="getting-started">
         <h2>Getting Started</h2>
         <p>
-          K expressions compile to equivalent code in all three target languages.
+          Elo expressions compile to equivalent code in all three target languages.
           Click any example to try it in the playground.
         </p>
 
@@ -272,7 +272,7 @@ inRange && passing;</pre>
 
       <section class="doc-section" id="types">
         <h2>Types</h2>
-        <p>K has a simple type system with the following types. Use <code>typeOf()</code> to inspect types at runtime.</p>
+        <p>Elo has a simple type system with the following types. Use <code>typeOf()</code> to inspect types at runtime.</p>
 
         <table class="type-table">
           <thead>
@@ -331,7 +331,7 @@ inRange && passing;</pre>
           </tbody>
         </table>
 
-        <p class="note"><strong>Note:</strong> K has no null literal. <code>NoVal</code> represents null values that come from external sources (databases, JSON, APIs). Use <code>isVal()</code> and <code>orVal()</code> to handle them safely.</p>
+        <p class="note"><strong>Note:</strong> Elo has no null literal. <code>NoVal</code> represents null values that come from external sources (databases, JSON, APIs). Use <code>isVal()</code> and <code>orVal()</code> to handle them safely.</p>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Type Introspection</div>
@@ -342,7 +342,7 @@ inRange && passing;</pre>
 
       <section class="doc-section" id="literals">
         <h2>Literals</h2>
-        <p>K supports numbers, booleans, strings, dates, and durations as first-class values.</p>
+        <p>Elo supports numbers, booleans, strings, dates, and durations as first-class values.</p>
 
         <h3>Numbers</h3>
         <div class="example" data-action="click->doc#tryExample">
@@ -411,7 +411,7 @@ inRange && passing;</pre>
 
       <section class="doc-section" id="objects">
         <h2>Object Literals</h2>
-        <p>K supports object literals with key-value pairs. Objects compile to native structures in each target language.</p>
+        <p>Elo supports object literals with key-value pairs. Objects compile to native structures in each target language.</p>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Simple Object</div>
@@ -440,7 +440,7 @@ inRange && passing;</pre>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Nested Expressions</div>
           <pre class="example-code">{total: 100 + 50, discount: 10 * 2}</pre>
-          <p class="example-desc">Property values can be any K expression.</p>
+          <p class="example-desc">Property values can be any Elo expression.</p>
         </div>
 
         <p class="note"><strong>Note:</strong> In SQL, objects compile to PostgreSQL JSONB using <code>jsonb_build_object()</code>.</p>
@@ -448,7 +448,7 @@ inRange && passing;</pre>
 
       <section class="doc-section" id="operators">
         <h2>Operators</h2>
-        <p>K provides arithmetic, comparison, and logical operators.</p>
+        <p>Elo provides arithmetic, comparison, and logical operators.</p>
 
         <h3>Arithmetic</h3>
         <div class="example" data-action="click->doc#tryExample">
@@ -544,7 +544,7 @@ inRange && passing;</pre>
 
       <section class="doc-section" id="lambdas">
         <h2>Lambdas and Predicates</h2>
-        <p>K provides two kinds of anonymous functions:</p>
+        <p>Elo provides two kinds of anonymous functions:</p>
         <ul>
           <li><strong>Lambdas</strong>: <code>fn( params ~> body )</code> — general functions that can return any type</li>
           <li><strong>Predicates</strong>: <code>fn( params | body )</code> — functions that always return a boolean</li>
@@ -708,9 +708,9 @@ in
 
       <footer class="doc-footer">
         <p>
-          K compiles to semantically equivalent code in JavaScript, Ruby, and SQL.
+          Elo compiles to semantically equivalent code in JavaScript, Ruby, and SQL.
           <br>
-          <a href="https://github.com/enspirit/k" target="_blank">View on GitHub</a>
+          <a href="https://github.com/enspirit/elo" target="_blank">View on GitHub</a>
         </p>
       </footer>
     </article>
@@ -729,7 +729,7 @@ in
     <div class="stdlib-content">
       <header class="stdlib-header">
         <h1>Standard Library</h1>
-        <p class="intro">Built-in functions available in K. Click any function to try it in the playground.</p>
+        <p class="intro">Built-in functions available in Elo. Click any function to try it in the playground.</p>
         <div class="stdlib-search-bar">
           <input
             type="text"
@@ -938,7 +938,7 @@ in
 
       <section class="stdlib-section" id="stdlib-introspection" data-stdlib-search-target="section">
         <h2>Type Introspection & Null Handling</h2>
-        <p>Functions to inspect types and handle null values safely. K has no null literal, but can receive null values from external sources. See <a href="#doc/types" data-action="click->tabs#switch" data-tab="doc">Types</a> in the language reference.</p>
+        <p>Functions to inspect types and handle null values safely. Elo has no null literal, but can receive null values from external sources. See <a href="#doc/types" data-action="click->tabs#switch" data-tab="doc">Types</a> in the language reference.</p>
 
         <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
@@ -966,9 +966,9 @@ in
 
       <footer class="stdlib-footer">
         <p>
-          K compiles to semantically equivalent code in JavaScript, Ruby, and SQL.
+          Elo compiles to semantically equivalent code in JavaScript, Ruby, and SQL.
           <br>
-          <a href="https://github.com/enspirit/k" target="_blank">View on GitHub</a>
+          <a href="https://github.com/enspirit/elo" target="_blank">View on GitHub</a>
         </p>
       </footer>
     </div>
@@ -979,12 +979,12 @@ in
     <article class="blog-content">
       <header class="blog-header">
         <h1>Blog</h1>
-        <p class="blog-intro">Stories, insights, and lessons from building K</p>
+        <p class="blog-intro">Stories, insights, and lessons from building Elo</p>
       </header>
 
       <article class="blog-post" id="building-k-with-claude">
         <header class="post-header">
-          <h2>Building K: A Human-AI Collaboration Story</h2>
+          <h2>Building Elo: A Human-AI Collaboration Story</h2>
           <div class="post-meta">
             <time datetime="2024-12-25">December 25, 2024</time>
             <span class="post-author">By Bernard Lambeau & Claude</span>
@@ -993,7 +993,7 @@ in
 
         <div class="post-content">
           <p class="lead">
-            K was built in a single day through an intense collaboration between a human developer and Claude Code. Here's what we learned about making AI pair programming actually work.
+            Elo was built in a single day through an intense collaboration between a human developer and Claude Code. Here's what we learned about making AI pair programming actually work.
           </p>
 
           <h3>The Starting Point</h3>
@@ -1037,7 +1037,7 @@ in
 
           <h3>The Power of Constraints</h3>
           <p>
-            K's design principles—simple, well-designed, portable, safe—weren't just marketing. They were active constraints that guided every decision:
+            Elo's design principles—simple, well-designed, portable, safe—weren't just marketing. They were active constraints that guided every decision:
           </p>
           <ul>
             <li>Should we add pattern matching? <em>Too complex for NoCode users.</em></li>
@@ -1083,13 +1083,13 @@ in
             In roughly 24 hours of collaboration, we built a complete expression language with a parser, type system, three compilers, a standard library, a CLI tool, and a documentation website. Not bad for a day's work.
           </p>
           <p>
-            K isn't just a demonstration that AI can write code. It's a demonstration that <strong>humans and AI can build together</strong>—each contributing what they do best.
+            Elo isn't just a demonstration that AI can write code. It's a demonstration that <strong>humans and AI can build together</strong>—each contributing what they do best.
           </p>
         </div>
 
         <footer class="post-footer">
           <p>
-            The complete history of our collaboration is preserved in <a href="https://github.com/enspirit/k/tree/main/.claude/tasks" target="_blank">the task files on GitHub</a>.
+            The complete history of our collaboration is preserved in <a href="https://github.com/enspirit/elo/tree/main/.claude/tasks" target="_blank">the task files on GitHub</a>.
           </p>
         </footer>
       </article>

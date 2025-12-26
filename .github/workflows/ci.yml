@@ -14,9 +14,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: klang
-          POSTGRES_PASSWORD: klang
-          POSTGRES_DB: klang
+          POSTGRES_USER: elo
+          POSTGRES_PASSWORD: elo
+          POSTGRES_DB: elo
         ports:
           - 5432:5432
         options: >-
@@ -55,6 +55,6 @@ jobs:
       env:
         PGHOST: localhost
         PGPORT: 5432
-        PGUSER: klang
-        PGPASSWORD: klang
-        PGDATABASE: klang
+        PGUSER: elo
+        PGPASSWORD: elo
+        PGDATABASE: elo

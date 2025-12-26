@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Regenerate expected fixture files for Klang compiler tests
+# Regenerate expected fixture files for Elo compiler tests
 #
 # Usage:
 #   ./scripts/regenerate-fixtures.sh              # Regenerate all fixtures
@@ -11,7 +11,7 @@
 set -e
 
 FIXTURES_DIR="test/fixtures"
-KC="./bin/kc"
+ELOC="./bin/eloc"
 TARGETS=""
 FIXTURES=()
 
@@ -47,10 +47,10 @@ done
 echo "Building compiler..."
 npm run build --silent
 
-# If no fixtures specified, find all .klang files
+# If no fixtures specified, find all .elo files
 if [ ${#FIXTURES[@]} -eq 0 ]; then
-    for f in "$FIXTURES_DIR"/*.klang; do
-        base=$(basename "$f" .klang)
+    for f in "$FIXTURES_DIR"/*.elo; do
+        base=$(basename "$f" .elo)
         FIXTURES+=("$base")
     done
 fi
@@ -64,10 +64,10 @@ fi
 
 regenerate_fixture() {
     local name="$1"
-    local klang_file="$FIXTURES_DIR/${name}.klang"
+    local elo_file="$FIXTURES_DIR/${name}.elo"
 
-    if [ ! -f "$klang_file" ]; then
-        echo "  ✗ $name (file not found: $klang_file)"
+    if [ ! -f "$elo_file" ]; then
+        echo "  ✗ $name (file not found: $elo_file)"
         return 1
     fi
 
@@ -92,7 +92,7 @@ regenerate_fixture() {
 
         # Only regenerate if expected file already exists (or targets explicitly specified)
         if [ -f "$expected_file" ] || [ ${#TARGET_LIST[@]} -gt 0 ]; then
-            $KC "$klang_file" -t "$target" -f "$expected_file"
+            $ELOC "$elo_file" -t "$target" -f "$expected_file"
             regenerated="$regenerated $target"
         fi
     done

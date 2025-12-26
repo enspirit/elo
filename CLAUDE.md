@@ -1,25 +1,25 @@
-# Claude Development Guide for Klang
+# Claude Development Guide for Elo
 
-This document provides instructions for AI assistants (like Claude) working on the Klang compiler project.
+This document provides instructions for AI assistants (like Claude) working on the Elo compiler project.
 
 ## Project Overview
 
-Klang is a small expression language that compiles to three target languages:
+Elo is a small expression language that compiles to three target languages:
 - **Ruby**: Server-side scripting
 - **JavaScript**: Client-side execution
 - **PostgreSQL SQL**: Database queries
 
-The compiler translates Klang expressions into semantically equivalent code in each target language.
+The compiler translates Elo expressions into semantically equivalent code in each target language.
 
 ## Design principles
 
 Following the vision, design and implementation choices MUST target a language that stays simple, well-designed,
-portable and safe, in that order. We SHOULD always restrict K's powerfullness if a wanted feature leads to a
+portable and safe, in that order. We SHOULD always restrict Elo's powerfullness if a wanted feature leads to a
 violation of those principles.
 
 ## Architecture
 
-KLang currently has the following components :
+Elo currently has the following components :
 
 * A parser (`src/parser.ts`)
 * AST types and factory (`src/ast.ts`)
@@ -27,8 +27,8 @@ KLang currently has the following components :
 * Intermediate Representation with type inference (`src/ir.ts`, `src/transform.ts`)
 * Standard library abstraction for type-based dispatch (`src/stdlib.ts`)
 * One compiler per target language (`src/compilers/*.ts`)
-* A binary command (`bin/kc` and `src/cli.ts`)
-* A try-k website to demonstrate K (`web/`)
+* A binary command (`bin/eloc` and `src/cli.ts`)
+* A try-elo website to demonstrate Elo (`web/`)
 
 ### Compilation Pipeline
 
@@ -38,7 +38,7 @@ KLang currently has the following components :
 
 ## Test-Driven Development
 
-Klang is developped in TDD. We have three levels of testing :
+Elo is developped in TDD. We have three levels of testing :
 
 * `npm run test:unit` : checks the behavior of core and utility functions
 * `npm run test:integration` : checks expected compilation output from sources
@@ -49,7 +49,7 @@ Klang is developped in TDD. We have three levels of testing :
 The tests are organized as follows :
 
 * `test/unit/**/*.ts` are unit tests without dependencies
-* `test/fixtures/*` are klang expression files and their expected compilation in the target languages
+* `test/fixtures/*` are elo expression files and their expected compilation in the target languages
 * `test/integration/**/*.ts` check the compiler and cli, using fixtures
 * `test/acceptance/**/*.ts` check the actual execution of generated code, using fixtures
 

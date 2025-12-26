@@ -1,5 +1,5 @@
 {
-  "name": "@enspirit/k",
+  "name": "@enspirit/elo",
   "version": "0.1.0",
   "description": "A small expression language that compiles to Ruby, Javascript and PostgreSQL",
   "main": "dist/src/index.js",
@@ -9,7 +9,7 @@
     "bin"
   ],
   "bin": {
-    "kc": "./bin/kc"
+    "eloc": "./bin/eloc"
   },
   "scripts": {
     "build": "tsc",
@@ -31,11 +31,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/enspirit/k.git"
+    "url": "git+https://github.com/enspirit/elo.git"
   },
-  "homepage": "https://github.com/enspirit/k#readme",
+  "homepage": "https://elo-lang.org",
   "bugs": {
-    "url": "https://github.com/enspirit/k/issues"
+    "url": "https://github.com/enspirit/elo/issues"
   },
   "publishConfig": {
     "access": "public"

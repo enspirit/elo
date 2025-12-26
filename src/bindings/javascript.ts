@@ -1,7 +1,7 @@
 /**
- * JavaScript stdlib binding for Klang
+ * JavaScript stdlib binding for Elo
  *
- * This module defines how Klang IR functions are emitted as JavaScript code.
+ * This module defines how Elo IR functions are emitted as JavaScript code.
  * Uses dayjs for temporal operations.
  */
 
@@ -66,7 +66,7 @@ export function createJavaScriptBinding(): StdLib<string> {
   }
 
   // Numeric arithmetic - native JS operators only for known numeric types
-  // Unknown types fall through to klang.* fallback
+  // Unknown types fall through to elo.* fallback
   for (const leftType of [Types.int, Types.float]) {
     for (const rightType of [Types.int, Types.float]) {
       jsLib.register('add', [leftType, rightType], simpleBinaryOp('+'));
@@ -155,7 +155,7 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('and', [Types.any, Types.any], simpleBinaryOp('&&'));
   jsLib.register('or', [Types.any, Types.any], simpleBinaryOp('||'));
 
-  // Unary operators - only for known types, unknown falls through to klang.* fallback
+  // Unary operators - only for known types, unknown falls through to elo.* fallback
   for (const t of [Types.int, Types.float]) {
     jsLib.register('neg', [t], (args, ctx) => {
       const operand = ctx.emit(args[0]);

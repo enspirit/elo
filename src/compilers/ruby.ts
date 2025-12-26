@@ -63,7 +63,7 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
 const rubyLib = createRubyBinding();
 
 /**
- * Compiles Klang expressions to Ruby code
+ * Compiles Elo expressions to Ruby code
  *
  * This compiler works in two phases:
  * 1. Transform AST to typed IR

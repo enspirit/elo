@@ -1,7 +1,7 @@
 /**
- * Intermediate Representation (IR) for Klang
+ * Intermediate Representation (IR) for Elo
  *
- * The IR is a typed representation of Klang expressions where:
+ * The IR is a typed representation of Elo expressions where:
  * - Literals carry their type explicitly
  * - Operators are replaced by typed function calls
  * - Temporal keywords are replaced by function calls
@@ -9,7 +9,7 @@
  * This allows target compilers to generate optimal code based on types.
  */
 
-import { KlangType, Types } from './types';
+import { EloType, Types } from './types';
 
 /**
  * IR expression types
@@ -110,7 +110,7 @@ export interface IRObjectLiteral {
 export interface IRVariable {
   type: 'variable';
   name: string;
-  inferredType: KlangType;
+  inferredType: EloType;
 }
 
 /**
@@ -124,8 +124,8 @@ export interface IRCall {
   type: 'call';
   fn: string;
   args: IRExpr[];
-  argTypes: KlangType[];
-  resultType: KlangType;
+  argTypes: EloType[];
+  resultType: EloType;
 }
 
 /**
@@ -138,8 +138,8 @@ export interface IRApply {
   type: 'apply';
   fn: IRExpr;  // The lambda expression or variable holding a lambda
   args: IRExpr[];
-  argTypes: KlangType[];
-  resultType: KlangType;
+  argTypes: EloType[];
+  resultType: EloType;
 }
 
 /**
@@ -183,7 +183,7 @@ export interface IRIf {
  */
 export interface IRLambdaParam {
   name: string;
-  inferredType: KlangType;
+  inferredType: EloType;
 }
 
 /**
@@ -193,7 +193,7 @@ export interface IRLambda {
   type: 'lambda';
   params: IRLambdaParam[];
   body: IRExpr;
-  resultType: KlangType;  // Type of the body
+  resultType: EloType;  // Type of the body
 }
 
 /**
@@ -243,15 +243,15 @@ export function irObject(properties: IRObjectProperty[]): IRObjectLiteral {
   return { type: 'object_literal', properties };
 }
 
-export function irVariable(name: string, inferredType: KlangType = Types.any): IRVariable {
+export function irVariable(name: string, inferredType: EloType = Types.any): IRVariable {
   return { type: 'variable', name, inferredType };
 }
 
-export function irCall(fn: string, args: IRExpr[], argTypes: KlangType[], resultType: KlangType = Types.any): IRCall {
+export function irCall(fn: string, args: IRExpr[], argTypes: EloType[], resultType: EloType = Types.any): IRCall {
   return { type: 'call', fn, args, argTypes, resultType };
 }
 
-export function irApply(fn: IRExpr, args: IRExpr[], argTypes: KlangType[], resultType: KlangType = Types.any): IRApply {
+export function irApply(fn: IRExpr, args: IRExpr[], argTypes: EloType[], resultType: EloType = Types.any): IRApply {
   return { type: 'apply', fn, args, argTypes, resultType };
 }
 
@@ -267,7 +267,7 @@ export function irIf(condition: IRExpr, thenBranch: IRExpr, elseBranch: IRExpr):
   return { type: 'if', condition, then: thenBranch, else: elseBranch };
 }
 
-export function irLambda(params: IRLambdaParam[], body: IRExpr, resultType: KlangType): IRLambda {
+export function irLambda(params: IRLambdaParam[], body: IRExpr, resultType: EloType): IRLambda {
   return { type: 'lambda', params, body, resultType };
 }
 
@@ -278,7 +278,7 @@ export function irPredicate(params: IRLambdaParam[], body: IRExpr): IRPredicate 
 /**
  * Infer the type of an IR expression
  */
-export function inferType(ir: IRExpr): KlangType {
+export function inferType(ir: IRExpr): EloType {
   switch (ir.type) {
     case 'int_literal':
       return Types.int;
