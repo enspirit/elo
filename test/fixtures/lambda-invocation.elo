@@ -1,3 +1,5 @@
+assert((let six = fn( ~> 6 ) in six()) == 6)
+assert((let product = fn( ~> 2 * 3 ) in product()) == 6)
 assert((let double = fn( x ~> x * 2 ) in double(5)) == 10)
 assert((let add = fn( x, y ~> x + y ) in add(3, 4)) == 7)
 assert((let mul = fn( a, b ~> a * b ) in mul(6, 7)) == 42)

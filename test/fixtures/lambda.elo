@@ -1,3 +1,5 @@
+assert(typeOf(fn( ~> 42 )) == 'Fn')
+assert(typeOf(fn( ~> 2 * 3 )) == 'Fn')
 assert(typeOf(fn( x ~> x )) == 'Fn')
 assert(typeOf(fn( x ~> x * 2 )) == 'Fn')
 assert(typeOf(fn( x, y ~> x + y )) == 'Fn')

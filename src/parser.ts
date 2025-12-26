@@ -966,7 +966,7 @@ export class Parser {
 
   /**
    * Parse lambda or predicate expression:
-   * - Lambda: fn( x ~> body ) or fn( x, y ~> body )
+   * - Lambda: fn( ~> body ) or fn( x ~> body ) or fn( x, y ~> body )
    * - Predicate: fn( x | body ) or fn( x, y | body )
    */
   private lambdaParse(): Expr {
@@ -975,17 +975,20 @@ export class Parser {
 
     const params: string[] = [];
 
-    // Parse first parameter
-    const firstName = this.currentToken.value;
-    this.eat('IDENTIFIER');
-    params.push(firstName);
-
-    // Parse additional parameters
-    while (this.currentToken.type === 'COMMA') {
-      this.eat('COMMA');
-      const name = this.currentToken.value;
+    // Check for parameterless lambda: fn( ~> body )
+    if (this.currentToken.type !== 'ARROW' && this.currentToken.type !== 'PIPE') {
+      // Parse first parameter
+      const firstName = this.currentToken.value;
       this.eat('IDENTIFIER');
-      params.push(name);
+      params.push(firstName);
+
+      // Parse additional parameters
+      while (this.currentToken.type === 'COMMA') {
+        this.eat('COMMA');
+        const name = this.currentToken.value;
+        this.eat('IDENTIFIER');
+        params.push(name);
+      }
     }
 
     // Check if it's a predicate (|) or lambda (~>)

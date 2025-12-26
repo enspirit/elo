@@ -1,3 +1,5 @@
+(raise "Assertion failed" unless (six = ->() { 6 }; six.call()) == 6; true)
+(raise "Assertion failed" unless (product = ->() { 2 * 3 }; product.call()) == 6; true)
 (raise "Assertion failed" unless (double = ->(x) { x * 2 }; double.call(5)) == 10; true)
 (raise "Assertion failed" unless (add = ->(x, y) { x + y }; add.call(3, 4)) == 7; true)
 (raise "Assertion failed" unless (mul = ->(a, b) { a * b }; mul.call(6, 7)) == 42; true)
