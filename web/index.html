@@ -531,6 +531,19 @@ inRange && passing;</pre>
           <pre class="example-code">(5 > 3 and 2 < 4) or not (1 == 2)</pre>
           <p class="example-desc">Combine conditions with <code>and</code>, <code>or</code>, and <code>not</code>.</p>
         </div>
+
+        <h3>Pipe Operator</h3>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Function Chaining</div>
+          <pre class="example-code">'  hello world  ' |> trim() |> upper()</pre>
+          <p class="example-desc">The pipe operator <code>|&gt;</code> passes the left value as the first argument to the right function. Reads left-to-right.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Pipe with Arguments</div>
+          <pre class="example-code">'42' |> padStart(5, '0')</pre>
+          <p class="example-desc">Additional arguments follow the piped value: <code>x |&gt; f(a, b)</code> becomes <code>f(x, a, b)</code>.</p>
+        </div>
       </section>
 
       <section class="doc-section" id="variables">

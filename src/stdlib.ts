@@ -193,6 +193,27 @@ export function unaryMethod(method: string): FunctionEmitter<string> {
 }
 
 /**
+ * Check if an IR expression is a binary operation (needs parens for postfix method calls)
+ */
+export function isBinaryOp(ir: IRExpr): boolean {
+  if (ir.type !== 'call') return false;
+  const binaryOps = ['add', 'sub', 'mul', 'div', 'mod', 'pow', 'lt', 'gt', 'lte', 'gte', 'eq', 'neq', 'and', 'or'];
+  return binaryOps.includes(ir.fn);
+}
+
+/**
+ * Helper for Ruby-style postfix method call that wraps binary expressions in parens.
+ * Use for: arg0.method() where Ruby's precedence requires parens around binary ops.
+ */
+export function rubyMethod(method: string): FunctionEmitter<string> {
+  return (args, ctx) => {
+    const emitted = ctx.emit(args[0]);
+    const needsParens = isBinaryOp(args[0]);
+    return needsParens ? `(${emitted}).${method}` : `${emitted}.${method}`;
+  };
+}
+
+/**
  * Helper for function call style: fn(arg0, arg1, ...)
  */
 export function fnCall(fnName: string): FunctionEmitter<string> {

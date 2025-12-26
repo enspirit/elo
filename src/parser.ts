@@ -25,6 +25,7 @@ type TokenType =
   | 'COLON'
   | 'DOT'
   | 'PIPE'
+  | 'PIPE_OP'
   | 'ARROW'
   | 'RANGE_INCL'
   | 'RANGE_EXCL'
@@ -366,6 +367,12 @@ class Lexer {
       return { type: 'AND', value: '&&', position: pos };
     }
     if (char === '|') {
+      if (next === '>') {
+        // Pipe operator for chaining: a |> f(b)
+        this.advance();
+        this.advance();
+        return { type: 'PIPE_OP', value: '|>', position: pos };
+      }
       if (next === '|') {
         this.advance();
         this.advance();
@@ -423,7 +430,8 @@ class Lexer {
  * Recursive descent parser for expressions
  *
  * Grammar:
- *   expr       -> logical_or
+ *   expr       -> pipe
+ *   pipe       -> logical_or ('|>' call)*      // lowest precedence, left-assoc
  *   logical_or -> logical_and ('||' logical_and)*
  *   logical_and -> equality ('&&' equality)*
  *   equality   -> comparison (('==' | '!=') comparison)*
@@ -437,6 +445,8 @@ class Lexer {
  *               | IDENTIFIER '(' (expr (',' expr)*)? ')'  // function call
  *               | IDENTIFIER                               // variable
  *               | '(' expr ')'
+ *
+ * Pipe desugaring: `a |> f(b, c)` becomes `f(a, b, c)`
  */
 interface ParserState {
   lexerState: LexerState;
@@ -745,6 +755,54 @@ export class Parser {
   }
 
   /**
+   * Parse pipe expressions: a |> f(b) |> g(c)
+   * Desugars to: g(f(a, b), c)
+   * Left-associative, lowest precedence (below logical_or)
+   */
+  private pipe(): Expr {
+    let node = this.logical_or();
+
+    while (this.currentToken.type === 'PIPE_OP') {
+      this.eat('PIPE_OP');
+
+      // Right side must be a function call: identifier followed by (
+      const tok = this.currentToken as Token;
+      if (tok.type !== 'IDENTIFIER') {
+        throw new Error(
+          `Expected function call after |> at position ${tok.position}`
+        );
+      }
+
+      const funcName = tok.value;
+      this.eat('IDENTIFIER');
+
+      const tok2 = this.currentToken as Token;
+      if (tok2.type !== 'LPAREN') {
+        throw new Error(
+          `Expected '(' after function name in pipe at position ${tok2.position}`
+        );
+      }
+
+      this.eat('LPAREN');
+      const args: Expr[] = [node]; // Left side becomes first argument
+
+      // Parse additional arguments
+      if ((this.currentToken as Token).type !== 'RPAREN') {
+        args.push(this.expr());
+        while ((this.currentToken as Token).type === 'COMMA') {
+          this.eat('COMMA');
+          args.push(this.expr());
+        }
+      }
+
+      this.eat('RPAREN');
+      node = functionCall(funcName, args);
+    }
+
+    return node;
+  }
+
+  /**
    * Try to parse range membership: expr in expr..expr or expr in expr...expr
    * Also handles: expr not in expr..expr (when negated is true)
    * Returns null if this is not a range expression (e.g., it's 'in' from 'let...in')
@@ -947,7 +1005,7 @@ export class Parser {
     if (this.currentToken.type === 'IF') {
       return this.ifExprParse();
     }
-    return this.logical_or();
+    return this.pipe();
   }
 
   parse(): Expr {

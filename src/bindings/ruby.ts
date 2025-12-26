@@ -6,7 +6,7 @@
 
 import { IRExpr } from '../ir';
 import { Types } from '../types';
-import { StdLib, EmitContext, simpleBinaryOp, nullary } from '../stdlib';
+import { StdLib, EmitContext, simpleBinaryOp, nullary, rubyMethod } from '../stdlib';
 
 /**
  * Check if a call will be emitted as a native Ruby binary operator
@@ -189,15 +189,15 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('padEnd', [Types.string, Types.int, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.ljust(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
 
-  // Numeric functions
-  rubyLib.register('abs', [Types.int], (args, ctx) => `${ctx.emit(args[0])}.abs`);
-  rubyLib.register('abs', [Types.float], (args, ctx) => `${ctx.emit(args[0])}.abs`);
+  // Numeric functions (use rubyMethod to handle binary op precedence)
+  rubyLib.register('abs', [Types.int], rubyMethod('abs'));
+  rubyLib.register('abs', [Types.float], rubyMethod('abs'));
   rubyLib.register('round', [Types.int], (args, ctx) => ctx.emit(args[0]));
-  rubyLib.register('round', [Types.float], (args, ctx) => `${ctx.emit(args[0])}.round`);
+  rubyLib.register('round', [Types.float], rubyMethod('round'));
   rubyLib.register('floor', [Types.int], (args, ctx) => ctx.emit(args[0]));
-  rubyLib.register('floor', [Types.float], (args, ctx) => `${ctx.emit(args[0])}.floor`);
+  rubyLib.register('floor', [Types.float], rubyMethod('floor'));
   rubyLib.register('ceil', [Types.int], (args, ctx) => ctx.emit(args[0]));
-  rubyLib.register('ceil', [Types.float], (args, ctx) => `${ctx.emit(args[0])}.ceil`);
+  rubyLib.register('ceil', [Types.float], rubyMethod('ceil'));
 
   // Temporal extraction functions
   rubyLib.register('year', [Types.date], (args, ctx) => `${ctx.emit(args[0])}.year`);

@@ -1,0 +1,5 @@
+assert(('hello' |> upper()) == 'HELLO')
+assert(('  HELLO  ' |> trim() |> lower()) == 'hello')
+assert(('42' |> padStart(5, '0')) == '00042')
+assert((0 - 5 |> abs()) == 5)
+assert(('hello world' |> replace('world', 'elo')) == 'hello elo')

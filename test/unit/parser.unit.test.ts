@@ -917,3 +917,101 @@ describe('Parser - Predicate Expressions', () => {
     }
   });
 });
+
+describe('Parser - Pipe Operator', () => {
+  it('should parse simple pipe: x |> f()', () => {
+    const ast = parse("'hello' |> upper()");
+    assert.deepStrictEqual(ast, {
+      type: 'function_call',
+      name: 'upper',
+      args: [{ type: 'string', value: 'hello' }]
+    });
+  });
+
+  it('should parse pipe with additional arguments: x |> f(a, b)', () => {
+    const ast = parse("'hello' |> padStart(10, '-')");
+    assert.strictEqual(ast.type, 'function_call');
+    if (ast.type === 'function_call') {
+      assert.strictEqual(ast.name, 'padStart');
+      assert.strictEqual(ast.args.length, 3);
+      assert.deepStrictEqual(ast.args[0], { type: 'string', value: 'hello' });
+      assert.deepStrictEqual(ast.args[1], { type: 'literal', value: 10 });
+      assert.deepStrictEqual(ast.args[2], { type: 'string', value: '-' });
+    }
+  });
+
+  it('should parse chained pipes: a |> f() |> g()', () => {
+    const ast = parse("'  hello  ' |> trim() |> upper()");
+    // Desugars to: upper(trim('  hello  '))
+    assert.strictEqual(ast.type, 'function_call');
+    if (ast.type === 'function_call') {
+      assert.strictEqual(ast.name, 'upper');
+      assert.strictEqual(ast.args.length, 1);
+      const inner = ast.args[0];
+      assert.strictEqual(inner.type, 'function_call');
+      if (inner.type === 'function_call') {
+        assert.strictEqual(inner.name, 'trim');
+        assert.deepStrictEqual(inner.args[0], { type: 'string', value: '  hello  ' });
+      }
+    }
+  });
+
+  it('should parse pipe with expression on left side', () => {
+    const ast = parse('1 + 2 |> abs()');
+    // Desugars to: abs(1 + 2)
+    assert.strictEqual(ast.type, 'function_call');
+    if (ast.type === 'function_call') {
+      assert.strictEqual(ast.name, 'abs');
+      assert.strictEqual(ast.args.length, 1);
+      const inner = ast.args[0];
+      assert.strictEqual(inner.type, 'binary');
+    }
+  });
+
+  it('should parse pipe with boolean expression on left', () => {
+    const ast = parse('x > 0 or y > 0 |> assert()');
+    // Pipe has lowest precedence, so: assert(x > 0 or y > 0)
+    assert.strictEqual(ast.type, 'function_call');
+    if (ast.type === 'function_call') {
+      assert.strictEqual(ast.name, 'assert');
+      const inner = ast.args[0];
+      assert.strictEqual(inner.type, 'binary');
+      if (inner.type === 'binary') {
+        assert.strictEqual(inner.operator, '||');
+      }
+    }
+  });
+
+  it('should parse pipe in let body', () => {
+    const ast = parse("let x = 'test' in x |> upper()");
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.body.type, 'function_call');
+    }
+  });
+
+  it('should error when right side is not a function call', () => {
+    assert.throws(() => parse("'hello' |> 5"), /Expected function call after \|>/);
+  });
+
+  it('should error when function call has no parens', () => {
+    assert.throws(() => parse("'hello' |> upper"), /Expected '\(' after function name/);
+  });
+
+  it('should not confuse |> with | (predicate) or || (or)', () => {
+    // |> is pipe
+    const pipeAst = parse("'x' |> upper()");
+    assert.strictEqual(pipeAst.type, 'function_call');
+
+    // | inside fn() is predicate
+    const predAst = parse('fn( x | x > 0 )');
+    assert.strictEqual(predAst.type, 'predicate');
+
+    // || is or
+    const orAst = parse('true || false');
+    assert.strictEqual(orAst.type, 'binary');
+    if (orAst.type === 'binary') {
+      assert.strictEqual(orAst.operator, '||');
+    }
+  });
+});

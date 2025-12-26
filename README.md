@@ -29,6 +29,7 @@ See also the Related work section below.
 - **Comparison operators**: `<`, `>`, `<=`, `>=`, `==`, `!=`
 - **Logical operators**: `&&`, `||`, `!`
 - **Unary operators**: `-`, `+`, `!`
+- **Pipe operator**: `|>` for function chaining (Elixir-style)
 - **Literals**:
   - Numbers: `42`, `3.14`
   - Booleans: `true`, `false`

@@ -1,0 +1,5 @@
+(raise "Assertion failed" unless "hello".upcase == "HELLO"; true)
+(raise "Assertion failed" unless "  HELLO  ".strip.downcase == "hello"; true)
+(raise "Assertion failed" unless "42".rjust(5, "0") == "00042"; true)
+(raise "Assertion failed" unless (0 - 5).abs == 5; true)
+(raise "Assertion failed" unless "hello world".sub("world", "elo") == "hello elo"; true)
