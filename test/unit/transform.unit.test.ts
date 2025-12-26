@@ -677,3 +677,46 @@ describe('transform - recursion detection', () => {
     assert.strictEqual(ir.type, 'let');
   });
 });
+
+describe('transform - depth limits', () => {
+  it('transforms expressions within depth limit', () => {
+    // Simple nested expression with maxDepth=10 should work
+    const ast = binary('+', binary('+', binary('+', literal(1), literal(2)), literal(3)), literal(4));
+    const ir = transform(ast, new Map(), new Set(), { maxDepth: 10 });
+    assert.strictEqual(ir.type, 'call');
+  });
+
+  it('throws when depth limit exceeded with deeply nested binary ops', () => {
+    // Create deeply nested binary expression: ((((1+2)+3)+4)+5)+...
+    let ast: any = literal(1);
+    for (let i = 0; i < 20; i++) {
+      ast = binary('+', ast, literal(i));
+    }
+    assert.throws(
+      () => transform(ast, new Map(), new Set(), { maxDepth: 5 }),
+      /Maximum transform depth exceeded \(5\)/
+    );
+  });
+
+  it('throws when depth limit exceeded with nested let expressions', () => {
+    // Nested let: let a = let b = let c = ... in c in b in a
+    let ast: any = literal(1);
+    for (let i = 0; i < 10; i++) {
+      ast = letExpr([{ name: `v${i}`, value: literal(i) }], ast);
+    }
+    assert.throws(
+      () => transform(ast, new Map(), new Set(), { maxDepth: 5 }),
+      /Maximum transform depth exceeded \(5\)/
+    );
+  });
+
+  it('uses default maxDepth of 100', () => {
+    // 50 levels should work with default maxDepth
+    let ast: any = literal(1);
+    for (let i = 0; i < 50; i++) {
+      ast = binary('+', ast, literal(i));
+    }
+    const ir = transform(ast);
+    assert.strictEqual(ir.type, 'call');
+  });
+});

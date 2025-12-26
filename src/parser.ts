@@ -451,27 +451,45 @@ class Lexer {
 interface ParserState {
   lexerState: LexerState;
   currentToken: Token;
+  depth: number;
 }
+
+export interface ParserOptions {
+  maxDepth?: number;
+}
+
+const DEFAULT_MAX_DEPTH = 100;
 
 export class Parser {
   private lexer: Lexer;
   private currentToken: Token;
+  private depth: number = 0;
+  private maxDepth: number;
 
-  constructor(input: string) {
+  constructor(input: string, options: ParserOptions = {}) {
     this.lexer = new Lexer(input);
     this.currentToken = this.lexer.nextToken();
+    this.maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
+  }
+
+  private checkDepth(): void {
+    if (this.depth > this.maxDepth) {
+      throw new Error(`Maximum expression depth exceeded (${this.maxDepth})`);
+    }
   }
 
   private saveState(): ParserState {
     return {
       lexerState: this.lexer.saveState(),
-      currentToken: { ...this.currentToken }
+      currentToken: { ...this.currentToken },
+      depth: this.depth
     };
   }
 
   private restoreState(state: ParserState): void {
     this.lexer.restoreState(state.lexerState);
     this.currentToken = state.currentToken;
+    this.depth = state.depth;
   }
 
   private eat(tokenType: TokenType): void {
@@ -998,14 +1016,20 @@ export class Parser {
   }
 
   private expr(): Expr {
-    // Let and if expressions have lowest precedence
-    if (this.currentToken.type === 'LET') {
-      return this.letExpr();
+    this.depth++;
+    this.checkDepth();
+    try {
+      // Let and if expressions have lowest precedence
+      if (this.currentToken.type === 'LET') {
+        return this.letExpr();
+      }
+      if (this.currentToken.type === 'IF') {
+        return this.ifExprParse();
+      }
+      return this.pipe();
+    } finally {
+      this.depth--;
     }
-    if (this.currentToken.type === 'IF') {
-      return this.ifExprParse();
-    }
-    return this.pipe();
   }
 
   parse(): Expr {
@@ -1018,7 +1042,7 @@ export class Parser {
 /**
  * Parse an arithmetic expression string into an AST
  */
-export function parse(input: string): Expr {
-  const parser = new Parser(input);
+export function parse(input: string, options: ParserOptions = {}): Expr {
+  const parser = new Parser(input, options);
   return parser.parse();
 }

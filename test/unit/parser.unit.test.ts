@@ -1015,3 +1015,45 @@ describe('Parser - Pipe Operator', () => {
     }
   });
 });
+
+describe('Parser - Depth Limits', () => {
+  it('should parse expressions within depth limit', () => {
+    // 5 levels of nesting with maxDepth=10 should work
+    const ast = parse('((((( 1 )))))', { maxDepth: 10 });
+    assert.strictEqual(ast.type, 'literal');
+  });
+
+  it('should throw when depth limit exceeded with nested parentheses', () => {
+    // Create 15 levels of nesting with maxDepth=10
+    const expr = '('.repeat(15) + '1' + ')'.repeat(15);
+    assert.throws(
+      () => parse(expr, { maxDepth: 10 }),
+      /Maximum expression depth exceeded \(10\)/
+    );
+  });
+
+  it('should throw when depth limit exceeded with nested function calls', () => {
+    // Nested function calls: f(f(f(f(f(f(f(1)))))))
+    const expr = 'f(f(f(f(f(f(f(f(f(f(f(1))))))))))';
+    assert.throws(
+      () => parse(expr, { maxDepth: 5 }),
+      /Maximum expression depth exceeded \(5\)/
+    );
+  });
+
+  it('should throw when depth limit exceeded with nested if expressions', () => {
+    // Nested if: if true then if true then if true then 1 else 2 else 2 else 2
+    const expr = 'if true then if true then if true then if true then if true then if true then 1 else 0 else 0 else 0 else 0 else 0 else 0';
+    assert.throws(
+      () => parse(expr, { maxDepth: 5 }),
+      /Maximum expression depth exceeded \(5\)/
+    );
+  });
+
+  it('should use default maxDepth of 100', () => {
+    // 50 levels should work with default maxDepth
+    const expr = '('.repeat(50) + '1' + ')'.repeat(50);
+    const ast = parse(expr);
+    assert.strictEqual(ast.type, 'literal');
+  });
+});

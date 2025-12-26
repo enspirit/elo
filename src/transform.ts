@@ -44,9 +44,44 @@ export type TypeEnv = Map<string, EloType>;
 type DefiningSet = Set<string>;
 
 /**
+ * Options for the transform function
+ */
+export interface TransformOptions {
+  maxDepth?: number;
+}
+
+const DEFAULT_MAX_DEPTH = 100;
+
+/**
  * Transform an AST expression into IR
  */
-export function transform(expr: Expr, env: TypeEnv = new Map(), defining: DefiningSet = new Set()): IRExpr {
+export function transform(
+  expr: Expr,
+  env: TypeEnv = new Map(),
+  defining: DefiningSet = new Set(),
+  options: TransformOptions = {}
+): IRExpr {
+  const maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
+  return transformWithDepth(expr, env, defining, 0, maxDepth);
+}
+
+/**
+ * Internal transform function that tracks depth
+ */
+function transformWithDepth(
+  expr: Expr,
+  env: TypeEnv,
+  defining: DefiningSet,
+  depth: number,
+  maxDepth: number
+): IRExpr {
+  if (depth > maxDepth) {
+    throw new Error(`Maximum transform depth exceeded (${maxDepth})`);
+  }
+  const nextDepth = depth + 1;
+  const recurse = (e: Expr, newEnv: TypeEnv = env, newDefining: DefiningSet = defining) =>
+    transformWithDepth(e, newEnv, newDefining, nextDepth, maxDepth);
+
   switch (expr.type) {
     case 'literal':
       return transformLiteral(expr.value);
@@ -67,41 +102,41 @@ export function transform(expr: Expr, env: TypeEnv = new Map(), defining: Defini
       return irVariable(expr.name, env.get(expr.name) ?? Types.any);
 
     case 'binary':
-      return transformBinaryOp(expr.operator, expr.left, expr.right, env, defining);
+      return transformBinaryOp(expr.operator, expr.left, expr.right, env, defining, nextDepth, maxDepth);
 
     case 'unary':
-      return transformUnaryOp(expr.operator, expr.operand, env, defining);
+      return transformUnaryOp(expr.operator, expr.operand, env, defining, nextDepth, maxDepth);
 
     case 'temporal_keyword':
       return transformTemporalKeyword(expr.keyword);
 
     case 'function_call':
-      return transformFunctionCall(expr.name, expr.args, env, defining);
+      return transformFunctionCall(expr.name, expr.args, env, defining, nextDepth, maxDepth);
 
     case 'member_access':
-      return irMemberAccess(transform(expr.object, env, defining), expr.property);
+      return irMemberAccess(recurse(expr.object), expr.property);
 
     case 'let':
-      return transformLet(expr.bindings, expr.body, env, defining);
+      return transformLet(expr.bindings, expr.body, env, defining, nextDepth, maxDepth);
 
     case 'if':
       return irIf(
-        transform(expr.condition, env, defining),
-        transform(expr.then, env, defining),
-        transform(expr.else, env, defining)
+        recurse(expr.condition),
+        recurse(expr.then),
+        recurse(expr.else)
       );
 
     case 'lambda':
-      return transformLambda(expr.params, expr.body, env, defining);
+      return transformLambda(expr.params, expr.body, env, defining, nextDepth, maxDepth);
 
     case 'predicate':
-      return transformPredicate(expr.params, expr.body, env, defining);
+      return transformPredicate(expr.params, expr.body, env, defining, nextDepth, maxDepth);
 
     case 'object':
       return irObject(
         expr.properties.map((prop) => ({
           key: prop.key,
-          value: transform(prop.value, env, defining),
+          value: recurse(prop.value),
         }))
       );
   }
@@ -129,10 +164,12 @@ function transformBinaryOp(
   left: Expr,
   right: Expr,
   env: TypeEnv,
-  defining: DefiningSet
+  defining: DefiningSet,
+  depth: number,
+  maxDepth: number
 ): IRExpr {
-  const leftIR = transform(left, env, defining);
-  const rightIR = transform(right, env, defining);
+  const leftIR = transformWithDepth(left, env, defining, depth, maxDepth);
+  const rightIR = transformWithDepth(right, env, defining, depth, maxDepth);
   const leftType = inferType(leftIR);
   const rightType = inferType(rightIR);
 
@@ -148,8 +185,15 @@ function transformBinaryOp(
 /**
  * Transform a unary operator into a typed function call
  */
-function transformUnaryOp(operator: string, operand: Expr, env: TypeEnv, defining: DefiningSet): IRExpr {
-  const operandIR = transform(operand, env, defining);
+function transformUnaryOp(
+  operator: string,
+  operand: Expr,
+  env: TypeEnv,
+  defining: DefiningSet,
+  depth: number,
+  maxDepth: number
+): IRExpr {
+  const operandIR = transformWithDepth(operand, env, defining, depth, maxDepth);
   const operandType = inferType(operandIR);
 
   const fn = unaryOpNameMap[operator];
@@ -222,13 +266,20 @@ function transformTemporalKeyword(keyword: string): IRExpr {
  * If the function name is a variable in the environment (i.e., a lambda),
  * we emit an 'apply' node. Otherwise, we emit a 'call' to the stdlib.
  */
-function transformFunctionCall(name: string, args: Expr[], env: TypeEnv, defining: DefiningSet): IRExpr {
+function transformFunctionCall(
+  name: string,
+  args: Expr[],
+  env: TypeEnv,
+  defining: DefiningSet,
+  depth: number,
+  maxDepth: number
+): IRExpr {
   // Check for recursive call
   if (defining.has(name)) {
     throw new Error(`Recursive function calls are not allowed: '${name}' cannot call itself`);
   }
 
-  const argsIR = args.map((arg) => transform(arg, env, defining));
+  const argsIR = args.map((arg) => transformWithDepth(arg, env, defining, depth, maxDepth));
   const argTypes = argsIR.map(inferType);
 
   // Check if the name is a variable holding a lambda
@@ -251,7 +302,9 @@ function transformLet(
   bindings: Array<{ name: string; value: Expr }>,
   body: Expr,
   env: TypeEnv,
-  defining: DefiningSet
+  defining: DefiningSet,
+  depth: number,
+  maxDepth: number
 ): IRExpr {
   // Build a new environment with the bindings
   const newEnv = new Map(env);
@@ -261,20 +314,27 @@ function transformLet(
     const isLambdaLike = binding.value.type === 'lambda' || binding.value.type === 'predicate';
     const newDefining = isLambdaLike ? new Set([...defining, binding.name]) : defining;
 
-    const valueIR = transform(binding.value, newEnv, newDefining);
+    const valueIR = transformWithDepth(binding.value, newEnv, newDefining, depth, maxDepth);
     const valueType = inferType(valueIR);
     newEnv.set(binding.name, valueType);
     return { name: binding.name, value: valueIR };
   });
 
-  const bodyIR = transform(body, newEnv, defining);
+  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth);
   return irLet(irBindings, bodyIR);
 }
 
 /**
  * Transform a lambda expression
  */
-function transformLambda(params: string[], body: Expr, env: TypeEnv, defining: DefiningSet): IRExpr {
+function transformLambda(
+  params: string[],
+  body: Expr,
+  env: TypeEnv,
+  defining: DefiningSet,
+  depth: number,
+  maxDepth: number
+): IRExpr {
   // Build a new environment with params as 'any' type
   const newEnv = new Map(env);
   const irParams = params.map((name) => {
@@ -282,7 +342,7 @@ function transformLambda(params: string[], body: Expr, env: TypeEnv, defining: D
     return { name, inferredType: Types.any };
   });
 
-  const bodyIR = transform(body, newEnv, defining);
+  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth);
   const resultType = inferType(bodyIR);
   return irLambda(irParams, bodyIR, resultType);
 }
@@ -290,7 +350,14 @@ function transformLambda(params: string[], body: Expr, env: TypeEnv, defining: D
 /**
  * Transform a predicate expression
  */
-function transformPredicate(params: string[], body: Expr, env: TypeEnv, defining: DefiningSet): IRExpr {
+function transformPredicate(
+  params: string[],
+  body: Expr,
+  env: TypeEnv,
+  defining: DefiningSet,
+  depth: number,
+  maxDepth: number
+): IRExpr {
   // Build a new environment with params as 'any' type
   const newEnv = new Map(env);
   const irParams = params.map((name) => {
@@ -298,7 +365,7 @@ function transformPredicate(params: string[], body: Expr, env: TypeEnv, defining
     return { name, inferredType: Types.any };
   });
 
-  const bodyIR = transform(body, newEnv, defining);
+  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth);
   return irPredicate(irParams, bodyIR);
 }
 
