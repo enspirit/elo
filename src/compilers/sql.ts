@@ -149,6 +149,9 @@ function emitSQL(ir: IRExpr): string {
     case 'lambda':
       throw new Error('Lambda expressions are not supported in SQL target');
 
+    case 'predicate':
+      throw new Error('Predicate expressions are not supported in SQL target');
+
     case 'apply':
       throw new Error('Lambda invocation is not supported in SQL target');
   }

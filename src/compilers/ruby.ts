@@ -150,6 +150,13 @@ function emitRuby(ir: IRExpr): string {
       return `->(${params}) { ${body} }`;
     }
 
+    case 'predicate': {
+      const params = ir.params.map(p => p.name).join(', ');
+      const body = emitRuby(ir.body);
+      // Use !! to ensure boolean return for predicates
+      return `->(${params}) { !!(${body}) }`;
+    }
+
     case 'apply': {
       const fn = emitRuby(ir.fn);
       const args = ir.args.map(emitRuby).join(', ');

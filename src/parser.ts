@@ -1,4 +1,4 @@
-import { Expr, literal, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty } from './ast';
+import { Expr, literal, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, predicate, LetBinding, objectLiteral, ObjectProperty } from './ast';
 
 /**
  * Token types
@@ -25,6 +25,7 @@ type TokenType =
   | 'COLON'
   | 'DOT'
   | 'PIPE'
+  | 'ARROW'
   | 'RANGE_INCL'
   | 'RANGE_EXCL'
   | 'LT'
@@ -370,9 +371,15 @@ class Lexer {
         this.advance();
         return { type: 'OR', value: '||', position: pos };
       }
-      // Single pipe for lambda syntax: fn( x | body )
+      // Single pipe for predicate syntax: fn( x | body )
       this.advance();
       return { type: 'PIPE', value: '|', position: pos };
+    }
+    // Arrow for lambda syntax: fn( x ~> body )
+    if (char === '~' && next === '>') {
+      this.advance();
+      this.advance();
+      return { type: 'ARROW', value: '~>', position: pos };
     }
     // Range operators: .. (inclusive) and ... (exclusive)
     if (char === '.' && next === '.') {
@@ -860,7 +867,9 @@ export class Parser {
   }
 
   /**
-   * Parse lambda expression: fn( x | body ) or fn( x, y | body )
+   * Parse lambda or predicate expression:
+   * - Lambda: fn( x ~> body ) or fn( x, y ~> body )
+   * - Predicate: fn( x | body ) or fn( x, y | body )
    */
   private lambdaParse(): Expr {
     this.eat('FN');
@@ -881,11 +890,18 @@ export class Parser {
       params.push(name);
     }
 
-    this.eat('PIPE');
+    // Check if it's a predicate (|) or lambda (~>)
+    const isPredicate = this.currentToken.type === 'PIPE';
+    if (isPredicate) {
+      this.eat('PIPE');
+    } else {
+      this.eat('ARROW');
+    }
+
     const body = this.expr();
     this.eat('RPAREN');
 
-    return lambda(params, body);
+    return isPredicate ? predicate(params, body) : lambda(params, body);
   }
 
   /**

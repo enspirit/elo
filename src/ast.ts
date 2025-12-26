@@ -2,7 +2,7 @@
  * AST node types for Klang expressions
  */
 
-export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr | Lambda | ObjectLiteral;
+export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr | Lambda | Predicate | ObjectLiteral;
 
 /**
  * Literal value (number or boolean)
@@ -136,10 +136,20 @@ export interface IfExpr {
 }
 
 /**
- * Lambda expression: fn( params | body )
+ * Lambda expression: fn( params ~> body )
  */
 export interface Lambda {
   type: 'lambda';
+  params: string[];
+  body: Expr;
+}
+
+/**
+ * Predicate expression: fn( params | body )
+ * A predicate is a special function that always returns a boolean.
+ */
+export interface Predicate {
+  type: 'predicate';
   params: string[];
   body: Expr;
 }
@@ -220,10 +230,17 @@ export function ifExpr(condition: Expr, thenBranch: Expr, elseBranch: Expr): IfE
 }
 
 /**
- * Creates a lambda expression: fn( params | body )
+ * Creates a lambda expression: fn( params ~> body )
  */
 export function lambda(params: string[], body: Expr): Lambda {
   return { type: 'lambda', params, body };
+}
+
+/**
+ * Creates a predicate expression: fn( params | body )
+ */
+export function predicate(params: string[], body: Expr): Predicate {
+  return { type: 'predicate', params, body };
 }
 
 /**

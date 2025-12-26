@@ -1,0 +1,8 @@
+->(isPositive) { (raise "Assertion failed" unless isPositive.call(5) == true; true) }.call(->(x) { !!(x > 0) })
+->(isPositive) { (raise "Assertion failed" unless isPositive.call(-5) == false; true) }.call(->(x) { !!(x > 0) })
+->(isInRange) { (raise "Assertion failed" unless isInRange.call(50) == true; true) }.call(->(x) { !!(x >= 0 && x <= 100) })
+->(isInRange) { (raise "Assertion failed" unless isInRange.call(150) == false; true) }.call(->(x) { !!(x >= 0 && x <= 100) })
+->(isEqual) { (raise "Assertion failed" unless isEqual.call(5, 5) == true; true) }.call(->(a, b) { !!(a == b) })
+->(isEqual) { (raise "Assertion failed" unless isEqual.call(5, 6) == false; true) }.call(->(a, b) { !!(a == b) })
+->(isTruthy) { (raise "Assertion failed" unless isTruthy.call(true) == true; true) }.call(->(x) { !!(x) })
+->(isTruthy) { (raise "Assertion failed" unless isTruthy.call(false) == false; true) }.call(->(x) { !!(x) })

@@ -29,7 +29,8 @@ export type IRExpr =
   | IRLet
   | IRMemberAccess
   | IRIf
-  | IRLambda;
+  | IRLambda
+  | IRPredicate;
 
 /**
  * Integer literal
@@ -186,13 +187,24 @@ export interface IRLambdaParam {
 }
 
 /**
- * Lambda expression: fn( params | body )
+ * Lambda expression: fn( params ~> body )
  */
 export interface IRLambda {
   type: 'lambda';
   params: IRLambdaParam[];
   body: IRExpr;
   resultType: KlangType;  // Type of the body
+}
+
+/**
+ * Predicate expression: fn( params | body )
+ * A predicate always returns a boolean.
+ */
+export interface IRPredicate {
+  type: 'predicate';
+  params: IRLambdaParam[];
+  body: IRExpr;
+  // Result type is always boolean for predicates
 }
 
 /**
@@ -259,6 +271,10 @@ export function irLambda(params: IRLambdaParam[], body: IRExpr, resultType: Klan
   return { type: 'lambda', params, body, resultType };
 }
 
+export function irPredicate(params: IRLambdaParam[], body: IRExpr): IRPredicate {
+  return { type: 'predicate', params, body };
+}
+
 /**
  * Infer the type of an IR expression
  */
@@ -294,5 +310,7 @@ export function inferType(ir: IRExpr): KlangType {
       return inferType(ir.then);
     case 'lambda':
       return Types.fn;  // Lambda is a function type
+    case 'predicate':
+      return Types.fn;  // Predicate is also a function type (that returns bool)
   }
 }

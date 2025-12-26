@@ -1,0 +1,8 @@
+let isPositive = fn( x | x > 0 ) in assert(isPositive(5) == true)
+let isPositive = fn( x | x > 0 ) in assert(isPositive(-5) == false)
+let isInRange = fn( x | x >= 0 && x <= 100 ) in assert(isInRange(50) == true)
+let isInRange = fn( x | x >= 0 && x <= 100 ) in assert(isInRange(150) == false)
+let isEqual = fn( a, b | a == b ) in assert(isEqual(5, 5) == true)
+let isEqual = fn( a, b | a == b ) in assert(isEqual(5, 6) == false)
+let isTruthy = fn( x | x ) in assert(isTruthy(true) == true)
+let isTruthy = fn( x | x ) in assert(isTruthy(false) == false)

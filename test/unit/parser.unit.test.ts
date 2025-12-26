@@ -745,7 +745,7 @@ describe('Parser - Comments', () => {
 
 describe('Parser - Lambda Expressions', () => {
   it('should parse simple lambda with one parameter', () => {
-    const ast = parse('fn( x | x )');
+    const ast = parse('fn( x ~> x )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['x']);
@@ -754,7 +754,7 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda with expression body', () => {
-    const ast = parse('fn( x | x * 2 )');
+    const ast = parse('fn( x ~> x * 2 )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['x']);
@@ -763,7 +763,7 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda with multiple parameters', () => {
-    const ast = parse('fn( x, y | x + y )');
+    const ast = parse('fn( x, y ~> x + y )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['x', 'y']);
@@ -772,7 +772,7 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda with three parameters', () => {
-    const ast = parse('fn( a, b, c | a + b + c )');
+    const ast = parse('fn( a, b, c ~> a + b + c )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['a', 'b', 'c']);
@@ -780,7 +780,7 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda with member access in body', () => {
-    const ast = parse('fn( _ | _.budget )');
+    const ast = parse('fn( _ ~> _.budget )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['_']);
@@ -789,7 +789,7 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda with let expression in body', () => {
-    const ast = parse('fn( x | let y = x * 2 in y + 1 )');
+    const ast = parse('fn( x ~> let y = x * 2 in y + 1 )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['x']);
@@ -798,7 +798,7 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda with if expression in body', () => {
-    const ast = parse('fn( x | if x > 0 then x else 0 )');
+    const ast = parse('fn( x ~> if x > 0 then x else 0 )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['x']);
@@ -807,27 +807,27 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda with underscore parameter name', () => {
-    const ast = parse('fn( _ | _.price * 1.21 )');
+    const ast = parse('fn( _ ~> _.price * 1.21 )');
     assert.strictEqual(ast.type, 'lambda');
     if (ast.type === 'lambda') {
       assert.deepStrictEqual(ast.params, ['_']);
     }
   });
 
-  it('should throw on lambda without pipe', () => {
-    assert.throws(() => parse('fn( x x )'), /Expected PIPE/);
+  it('should throw on lambda without arrow', () => {
+    assert.throws(() => parse('fn( x x )'), /Expected ARROW/);
   });
 
   it('should throw on lambda without closing paren', () => {
-    assert.throws(() => parse('fn( x | x'), /Expected RPAREN/);
+    assert.throws(() => parse('fn( x ~> x'), /Expected RPAREN/);
   });
 
   it('should throw on lambda without opening paren', () => {
-    assert.throws(() => parse('fn x | x )'), /Expected LPAREN/);
+    assert.throws(() => parse('fn x ~> x )'), /Expected LPAREN/);
   });
 
   it('should parse lambda invocation in let', () => {
-    const ast = parse('let f = fn( x | x * 2 ) in f(5)');
+    const ast = parse('let f = fn( x ~> x * 2 ) in f(5)');
     assert.strictEqual(ast.type, 'let');
     if (ast.type === 'let') {
       assert.strictEqual(ast.bindings[0].name, 'f');
@@ -841,7 +841,7 @@ describe('Parser - Lambda Expressions', () => {
   });
 
   it('should parse lambda invocation with multiple args', () => {
-    const ast = parse('let add = fn( x, y | x + y ) in add(3, 4)');
+    const ast = parse('let add = fn( x, y ~> x + y ) in add(3, 4)');
     assert.strictEqual(ast.type, 'let');
     if (ast.type === 'let') {
       assert.strictEqual(ast.body.type, 'function_call');
@@ -849,6 +849,71 @@ describe('Parser - Lambda Expressions', () => {
         assert.strictEqual(ast.body.name, 'add');
         assert.strictEqual(ast.body.args.length, 2);
       }
+    }
+  });
+});
+
+describe('Parser - Predicate Expressions', () => {
+  it('should parse simple predicate with one parameter', () => {
+    const ast = parse('fn( x | x )');
+    assert.strictEqual(ast.type, 'predicate');
+    if (ast.type === 'predicate') {
+      assert.deepStrictEqual(ast.params, ['x']);
+      assert.deepStrictEqual(ast.body, { type: 'variable', name: 'x' });
+    }
+  });
+
+  it('should parse predicate with comparison body', () => {
+    const ast = parse('fn( x | x > 0 )');
+    assert.strictEqual(ast.type, 'predicate');
+    if (ast.type === 'predicate') {
+      assert.deepStrictEqual(ast.params, ['x']);
+      assert.strictEqual(ast.body.type, 'binary');
+    }
+  });
+
+  it('should parse predicate with multiple parameters', () => {
+    const ast = parse('fn( x, y | x > y )');
+    assert.strictEqual(ast.type, 'predicate');
+    if (ast.type === 'predicate') {
+      assert.deepStrictEqual(ast.params, ['x', 'y']);
+      assert.strictEqual(ast.body.type, 'binary');
+    }
+  });
+
+  it('should parse predicate with logical operators', () => {
+    const ast = parse('fn( x | x > 0 && x < 100 )');
+    assert.strictEqual(ast.type, 'predicate');
+    if (ast.type === 'predicate') {
+      assert.deepStrictEqual(ast.params, ['x']);
+      assert.strictEqual(ast.body.type, 'binary');
+    }
+  });
+
+  it('should parse predicate with member access in body', () => {
+    const ast = parse('fn( _ | _.active )');
+    assert.strictEqual(ast.type, 'predicate');
+    if (ast.type === 'predicate') {
+      assert.deepStrictEqual(ast.params, ['_']);
+      assert.strictEqual(ast.body.type, 'member_access');
+    }
+  });
+
+  it('should distinguish predicate from lambda', () => {
+    const predAst = parse('fn( x | x > 0 )');
+    const lambdaAst = parse('fn( x ~> x * 2 )');
+
+    assert.strictEqual(predAst.type, 'predicate');
+    assert.strictEqual(lambdaAst.type, 'lambda');
+  });
+
+  it('should parse predicate invocation in let', () => {
+    const ast = parse('let isPositive = fn( x | x > 0 ) in isPositive(5)');
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.bindings[0].name, 'isPositive');
+      assert.strictEqual(ast.bindings[0].value.type, 'predicate');
+      assert.strictEqual(ast.body.type, 'function_call');
     }
   });
 });

@@ -27,6 +27,7 @@ import {
   irMemberAccess,
   irIf,
   irLambda,
+  irPredicate,
   inferType,
 } from './ir';
 import { KlangType, Types } from './types';
@@ -87,6 +88,9 @@ export function transform(expr: Expr, env: TypeEnv = new Map()): IRExpr {
 
     case 'lambda':
       return transformLambda(expr.params, expr.body, env);
+
+    case 'predicate':
+      return transformPredicate(expr.params, expr.body, env);
 
     case 'object':
       return irObject(
@@ -264,6 +268,21 @@ function transformLambda(params: string[], body: Expr, env: TypeEnv): IRExpr {
   const bodyIR = transform(body, newEnv);
   const resultType = inferType(bodyIR);
   return irLambda(irParams, bodyIR, resultType);
+}
+
+/**
+ * Transform a predicate expression
+ */
+function transformPredicate(params: string[], body: Expr, env: TypeEnv): IRExpr {
+  // Build a new environment with params as 'any' type
+  const newEnv = new Map(env);
+  const irParams = params.map((name) => {
+    newEnv.set(name, Types.any);
+    return { name, inferredType: Types.any };
+  });
+
+  const bodyIR = transform(body, newEnv);
+  return irPredicate(irParams, bodyIR);
 }
 
 /**

@@ -130,7 +130,7 @@ inRange && passing;</pre>
               <span class="lang-badge k-badge">K</span>
               <span class="comparison-title">Data transformation lambda</span>
             </div>
-            <pre class="comparison-code example-code">fn( item | item.price * 1.21 )</pre>
+            <pre class="comparison-code example-code">fn( item ~> item.price * 1.21 )</pre>
           </div>
           <div class="comparison-example js-example">
             <div class="comparison-header">
@@ -320,8 +320,8 @@ inRange && passing;</pre>
             </tr>
             <tr>
               <td><code>Fn</code></td>
-              <td>Lambda functions</td>
-              <td><code>fn( x | x * 2 )</code></td>
+              <td>Lambda functions and predicates</td>
+              <td><code>fn( x ~> x * 2 )</code>, <code>fn( x | x > 0 )</code></td>
             </tr>
           </tbody>
         </table>
@@ -536,55 +536,89 @@ inRange && passing;</pre>
       </section>
 
       <section class="doc-section" id="lambdas">
-        <h2>Lambda Expressions</h2>
-        <p>Use <code>fn( params | body )</code> to create anonymous functions (lambdas).</p>
+        <h2>Lambdas and Predicates</h2>
+        <p>K provides two kinds of anonymous functions:</p>
+        <ul>
+          <li><strong>Lambdas</strong>: <code>fn( params ~> body )</code> — general functions that can return any type</li>
+          <li><strong>Predicates</strong>: <code>fn( params | body )</code> — functions that always return a boolean</li>
+        </ul>
+
+        <h3>Lambda Expressions</h3>
+        <p>Use the arrow <code>~></code> syntax for general-purpose functions:</p>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Simple Lambda</div>
-          <pre class="example-code">fn( x | x * 2 )</pre>
+          <pre class="example-code">fn( x ~> x * 2 )</pre>
           <p class="example-desc">A function that doubles its input. Compiles to arrow functions in JS, procs in Ruby.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Multiple Parameters</div>
-          <pre class="example-code">fn( x, y | x + y )</pre>
+          <pre class="example-code">fn( x, y ~> x + y )</pre>
           <p class="example-desc">Lambdas can take multiple parameters, separated by commas.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">With Member Access</div>
-          <pre class="example-code">fn( _ | _.price * 1.21 )</pre>
+          <pre class="example-code">fn( _ ~> _.price * 1.21 )</pre>
           <p class="example-desc">Common pattern: use <code>_</code> as a placeholder to access object properties.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Lambda with Conditional</div>
-          <pre class="example-code">fn( x | if x > 0 then x else 0 - x )</pre>
+          <pre class="example-code">fn( x ~> if x > 0 then x else 0 - x )</pre>
           <p class="example-desc">The body can contain any expression, including conditionals.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Lambda with Let</div>
-          <pre class="example-code">fn( x | let doubled = x * 2 in doubled + 1 )</pre>
+          <pre class="example-code">fn( x ~> let doubled = x * 2 in doubled + 1 )</pre>
           <p class="example-desc">Use local variables inside the lambda body for complex expressions.</p>
         </div>
 
-        <h3>Invoking Lambdas</h3>
-        <p>Bind a lambda to a name with <code>let</code>, then call it like a function.</p>
+        <h3>Predicate Expressions</h3>
+        <p>Use the pipe <code>|</code> syntax for predicates (functions that return boolean):</p>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Simple Predicate</div>
+          <pre class="example-code">fn( x | x > 0 )</pre>
+          <p class="example-desc">A predicate that tests if a number is positive. Always returns true or false.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Range Check Predicate</div>
+          <pre class="example-code">fn( x | x >= 0 and x <= 100 )</pre>
+          <p class="example-desc">Predicates are ideal for validation and filtering.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Object Predicate</div>
+          <pre class="example-code">fn( item | item.active and item.price > 0 )</pre>
+          <p class="example-desc">Test conditions on object properties.</p>
+        </div>
+
+        <h3>Invoking Lambdas and Predicates</h3>
+        <p>Bind a lambda or predicate to a name with <code>let</code>, then call it like a function.</p>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Call a Lambda</div>
-          <pre class="example-code">let double = fn( x | x * 2 ) in double(5)</pre>
+          <pre class="example-code">let double = fn( x ~> x * 2 ) in double(5)</pre>
           <p class="example-desc">Bind a lambda to <code>double</code>, then call it with an argument. Returns 10.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Call a Predicate</div>
+          <pre class="example-code">let isPositive = fn( x | x > 0 ) in isPositive(5)</pre>
+          <p class="example-desc">Call the predicate. Returns true.</p>
+        </div>
+
+        <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Lambda with Assert</div>
-          <pre class="example-code">let add = fn( x, y | x + y ) in assert(add(3, 4) == 7)</pre>
+          <pre class="example-code">let add = fn( x, y ~> x + y ) in assert(add(3, 4) == 7)</pre>
           <p class="example-desc">Test your lambdas with assertions.</p>
         </div>
 
-        <p class="note"><strong>Note:</strong> Lambdas compile to JavaScript and Ruby only. SQL does not support lambda expressions.</p>
+        <p class="note"><strong>Note:</strong> Lambdas and predicates compile to JavaScript and Ruby only. SQL does not support function expressions.</p>
       </section>
 
       <section class="doc-section" id="assertions">
