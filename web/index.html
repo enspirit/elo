@@ -95,7 +95,7 @@ in
               <span class="lang-badge js-badge">JavaScript</span>
               <span class="comparison-title">The same thing...</span>
             </div>
-            <pre class="comparison-code">const signup = new Date('2024-06-15');
+            <pre class="comparison-code code-js">const signup = new Date('2024-06-15');
 const trialEnd = new Date(signup);
 trialEnd.setDate(trialEnd.getDate() + 30);
 const today = new Date();
@@ -120,7 +120,7 @@ in
               <span class="lang-badge js-badge">JavaScript</span>
               <span class="comparison-title">The same thing...</span>
             </div>
-            <pre class="comparison-code">const score = 85;
+            <pre class="comparison-code code-js">const score = 85;
 const inRange = score >= 0 && score <= 100;
 const passing = !(score >= 0 && score < 60);
 inRange && passing;</pre>
@@ -140,7 +140,7 @@ inRange && passing;</pre>
               <span class="lang-badge js-badge">JavaScript</span>
               <span class="comparison-title">The same thing...</span>
             </div>
-            <pre class="comparison-code">// Works in JS, but what about Ruby? SQL?
+            <pre class="comparison-code code-js">// Works in JS, but what about Ruby? SQL?
 // Elo compiles to all three targets.
 (item) => item.price * 1.21</pre>
           </div>
@@ -719,7 +719,7 @@ in
         <h3>compile()</h3>
         <p>The <code>compile()</code> function creates a callable JavaScript function from an Elo lambda expression:</p>
 
-        <pre class="code-block">import { compile } from '@enspirit/elo';
+        <pre class="code-js">import { compile } from '@enspirit/elo';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -749,7 +749,7 @@ inThisWeek(dayjs()); // =&gt; true or false</pre>
         <h3>Lower-Level API</h3>
         <p>For more control, you can use the lower-level parsing and compilation functions:</p>
 
-        <pre class="code-block">import { parse, compileToJavaScript, compileToRuby, compileToSQL } from '@enspirit/elo';
+        <pre class="code-js">import { parse, compileToJavaScript, compileToRuby, compileToSQL } from '@enspirit/elo';
 
 // Parse an expression to an AST
 const ast = parse('2 + 3 * 4');

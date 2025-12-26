@@ -444,7 +444,8 @@ select:focus {
   margin-bottom: 0.5rem;
 }
 
-.example-code {
+.example-code,
+.code-js {
   background: var(--bg-panel);
   padding: 0.75rem 1rem;
   border-radius: 4px;
@@ -454,6 +455,10 @@ select:focus {
   overflow-x: auto;
   margin: 0;
   white-space: pre-wrap;
+}
+
+.doc-section .code-js {
+  margin-bottom: 1rem;
 }
 
 /* Syntax highlighting colors */
@@ -505,6 +510,53 @@ select:focus {
 }
 
 .hl-punctuation {
+  color: var(--text-secondary);
+}
+
+/* JavaScript/TypeScript syntax highlighting */
+.hl-js-keyword {
+  color: #c792ea;
+  font-weight: 500;
+}
+
+.hl-js-boolean {
+  color: #ff9cac;
+}
+
+.hl-js-number {
+  color: #f78c6c;
+}
+
+.hl-js-string {
+  color: #c3e88d;
+}
+
+.hl-js-comment {
+  color: #546e7a;
+  font-style: italic;
+}
+
+.hl-js-operator {
+  color: #89ddff;
+}
+
+.hl-js-function {
+  color: #82aaff;
+}
+
+.hl-js-type {
+  color: #ffcb6b;
+}
+
+.hl-js-property {
+  color: #f07178;
+}
+
+.hl-js-var {
+  color: var(--text-primary);
+}
+
+.hl-js-punctuation {
   color: var(--text-secondary);
 }
 

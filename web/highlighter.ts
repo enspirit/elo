@@ -219,3 +219,221 @@ export function highlightAll(selector: string): void {
     el.innerHTML = highlight(code);
   });
 }
+
+// =============================================================================
+// JavaScript/TypeScript Highlighter
+// =============================================================================
+
+type JSCategory =
+  | 'keyword'
+  | 'boolean'
+  | 'number'
+  | 'string'
+  | 'comment'
+  | 'operator'
+  | 'punctuation'
+  | 'function'
+  | 'variable'
+  | 'property'
+  | 'type';
+
+interface JSToken {
+  category: JSCategory;
+  text: string;
+}
+
+const JS_KEYWORDS = new Set([
+  'import', 'export', 'from', 'default', 'const', 'let', 'var',
+  'function', 'return', 'if', 'else', 'for', 'while', 'do',
+  'switch', 'case', 'break', 'continue', 'try', 'catch', 'finally',
+  'throw', 'new', 'class', 'extends', 'static', 'async', 'await',
+  'typeof', 'instanceof', 'in', 'of', 'void', 'delete', 'this', 'super'
+]);
+
+const JS_TYPES = new Set([
+  'string', 'number', 'boolean', 'undefined', 'null', 'object',
+  'Array', 'Object', 'String', 'Number', 'Boolean', 'Function',
+  'Promise', 'Map', 'Set', 'Date', 'RegExp', 'Error'
+]);
+
+const JS_BOOLEANS = new Set(['true', 'false', 'null', 'undefined']);
+
+/**
+ * Tokenize JavaScript/TypeScript source code
+ */
+function tokenizeJS(source: string): JSToken[] {
+  const tokens: JSToken[] = [];
+  let pos = 0;
+
+  const peek = (offset = 0) => source[pos + offset] || '';
+  const advance = () => source[pos++] || '';
+  const match = (pattern: RegExp) => {
+    const rest = source.slice(pos);
+    const m = rest.match(pattern);
+    return m && m.index === 0 ? m[0] : null;
+  };
+
+  while (pos < source.length) {
+    const ch = peek();
+
+    // Whitespace
+    const ws = match(/^\s+/);
+    if (ws) {
+      tokens.push({ category: 'variable', text: ws });
+      pos += ws.length;
+      continue;
+    }
+
+    // Single-line comment
+    if (ch === '/' && peek(1) === '/') {
+      let comment = '';
+      while (pos < source.length && peek() !== '\n') {
+        comment += advance();
+      }
+      tokens.push({ category: 'comment', text: comment });
+      continue;
+    }
+
+    // Multi-line comment
+    if (ch === '/' && peek(1) === '*') {
+      let comment = advance() + advance(); // /*
+      while (pos < source.length && !(peek() === '*' && peek(1) === '/')) {
+        comment += advance();
+      }
+      if (pos < source.length) {
+        comment += advance() + advance(); // */
+      }
+      tokens.push({ category: 'comment', text: comment });
+      continue;
+    }
+
+    // String literals (single, double, backtick)
+    if (ch === "'" || ch === '"' || ch === '`') {
+      const quote = ch;
+      let str = advance();
+      while (pos < source.length && peek() !== quote) {
+        if (peek() === '\\') str += advance();
+        str += advance();
+      }
+      if (peek() === quote) str += advance();
+      tokens.push({ category: 'string', text: str });
+      continue;
+    }
+
+    // Numbers
+    const numMatch = match(/^\d+(\.\d+)?([eE][+-]?\d+)?/);
+    if (numMatch) {
+      tokens.push({ category: 'number', text: numMatch });
+      pos += numMatch.length;
+      continue;
+    }
+
+    // Identifiers and keywords
+    const idMatch = match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
+    if (idMatch) {
+      let category: JSCategory = 'variable';
+      if (JS_KEYWORDS.has(idMatch)) {
+        category = 'keyword';
+      } else if (JS_BOOLEANS.has(idMatch)) {
+        category = 'boolean';
+      } else if (JS_TYPES.has(idMatch)) {
+        category = 'type';
+      } else if (peek() === '(') {
+        category = 'function';
+      }
+      tokens.push({ category, text: idMatch });
+      pos += idMatch.length;
+      continue;
+    }
+
+    // Arrow function
+    if (ch === '=' && peek(1) === '>') {
+      tokens.push({ category: 'operator', text: '=>' });
+      pos += 2;
+      continue;
+    }
+
+    // Multi-character operators
+    const ops = ['===', '!==', '==', '!=', '<=', '>=', '&&', '||', '??', '?.', '...'];
+    let foundOp = false;
+    for (const op of ops) {
+      if (source.slice(pos, pos + op.length) === op) {
+        tokens.push({ category: 'operator', text: op });
+        pos += op.length;
+        foundOp = true;
+        break;
+      }
+    }
+    if (foundOp) continue;
+
+    // Single-character operators
+    if ('+-*/%<>=!&|?:'.includes(ch)) {
+      tokens.push({ category: 'operator', text: advance() });
+      continue;
+    }
+
+    // Punctuation
+    if ('(){}[],.;'.includes(ch)) {
+      tokens.push({ category: 'punctuation', text: advance() });
+      continue;
+    }
+
+    // Property access
+    if (ch === '.') {
+      tokens.push({ category: 'punctuation', text: advance() });
+      const propMatch = match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
+      if (propMatch) {
+        tokens.push({ category: 'property', text: propMatch });
+        pos += propMatch.length;
+      }
+      continue;
+    }
+
+    // Type annotations (simplified)
+    if (ch === '<') {
+      let depth = 1;
+      let typeAnnotation = advance();
+      while (pos < source.length && depth > 0) {
+        const c = advance();
+        typeAnnotation += c;
+        if (c === '<') depth++;
+        if (c === '>') depth--;
+      }
+      tokens.push({ category: 'type', text: typeAnnotation });
+      continue;
+    }
+
+    // Unknown
+    tokens.push({ category: 'variable', text: advance() });
+  }
+
+  return tokens;
+}
+
+/**
+ * Highlight JavaScript/TypeScript source code
+ */
+export function highlightJS(source: string): string {
+  const tokens = tokenizeJS(source);
+  return tokens.map(token => {
+    const escaped = escapeHtml(token.text);
+    if (token.category === 'variable' && /^\s*$/.test(token.text)) {
+      return escaped;
+    }
+    if (token.category === 'variable') {
+      return `<span class="hl-js-var">${escaped}</span>`;
+    }
+    return `<span class="hl-js-${token.category}">${escaped}</span>`;
+  }).join('');
+}
+
+/**
+ * Highlight all JS/TS code blocks matching a selector
+ */
+export function highlightAllJS(selector: string): void {
+  const elements = document.querySelectorAll(selector);
+  elements.forEach(el => {
+    const code = el.textContent || '';
+    el.innerHTML = highlightJS(code);
+  });
+}
