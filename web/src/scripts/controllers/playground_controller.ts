@@ -32,8 +32,58 @@ dayjs.extend(utc);
 
 type TargetLanguage = 'ruby' | 'javascript' | 'sql';
 
+const STORAGE_KEY = 'elo-playground-code';
+
+const EXAMPLES: Record<string, string> = {
+  arithmetic: `2 + 3 * 4`,
+  strings: `let greeting = 'hello world' in
+  upper(greeting)`,
+  booleans: `let age = 25 in
+  age >= 18 and age < 65`,
+  conditionals: `let score = 85 in
+  if score >= 90 then 'A'
+  else if score >= 80 then 'B'
+  else if score >= 70 then 'C'
+  else 'F'`,
+  variables: `let width = 10,
+    height = 5,
+    area = width * height
+in area`,
+  objects: `let person = {
+  name: 'Alice',
+  age: 30,
+  city: 'Brussels'
+} in person.name`,
+  arrays: `let numbers = [1, 2, 3, 4, 5] in {
+  first: first(numbers),
+  last: last(numbers),
+  length: length(numbers)
+}`,
+  nulls: `let value = null in
+  value | 'default'`,
+  lambdas: `let double = fn(x ~> x * 2),
+    add = fn(a, b ~> a + b)
+in add(double(5), 3)`,
+  'map-filter': `let numbers = [1, 2, 3, 4, 5] in {
+  doubled: map(numbers, fn(x ~> x * 2)),
+  evens: filter(numbers, fn(x | x % 2 == 0)),
+  sum: reduce(numbers, 0, fn(acc, x ~> acc + x))
+}`,
+  pipes: `'  hello world  '
+  |> trim
+  |> upper
+  |> length`,
+  dates: `let today = TODAY,
+    nextWeek = today + P7D
+in {
+  year: year(today),
+  month: month(today)
+}`,
+  durations: `P1D + PT2H`
+};
+
 export default class PlaygroundController extends Controller {
-  static targets = ['editor', 'output', 'language', 'pretty', 'prelude', 'error', 'result', 'copyButton', 'saveButton', 'runButton'];
+  static targets = ['editor', 'output', 'language', 'pretty', 'prelude', 'error', 'result', 'resultPanel', 'copyButton', 'saveButton', 'examples'];
 
   declare editorTarget: HTMLDivElement;
   declare outputTarget: HTMLPreElement;
@@ -41,15 +91,17 @@ export default class PlaygroundController extends Controller {
   declare prettyTarget: HTMLInputElement;
   declare preludeTarget: HTMLInputElement;
   declare errorTarget: HTMLDivElement;
-  declare resultTarget: HTMLDivElement;
+  declare resultTarget: HTMLPreElement;
+  declare resultPanelTarget: HTMLDivElement;
   declare copyButtonTarget: HTMLButtonElement;
   declare saveButtonTarget: HTMLButtonElement;
-  declare runButtonTarget: HTMLButtonElement;
+  declare examplesTarget: HTMLSelectElement;
 
   private editorView: EditorView | null = null;
   private themeObserver: MutationObserver | null = null;
   private compileVersion = 0;
   private currentOutput = ''; // Raw output for copy/save
+  private runTimeout: number | null = null;
 
   connect() {
     this.initializeEditor();
@@ -64,21 +116,38 @@ export default class PlaygroundController extends Controller {
     });
     this.themeObserver.observe(document.body, { attributes: true });
 
-    // Check for code in URL parameters
+    // Check for code in URL parameters first, then localStorage
     const urlParams = new URLSearchParams(window.location.search);
     const codeFromUrl = urlParams.get('code');
     if (codeFromUrl) {
       this.setCode(codeFromUrl);
       // Clean URL without reload
       window.history.replaceState({}, '', window.location.pathname);
+    } else {
+      // Load from localStorage if available
+      const savedCode = localStorage.getItem(STORAGE_KEY);
+      if (savedCode) {
+        this.setCode(savedCode);
+      }
     }
 
-    // Compile on initial load
+    // Keyboard shortcut: Ctrl+Enter to run
+    document.addEventListener('keydown', this.handleKeydown.bind(this));
+
+    // Compile and auto-run on initial load
     this.compile();
+    this.scheduleAutoRun();
 
     // Auto-run if requested via URL
     if (urlParams.get('run') === '1' && codeFromUrl) {
       setTimeout(() => this.run(), 100);
+    }
+  }
+
+  private handleKeydown(event: KeyboardEvent) {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      event.preventDefault();
+      this.run();
     }
   }
 
@@ -117,6 +186,7 @@ export default class PlaygroundController extends Controller {
   }
 
   disconnect() {
+    document.removeEventListener('keydown', this.handleKeydown.bind(this));
     if (this.themeObserver) {
       this.themeObserver.disconnect();
       this.themeObserver = null;
@@ -124,6 +194,36 @@ export default class PlaygroundController extends Controller {
     if (this.editorView) {
       this.editorView.destroy();
       this.editorView = null;
+    }
+    if (this.runTimeout) {
+      clearTimeout(this.runTimeout);
+    }
+  }
+
+  loadExample() {
+    const exampleId = this.examplesTarget.value;
+    if (exampleId && EXAMPLES[exampleId]) {
+      this.setCode(EXAMPLES[exampleId]);
+      this.examplesTarget.value = ''; // Reset dropdown
+    }
+  }
+
+  private scheduleAutoRun() {
+    if (this.runTimeout) {
+      clearTimeout(this.runTimeout);
+    }
+    // Only auto-run for JavaScript
+    if (this.languageTarget.value === 'javascript') {
+      this.runTimeout = window.setTimeout(() => this.run(), 300);
+    }
+  }
+
+  private saveToLocalStorage() {
+    const code = this.getCode();
+    try {
+      localStorage.setItem(STORAGE_KEY, code);
+    } catch {
+      // localStorage might be unavailable
     }
   }
 
@@ -146,16 +246,17 @@ export default class PlaygroundController extends Controller {
     const prettyPrint = this.prettyTarget.checked;
     const includePrelude = this.preludeTarget.checked;
 
-    // Hide result when code changes
-    this.hideResult();
+    // Save to localStorage
+    this.saveToLocalStorage();
 
-    // Enable/disable run button based on language
-    this.runButtonTarget.disabled = language !== 'javascript';
+    // Schedule auto-run
+    this.scheduleAutoRun();
 
     if (!input.trim()) {
       this.outputTarget.textContent = '';
       this.currentOutput = '';
       this.hideError();
+      this.hideResult();
       return;
     }
 
@@ -275,6 +376,14 @@ export default class PlaygroundController extends Controller {
     if (value instanceof Date) {
       return value.toISOString();
     }
+    // Pretty print objects and arrays
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return String(value);
+      }
+    }
     return String(value);
   }
 
@@ -305,13 +414,13 @@ export default class PlaygroundController extends Controller {
   }
 
   private showResult(message: string) {
-    this.resultTarget.textContent = `Result: ${message}`;
-    this.resultTarget.classList.add('visible');
+    this.resultTarget.textContent = message;
+    this.resultPanelTarget.classList.add('visible');
   }
 
   private hideResult() {
     this.resultTarget.textContent = '';
-    this.resultTarget.classList.remove('visible');
+    this.resultPanelTarget.classList.remove('visible');
   }
 
   private showError(message: string) {

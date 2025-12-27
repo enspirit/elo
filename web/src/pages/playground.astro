@@ -5,13 +5,45 @@ import Layout from '../layouts/Layout.astro';
 <Layout title="Try Elo" activeNav="try">
   <main data-controller="playground">
     <section class="editor-panel">
+      <div class="editor-header">
+        <select data-playground-target="examples" data-action="change->playground#loadExample">
+          <option value="">Examples...</option>
+          <optgroup label="Basics">
+            <option value="arithmetic">Arithmetic</option>
+            <option value="strings">Strings</option>
+            <option value="booleans">Booleans</option>
+            <option value="conditionals">Conditionals</option>
+            <option value="variables">Variables</option>
+          </optgroup>
+          <optgroup label="Data">
+            <option value="objects">Objects</option>
+            <option value="arrays">Arrays</option>
+            <option value="nulls">Null handling</option>
+          </optgroup>
+          <optgroup label="Functions">
+            <option value="lambdas">Lambdas</option>
+            <option value="map-filter">Map & Filter</option>
+            <option value="pipes">Pipes</option>
+          </optgroup>
+          <optgroup label="Temporal">
+            <option value="dates">Dates</option>
+            <option value="durations">Durations</option>
+          </optgroup>
+        </select>
+        <span class="editor-hint">Ctrl+Enter to run</span>
+      </div>
       <div
         data-playground-target="editor"
-        data-initial-code="let x = 12, y = 13 in assert(x + y == 25)"
+        data-initial-code="let x = 12, y = 13 in x + y"
       ></div>
     </section>
 
     <section class="output-panel">
+      <div class="result-panel" data-playground-target="resultPanel">
+        <span class="result-label">Result:</span>
+        <pre class="result-value" data-playground-target="result"></pre>
+      </div>
+      <div class="error" data-playground-target="error"></div>
       <div class="panel-header">
         <select
           data-playground-target="language"
@@ -49,16 +81,9 @@ import Layout from '../layouts/Layout.astro';
             data-action="click->playground#save"
             class="secondary-button"
           >Save</button>
-          <button
-            data-playground-target="runButton"
-            data-action="click->playground#run"
-            class="run-button"
-          >Run</button>
         </div>
       </div>
       <pre data-playground-target="output"></pre>
-      <div class="result" data-playground-target="result"></div>
-      <div class="error" data-playground-target="error"></div>
     </section>
   </main>
 </Layout>

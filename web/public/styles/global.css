@@ -208,8 +208,23 @@ main {
   color: var(--text-secondary);
 }
 
+/* Editor header */
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* CodeMirror Editor */
-.editor-panel > div {
+.editor-panel > div:last-child {
   flex: 1;
   width: 100%;
   min-height: 0;
@@ -337,29 +352,48 @@ select:focus {
 }
 
 /* Result display */
-.result {
+.result-panel {
   display: none;
-  padding: 0.75rem 1rem;
-  background: rgba(34, 197, 94, 0.1);
-  border-top: 1px solid var(--border);
-  color: var(--success);
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.08) 100%);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.3);
 }
 
-.result.visible {
+.result-panel.visible {
   display: block;
+}
+
+.result-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--success);
+  margin-bottom: 0.5rem;
+}
+
+.result-value {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--success);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Error display */
 .error {
   display: none;
-  padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.1);
-  border-top: 1px solid var(--border);
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.3);
   color: var(--error);
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .error.visible {
