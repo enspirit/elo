@@ -27,7 +27,7 @@ Design decisions:
 
 ### Quality & polish
 
-- Stdlib review with /rigorous
+- [x] Stdlib review with /rigorous
+- [x] Run feature improvements on Try page
 - /sceptic pass before 1.0
-- Run feature improvements on Try page
 
