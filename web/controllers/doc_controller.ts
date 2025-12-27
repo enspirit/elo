@@ -8,14 +8,7 @@ export default class DocController extends Controller {
 
     if (!codeElement) return;
 
-    // Get the first non-empty, non-comment line of code
-    const fullCode = codeElement.textContent || '';
-    const lines = fullCode.split('\n');
-    const firstCodeLine = lines.find(line => {
-      const trimmed = line.trim();
-      return trimmed.length > 0 && !trimmed.startsWith('#');
-    });
-    const code = firstCodeLine?.trim() || '';
+    const code = (codeElement.textContent || '').trim();
 
     // Switch to the Try tab
     const tryTab = document.querySelector('[data-tab="try"]') as HTMLAnchorElement;
