@@ -162,17 +162,19 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('last', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.last`);
   rubyLib.register('isEmpty', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.empty?`);
 
-  // Array iteration functions
-  rubyLib.register('map', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.map(&${ctx.emit(args[1])})`);
-  rubyLib.register('filter', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.select(&${ctx.emit(args[1])})`);
-  rubyLib.register('reduce', [Types.array, Types.any, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.reduce(${ctx.emit(args[1])}, &${ctx.emit(args[2])})`);
-  rubyLib.register('any', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.any?(&${ctx.emit(args[1])})`);
-  rubyLib.register('all', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.all?(&${ctx.emit(args[1])})`);
+  // Array iteration functions (register for both array and any to support dynamic types)
+  for (const t of [Types.array, Types.any]) {
+    rubyLib.register('map', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.map(&${ctx.emit(args[1])})`);
+    rubyLib.register('filter', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.select(&${ctx.emit(args[1])})`);
+    rubyLib.register('reduce', [t, Types.any, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.reduce(${ctx.emit(args[1])}, &${ctx.emit(args[2])})`);
+    rubyLib.register('any', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.any?(&${ctx.emit(args[1])})`);
+    rubyLib.register('all', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.all?(&${ctx.emit(args[1])})`);
+  }
 
   // String functions (register for string and any to support lambdas with unknown types)
   // Use rubyMethod to handle binary expression precedence

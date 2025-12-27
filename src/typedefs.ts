@@ -237,6 +237,20 @@ export function createTypeDefs(): TypeDefs {
   defs.register('padEnd', [Types.string, Types.int, Types.string], Types.string);
 
   // ============================================
+  // Array functions
+  // ============================================
+  defs.register('length', [Types.array], Types.int);
+  defs.register('at', [Types.array, Types.int], Types.any);
+  defs.register('first', [Types.array], Types.any);
+  defs.register('last', [Types.array], Types.any);
+  defs.register('isEmpty', [Types.array], Types.bool);
+  defs.register('map', [Types.array, Types.fn], Types.array);
+  defs.register('filter', [Types.array, Types.fn], Types.array);
+  defs.register('reduce', [Types.array, Types.any, Types.fn], Types.any);
+  defs.register('any', [Types.array, Types.fn], Types.bool);
+  defs.register('all', [Types.array, Types.fn], Types.bool);
+
+  // ============================================
   // Assert function -> bool
   // ============================================
   defs.register('assert', [Types.bool], Types.bool);

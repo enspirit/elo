@@ -199,17 +199,19 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(${ctx.emit(args[0])}.length === 0)`);
 
-  // Array iteration functions
-  jsLib.register('map', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.map(${ctx.emit(args[1])})`);
-  jsLib.register('filter', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.filter(${ctx.emit(args[1])})`);
-  jsLib.register('reduce', [Types.array, Types.any, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.reduce(${ctx.emit(args[2])}, ${ctx.emit(args[1])})`);
-  jsLib.register('any', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.some(${ctx.emit(args[1])})`);
-  jsLib.register('all', [Types.array, Types.fn], (args, ctx) =>
-    `${ctx.emit(args[0])}.every(${ctx.emit(args[1])})`);
+  // Array iteration functions (register for both array and any to support dynamic types)
+  for (const t of [Types.array, Types.any]) {
+    jsLib.register('map', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.map(${ctx.emit(args[1])})`);
+    jsLib.register('filter', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.filter(${ctx.emit(args[1])})`);
+    jsLib.register('reduce', [t, Types.any, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.reduce(${ctx.emit(args[2])}, ${ctx.emit(args[1])})`);
+    jsLib.register('any', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.some(${ctx.emit(args[1])})`);
+    jsLib.register('all', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.every(${ctx.emit(args[1])})`);
+  }
 
   // String functions (register for both string and any to support lambdas with unknown types)
   // Helper to wrap binary expressions in parentheses for method calls
