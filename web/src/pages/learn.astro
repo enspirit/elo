@@ -10,16 +10,24 @@ const url = (path: string) => `${base}${path}`;
   <main class="learn-panel" data-controller="doc">
     <aside class="learn-toc">
       <nav>
-        <span class="toc-section">Lessons</span>
+        <span class="toc-section">Basics</span>
         <a href="#lesson-1">1. Playing with Numbers</a>
         <a href="#lesson-2">2. Words, Words, Words</a>
         <a href="#lesson-3">3. True or False?</a>
         <a href="#lesson-4">4. Making Decisions</a>
         <a href="#lesson-5">5. Naming Things</a>
+        <span class="toc-section">Intermediate</span>
         <a href="#lesson-6">6. Time Flies</a>
         <a href="#lesson-7">7. Bundling Data</a>
-        <a href="#lesson-8">8. Building Blocks</a>
-        <a href="#lesson-9">9. Piping It Through</a>
+        <a href="#lesson-8">8. Lists of Things</a>
+        <a href="#lesson-9">9. Building Blocks</a>
+        <a href="#lesson-10">10. Piping It Through</a>
+        <span class="toc-section">Advanced</span>
+        <a href="#lesson-11">11. Transforming Lists</a>
+        <a href="#lesson-12">12. Checking Lists</a>
+        <a href="#lesson-13">13. Handling Nulls</a>
+        <a href="#lesson-14">14. Time Ranges</a>
+        <a href="#lesson-15">15. Parsing Data</a>
         <span class="toc-section">Next</span>
         <a href="#lesson-next">What's Next?</a>
       </nav>
@@ -206,7 +214,37 @@ const url = (path: string) => `${base}${path}`;
       </section>
 
       <section class="lesson" id="lesson-8">
-        <h2>8. Building Blocks</h2>
+        <h2>8. Lists of Things</h2>
+        <p>
+          Sometimes you have multiple items: a list of prices, names, or dates.
+          Elo uses <em>arrays</em> for this—just wrap items in square brackets:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">[1, 2, 3, 4, 5]</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">['apple', 'banana', 'cherry']</pre>
+        </div>
+        <p>
+          How many items? Use <code>length</code>:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">length([1, 2, 3, 4, 5])</pre>
+        </div>
+        <p>
+          Arrays can hold any type—even mixed types or other arrays:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">let fruits = ['apple', 'banana'] in length(fruits)</pre>
+        </div>
+        <p class="lesson-tip">
+          <strong>Think shopping lists:</strong> An array is just an ordered collection.
+          You'll learn how to transform and filter arrays in the Advanced section!
+        </p>
+      </section>
+
+      <section class="lesson" id="lesson-9">
+        <h2>9. Building Blocks</h2>
         <p>
           Functions are reusable recipes. Define them with <code>fn</code>:
         </p>
@@ -230,8 +268,8 @@ const url = (path: string) => `${base}${path}`;
         </p>
       </section>
 
-      <section class="lesson" id="lesson-9">
-        <h2>9. Piping It Through</h2>
+      <section class="lesson" id="lesson-10">
+        <h2>10. Piping It Through</h2>
         <p>
           Sometimes you want to chain operations. The pipe operator <code>|></code> makes it readable:
         </p>
@@ -255,10 +293,141 @@ const url = (path: string) => `${base}${path}`;
         </p>
       </section>
 
+      <section class="lesson" id="lesson-11">
+        <h2>11. Transforming Lists</h2>
+        <p>
+          Now that you know arrays and functions, let's combine them! The <code>map</code> function
+          applies a transformation to every item in a list:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">map([1, 2, 3], fn(x ~> x * 2))</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">map(['hello', 'world'], fn(s ~> upper(s)))</pre>
+        </div>
+        <p>
+          Want only certain items? Use <code>filter</code> with a predicate (a function that returns true/false):
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">filter([1, 2, 3, 4, 5], fn(x | x > 2))</pre>
+        </div>
+        <p>
+          Need to combine all items into one value? That's <code>reduce</code>:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">reduce([1, 2, 3, 4], 0, fn(sum, x ~> sum + x))</pre>
+        </div>
+        <p class="lesson-tip">
+          <strong>The pattern:</strong> <code>map</code> transforms each item, <code>filter</code> keeps some items,
+          <code>reduce</code> combines all items into one.
+        </p>
+      </section>
+
+      <section class="lesson" id="lesson-12">
+        <h2>12. Checking Lists</h2>
+        <p>
+          Sometimes you just want to ask a question about a list. Does <em>any</em> item match?
+          Do <em>all</em> items match? Elo has functions for that:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">any([1, 2, 3], fn(x | x > 2))</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">all([1, 2, 3], fn(x | x > 0))</pre>
+        </div>
+        <p>
+          Real-world example: are all prices reasonable?
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">let prices = [10, 25, 5, 30] in all(prices, fn(p | p < 100))</pre>
+        </div>
+        <p class="lesson-tip">
+          <strong>Predicate shorthand:</strong> Notice <code>fn(x | x > 0)</code>? The <code>|</code> means
+          "such that"—it's a predicate that returns true or false.
+        </p>
+      </section>
+
+      <section class="lesson" id="lesson-13">
+        <h2>13. Handling Nulls</h2>
+        <p>
+          Sometimes data is missing. Elo represents this with <code>null</code>:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">null</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">isNull(null)</pre>
+        </div>
+        <p>
+          The <code>|</code> operator provides a fallback when something is null:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">null | 'default value'</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">let x = null in x | 0</pre>
+        </div>
+        <p class="lesson-tip">
+          <strong>Safe defaults:</strong> The <code>|</code> operator is your friend when dealing with
+          optional data. It's like saying "use this, or if it's null, use that instead."
+        </p>
+      </section>
+
+      <section class="lesson" id="lesson-14">
+        <h2>14. Time Ranges</h2>
+        <p>
+          Remember dates from lesson 6? Let's check if a date falls within a range.
+          Elo has special keywords for common boundaries:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">TODAY in SOW .. EOW</pre>
+        </div>
+        <p>
+          <code>SOW</code> = Start of Week, <code>EOW</code> = End of Week. There are more:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">TODAY in SOM .. EOM</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">TODAY in SOY .. EOY</pre>
+        </div>
+        <p class="lesson-tip">
+          <strong>Time boundaries:</strong> SOD/EOD (day), SOW/EOW (week), SOM/EOM (month),
+          SOQ/EOQ (quarter), SOY/EOY (year). Perfect for business logic!
+        </p>
+      </section>
+
+      <section class="lesson" id="lesson-15">
+        <h2>15. Parsing Data</h2>
+        <p>
+          Data often comes as text. Elo can parse strings into proper types using
+          <em>type selectors</em>:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">Int('42')</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">Date('2024-12-25')</pre>
+        </div>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">Duration('P1D')</pre>
+        </div>
+        <p>
+          What if parsing fails? Combine with the fallback operator:
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">Int('not a number') | 0</pre>
+        </div>
+        <p class="lesson-tip">
+          <strong>Type safety:</strong> Type selectors convert text to proper typed values.
+          When combined with <code>|</code>, you get robust data parsing with fallbacks.
+        </p>
+      </section>
+
       <section class="lesson" id="lesson-next">
         <h2>What's Next?</h2>
         <p>
-          You've learned the essentials! Here's where to go from here:
+          Congratulations! You've completed all 15 lessons—from basic arithmetic to advanced list processing and data parsing.
         </p>
         <ul class="next-steps">
           <li>

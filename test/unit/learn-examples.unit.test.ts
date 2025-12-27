@@ -97,7 +97,16 @@ describe('Learn Page Examples - Lesson 7: Objects', () => {
   });
 });
 
-describe('Learn Page Examples - Lesson 8: Functions', () => {
+describe('Learn Page Examples - Lesson 8: Arrays', () => {
+  it('should evaluate array examples', () => {
+    assert.deepStrictEqual(compile('[1, 2, 3, 4, 5]', { runtime }), [1, 2, 3, 4, 5]);
+    assert.deepStrictEqual(compile("['apple', 'banana', 'cherry']", { runtime }), ['apple', 'banana', 'cherry']);
+    assert.strictEqual(compile('length([1, 2, 3, 4, 5])', { runtime }), 5);
+    assert.strictEqual(compile("let fruits = ['apple', 'banana'] in length(fruits)", { runtime }), 2);
+  });
+});
+
+describe('Learn Page Examples - Lesson 9: Functions', () => {
   it('should evaluate lambda examples', () => {
     assert.strictEqual(compile('let double = fn( x ~> x * 2 ) in double(5)', { runtime }), 10);
     assert.strictEqual(compile("let greet = fn( name ~> 'Hello, ' + name + '!' ) in greet('Elo')", { runtime }), 'Hello, Elo!');
@@ -105,10 +114,56 @@ describe('Learn Page Examples - Lesson 8: Functions', () => {
   });
 });
 
-describe('Learn Page Examples - Lesson 9: Pipes', () => {
+describe('Learn Page Examples - Lesson 10: Pipes', () => {
   it('should evaluate pipe examples', () => {
     assert.strictEqual(compile("upper(trim('  hello  '))", { runtime }), 'HELLO');
     assert.strictEqual(compile("'  hello  ' |> trim |> upper", { runtime }), 'HELLO');
     assert.strictEqual(compile("'  elo is fun  ' |> trim |> upper |> length", { runtime }), 10);
+  });
+});
+
+describe('Learn Page Examples - Lesson 11: Transforming Lists', () => {
+  it('should evaluate map, filter, reduce examples', () => {
+    assert.deepStrictEqual(compile('map([1, 2, 3], fn(x ~> x * 2))', { runtime }), [2, 4, 6]);
+    assert.deepStrictEqual(compile("map(['hello', 'world'], fn(s ~> upper(s)))", { runtime }), ['HELLO', 'WORLD']);
+    assert.deepStrictEqual(compile('filter([1, 2, 3, 4, 5], fn(x | x > 2))', { runtime }), [3, 4, 5]);
+    assert.strictEqual(compile('reduce([1, 2, 3, 4], 0, fn(sum, x ~> sum + x))', { runtime }), 10);
+  });
+});
+
+describe('Learn Page Examples - Lesson 12: Checking Lists', () => {
+  it('should evaluate any, all examples', () => {
+    assert.strictEqual(compile('any([1, 2, 3], fn(x | x > 2))', { runtime }), true);
+    assert.strictEqual(compile('all([1, 2, 3], fn(x | x > 0))', { runtime }), true);
+    assert.strictEqual(compile('let prices = [10, 25, 5, 30] in all(prices, fn(p | p < 100))', { runtime }), true);
+  });
+});
+
+describe('Learn Page Examples - Lesson 13: Handling Nulls', () => {
+  it('should evaluate null examples', () => {
+    assert.strictEqual(compile('null', { runtime }), null);
+    assert.strictEqual(compile('isNull(null)', { runtime }), true);
+    assert.strictEqual(compile("null | 'default value'", { runtime }), 'default value');
+    assert.strictEqual(compile('let x = null in x | 0', { runtime }), 0);
+  });
+});
+
+describe('Learn Page Examples - Lesson 14: Time Ranges', () => {
+  it('should evaluate time range examples', () => {
+    // These should return booleans (in operator with ranges)
+    assert.strictEqual(typeof compile('TODAY in SOW .. EOW', { runtime }), 'boolean');
+    assert.strictEqual(typeof compile('TODAY in SOM .. EOM', { runtime }), 'boolean');
+    assert.strictEqual(typeof compile('TODAY in SOY .. EOY', { runtime }), 'boolean');
+  });
+});
+
+describe('Learn Page Examples - Lesson 15: Parsing Data', () => {
+  it('should evaluate type selector examples', () => {
+    assert.strictEqual(compile("Int('42')", { runtime }), 42);
+    const date = compile("Date('2024-12-25')", { runtime });
+    assert.ok(dayjs.isDayjs(date));
+    const dur = compile("Duration('P1D')", { runtime });
+    assert.ok(dayjs.isDuration(dur));
+    assert.strictEqual(compile("Int('not a number') | 0", { runtime }), 0);
   });
 });
