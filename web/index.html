@@ -678,14 +678,14 @@ inRange && passing;</pre>
               <td><code>fn( x ~> x * 2 )</code>, <code>fn( x | x > 0 )</code></td>
             </tr>
             <tr>
-              <td><code>NoVal</code></td>
-              <td>Null/undefined/nil values (from external sources)</td>
-              <td><code>typeOf(nullVar)</code> → <code>'NoVal'</code></td>
+              <td><code>Null</code></td>
+              <td>Null values</td>
+              <td><code>null</code>, <code>typeOf(null)</code> → <code>'Null'</code></td>
             </tr>
           </tbody>
         </table>
 
-        <p class="note"><strong>Note:</strong> Elo has no null literal. <code>NoVal</code> represents null values that come from external sources (databases, JSON, APIs). Use <code>isVal()</code> and <code>orVal()</code> to handle them safely.</p>
+        <p class="note"><strong>Note:</strong> Use <code>null</code> for absent values. Use <code>isNull()</code> to check for null, and the <code>|</code> operator to provide defaults: <code>x | 'default'</code>.</p>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Type Introspection</div>
@@ -866,13 +866,13 @@ inRange && passing;</pre>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Fallback Chain</div>
           <pre class="example-code">indexOf('hello', 'x') | indexOf('hello', 'l') | -1</pre>
-          <p class="example-desc">The <code>|</code> operator returns the first defined value (non-NoVal). Useful for providing defaults when operations may fail.</p>
+          <p class="example-desc">The <code>|</code> operator returns the first non-null value. Useful for providing defaults when operations may fail.</p>
         </div>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Simple Default</div>
           <pre class="example-code">indexOf('test', 'z') | 0</pre>
-          <p class="example-desc">If <code>indexOf</code> returns NoVal (not found), use <code>0</code> as the default.</p>
+          <p class="example-desc">If <code>indexOf</code> returns null (not found), use <code>0</code> as the default.</p>
         </div>
       </section>
 
@@ -1053,7 +1053,7 @@ inRange && passing;</pre>
 
       <section class="doc-section" id="type-selectors">
         <h2>Type Selectors</h2>
-        <p>Type selectors convert values to specific types, parsing strings when needed. They return <code>NoVal</code> on invalid input, making them composable with the <code>|</code> alternative operator.</p>
+        <p>Type selectors convert values to specific types, parsing strings when needed. They return <code>null</code> on invalid input, making them composable with the <code>|</code> alternative operator.</p>
 
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Parse String to Integer</div>
@@ -1445,8 +1445,8 @@ echo "2 + 3 * 4" | eloc -</pre>
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">indexOf</div>
-            <div class="fn-sig">(s: String, sub: String) → Int | NoVal</div>
-            <p class="fn-desc">Returns the index of the first occurrence, or <code>NoVal</code> (null) if not found. Use <code>isVal()</code> or <code>orVal()</code> to handle the not-found case.</p>
+            <div class="fn-sig">(s: String, sub: String) → Int | Null</div>
+            <p class="fn-desc">Returns the index of the first occurrence, or <code>null</code> if not found. Use <code>isNull()</code> to check, or <code>|</code> to provide a default.</p>
             <div class="fn-example"><code class="example-code">indexOf('hello', 'l')</code><span class="fn-result">→ 2</span></div>
           </div>
 
@@ -1510,76 +1510,69 @@ echo "2 + 3 * 4" | eloc -</pre>
 
       <section class="stdlib-section" id="stdlib-introspection" data-stdlib-search-target="section">
         <h2>Type Introspection & Null Handling</h2>
-        <p>Functions to inspect types and handle null values safely. Elo has no null literal, but can receive null values from external sources. See <a href="#doc/types" data-action="click->tabs#switch" data-tab="doc">Types</a> in the language reference.</p>
+        <p>Functions to inspect types and handle null values. Use <code>null</code> for absent values and <code>isNull()</code> to check. See <a href="#doc/types" data-action="click->tabs#switch" data-tab="doc">Types</a> in the language reference.</p>
 
         <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">typeOf</div>
             <div class="fn-sig">(value: Any) → String</div>
-            <p class="fn-desc">Returns the type name of the value. Returns <code>'NoVal'</code> for null/undefined/nil.</p>
+            <p class="fn-desc">Returns the type name of the value. Returns <code>'Null'</code> for null values.</p>
             <div class="fn-example"><code class="example-code">typeOf(42)</code><span class="fn-result">→ 'Int'</span></div>
           </div>
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">isVal</div>
+            <div class="fn-name">isNull</div>
             <div class="fn-sig">(value: Any) → Bool</div>
-            <p class="fn-desc">Returns <code>true</code> if the value is not null/undefined/nil. Use to check if external values exist.</p>
-            <div class="fn-example"><code class="example-code">isVal(42)</code><span class="fn-result">→ true</span></div>
-          </div>
-
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">orVal</div>
-            <div class="fn-sig">(value: Any, default: Any) → Any</div>
-            <p class="fn-desc">Returns the value if it's not null, otherwise returns the default. Like <code>??</code> in JavaScript or <code>COALESCE</code> in SQL.</p>
-            <div class="fn-example"><code class="example-code">orVal(42, 0)</code><span class="fn-result">→ 42</span></div>
+            <p class="fn-desc">Returns <code>true</code> if the value is null. Use to check for absent values.</p>
+            <div class="fn-example"><code class="example-code">isNull(null)</code><span class="fn-result">→ true</span></div>
           </div>
         </div>
       </section>
 
       <section class="stdlib-section" id="stdlib-type-selectors" data-stdlib-search-target="section">
         <h2>Type Selectors</h2>
-        <p>Type selectors parse strings to typed values. They return <code>NoVal</code> on invalid input, making them safe to use with the <code>|</code> alternative operator for defaults.</p>
+        <p>Type selectors parse strings to typed values. They return <code>null</code> on invalid input, making them safe to use with the <code>|</code> alternative operator for defaults.</p>
 
         <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Int</div>
-            <div class="fn-sig">(value: String | Int | Float) → Int | NoVal</div>
+            <div class="fn-sig">(value: String | Int | Float) → Int | Null</div>
             <p class="fn-desc">Parses a string to an integer. Returns the value unchanged if already an Int, truncates Floats.</p>
             <div class="fn-example"><code class="example-code">Int('123')</code><span class="fn-result">→ 123</span></div>
           </div>
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Float</div>
-            <div class="fn-sig">(value: String | Int | Float) → Float | NoVal</div>
+            <div class="fn-sig">(value: String | Int | Float) → Float | Null</div>
             <p class="fn-desc">Parses a string to a floating-point number. Returns the value unchanged if already numeric.</p>
             <div class="fn-example"><code class="example-code">Float('3.14')</code><span class="fn-result">→ 3.14</span></div>
           </div>
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Bool</div>
-            <div class="fn-sig">(value: String | Bool) → Bool | NoVal</div>
-            <p class="fn-desc">Parses <code>'true'</code> or <code>'false'</code> strings to boolean. Returns <code>NoVal</code> for other strings.</p>
+            <div class="fn-sig">(value: String | Bool) → Bool | Null</div>
+            <p class="fn-desc">Parses <code>'true'</code> or <code>'false'</code> strings to boolean. Returns <code>null</code> for other strings.</p>
             <div class="fn-example"><code class="example-code">Bool('true')</code><span class="fn-result">→ true</span></div>
           </div>
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Date</div>
-            <div class="fn-sig">(value: String | Date) → Date | NoVal</div>
-            <p class="fn-desc">Parses an ISO date string (YYYY-MM-DD) to a Date. Returns <code>NoVal</code> for invalid formats.</p>
+            <div class="fn-sig">(value: String | Date) → Date | Null</div>
+            <p class="fn-desc">Parses an ISO date string (YYYY-MM-DD) to a Date. Returns <code>null</code> for invalid formats.</p>
             <div class="fn-example"><code class="example-code">Date('2025-01-15')</code><span class="fn-result">→ D2025-01-15</span></div>
           </div>
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Datetime</div>
-            <div class="fn-sig">(value: String | DateTime) → DateTime | NoVal</div>
-            <p class="fn-desc">Parses an ISO datetime string to a DateTime. Returns <code>NoVal</code> for invalid formats.</p>
+            <div class="fn-sig">(value: String | DateTime) → DateTime | Null</div>
+            <p class="fn-desc">Parses an ISO datetime string to a DateTime. Returns <code>null</code> for invalid formats.</p>
             <div class="fn-example"><code class="example-code">Datetime('2025-01-15T10:30:00')</code><span class="fn-result">→ D2025-01-15T10:30:00</span></div>
           </div>
 
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Duration</div>
-            <div class="fn-sig">(value: String | Duration) → Duration | NoVal</div>
-            <p class="fn-desc">Parses an ISO 8601 duration string. Returns <code>NoVal</code> for invalid formats.</p>
+            <div class="fn-sig">(value: String | Duration) → Duration | Null</div>
+            <p class="fn-desc">Parses an ISO 8601 duration string. Returns <code>null</code> for invalid formats.</p>
             <div class="fn-example"><code class="example-code">Duration('P1D')</code><span class="fn-result">→ P1D</span></div>
           </div>
         </div>
@@ -1664,7 +1657,7 @@ echo "2 + 3 * 4" | eloc -</pre>
             <li><strong>SQL:</strong> <code>COALESCE()</code>—elegant and native</li>
           </ul>
           <p>
-            The design session was illuminating. We considered tagged NoVal values, exception accumulation, and various operator syntaxes. The final choice—<code>|</code> inspired by Finitio's union types—emerged from exploring how each target language handles optionality.
+            The design session was illuminating. We considered tagged null values, exception accumulation, and various operator syntaxes. The final choice—<code>|</code> inspired by Finitio's union types—emerged from exploring how each target language handles optionality.
           </p>
 
           <h3>Type Selectors: Information Contracts Come to Elo</h3>

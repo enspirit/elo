@@ -2,7 +2,7 @@
  * AST node types for Elo expressions
  */
 
-export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr | Lambda | Predicate | ObjectLiteral | Alternative | Apply;
+export type Expr = Literal | NullLiteral | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr | Lambda | Predicate | ObjectLiteral | Alternative | Apply;
 
 /**
  * Literal value (number or boolean)
@@ -10,6 +10,13 @@ export type Expr = Literal | StringLiteral | Variable | BinaryOp | UnaryOp | Dat
 export interface Literal {
   type: 'literal';
   value: number | boolean;
+}
+
+/**
+ * Null literal
+ */
+export interface NullLiteral {
+  type: 'null';
 }
 
 /**
@@ -170,6 +177,10 @@ export function literal(value: number | boolean): Literal {
   return { type: 'literal', value };
 }
 
+export function nullLiteral(): NullLiteral {
+  return { type: 'null' };
+}
+
 export function stringLiteral(value: string): StringLiteral {
   return { type: 'string', value };
 }
@@ -281,7 +292,7 @@ export function objectLiteral(properties: ObjectProperty[]): ObjectLiteral {
 
 /**
  * Alternative expression: a | b | c
- * Evaluates alternatives left-to-right, returns first non-NoVal value.
+ * Evaluates alternatives left-to-right, returns first non-null value.
  */
 export interface Alternative {
   type: 'alternative';

@@ -22,7 +22,7 @@
 (raise "Assertion failed" unless "".concat("test") == "test"; true)
 (raise "Assertion failed" unless "hello world".index("world") == 6; true)
 (raise "Assertion failed" unless "hello world".index("o") == 4; true)
-(raise "Assertion failed" unless !("hello world".index("xyz")).nil? == false; true)
+(raise "Assertion failed" unless ("hello world".index("xyz")).nil? == true; true)
 (raise "Assertion failed" unless "hello world".sub("world", "there") == "hello there"; true)
 (raise "Assertion failed" unless "abab".sub("ab", "x") == "xab"; true)
 (raise "Assertion failed" unless "abab".gsub("ab", "x") == "xx"; true)

@@ -36,7 +36,7 @@ const STDLIB_FUNCTIONS = new Set([
   'year', 'month', 'day', 'hour', 'minute',
   'length', 'upper', 'lower', 'trim', 'concat', 'substring', 'indexOf',
   'replace', 'replaceAll', 'startsWith', 'endsWith', 'contains', 'isEmpty',
-  'padStart', 'padEnd', 'typeOf', 'isVal', 'orVal'
+  'padStart', 'padEnd', 'typeOf', 'isNull'
 ]);
 
 /**

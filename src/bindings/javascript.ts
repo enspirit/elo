@@ -277,8 +277,7 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('typeOf', [Types.any], helperCall('kTypeOf'));
 
   // Null handling
-  jsLib.register('isVal', [Types.any], helperCall('kIsVal'));
-  jsLib.register('orVal', [Types.any, Types.any], helperCall('kOrVal'));
+  jsLib.register('isNull', [Types.any], helperCall('kIsNull'));
 
   // Error handling
   jsLib.register('fail', [Types.string], (args, ctx) => {

@@ -230,7 +230,7 @@ export function createTypeDefs(): TypeDefs {
   defs.register('isEmpty', [Types.string], Types.bool);
   defs.register('substring', [Types.string, Types.int, Types.int], Types.string);
   defs.register('concat', [Types.string, Types.string], Types.string);
-  defs.register('indexOf', [Types.string, Types.string], Types.any); // Int or NoVal
+  defs.register('indexOf', [Types.string, Types.string], Types.any); // Int or null
   defs.register('replace', [Types.string, Types.string, Types.string], Types.string);
   defs.register('replaceAll', [Types.string, Types.string, Types.string], Types.string);
   defs.register('padStart', [Types.string, Types.int, Types.string], Types.string);
@@ -258,10 +258,8 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   // Null handling
   // ============================================
-  // isVal(x) - returns true if x is a real value (not null/undefined/nil)
-  defs.register('isVal', [Types.any], Types.bool);
-  // orVal(x, default) - returns x if it's a value, otherwise returns default
-  defs.register('orVal', [Types.any, Types.any], Types.any);
+  // isNull(x) - returns true if x is null/undefined/nil
+  defs.register('isNull', [Types.any], Types.bool);
 
   // ============================================
   // Error handling
@@ -272,36 +270,36 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   // Type selectors (information contracts)
   // ============================================
-  // Int(x) - coerce to Int, returns NoVal on failure
+  // Int(x) - coerce to Int, returns null on failure
   defs.register('Int', [Types.int], Types.int);
   defs.register('Int', [Types.float], Types.int);
-  defs.register('Int', [Types.string], Types.any); // may return NoVal
+  defs.register('Int', [Types.string], Types.any); // may return null
   defs.register('Int', [Types.any], Types.any);
 
-  // Float(x) - coerce to Float, returns NoVal on failure
+  // Float(x) - coerce to Float, returns null on failure
   defs.register('Float', [Types.float], Types.float);
   defs.register('Float', [Types.int], Types.float);
-  defs.register('Float', [Types.string], Types.any); // may return NoVal
+  defs.register('Float', [Types.string], Types.any); // may return null
   defs.register('Float', [Types.any], Types.any);
 
-  // Bool(x) - coerce to Bool, returns NoVal on failure
+  // Bool(x) - coerce to Bool, returns null on failure
   defs.register('Bool', [Types.bool], Types.bool);
-  defs.register('Bool', [Types.string], Types.any); // may return NoVal
+  defs.register('Bool', [Types.string], Types.any); // may return null
   defs.register('Bool', [Types.any], Types.any);
 
-  // Date(x) - coerce to Date, returns NoVal on failure
+  // Date(x) - coerce to Date, returns null on failure
   defs.register('Date', [Types.date], Types.date);
-  defs.register('Date', [Types.string], Types.any); // may return NoVal
+  defs.register('Date', [Types.string], Types.any); // may return null
   defs.register('Date', [Types.any], Types.any);
 
-  // Datetime(x) - coerce to Datetime, returns NoVal on failure
+  // Datetime(x) - coerce to Datetime, returns null on failure
   defs.register('Datetime', [Types.datetime], Types.datetime);
-  defs.register('Datetime', [Types.string], Types.any); // may return NoVal
+  defs.register('Datetime', [Types.string], Types.any); // may return null
   defs.register('Datetime', [Types.any], Types.any);
 
-  // Duration(x) - coerce to Duration, returns NoVal on failure
+  // Duration(x) - coerce to Duration, returns null on failure
   defs.register('Duration', [Types.duration], Types.duration);
-  defs.register('Duration', [Types.string], Types.any); // may return NoVal
+  defs.register('Duration', [Types.string], Types.any); // may return null
   defs.register('Duration', [Types.any], Types.any);
 
   // Fallback: unknown functions return any

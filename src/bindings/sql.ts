@@ -209,7 +209,7 @@ export function createSQLBinding(): StdLib<string> {
   // Type introspection - map PostgreSQL types to K type names
   sqlLib.register('typeOf', [Types.any], (args, ctx) => {
     const v = ctx.emit(args[0]);
-    return `CASE WHEN ${v} IS NULL THEN 'NoVal' ELSE CASE pg_typeof(${v})::text ` +
+    return `CASE WHEN ${v} IS NULL THEN 'Null' ELSE CASE pg_typeof(${v})::text ` +
       `WHEN 'integer' THEN 'Int' ` +
       `WHEN 'bigint' THEN 'Int' ` +
       `WHEN 'double precision' THEN 'Float' ` +
@@ -226,9 +226,7 @@ export function createSQLBinding(): StdLib<string> {
   });
 
   // Null handling
-  sqlLib.register('isVal', [Types.any], (args, ctx) => `${ctx.emit(args[0])} IS NOT NULL`);
-  sqlLib.register('orVal', [Types.any, Types.any], (args, ctx) =>
-    `COALESCE(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+  sqlLib.register('isNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} IS NULL`);
 
   // Error handling - uses elo_fail() PL/pgSQL function that raises an exception
   sqlLib.register('fail', [Types.string], (args, ctx) => `elo_fail(${ctx.emit(args[0])})`);

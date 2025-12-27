@@ -22,7 +22,7 @@
 (function() { if (!("".concat("test") == "test")) throw new Error("Assertion failed"); return true; })()
 (function() { function kEq(l, r) { if (dayjs.isDuration(l) && dayjs.isDuration(r)) return l.asMilliseconds() === r.asMilliseconds(); if (dayjs.isDayjs(l) && dayjs.isDayjs(r)) return l.valueOf() === r.valueOf(); return l == r; } return (function() { if (!(kEq((i => i === -1 ? null : i)("hello world".indexOf("world")), 6))) throw new Error("Assertion failed"); return true; })(); })()
 (function() { function kEq(l, r) { if (dayjs.isDuration(l) && dayjs.isDuration(r)) return l.asMilliseconds() === r.asMilliseconds(); if (dayjs.isDayjs(l) && dayjs.isDayjs(r)) return l.valueOf() === r.valueOf(); return l == r; } return (function() { if (!(kEq((i => i === -1 ? null : i)("hello world".indexOf("o")), 4))) throw new Error("Assertion failed"); return true; })(); })()
-(function() { function kIsVal(v) { return v !== null && v !== undefined; } return (function() { if (!(kIsVal((i => i === -1 ? null : i)("hello world".indexOf("xyz"))) == false)) throw new Error("Assertion failed"); return true; })(); })()
+(function() { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(kIsNull((i => i === -1 ? null : i)("hello world".indexOf("xyz"))) == true)) throw new Error("Assertion failed"); return true; })(); })()
 (function() { if (!("hello world".replace("world", "there") == "hello there")) throw new Error("Assertion failed"); return true; })()
 (function() { if (!("abab".replace("ab", "x") == "xab")) throw new Error("Assertion failed"); return true; })()
 (function() { if (!("abab".replaceAll("ab", "x") == "xx")) throw new Error("Assertion failed"); return true; })()

@@ -49,7 +49,7 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   kPos: `function kPos(v) { return +v; }`,
   kTypeOf: `function kTypeOf(v) {
-  if (v === null || v === undefined) return 'NoVal';
+  if (v === null || v === undefined) return 'Null';
   if (dayjs.isDuration(v)) return 'Duration';
   if (dayjs.isDayjs(v)) return 'DateTime';
   if (typeof v === 'number') return Number.isInteger(v) ? 'Int' : 'Float';
@@ -58,8 +58,7 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof v === 'function') return 'Fn';
   return 'Object';
 }`,
-  kIsVal: `function kIsVal(v) { return v !== null && v !== undefined; }`,
-  kOrVal: `function kOrVal(v, d) { return (v !== null && v !== undefined) ? v : d; }`,
+  kIsNull: `function kIsNull(v) { return v === null || v === undefined; }`,
   // Type selectors
   kInt: `function kInt(v) {
   if (v === null || v === undefined) return null;

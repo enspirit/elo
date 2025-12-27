@@ -83,6 +83,9 @@ function emitSQL(ir: IRExpr): string {
     case 'bool_literal':
       return ir.value ? 'TRUE' : 'FALSE';
 
+    case 'null_literal':
+      return 'NULL';
+
     case 'string_literal': {
       // SQL strings use single quotes, escape single quotes by doubling
       const escaped = ir.value.replace(/'/g, "''");

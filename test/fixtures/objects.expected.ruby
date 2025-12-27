@@ -1,4 +1,4 @@
-(raise "Assertion failed" unless !({}[:budget]).nil? == false; true)
+(raise "Assertion failed" unless ({}[:budget]).nil? == true; true)
 (raise "Assertion failed" unless {budget: 1500}[:budget] == 1500; true)
 (raise "Assertion failed" unless {name: "Alice", age: 30}[:name] == "Alice"; true)
 (raise "Assertion failed" unless {name: "Alice", age: 30}[:age] == 30; true)

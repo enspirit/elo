@@ -8,7 +8,7 @@
 /**
  * Primitive type kinds in Elo
  */
-export type TypeKind = 'int' | 'float' | 'bool' | 'string' | 'date' | 'datetime' | 'duration' | 'fn' | 'object' | 'any';
+export type TypeKind = 'int' | 'float' | 'bool' | 'null' | 'string' | 'date' | 'datetime' | 'duration' | 'fn' | 'object' | 'any';
 
 /**
  * A Elo type
@@ -24,6 +24,7 @@ export const Types = {
   int: { kind: 'int' } as EloType,
   float: { kind: 'float' } as EloType,
   bool: { kind: 'bool' } as EloType,
+  null: { kind: 'null' } as EloType,
   string: { kind: 'string' } as EloType,
   date: { kind: 'date' } as EloType,
   datetime: { kind: 'datetime' } as EloType,

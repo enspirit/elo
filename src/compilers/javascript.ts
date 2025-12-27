@@ -124,6 +124,9 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>): string {
     case 'bool_literal':
       return ir.value.toString();
 
+    case 'null_literal':
+      return 'null';
+
     case 'string_literal':
       return JSON.stringify(ir.value);
 

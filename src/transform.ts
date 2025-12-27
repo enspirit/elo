@@ -15,6 +15,7 @@ import {
   irInt,
   irFloat,
   irBool,
+  irNull,
   irString,
   irDate,
   irDateTime,
@@ -89,6 +90,9 @@ function transformWithDepth(
 
     case 'string':
       return irString(expr.value);
+
+    case 'null':
+      return irNull();
 
     case 'date':
       return irDate(expr.value);

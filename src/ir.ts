@@ -18,6 +18,7 @@ export type IRExpr =
   | IRIntLiteral
   | IRFloatLiteral
   | IRBoolLiteral
+  | IRNullLiteral
   | IRStringLiteral
   | IRDateLiteral
   | IRDateTimeLiteral
@@ -55,6 +56,13 @@ export interface IRFloatLiteral {
 export interface IRBoolLiteral {
   type: 'bool_literal';
   value: boolean;
+}
+
+/**
+ * Null literal
+ */
+export interface IRNullLiteral {
+  type: 'null_literal';
 }
 
 /**
@@ -210,7 +218,7 @@ export interface IRPredicate {
 
 /**
  * Alternative expression: a | b | c
- * Evaluates alternatives left-to-right, returns first non-NoVal value.
+ * Evaluates alternatives left-to-right, returns first non-null value.
  */
 export interface IRAlternative {
   type: 'alternative';
@@ -232,6 +240,10 @@ export function irFloat(value: number): IRFloatLiteral {
 
 export function irBool(value: boolean): IRBoolLiteral {
   return { type: 'bool_literal', value };
+}
+
+export function irNull(): IRNullLiteral {
+  return { type: 'null_literal' };
 }
 
 export function irString(value: string): IRStringLiteral {
@@ -301,6 +313,8 @@ export function inferType(ir: IRExpr): EloType {
       return Types.float;
     case 'bool_literal':
       return Types.bool;
+    case 'null_literal':
+      return Types.null;
     case 'string_literal':
       return Types.string;
     case 'date_literal':

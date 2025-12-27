@@ -1,4 +1,4 @@
-import { Expr, literal, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, predicate, LetBinding, objectLiteral, ObjectProperty, alternative, apply } from './ast';
+import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, predicate, LetBinding, objectLiteral, ObjectProperty, alternative, apply } from './ast';
 
 /**
  * Token types
@@ -7,6 +7,7 @@ type TokenType =
   | 'NUMBER'
   | 'STRING'
   | 'BOOLEAN'
+  | 'NULL'
   | 'IDENTIFIER'
   | 'DATE'
   | 'DATETIME'
@@ -296,6 +297,9 @@ class Lexer {
       if (id === 'true' || id === 'false') {
         return { type: 'BOOLEAN', value: id, position: pos };
       }
+      if (id === 'null') {
+        return { type: 'NULL', value: id, position: pos };
+      }
       if (id === 'let') {
         return { type: 'LET', value: id, position: pos };
       }
@@ -448,7 +452,7 @@ class Lexer {
  *                | '(' expr ')'
  *
  * Pipe desugaring: `a |> f(b, c)` becomes `f(a, b, c)`
- * Alternative: `a | b | c` evaluates left-to-right, returns first non-NoVal
+ * Alternative: `a | b | c` evaluates left-to-right, returns first non-null
  */
 interface ParserState {
   lexerState: LexerState;
@@ -515,6 +519,11 @@ export class Parser {
     if (token.type === 'BOOLEAN') {
       this.eat('BOOLEAN');
       return literal(token.value === 'true');
+    }
+
+    if (token.type === 'NULL') {
+      this.eat('NULL');
+      return nullLiteral();
     }
 
     if (token.type === 'DATE') {
@@ -781,7 +790,7 @@ export class Parser {
 
   /**
    * Parse alternative expressions: a | b | c
-   * Returns first non-NoVal value, left-to-right evaluation.
+   * Returns first non-null value, left-to-right evaluation.
    */
   private alternative(): Expr {
     let node = this.equality();

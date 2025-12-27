@@ -213,16 +213,11 @@ export function createRubyBinding(): StdLib<string> {
   // Type introspection
   rubyLib.register('typeOf', [Types.any], (args, ctx) => {
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when NilClass; 'NoVal' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Fn' else 'Object' end }).call(${v})`;
+    return `(->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Fn' else 'Object' end }).call(${v})`;
   });
 
   // Null handling
-  rubyLib.register('isVal', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])}).nil?`);
-  rubyLib.register('orVal', [Types.any, Types.any], (args, ctx) => {
-    const v = ctx.emit(args[0]);
-    const d = ctx.emit(args[1]);
-    return `(->(v) { v.nil? ? ${d} : v }).call(${v})`;
-  });
+  rubyLib.register('isNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])}).nil?`);
 
   // Error handling
   rubyLib.register('fail', [Types.string], (args, ctx) => {

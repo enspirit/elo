@@ -88,6 +88,9 @@ function emitRuby(ir: IRExpr): string {
     case 'bool_literal':
       return ir.value.toString();
 
+    case 'null_literal':
+      return 'nil';
+
     case 'string_literal': {
       // Ruby double-quoted strings: escape backslash and double quote
       const escaped = ir.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
