@@ -218,10 +218,6 @@ main {
   border-bottom: 1px solid var(--border);
 }
 
-.editor-hint {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
 
 /* CodeMirror Editor */
 .editor-panel > div:last-child {

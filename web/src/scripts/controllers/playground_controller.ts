@@ -83,7 +83,7 @@ in {
 };
 
 export default class PlaygroundController extends Controller {
-  static targets = ['editor', 'output', 'language', 'pretty', 'prelude', 'error', 'result', 'resultPanel', 'copyButton', 'saveButton', 'examples'];
+  static targets = ['editor', 'output', 'language', 'pretty', 'prelude', 'error', 'result', 'resultPanel', 'copyButton', 'saveButton', 'runButton', 'examples'];
 
   declare editorTarget: HTMLDivElement;
   declare outputTarget: HTMLPreElement;
@@ -95,6 +95,7 @@ export default class PlaygroundController extends Controller {
   declare resultPanelTarget: HTMLDivElement;
   declare copyButtonTarget: HTMLButtonElement;
   declare saveButtonTarget: HTMLButtonElement;
+  declare runButtonTarget: HTMLButtonElement;
   declare examplesTarget: HTMLSelectElement;
 
   private editorView: EditorView | null = null;

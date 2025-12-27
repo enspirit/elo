@@ -30,7 +30,11 @@ import Layout from '../layouts/Layout.astro';
             <option value="durations">Durations</option>
           </optgroup>
         </select>
-        <span class="editor-hint">Ctrl+Enter to run</span>
+        <button
+          data-playground-target="runButton"
+          data-action="click->playground#run"
+          class="run-button"
+        >Run</button>
       </div>
       <div
         data-playground-target="editor"
