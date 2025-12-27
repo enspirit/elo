@@ -371,10 +371,12 @@ select:focus {
 /* ==================== */
 
 .page-header {
+  display: block;
   margin-bottom: 2rem;
 }
 
 .page-header h1 {
+  display: block;
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 1rem;
@@ -382,6 +384,7 @@ select:focus {
 }
 
 .page-intro {
+  display: block;
   font-size: 1.125rem;
   color: var(--text-secondary);
   line-height: 1.6;
