@@ -31,3 +31,7 @@ CASE WHEN NOT (LENGTH('hello') = 0) THEN TRUE ELSE (SELECT pg_terminate_backend(
 CASE WHEN LPAD('42', 5, '0') = '00042' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN RPAD('hi', 5, '.') = 'hi...' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN 'hello' || ' ' || 'world' = 'hello world' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN UPPER('hello' || ' ' || 'world') = 'HELLO WORLD' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LOWER('HELLO' || ' ' || 'WORLD') = 'hello world' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN TRIM(' hello ' || ' world ') = 'hello  world' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LENGTH('ab' || 'cd') = 4 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

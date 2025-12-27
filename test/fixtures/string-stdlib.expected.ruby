@@ -31,3 +31,7 @@
 (raise "Assertion failed" unless "42".rjust(5, "0") == "00042"; true)
 (raise "Assertion failed" unless "hi".ljust(5, ".") == "hi..."; true)
 (raise "Assertion failed" unless "hello" + " " + "world" == "hello world"; true)
+(raise "Assertion failed" unless ("hello" + " " + "world").upcase == "HELLO WORLD"; true)
+(raise "Assertion failed" unless ("HELLO" + " " + "WORLD").downcase == "hello world"; true)
+(raise "Assertion failed" unless (" hello " + " world ").strip == "hello  world"; true)
+(raise "Assertion failed" unless ("ab" + "cd").length == 4; true)

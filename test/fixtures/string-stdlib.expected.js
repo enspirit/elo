@@ -31,3 +31,7 @@
 (function() { if (!("42".padStart(5, "0") == "00042")) throw new Error("Assertion failed"); return true; })()
 (function() { if (!("hi".padEnd(5, ".") == "hi...")) throw new Error("Assertion failed"); return true; })()
 (function() { if (!("hello" + " " + "world" == "hello world")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!(("hello" + " " + "world").toUpperCase() == "HELLO WORLD")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!(("HELLO" + " " + "WORLD").toLowerCase() == "hello world")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!((" hello " + " world ").trim() == "hello  world")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!(("ab" + "cd").length == 4)) throw new Error("Assertion failed"); return true; })()

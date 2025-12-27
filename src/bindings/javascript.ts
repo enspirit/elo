@@ -212,44 +212,57 @@ export function createJavaScriptBinding(): StdLib<string> {
     `${ctx.emit(args[0])}.every(${ctx.emit(args[1])})`);
 
   // String functions (register for both string and any to support lambdas with unknown types)
+  // Helper to wrap binary expressions in parentheses for method calls
+  const methodCall = (method: string) => (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
+    const operand = ctx.emit(args[0]);
+    if (isNativeBinaryOp(args[0])) return `(${operand})${method}`;
+    return `${operand}${method}`;
+  };
+
   for (const t of [Types.string, Types.any]) {
-    jsLib.register('length', [t], (args, ctx) => `${ctx.emit(args[0])}.length`);
-    jsLib.register('upper', [t], (args, ctx) => `${ctx.emit(args[0])}.toUpperCase()`);
-    jsLib.register('lower', [t], (args, ctx) => `${ctx.emit(args[0])}.toLowerCase()`);
-    jsLib.register('trim', [t], (args, ctx) => `${ctx.emit(args[0])}.trim()`);
+    jsLib.register('length', [t], methodCall('.length'));
+    jsLib.register('upper', [t], methodCall('.toUpperCase()'));
+    jsLib.register('lower', [t], methodCall('.toLowerCase()'));
+    jsLib.register('trim', [t], methodCall('.trim()'));
   }
+  // Helper for method calls with arguments - wraps receiver in parens if needed
+  const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
+    const operand = ctx.emit(args[0]);
+    return isNativeBinaryOp(args[0]) ? `(${operand})` : operand;
+  };
+
   // String functions with two args (register for string and any)
   for (const t of [Types.string, Types.any]) {
     jsLib.register('startsWith', [t, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.startsWith(${ctx.emit(args[1])})`);
+      `${wrapReceiver(args, ctx)}.startsWith(${ctx.emit(args[1])})`);
     jsLib.register('endsWith', [t, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.endsWith(${ctx.emit(args[1])})`);
+      `${wrapReceiver(args, ctx)}.endsWith(${ctx.emit(args[1])})`);
     jsLib.register('contains', [t, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.includes(${ctx.emit(args[1])})`);
+      `${wrapReceiver(args, ctx)}.includes(${ctx.emit(args[1])})`);
     jsLib.register('concat', [t, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.concat(${ctx.emit(args[1])})`);
+      `${wrapReceiver(args, ctx)}.concat(${ctx.emit(args[1])})`);
     jsLib.register('indexOf', [t, Types.string], (args, ctx) =>
-      `(i => i === -1 ? null : i)(${ctx.emit(args[0])}.indexOf(${ctx.emit(args[1])}))`);
+      `(i => i === -1 ? null : i)(${wrapReceiver(args, ctx)}.indexOf(${ctx.emit(args[1])}))`);
     jsLib.register('isEmpty', [t], (args, ctx) =>
-      `(${ctx.emit(args[0])}.length === 0)`);
+      `(${wrapReceiver(args, ctx)}.length === 0)`);
   }
 
   // String functions with three args
   for (const t of [Types.string, Types.any]) {
     jsLib.register('substring', [t, Types.int, Types.int], (args, ctx) => {
-      const s = ctx.emit(args[0]);
+      const s = wrapReceiver(args, ctx);
       const start = ctx.emit(args[1]);
       const len = ctx.emit(args[2]);
       return `${s}.substring(${start}, ${start} + ${len})`;
     });
     jsLib.register('replace', [t, Types.string, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     jsLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.replaceAll(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.replaceAll(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     jsLib.register('padStart', [t, Types.int, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.padStart(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.padStart(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     jsLib.register('padEnd', [t, Types.int, Types.string], (args, ctx) =>
-      `${ctx.emit(args[0])}.padEnd(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.padEnd(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   }
 
   // Numeric functions
