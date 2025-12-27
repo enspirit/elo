@@ -17,7 +17,7 @@ Add Array type and literals to Elo for JSON input processing.
 5. Compilers:
    - JavaScript: `[...]`
    - Ruby: `[...]`
-   - SQL: `ARRAY[...]` or JSON array
+   - SQL: `ARRAY[...]`
 6. Tests: unit, integration, acceptance
 7. Documentation: README, website
 
