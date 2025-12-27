@@ -44,6 +44,7 @@
           <a href="#stdlib/stdlib-numeric" data-action="click->tabs#switch" data-tab="stdlib">Numeric</a>
           <a href="#stdlib/stdlib-temporal" data-action="click->tabs#switch" data-tab="stdlib">Temporal</a>
           <a href="#stdlib/stdlib-string" data-action="click->tabs#switch" data-tab="stdlib">String</a>
+          <a href="#stdlib/stdlib-array" data-action="click->tabs#switch" data-tab="stdlib">Array</a>
           <a href="#stdlib/stdlib-introspection" data-action="click->tabs#switch" data-tab="stdlib">Introspection</a>
           <a href="#stdlib/stdlib-type-selectors" data-action="click->tabs#switch" data-tab="stdlib">Type Selectors</a>
         </div>
@@ -1344,6 +1345,7 @@ echo "2 + 3 * 4" | eloc -</pre>
         <a href="#stdlib/stdlib-numeric" data-action="click->tabs#switch" data-tab="stdlib">Numeric</a>
         <a href="#stdlib/stdlib-temporal" data-action="click->tabs#switch" data-tab="stdlib">Temporal</a>
         <a href="#stdlib/stdlib-string" data-action="click->tabs#switch" data-tab="stdlib">String</a>
+        <a href="#stdlib/stdlib-array" data-action="click->tabs#switch" data-tab="stdlib">Array</a>
         <a href="#stdlib/stdlib-introspection" data-action="click->tabs#switch" data-tab="stdlib">Introspection</a>
         <a href="#stdlib/stdlib-type-selectors" data-action="click->tabs#switch" data-tab="stdlib">Type Selectors</a>
       </nav>
@@ -1554,6 +1556,48 @@ echo "2 + 3 * 4" | eloc -</pre>
             <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
             <p class="fn-desc">Pads the end of the string to reach the target length.</p>
             <div class="fn-example"><code class="example-code">padEnd('hi', 5, '.')</code><span class="fn-result">→ 'hi...'</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stdlib-section" id="stdlib-array" data-stdlib-search-target="section">
+        <h2>Array Functions</h2>
+        <p>Functions for working with arrays. Arrays can contain mixed types: <code>[1, 'two', true, null]</code>.</p>
+
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">length</div>
+            <div class="fn-sig">(arr: Array) → Int</div>
+            <p class="fn-desc">Returns the number of elements in the array.</p>
+            <div class="fn-example"><code class="example-code">length([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">at</div>
+            <div class="fn-sig">(arr: Array, index: Int) → Any</div>
+            <p class="fn-desc">Returns the element at the given index (0-based). Returns <code>null</code> if index is out of bounds.</p>
+            <div class="fn-example"><code class="example-code">at([1, 2, 3], 1)</code><span class="fn-result">→ 2</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">first</div>
+            <div class="fn-sig">(arr: Array) → Any</div>
+            <p class="fn-desc">Returns the first element of the array, or <code>null</code> if empty.</p>
+            <div class="fn-example"><code class="example-code">first([1, 2, 3])</code><span class="fn-result">→ 1</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">last</div>
+            <div class="fn-sig">(arr: Array) → Any</div>
+            <p class="fn-desc">Returns the last element of the array, or <code>null</code> if empty.</p>
+            <div class="fn-example"><code class="example-code">last([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
+          </div>
+
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">isEmpty</div>
+            <div class="fn-sig">(arr: Array) → Bool</div>
+            <p class="fn-desc">Returns <code>true</code> if the array is empty (length 0).</p>
+            <div class="fn-example"><code class="example-code">isEmpty([])</code><span class="fn-result">→ true</span></div>
           </div>
         </div>
       </section>

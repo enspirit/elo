@@ -155,6 +155,18 @@ export function createSQLBinding(): StdLib<string> {
     return `CASE WHEN ${condition} THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END`;
   });
 
+  // Array functions
+  sqlLib.register('length', [Types.array], (args, ctx) =>
+    `COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0)`);
+  sqlLib.register('at', [Types.array, Types.int], (args, ctx) =>
+    `${ctx.emit(args[0])}[${ctx.emit(args[1])} + 1]`);
+  sqlLib.register('first', [Types.array], (args, ctx) =>
+    `${ctx.emit(args[0])}[1]`);
+  sqlLib.register('last', [Types.array], (args, ctx) =>
+    `${ctx.emit(args[0])}[CARDINALITY(${ctx.emit(args[0])})]`);
+  sqlLib.register('isEmpty', [Types.array], (args, ctx) =>
+    `(COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0) = 0)`);
+
   // String functions
   sqlLib.register('length', [Types.string], (args, ctx) => `LENGTH(${ctx.emit(args[0])})`);
   sqlLib.register('upper', [Types.string], (args, ctx) => `UPPER(${ctx.emit(args[0])})`);

@@ -154,6 +154,14 @@ export function createRubyBinding(): StdLib<string> {
     return `(raise ${message} unless ${condition}; true)`;
   });
 
+  // Array functions
+  rubyLib.register('length', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
+  rubyLib.register('at', [Types.array, Types.int], (args, ctx) =>
+    `${ctx.emit(args[0])}[${ctx.emit(args[1])}]`);
+  rubyLib.register('first', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.first`);
+  rubyLib.register('last', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.last`);
+  rubyLib.register('isEmpty', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.empty?`);
+
   // String functions (register for string and any to support lambdas with unknown types)
   for (const t of [Types.string, Types.any]) {
     rubyLib.register('length', [t], (args, ctx) => `${ctx.emit(args[0])}.length`);

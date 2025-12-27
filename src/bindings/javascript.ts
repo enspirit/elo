@@ -188,6 +188,17 @@ export function createJavaScriptBinding(): StdLib<string> {
     });
   }
 
+  // Array functions
+  jsLib.register('length', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
+  jsLib.register('at', [Types.array, Types.int], (args, ctx) =>
+    `${ctx.emit(args[0])}[${ctx.emit(args[1])}] ?? null`);
+  jsLib.register('first', [Types.array], (args, ctx) =>
+    `${ctx.emit(args[0])}[0] ?? null`);
+  jsLib.register('last', [Types.array], (args, ctx) =>
+    `(a => a[a.length - 1] ?? null)(${ctx.emit(args[0])})`);
+  jsLib.register('isEmpty', [Types.array], (args, ctx) =>
+    `(${ctx.emit(args[0])}.length === 0)`);
+
   // String functions (register for both string and any to support lambdas with unknown types)
   for (const t of [Types.string, Types.any]) {
     jsLib.register('length', [t], (args, ctx) => `${ctx.emit(args[0])}.length`);
