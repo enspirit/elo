@@ -5,3 +5,5 @@
 (raise "Assertion failed" unless (a = 10; b = 20; a + b) == 30; true)
 (raise "Assertion failed" unless (a = 5; b = a * 2; b) == 10; true)
 (raise "Assertion failed" unless (x = 2; y = x + 1; z = y + 1; z) == 4; true)
+(raise "Assertion failed" unless (x = 1; x = 2; x) == 2; true)
+(raise "Assertion failed" unless (x = 10; x + (x = 5; x)) == 15; true)

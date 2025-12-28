@@ -193,12 +193,25 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>): string {
     }
 
     case 'let': {
-      // Collect all consecutive let bindings for flattened output
+      // Collect consecutive let bindings, but stop if we encounter shadowing
       const allBindings: Array<{ name: string; value: string }> = [];
+      const seenNames = new Set<string>();
       let current: IRExpr = ir;
 
       while (current.type === 'let') {
+        let hasShadowing = false;
         for (const b of current.bindings) {
+          if (seenNames.has(b.name)) {
+            hasShadowing = true;
+            break;
+          }
+        }
+        if (hasShadowing) {
+          // Stop flattening - emit nested IIFE for proper scoping
+          break;
+        }
+        for (const b of current.bindings) {
+          seenNames.add(b.name);
           allBindings.push({ name: b.name, value: ctx.emit(b.value) });
         }
         current = current.body;

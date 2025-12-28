@@ -5,3 +5,5 @@
 (function() { if (!((() => { const a = 10; const b = 20; return a + b; })() == 30)) throw new Error("Assertion failed"); return true; })()
 (function() { if (!((() => { const a = 5; const b = a * 2; return b; })() == 10)) throw new Error("Assertion failed"); return true; })()
 (function() { if (!((() => { const x = 2; const y = x + 1; const z = y + 1; return z; })() == 4)) throw new Error("Assertion failed"); return true; })()
+(function() { if (!((() => { const x = 1; return (() => { const x = 2; return x; })(); })() == 2)) throw new Error("Assertion failed"); return true; })()
+(function() { if (!((() => { const x = 10; return x + (() => { const x = 5; return x; })(); })() == 15)) throw new Error("Assertion failed"); return true; })()

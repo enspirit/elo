@@ -8,7 +8,8 @@ type TokenType =
   | 'STRING'
   | 'BOOLEAN'
   | 'NULL'
-  | 'IDENTIFIER'
+  | 'IDENTIFIER'       // lowercase: user variables (x, foo, my_var)
+  | 'UPPER_IDENTIFIER' // uppercase: Types, Selectors, temporal keywords (NOW, TODAY, String)
   | 'DATE'
   | 'DATETIME'
   | 'DURATION'
@@ -329,11 +330,11 @@ class Lexer {
       if (id === 'fn') {
         return { type: 'FN', value: id, position: pos };
       }
-      const temporalKeywords = ['NOW', 'TODAY', 'TOMORROW', 'YESTERDAY',
-        'SOD', 'EOD', 'SOW', 'EOW', 'SOM', 'EOM', 'SOQ', 'EOQ', 'SOY', 'EOY'];
-      if (temporalKeywords.includes(id)) {
-        return { type: 'IDENTIFIER', value: id, position: pos };
+      // Uppercase identifiers: types, selectors, temporal keywords
+      if (/^[A-Z]/.test(id)) {
+        return { type: 'UPPER_IDENTIFIER', value: id, position: pos };
       }
+      // Lowercase identifiers: user variables
       return { type: 'IDENTIFIER', value: id, position: pos };
     }
 
@@ -550,6 +551,42 @@ export class Parser {
       return stringLiteral(token.value);
     }
 
+    // Uppercase identifiers: temporal keywords, types, selectors
+    if (token.type === 'UPPER_IDENTIFIER') {
+      const name = token.value;
+      this.eat('UPPER_IDENTIFIER');
+
+      // Check if this is a temporal keyword
+      const temporalKeywords = ['NOW', 'TODAY', 'TOMORROW', 'YESTERDAY',
+        'SOD', 'EOD', 'SOW', 'EOW', 'SOM', 'EOM', 'SOQ', 'EOQ', 'SOY', 'EOY'];
+      if (temporalKeywords.includes(name)) {
+        return temporalKeyword(name as any);
+      }
+
+      // Check if this is a function call (uppercase functions like Type selectors)
+      if (this.currentToken.type === 'LPAREN') {
+        this.eat('LPAREN');
+        const args: Expr[] = [];
+
+        const tok = this.currentToken as Token;
+        if (tok.type !== 'RPAREN') {
+          args.push(this.expr());
+          while ((this.currentToken as Token).type === 'COMMA') {
+            this.eat('COMMA');
+            args.push(this.expr());
+          }
+        }
+
+        this.eat('RPAREN');
+        return functionCall(name, args);
+      }
+
+      throw new Error(
+        `Unknown uppercase identifier '${name}' at position ${token.position}`
+      );
+    }
+
+    // Lowercase identifiers: user variables, function calls
     if (token.type === 'IDENTIFIER') {
       const name = token.value;
       this.eat('IDENTIFIER');
@@ -561,13 +598,6 @@ export class Parser {
         this.eat('ARROW');
         const body = this.pipe();
         return lambda([name], body);
-      }
-
-      // Check if this is a temporal keyword
-      const temporalKeywords = ['NOW', 'TODAY', 'TOMORROW', 'YESTERDAY',
-        'SOD', 'EOD', 'SOW', 'EOW', 'SOM', 'EOM', 'SOQ', 'EOQ', 'SOY', 'EOY'];
-      if (temporalKeywords.includes(name)) {
-        return temporalKeyword(name as any);
       }
 
       // Check if this is a function call

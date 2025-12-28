@@ -614,7 +614,7 @@ describe('Temporal - Invalid Duration Formats (missing T for time components)', 
   it('should not parse P2H - hours require T prefix', () => {
     // P2H is invalid ISO 8601 - time components require T prefix (PT2H)
     // Parser reads P2 as duration, then H becomes an unexpected identifier
-    assert.throws(() => parse('P2H'), /Expected EOF but got IDENTIFIER/);
+    assert.throws(() => parse('P2H'), /Expected EOF but got (UPPER_)?IDENTIFIER/);
   });
 
   it('should not parse P30M - minutes require T prefix', () => {
@@ -630,17 +630,17 @@ describe('Temporal - Invalid Duration Formats (missing T for time components)', 
 
   it('should not parse P1H30M - hours require T prefix', () => {
     // P1H30M is invalid - should be PT1H30M
-    assert.throws(() => parse('P1H30M'), /Expected EOF but got IDENTIFIER/);
+    assert.throws(() => parse('P1H30M'), /Expected EOF but got (UPPER_)?IDENTIFIER/);
   });
 
   it('should not parse P2H30M - hours require T prefix', () => {
     // P2H30M is invalid - should be PT2H30M
-    assert.throws(() => parse('P2H30M'), /Expected EOF but got IDENTIFIER/);
+    assert.throws(() => parse('P2H30M'), /Expected EOF but got (UPPER_)?IDENTIFIER/);
   });
 
   it('should not parse P1S - seconds require T prefix', () => {
     // P1S is invalid - should be PT1S
-    assert.throws(() => parse('P1S'), /Expected EOF but got IDENTIFIER/);
+    assert.throws(() => parse('P1S'), /Expected EOF but got (UPPER_)?IDENTIFIER/);
   });
 
   it('should parse PT2H correctly', () => {

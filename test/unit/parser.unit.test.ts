@@ -562,6 +562,12 @@ describe('Parser - Let Expressions', () => {
   it('should throw on let without binding value', () => {
     assert.throws(() => parse('let x in x'), /Expected ASSIGN/);
   });
+
+  it('should reject uppercase variable names in let bindings', () => {
+    // Uppercase names are reserved for Types and Selectors
+    assert.throws(() => parse('let X = 1 in X'), /Expected IDENTIFIER/);
+    assert.throws(() => parse('let MyVar = 1 in MyVar'), /Expected IDENTIFIER/);
+  });
 });
 
 describe('Parser - Range Membership', () => {
@@ -851,6 +857,12 @@ describe('Parser - Lambda Expressions', () => {
       }
     }
   });
+
+  it('should reject uppercase parameter names', () => {
+    // Uppercase names are reserved for Types and Selectors
+    assert.throws(() => parse('fn( X ~> X )'), /Expected IDENTIFIER/);
+    assert.throws(() => parse('fn( x, Y ~> x + Y )'), /Expected IDENTIFIER/);
+  });
 });
 
 describe('Parser - Lambda Sugar (single param)', () => {
@@ -923,6 +935,11 @@ describe('Parser - Lambda Sugar (single param)', () => {
     const fnAst = parse('fn( x ~> x * 2 )');
     assert.deepStrictEqual(sugarAst, fnAst);
   });
+
+  it('should reject uppercase parameter names in sugar syntax', () => {
+    // Uppercase names are reserved for Types and Selectors
+    assert.throws(() => parse('X ~> X'), /Unknown uppercase identifier/);
+  });
 });
 
 describe('Parser - Predicate Expressions', () => {
@@ -987,6 +1004,11 @@ describe('Parser - Predicate Expressions', () => {
       assert.strictEqual(ast.bindings[0].value.type, 'predicate');
       assert.strictEqual(ast.body.type, 'function_call');
     }
+  });
+
+  it('should reject uppercase parameter names in predicates', () => {
+    // Uppercase names are reserved for Types and Selectors
+    assert.throws(() => parse('fn( X | X > 0 )'), /Expected IDENTIFIER/);
   });
 });
 
