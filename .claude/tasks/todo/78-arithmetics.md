@@ -84,3 +84,9 @@ These additions align well with the "extended arithmetic" vision:
 - List + List is standard in most functional languages
 - Object merge is useful for data manipulation (common in JSON processing)
 - DataPath concat enables dynamic path construction
+
+### Decision
+
+- Add String * Number and Number * String
+- Add List + List
+- Hold on on others, split into ideation tasks (one for each)
