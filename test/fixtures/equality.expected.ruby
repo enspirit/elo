@@ -25,3 +25,6 @@
 (raise "Assertion failed" unless ActiveSupport::Duration.parse('PT1H') == ActiveSupport::Duration.parse('PT1H'); true)
 (raise "Assertion failed" unless ActiveSupport::Duration.parse('PT30M') + ActiveSupport::Duration.parse('PT30M') == ActiveSupport::Duration.parse('PT1H'); true)
 (raise "Assertion failed" unless ActiveSupport::Duration.parse('PT1H') != ActiveSupport::Duration.parse('PT2H'); true)
+(raise "Assertion failed" unless ActiveSupport::Duration.parse('P2D') - ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P1D'); true)
+(raise "Assertion failed" unless ActiveSupport::Duration.parse('PT2H') - ActiveSupport::Duration.parse('PT1H') == ActiveSupport::Duration.parse('PT1H'); true)
+(raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call(((DateTime.parse('2024-01-15T10:00:00Z') - DateTime.parse('2024-01-15T09:00:00Z')) * 86400).to_i.seconds) == "Duration"; true)
