@@ -81,6 +81,16 @@ export function createJavaScriptBinding(): StdLib<string> {
   // String concatenation
   jsLib.register('add', [Types.string, Types.string], simpleBinaryOp('+'));
 
+  // String multiplication (repeat)
+  jsLib.register('mul', [Types.string, Types.int], (args, ctx) =>
+    `${ctx.emit(args[0])}.repeat(${ctx.emit(args[1])})`);
+  jsLib.register('mul', [Types.int, Types.string], (args, ctx) =>
+    `${ctx.emit(args[1])}.repeat(${ctx.emit(args[0])})`);
+
+  // List concatenation
+  jsLib.register('add', [Types.array, Types.array], (args, ctx) =>
+    `${ctx.emit(args[0])}.concat(${ctx.emit(args[1])})`);
+
   // Temporal addition
   jsLib.register('add', [Types.date, Types.duration], (args, ctx) =>
     `${ctx.emit(args[0])}.add(${ctx.emit(args[1])})`);

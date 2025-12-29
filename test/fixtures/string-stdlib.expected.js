@@ -36,3 +36,8 @@
 (function() { if (!(("HELLO" + " " + "WORLD").toLowerCase() == "hello world")) throw new Error("Assertion failed"); return true; })()
 (function() { if (!((" hello " + " world ").trim() == "hello  world")) throw new Error("Assertion failed"); return true; })()
 (function() { if (!(("ab" + "cd").length == 4)) throw new Error("Assertion failed"); return true; })()
+(function() { if (!("hi".repeat(3) == "hihihi")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!("hi".repeat(3) == "hihihi")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!("ab".repeat(2) == "abab")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!("".repeat(5) == "")) throw new Error("Assertion failed"); return true; })()
+(function() { if (!("x".repeat(0) == "")) throw new Error("Assertion failed"); return true; })()

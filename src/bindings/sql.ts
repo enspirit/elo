@@ -77,6 +77,15 @@ export function createSQLBinding(): StdLib<string> {
   // String concatenation uses || in SQL
   sqlLib.register('add', [Types.string, Types.string], sqlBinaryOp('||'));
 
+  // String multiplication (repeat) uses REPEAT function in PostgreSQL
+  sqlLib.register('mul', [Types.string, Types.int], (args, ctx) =>
+    `REPEAT(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+  sqlLib.register('mul', [Types.int, Types.string], (args, ctx) =>
+    `REPEAT(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`);
+
+  // List concatenation uses || in PostgreSQL (array concatenation)
+  sqlLib.register('add', [Types.array, Types.array], sqlBinaryOp('||'));
+
   // SQL uses native operators for all types - type generalization handles all combinations
   sqlLib.register('add', [Types.any, Types.any], sqlBinaryOp('+'));
   sqlLib.register('sub', [Types.any, Types.any], sqlBinaryOp('-'));

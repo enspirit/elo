@@ -69,6 +69,13 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('mod', [Types.any, Types.any], simpleBinaryOp('%'));
   rubyLib.register('pow', [Types.any, Types.any], simpleBinaryOp('**'));
 
+  // Int * String needs operand swap (Ruby only supports String * Int)
+  rubyLib.register('mul', [Types.int, Types.string], (args, ctx) => {
+    const left = ctx.emitWithParens(args[1], '*', 'left');
+    const right = ctx.emitWithParens(args[0], '*', 'right');
+    return `${left} * ${right}`;
+  });
+
   // Temporal arithmetic - Ruby's operator overloading handles this
   // Special case: today() + duration('P1D') -> Date.today + 1 (for TOMORROW)
   rubyLib.register('add', [Types.date, Types.duration], (args, ctx) => {

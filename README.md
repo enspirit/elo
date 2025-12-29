@@ -25,7 +25,7 @@ See also the Related work section below.
 - **Boolean expressions** with comparison and logical operators
 - **Temporal types** with dates, datetimes, and ISO8601 durations
 - **Infix notation** (standard mathematical notation)
-- **Arithmetic operators**: `+`, `-`, `*`, `/`, `%`, `^` (power)
+- **Arithmetic operators**: `+`, `-`, `*`, `/`, `%`, `^` (power, plus string repeat and array concat)
 - **Comparison operators**: `<`, `>`, `<=`, `>=`, `==`, `!=`
 - **Logical operators**: `&&`, `||`, `!`
 - **Unary operators**: `-`, `+`, `!`

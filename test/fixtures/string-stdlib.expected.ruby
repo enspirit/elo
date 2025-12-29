@@ -36,3 +36,8 @@
 (raise "Assertion failed" unless ("HELLO" + " " + "WORLD").downcase == "hello world"; true)
 (raise "Assertion failed" unless (" hello " + " world ").strip == "hello  world"; true)
 (raise "Assertion failed" unless ("ab" + "cd").length == 4; true)
+(raise "Assertion failed" unless "hi" * 3 == "hihihi"; true)
+(raise "Assertion failed" unless "hi" * 3 == "hihihi"; true)
+(raise "Assertion failed" unless "ab" * 2 == "abab"; true)
+(raise "Assertion failed" unless "" * 5 == ""; true)
+(raise "Assertion failed" unless "x" * 0 == ""; true)

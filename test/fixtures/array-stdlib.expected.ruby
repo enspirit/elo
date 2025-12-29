@@ -10,3 +10,8 @@
 (raise "Assertion failed" unless [1].empty? == false; true)
 (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 100)).nil? == true; true)
 (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], -1)).nil? == true; true)
+(raise "Assertion failed" unless [1, 2] + [3, 4] == [1, 2, 3, 4]; true)
+(raise "Assertion failed" unless [] + [1, 2] == [1, 2]; true)
+(raise "Assertion failed" unless [1, 2] + [] == [1, 2]; true)
+(raise "Assertion failed" unless [] + [] == []; true)
+(raise "Assertion failed" unless ["a"] + ["b", "c"] == ["a", "b", "c"]; true)

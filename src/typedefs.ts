@@ -134,6 +134,13 @@ export function createTypeDefs(): TypeDefs {
   // String concatenation
   defs.register('add', [Types.string, Types.string], Types.string);
 
+  // String multiplication (repeat)
+  defs.register('mul', [Types.string, Types.int], Types.string);
+  defs.register('mul', [Types.int, Types.string], Types.string);
+
+  // List concatenation
+  defs.register('add', [Types.array, Types.array], Types.array);
+
   // ============================================
   // Temporal arithmetic
   // ============================================
