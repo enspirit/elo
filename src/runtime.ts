@@ -42,17 +42,17 @@ export const JS_HELPERS: Record<string, string> = {
     for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
     return true;
   }
+  if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) {
+    const keysL = Object.keys(l);
+    const keysR = Object.keys(r);
+    if (keysL.length !== keysR.length) return false;
+    for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false;
+    return true;
+  }
   return l == r;
 }`,
   kNeq: `function kNeq(l, r) {
-  if (dayjs.isDuration(l) && dayjs.isDuration(r)) return l.asMilliseconds() !== r.asMilliseconds();
-  if (dayjs.isDayjs(l) && dayjs.isDayjs(r)) return l.valueOf() !== r.valueOf();
-  if (Array.isArray(l) && Array.isArray(r)) {
-    if (l.length !== r.length) return true;
-    for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return true;
-    return false;
-  }
-  return l != r;
+  return !kEq(l, r);
 }`,
   kNeg: `function kNeg(v) {
   if (dayjs.isDuration(v)) return dayjs.duration(-v.asMilliseconds());
