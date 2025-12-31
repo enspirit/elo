@@ -323,9 +323,9 @@ function emitTypeExprParser(
         return { key: prop.key, parser: propParser };
       });
 
-      // Generate object parser
+      // Generate object parser - wrap parser in parens to handle inline functions
       const propChecks = propParsers.map(({ key, parser }) =>
-        `const _r_${key} = ${parser}(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, [_r_${key}]); _o.${key} = _r_${key}.value;`
+        `const _r_${key} = (${parser})(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, [_r_${key}]); _o.${key} = _r_${key}.value;`
       ).join(' ');
 
       return `(v, p) => { if (typeof v !== 'object' || v === null) return pFail(p, []); const _o = {}; ${propChecks} return pOk(_o, p); }`;
