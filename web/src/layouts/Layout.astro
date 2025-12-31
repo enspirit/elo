@@ -2,7 +2,7 @@
 interface Props {
   title?: string;
   description?: string;
-  activeNav?: 'home' | 'try' | 'learn' | 'doc' | 'stdlib' | 'blog' | 'about';
+  activeNav?: 'home' | 'try' | 'learn' | 'exercises' | 'doc' | 'stdlib' | 'blog' | 'about';
 }
 
 const {
@@ -43,6 +43,7 @@ const url = (path: string) => `${base}${path}`;
       <a href={url('/')} class:list={[{ active: activeNav === 'home' }]}>Home</a>
       <a href={url('/playground')} class:list={[{ active: activeNav === 'try' }]}>Try</a>
       <a href={url('/learn')} class:list={[{ active: activeNav === 'learn' }]}>Learn</a>
+      <a href={url('/exercises')} class:list={[{ active: activeNav === 'exercises' }]}>Exercises</a>
       <div class="nav-group">
         <a href={url('/docs')} class:list={[{ active: activeNav === 'doc' }]}>Reference</a>
         <div class="nav-submenu">
@@ -94,6 +95,7 @@ const url = (path: string) => `${base}${path}`;
     import DocController from '../scripts/controllers/doc_controller';
     import StdlibSearchController from '../scripts/controllers/stdlib_search_controller';
     import LearnProgressController from '../scripts/controllers/learn_progress_controller';
+    import ExercisesController from '../scripts/controllers/exercises_controller';
     import { highlightAll, highlightAllJS } from '../scripts/highlighter';
 
     // Start Stimulus application
@@ -105,6 +107,7 @@ const url = (path: string) => `${base}${path}`;
     application.register('doc', DocController);
     application.register('stdlib-search', StdlibSearchController);
     application.register('learn-progress', LearnProgressController);
+    application.register('exercises', ExercisesController);
 
     // Theme toggle functionality
     function initTheme() {

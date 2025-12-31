@@ -1,0 +1,149 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const url = (path: string) => `${base}${path}`;
+
+interface Exercise {
+  id: string;
+  title: string;
+  description: string;
+  chapter?: string;
+  initialCode: string;
+  solution: string;
+}
+
+const exercises: Exercise[] = [
+  {
+    id: 'ex-area',
+    title: 'Rectangle Area',
+    chapter: 'Chapter 2',
+    description: 'Calculate the area of a rectangle. The width is 8 and the height is 5. Store them in variables and compute the area.',
+    initialCode: `let
+  width = ???,
+  height = ???
+in
+  assert(width * height == 40)`,
+    solution: `let
+  width = 8,
+  height = 5
+in
+  assert(width * height == 40)`
+  },
+  {
+    id: 'ex-filter-map',
+    title: 'Filter and Double',
+    chapter: 'Chapter 6',
+    description: 'Given a list of numbers, keep only those greater than 10, then double each remaining value.',
+    initialCode: `let
+  numbers = [5, 12, 8, 20, 3, 15]
+in
+  numbers
+    |> filter(???)
+    |> map(???)
+    |> fn(result ~> assert(result == [24, 40, 30]))`,
+    solution: `let
+  numbers = [5, 12, 8, 20, 3, 15]
+in
+  numbers
+    |> filter(x ~> x > 10)
+    |> map(x ~> x * 2)
+    |> fn(result ~> assert(result == [24, 40, 30]))`
+  }
+];
+---
+
+<Layout title="Exercises — Elo" activeNav="learn">
+  <main class="exercises-panel" data-controller="exercises">
+    <aside class="exercises-toc">
+      <nav>
+        <span class="toc-section">Exercises</span>
+        {exercises.map(ex => (
+          <a href={`#${ex.id}`} data-exercises-target="tocLink">
+            <span class="toc-check"></span>
+            {ex.title}
+          </a>
+        ))}
+        <span class="toc-section">Resources</span>
+        <a href={url('/learn')}>Back to Learn</a>
+        <a href={url('/playground')}>Playground</a>
+      </nav>
+    </aside>
+
+    <article class="exercises-content">
+      <header class="page-header">
+        <h1>Exercises</h1>
+        <p class="page-intro">
+          Practice what you've learned! Each exercise comes with assertions that must pass.
+          Replace the <code>???</code> placeholders with your code, then click "Check" to verify.
+        </p>
+      </header>
+
+      {exercises.map(ex => (
+        <section class="exercise" id={ex.id} data-exercises-target="exercise">
+          <div class="exercise-header">
+            <h2>{ex.title}</h2>
+            {ex.chapter && <span class="exercise-chapter">{ex.chapter}</span>}
+          </div>
+          <p class="exercise-description">{ex.description}</p>
+
+          <div
+            class="exercise-editor"
+            data-exercises-target="editor"
+            data-exercise-id={ex.id}
+            data-initial-code={ex.initialCode}
+          ></div>
+
+          <div class="exercise-actions">
+            <button
+              class="exercise-check"
+              data-action="click->exercises#check"
+              data-exercises-target="checkButton"
+              data-exercise-id={ex.id}
+            >
+              Check
+            </button>
+            <button
+              class="exercise-solution-toggle"
+              data-action="click->exercises#toggleSolution"
+              data-exercises-target="solutionButton"
+              data-exercise-id={ex.id}
+            >
+              Show Solution
+            </button>
+          </div>
+
+          <div
+            class="exercise-feedback"
+            data-exercises-target="feedback"
+            data-exercise-id={ex.id}
+          ></div>
+
+          <div
+            class="exercise-solution hidden"
+            data-exercises-target="solution"
+            data-exercise-id={ex.id}
+          >
+            <h4>Solution</h4>
+            <pre class="example-code">{ex.solution}</pre>
+          </div>
+        </section>
+      ))}
+
+      <section class="exercises-next">
+        <h2>What's Next?</h2>
+        <p>
+          More exercises are coming soon! In the meantime:
+        </p>
+        <ul>
+          <li><a href={url('/learn')}>Continue learning</a> with the tutorial</li>
+          <li><a href={url('/playground')}>Experiment freely</a> in the playground</li>
+          <li><a href={url('/stdlib')}>Explore the stdlib</a> for more functions</li>
+        </ul>
+      </section>
+
+      <Footer className="exercises-footer" />
+    </article>
+  </main>
+</Layout>
