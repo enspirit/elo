@@ -7,9 +7,10 @@ const url = (path: string) => `${base}${path}`;
 ---
 
 <Layout title="Learn Elo" activeNav="learn">
-  <main class="learn-panel" data-controller="doc learn-progress">
+  <main class="learn-panel" data-controller="doc learn-progress exercises">
     <aside class="learn-toc">
       <nav>
+        <span class="toc-section">Chapters</span>
         <a href="#chapter-1" data-learn-progress-target="tocLink"><span class="toc-check"></span>1. Introduction</a>
         <a href="#chapter-2" data-learn-progress-target="tocLink"><span class="toc-check"></span>2. Extended Arithmetics</a>
         <a href="#chapter-3" data-learn-progress-target="tocLink"><span class="toc-check"></span>3. Data Structures</a>
@@ -17,6 +18,9 @@ const url = (path: string) => `${base}${path}`;
         <a href="#chapter-5" data-learn-progress-target="tocLink"><span class="toc-check"></span>5. Program Structure</a>
         <a href="#chapter-6" data-learn-progress-target="tocLink"><span class="toc-check"></span>6. Advanced Processing</a>
         <a href="#chapter-7" data-learn-progress-target="tocLink"><span class="toc-check"></span>7. Input Data</a>
+        <span class="toc-section">Exercises</span>
+        <a href="#ex-area" data-exercises-target="tocLink"><span class="toc-check"></span>Rectangle Area</a>
+        <a href="#ex-filter-map" data-exercises-target="tocLink"><span class="toc-check"></span>Filter and Double</a>
         <span class="toc-section">Next</span>
         <a href="#chapter-next">What's Next?</a>
       </nav>
@@ -402,17 +406,127 @@ in
         </p>
       </section>
 
+      <section class="exercises-section" id="exercises-intro">
+        <h2>Exercises</h2>
+        <p class="exercises-intro">
+          Practice what you've learned! Each exercise comes with assertions that must pass.
+          Replace the <code>???</code> placeholders with your code, then click "Check" to verify.
+        </p>
+      </section>
+
+      <section class="exercise" id="ex-area" data-exercises-target="exercise">
+        <div class="exercise-header">
+          <h3>Rectangle Area</h3>
+          <span class="exercise-chapter">Chapter 2</span>
+        </div>
+        <p class="exercise-description">
+          Calculate the area of a rectangle. The width is 8 and the height is 5.
+          Store them in variables and compute the area.
+        </p>
+        <div
+          class="exercise-editor"
+          data-exercises-target="editor"
+          data-exercise-id="ex-area"
+          data-initial-code={`let
+  width = ???,
+  height = ???
+in
+  assert(width * height == 40)`}
+        ></div>
+        <div class="exercise-actions">
+          <button
+            class="exercise-check"
+            data-action="click->exercises#check"
+            data-exercises-target="checkButton"
+            data-exercise-id="ex-area"
+          >Check</button>
+          <button
+            class="exercise-solution-toggle"
+            data-action="click->exercises#toggleSolution"
+            data-exercises-target="solutionButton"
+            data-exercise-id="ex-area"
+          >Show Solution</button>
+        </div>
+        <div
+          class="exercise-feedback"
+          data-exercises-target="feedback"
+          data-exercise-id="ex-area"
+        ></div>
+        <div
+          class="exercise-solution hidden"
+          data-exercises-target="solution"
+          data-exercise-id="ex-area"
+        >
+          <h4>Solution</h4>
+          <pre class="example-code">let
+  width = 8,
+  height = 5
+in
+  assert(width * height == 40)</pre>
+        </div>
+      </section>
+
+      <section class="exercise" id="ex-filter-map" data-exercises-target="exercise">
+        <div class="exercise-header">
+          <h3>Filter and Double</h3>
+          <span class="exercise-chapter">Chapter 6</span>
+        </div>
+        <p class="exercise-description">
+          Given a list of numbers, keep only those greater than 10, then double each remaining value.
+        </p>
+        <div
+          class="exercise-editor"
+          data-exercises-target="editor"
+          data-exercise-id="ex-filter-map"
+          data-initial-code={`let
+  numbers = [5, 12, 8, 20, 3, 15]
+in
+  numbers
+    |> filter(???)
+    |> map(???)
+    |> fn(result ~> assert(result == [24, 40, 30]))`}
+        ></div>
+        <div class="exercise-actions">
+          <button
+            class="exercise-check"
+            data-action="click->exercises#check"
+            data-exercises-target="checkButton"
+            data-exercise-id="ex-filter-map"
+          >Check</button>
+          <button
+            class="exercise-solution-toggle"
+            data-action="click->exercises#toggleSolution"
+            data-exercises-target="solutionButton"
+            data-exercise-id="ex-filter-map"
+          >Show Solution</button>
+        </div>
+        <div
+          class="exercise-feedback"
+          data-exercises-target="feedback"
+          data-exercise-id="ex-filter-map"
+        ></div>
+        <div
+          class="exercise-solution hidden"
+          data-exercises-target="solution"
+          data-exercise-id="ex-filter-map"
+        >
+          <h4>Solution</h4>
+          <pre class="example-code">let
+  numbers = [5, 12, 8, 20, 3, 15]
+in
+  numbers
+    |> filter(x ~> x > 10)
+    |> map(x ~> x * 2)
+    |> fn(result ~> assert(result == [24, 40, 30]))</pre>
+        </div>
+      </section>
+
       <section class="lesson" id="chapter-next">
         <h2>What's Next?</h2>
         <p>
-          You've learned the core of Elo: extended arithmetics on multiple types, data structures,
-          functions, program structure, list processing, and input handling.
+          You've learned the core of Elo and practiced with exercises. Now explore further:
         </p>
         <ul class="next-steps">
-          <li>
-            <a href={url('/exercises')}><strong>Practice with Exercises</strong></a>
-            — Test your understanding with hands-on challenges
-          </li>
           <li>
             <a href={url('/playground')}><strong>Try the Playground</strong></a>
             — Experiment with everything you've learned

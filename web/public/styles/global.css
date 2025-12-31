@@ -2479,69 +2479,28 @@ body.light-theme .js-badge {
 }
 
 /* ================================
-   Exercises Page
+   Exercises (within Learn page)
    ================================ */
 
-.exercises-panel {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+.exercises-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 2px solid var(--border);
 }
 
-.exercises-toc {
-  position: sticky;
-  top: 2rem;
-  align-self: start;
-  max-height: calc(100vh - 4rem);
-  overflow-y: auto;
+.exercises-section h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.75rem;
+  color: var(--text-primary);
 }
 
-.exercises-toc nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.exercises-toc nav a {
+.exercises-intro {
   color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 0.875rem;
-  padding: 0.25rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.exercises-toc nav a:hover {
-  color: var(--accent);
-}
-
-.exercises-toc nav a.completed .toc-check {
-  color: var(--accent);
-}
-
-.exercises-toc nav a.completed .toc-check::before {
-  content: '\2713';
-  font-weight: bold;
-}
-
-.exercises-toc nav a.completed {
-  color: var(--text-secondary);
-  opacity: 0.8;
-}
-
-.exercises-content {
-  max-width: 800px;
-}
-
-.exercises-content .page-header {
+  line-height: 1.6;
   margin-bottom: 2rem;
 }
 
-.exercises-content .page-intro code {
+.exercises-intro code {
   background: var(--bg-code);
   padding: 0.125rem 0.375rem;
   border-radius: 3px;
@@ -2565,9 +2524,9 @@ body.light-theme .js-badge {
   margin-bottom: 0.75rem;
 }
 
-.exercise-header h2 {
+.exercise-header h3 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: var(--text-primary);
 }
 
@@ -2685,75 +2644,14 @@ body.light-theme .js-badge {
   overflow-x: auto;
 }
 
-.exercise.completed .exercise-header h2::after {
+.exercise.completed .exercise-header h3::after {
   content: ' \2713';
   color: var(--accent);
 }
 
-.exercises-next {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: var(--bg-code);
-  border-radius: 8px;
-}
-
-.exercises-next h2 {
-  margin: 0 0 1rem 0;
-  font-size: 1.25rem;
-  color: var(--text-primary);
-}
-
-.exercises-next p {
-  margin: 0 0 1rem 0;
-  color: var(--text-secondary);
-}
-
-.exercises-next ul {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-
-.exercises-next li {
-  margin-bottom: 0.5rem;
-  color: var(--text-secondary);
-}
-
-.exercises-next a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.exercises-next a:hover {
-  text-decoration: underline;
-}
-
-.exercises-footer {
-  margin-top: 3rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
-  text-align: center;
-}
-
 /* Exercises responsive */
 @media (max-width: 768px) {
-  .exercises-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .exercises-toc {
-    position: static;
-    max-height: none;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .exercises-toc nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .exercise-header h2 {
+  .exercise-header h3 {
     font-size: 1.25rem;
   }
 

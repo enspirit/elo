@@ -2,7 +2,7 @@
 interface Props {
   title?: string;
   description?: string;
-  activeNav?: 'home' | 'try' | 'learn' | 'exercises' | 'doc' | 'stdlib' | 'blog' | 'about';
+  activeNav?: 'home' | 'try' | 'learn' | 'doc' | 'stdlib' | 'blog' | 'about';
 }
 
 const {
@@ -42,8 +42,22 @@ const url = (path: string) => `${base}${path}`;
     <nav id="main-nav">
       <a href={url('/')} class:list={[{ active: activeNav === 'home' }]}>Home</a>
       <a href={url('/playground')} class:list={[{ active: activeNav === 'try' }]}>Try</a>
-      <a href={url('/learn')} class:list={[{ active: activeNav === 'learn' }]}>Learn</a>
-      <a href={url('/exercises')} class:list={[{ active: activeNav === 'exercises' }]}>Exercises</a>
+      <div class="nav-group">
+        <a href={url('/learn')} class:list={[{ active: activeNav === 'learn' }]}>Learn</a>
+        <div class="nav-submenu">
+          <span class="submenu-section">Chapters</span>
+          <a href={url('/learn#chapter-1')}>1. Introduction</a>
+          <a href={url('/learn#chapter-2')}>2. Extended Arithmetics</a>
+          <a href={url('/learn#chapter-3')}>3. Data Structures</a>
+          <a href={url('/learn#chapter-4')}>4. Functions</a>
+          <a href={url('/learn#chapter-5')}>5. Program Structure</a>
+          <a href={url('/learn#chapter-6')}>6. Advanced Processing</a>
+          <a href={url('/learn#chapter-7')}>7. Input Data</a>
+          <span class="submenu-section">Exercises</span>
+          <a href={url('/learn#ex-area')}>Rectangle Area</a>
+          <a href={url('/learn#ex-filter-map')}>Filter and Double</a>
+        </div>
+      </div>
       <div class="nav-group">
         <a href={url('/docs')} class:list={[{ active: activeNav === 'doc' }]}>Reference</a>
         <div class="nav-submenu">
