@@ -19,8 +19,12 @@ const url = (path: string) => `${base}${path}`;
         <a href="#chapter-6" data-learn-progress-target="tocLink"><span class="toc-check"></span>6. Advanced Processing</a>
         <a href="#chapter-7" data-learn-progress-target="tocLink"><span class="toc-check"></span>7. Input Data</a>
         <span class="toc-section">Exercises</span>
+        <a href="#ex-greeting" data-exercises-target="tocLink"><span class="toc-check"></span>Build a Greeting</a>
+        <a href="#ex-product" data-exercises-target="tocLink"><span class="toc-check"></span>Product Total</a>
+        <a href="#ex-transform" data-exercises-target="tocLink"><span class="toc-check"></span>Text Transform</a>
         <a href="#ex-area" data-exercises-target="tocLink"><span class="toc-check"></span>Rectangle Area</a>
         <a href="#ex-filter-map" data-exercises-target="tocLink"><span class="toc-check"></span>Filter and Double</a>
+        <a href="#ex-input" data-exercises-target="tocLink"><span class="toc-check"></span>Order Total</a>
         <span class="toc-section">Next</span>
         <a href="#chapter-next">What's Next?</a>
       </nav>
@@ -138,6 +142,9 @@ in
           <strong>The pattern:</strong> Operators like <code>+</code>, <code>-</code>, <code>*</code> are not just for numbers.
           Each type defines what these operations mean. See the <a href={url('/stdlib')}>stdlib</a> for all type-specific operations.
         </p>
+        <p class="lesson-exercise">
+          <a href="#ex-greeting">Practice: Build a Greeting</a>
+        </p>
       </section>
 
       <section class="lesson" id="chapter-3" data-learn-progress-target="lesson">
@@ -190,6 +197,9 @@ in
         <p class="lesson-tip">
           <strong>Think JSON:</strong> Tuples and lists work just like JSON objects and arrays.
           Elo makes them first-class citizens with operators and safe navigation.
+        </p>
+        <p class="lesson-exercise">
+          <a href="#ex-product">Practice: Product Total</a>
         </p>
       </section>
 
@@ -244,6 +254,9 @@ in
           and return them. This is key for list processing in Chapter 6.
           Explore all <a href={url('/stdlib')}>stdlib functions</a>.
         </p>
+        <p class="lesson-exercise">
+          <a href="#ex-transform">Practice: Text Transform</a>
+        </p>
       </section>
 
       <section class="lesson" id="chapter-5" data-learn-progress-target="lesson">
@@ -294,6 +307,9 @@ in
         <p class="lesson-tip">
           <strong>Assembly line:</strong> Data flows through the pipe, getting transformed at each step.
           Much cleaner than deeply nested parentheses!
+        </p>
+        <p class="lesson-exercise">
+          <a href="#ex-area">Practice: Rectangle Area</a>
         </p>
       </section>
 
@@ -355,6 +371,9 @@ in
           <strong>Robust processing:</strong> Combine <code>|</code> with type selectors for safe parsing.
           Invalid input returns <code>null</code>, which you catch with a fallback.
         </p>
+        <p class="lesson-exercise">
+          <a href="#ex-filter-map">Practice: Filter and Double</a>
+        </p>
       </section>
 
       <section class="lesson" id="chapter-7" data-learn-progress-target="lesson">
@@ -404,65 +423,141 @@ in
           <strong>Think transformations:</strong> Every Elo expression with <code>_</code> is a reusable transformation.
           The same expression works whether it runs in your browser (JS), server (Ruby), or database (SQL).
         </p>
+        <p class="lesson-exercise">
+          <a href="#ex-input">Practice: Order Total</a>
+        </p>
       </section>
 
       <section class="exercises-section" id="exercises-intro">
         <h2>Exercises</h2>
         <p class="exercises-intro">
-          Practice what you've learned! Each exercise comes with assertions that must pass.
-          Replace the <code>???</code> placeholders with your code, then click "Check" to verify.
+          Practice what you've learned! Each exercise uses <code>assert(condition)</code> to check your answer.
+          If the condition is true, the assertion passes. Replace the <code>???</code> placeholders
+          with your code, then click "Check" to verify.
         </p>
+      </section>
+
+      <section class="exercise" id="ex-greeting" data-exercises-target="exercise">
+        <div class="exercise-header">
+          <h3>Build a Greeting</h3>
+          <span class="exercise-chapter">Chapter 2</span>
+          <button class="exercise-toggle" data-action="click->exercises#toggle" data-exercise-id="ex-greeting" data-exercises-target="toggleBtn">
+            <span class="toggle-check"></span><span class="toggle-text">Mark as complete</span>
+          </button>
+        </div>
+        <p class="exercise-description">
+          Use string concatenation to build the greeting "Hello, World!".
+        </p>
+        <div
+          class="exercise-editor"
+          data-exercises-target="editor"
+          data-exercise-id="ex-greeting"
+          data-initial-code={"assert(??? + ??? == 'Hello, World!')"}
+        ></div>
+        <div class="exercise-actions">
+          <button class="exercise-check" data-action="click->exercises#check" data-exercises-target="checkButton" data-exercise-id="ex-greeting">Check</button>
+          <button class="exercise-solution-toggle" data-action="click->exercises#toggleSolution" data-exercises-target="solutionButton" data-exercise-id="ex-greeting">Show Solution</button>
+        </div>
+        <div class="exercise-feedback" data-exercises-target="feedback" data-exercise-id="ex-greeting"></div>
+        <div class="exercise-solution hidden" data-exercises-target="solution" data-exercise-id="ex-greeting">
+          <h4>Solution</h4>
+          <div class="lesson-example" data-action="click->doc#tryExample">
+            <pre class="example-code">assert('Hello, ' + 'World!' == 'Hello, World!')</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="exercise" id="ex-product" data-exercises-target="exercise">
+        <div class="exercise-header">
+          <h3>Product Total</h3>
+          <span class="exercise-chapter">Chapter 3</span>
+          <button class="exercise-toggle" data-action="click->exercises#toggle" data-exercise-id="ex-product" data-exercises-target="toggleBtn">
+            <span class="toggle-check"></span><span class="toggle-text">Mark as complete</span>
+          </button>
+        </div>
+        <p class="exercise-description">
+          Access the price and quantity fields from the tuple to compute the total (should be 100).
+        </p>
+        <div
+          class="exercise-editor"
+          data-exercises-target="editor"
+          data-exercise-id="ex-product"
+          data-initial-code={"assert({ price: 25, quantity: 4 }.??? * { price: 25, quantity: 4 }.??? == 100)"}
+        ></div>
+        <div class="exercise-actions">
+          <button class="exercise-check" data-action="click->exercises#check" data-exercises-target="checkButton" data-exercise-id="ex-product">Check</button>
+          <button class="exercise-solution-toggle" data-action="click->exercises#toggleSolution" data-exercises-target="solutionButton" data-exercise-id="ex-product">Show Solution</button>
+        </div>
+        <div class="exercise-feedback" data-exercises-target="feedback" data-exercise-id="ex-product"></div>
+        <div class="exercise-solution hidden" data-exercises-target="solution" data-exercise-id="ex-product">
+          <h4>Solution</h4>
+          <div class="lesson-example" data-action="click->doc#tryExample">
+            <pre class="example-code">assert(&#123; price: 25, quantity: 4 &#125;.price * &#123; price: 25, quantity: 4 &#125;.quantity == 100)</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="exercise" id="ex-transform" data-exercises-target="exercise">
+        <div class="exercise-header">
+          <h3>Text Transform</h3>
+          <span class="exercise-chapter">Chapter 4</span>
+          <button class="exercise-toggle" data-action="click->exercises#toggle" data-exercise-id="ex-transform" data-exercises-target="toggleBtn">
+            <span class="toggle-check"></span><span class="toggle-text">Mark as complete</span>
+          </button>
+        </div>
+        <p class="exercise-description">
+          Use stdlib functions to transform "  hello  " into "HELLO" (trim whitespace, then uppercase).
+        </p>
+        <div
+          class="exercise-editor"
+          data-exercises-target="editor"
+          data-exercise-id="ex-transform"
+          data-initial-code={"assert(???(???('  hello  ')) == 'HELLO')"}
+        ></div>
+        <div class="exercise-actions">
+          <button class="exercise-check" data-action="click->exercises#check" data-exercises-target="checkButton" data-exercise-id="ex-transform">Check</button>
+          <button class="exercise-solution-toggle" data-action="click->exercises#toggleSolution" data-exercises-target="solutionButton" data-exercise-id="ex-transform">Show Solution</button>
+        </div>
+        <div class="exercise-feedback" data-exercises-target="feedback" data-exercise-id="ex-transform"></div>
+        <div class="exercise-solution hidden" data-exercises-target="solution" data-exercise-id="ex-transform">
+          <h4>Solution</h4>
+          <div class="lesson-example" data-action="click->doc#tryExample">
+            <pre class="example-code">assert(upper(trim('  hello  ')) == 'HELLO')</pre>
+          </div>
+        </div>
       </section>
 
       <section class="exercise" id="ex-area" data-exercises-target="exercise">
         <div class="exercise-header">
           <h3>Rectangle Area</h3>
-          <span class="exercise-chapter">Chapter 2</span>
+          <span class="exercise-chapter">Chapter 5</span>
+          <button class="exercise-toggle" data-action="click->exercises#toggle" data-exercise-id="ex-area" data-exercises-target="toggleBtn">
+            <span class="toggle-check"></span><span class="toggle-text">Mark as complete</span>
+          </button>
         </div>
         <p class="exercise-description">
-          Calculate the area of a rectangle. The width is 8 and the height is 5.
-          Store them in variables and compute the area.
+          Use let bindings to store width (8) and height (5), then compute the area.
         </p>
         <div
           class="exercise-editor"
           data-exercises-target="editor"
           data-exercise-id="ex-area"
-          data-initial-code={`let
-  width = ???,
-  height = ???
-in
-  assert(width * height == 40)`}
+          data-initial-code={'let\n  width = ???,\n  height = ???\nin\n  assert(width * height == 40)'}
         ></div>
         <div class="exercise-actions">
-          <button
-            class="exercise-check"
-            data-action="click->exercises#check"
-            data-exercises-target="checkButton"
-            data-exercise-id="ex-area"
-          >Check</button>
-          <button
-            class="exercise-solution-toggle"
-            data-action="click->exercises#toggleSolution"
-            data-exercises-target="solutionButton"
-            data-exercise-id="ex-area"
-          >Show Solution</button>
+          <button class="exercise-check" data-action="click->exercises#check" data-exercises-target="checkButton" data-exercise-id="ex-area">Check</button>
+          <button class="exercise-solution-toggle" data-action="click->exercises#toggleSolution" data-exercises-target="solutionButton" data-exercise-id="ex-area">Show Solution</button>
         </div>
-        <div
-          class="exercise-feedback"
-          data-exercises-target="feedback"
-          data-exercise-id="ex-area"
-        ></div>
-        <div
-          class="exercise-solution hidden"
-          data-exercises-target="solution"
-          data-exercise-id="ex-area"
-        >
+        <div class="exercise-feedback" data-exercises-target="feedback" data-exercise-id="ex-area"></div>
+        <div class="exercise-solution hidden" data-exercises-target="solution" data-exercise-id="ex-area">
           <h4>Solution</h4>
-          <pre class="example-code">let
+          <div class="lesson-example" data-action="click->doc#tryExample">
+            <pre class="example-code">let
   width = 8,
   height = 5
 in
   assert(width * height == 40)</pre>
+          </div>
         </div>
       </section>
 
@@ -470,54 +565,60 @@ in
         <div class="exercise-header">
           <h3>Filter and Double</h3>
           <span class="exercise-chapter">Chapter 6</span>
+          <button class="exercise-toggle" data-action="click->exercises#toggle" data-exercise-id="ex-filter-map" data-exercises-target="toggleBtn">
+            <span class="toggle-check"></span><span class="toggle-text">Mark as complete</span>
+          </button>
         </div>
         <p class="exercise-description">
-          Given a list of numbers, keep only those greater than 10, then double each remaining value.
+          Keep only numbers greater than 10, then double each remaining value.
         </p>
         <div
           class="exercise-editor"
           data-exercises-target="editor"
           data-exercise-id="ex-filter-map"
-          data-initial-code={`let
-  numbers = [5, 12, 8, 20, 3, 15]
-in
-  numbers
-    |> filter(???)
-    |> map(???)
-    |> fn(result ~> assert(result == [24, 40, 30]))`}
+          data-initial-code={'assert(([5, 12, 8, 20, 3, 15] |> filter(???) |> map(???)) == [24, 40, 30])'}
         ></div>
         <div class="exercise-actions">
-          <button
-            class="exercise-check"
-            data-action="click->exercises#check"
-            data-exercises-target="checkButton"
-            data-exercise-id="ex-filter-map"
-          >Check</button>
-          <button
-            class="exercise-solution-toggle"
-            data-action="click->exercises#toggleSolution"
-            data-exercises-target="solutionButton"
-            data-exercise-id="ex-filter-map"
-          >Show Solution</button>
+          <button class="exercise-check" data-action="click->exercises#check" data-exercises-target="checkButton" data-exercise-id="ex-filter-map">Check</button>
+          <button class="exercise-solution-toggle" data-action="click->exercises#toggleSolution" data-exercises-target="solutionButton" data-exercise-id="ex-filter-map">Show Solution</button>
         </div>
-        <div
-          class="exercise-feedback"
-          data-exercises-target="feedback"
-          data-exercise-id="ex-filter-map"
-        ></div>
-        <div
-          class="exercise-solution hidden"
-          data-exercises-target="solution"
-          data-exercise-id="ex-filter-map"
-        >
+        <div class="exercise-feedback" data-exercises-target="feedback" data-exercise-id="ex-filter-map"></div>
+        <div class="exercise-solution hidden" data-exercises-target="solution" data-exercise-id="ex-filter-map">
           <h4>Solution</h4>
-          <pre class="example-code">let
-  numbers = [5, 12, 8, 20, 3, 15]
-in
-  numbers
-    |> filter(x ~> x > 10)
-    |> map(x ~> x * 2)
-    |> fn(result ~> assert(result == [24, 40, 30]))</pre>
+          <div class="lesson-example" data-action="click->doc#tryExample">
+            <pre class="example-code">assert(([5, 12, 8, 20, 3, 15] |> filter(x ~> x > 10) |> map(x ~> x * 2)) == [24, 40, 30])</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="exercise" id="ex-input" data-exercises-target="exercise">
+        <div class="exercise-header">
+          <h3>Order Total</h3>
+          <span class="exercise-chapter">Chapter 7</span>
+          <button class="exercise-toggle" data-action="click->exercises#toggle" data-exercise-id="ex-input" data-exercises-target="toggleBtn">
+            <span class="toggle-check"></span><span class="toggle-text">Mark as complete</span>
+          </button>
+        </div>
+        <p class="exercise-description">
+          Given input data with price and quantity, compute the total.
+        </p>
+        <div
+          class="exercise-editor"
+          data-exercises-target="editor"
+          data-exercise-id="ex-input"
+          data-initial-code={'let order = { price: 50, quantity: 3 } in\n  assert(order.??? * order.??? == 150)'}
+        ></div>
+        <div class="exercise-actions">
+          <button class="exercise-check" data-action="click->exercises#check" data-exercises-target="checkButton" data-exercise-id="ex-input">Check</button>
+          <button class="exercise-solution-toggle" data-action="click->exercises#toggleSolution" data-exercises-target="solutionButton" data-exercise-id="ex-input">Show Solution</button>
+        </div>
+        <div class="exercise-feedback" data-exercises-target="feedback" data-exercise-id="ex-input"></div>
+        <div class="exercise-solution hidden" data-exercises-target="solution" data-exercise-id="ex-input">
+          <h4>Solution</h4>
+          <div class="lesson-example" data-action="click->doc#tryExample">
+            <pre class="example-code">let order = &#123; price: 50, quantity: 3 &#125; in
+  assert(order.price * order.quantity == 150)</pre>
+          </div>
         </div>
       </section>
 

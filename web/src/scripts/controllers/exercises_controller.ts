@@ -31,7 +31,7 @@ interface ExerciseProgress {
 }
 
 export default class ExercisesController extends Controller {
-  static targets = ['exercise', 'editor', 'feedback', 'checkButton', 'solutionButton', 'solution', 'tocLink'];
+  static targets = ['exercise', 'editor', 'feedback', 'checkButton', 'solutionButton', 'solution', 'tocLink', 'toggleBtn'];
 
   declare exerciseTargets: HTMLElement[];
   declare editorTargets: HTMLElement[];
@@ -40,6 +40,7 @@ export default class ExercisesController extends Controller {
   declare solutionButtonTargets: HTMLButtonElement[];
   declare solutionTargets: HTMLElement[];
   declare tocLinkTargets: HTMLElement[];
+  declare toggleBtnTargets: HTMLElement[];
 
   private editors: Map<string, EditorView> = new Map();
   private progress: ExerciseProgress = {};
@@ -217,6 +218,32 @@ export default class ExercisesController extends Controller {
     button.textContent = isHidden ? 'Hide Solution' : 'Show Solution';
   }
 
+  toggle(event: Event) {
+    const button = event.currentTarget as HTMLElement;
+    const exerciseId = button.dataset.exerciseId;
+    if (!exerciseId) return;
+
+    const wasCompleted = this.progress[exerciseId];
+    this.progress[exerciseId] = !wasCompleted;
+    this.saveProgress();
+    this.updateExerciseUI(exerciseId);
+
+    // If just marked as complete, scroll to next exercise
+    if (!wasCompleted) {
+      this.scrollToNextExercise(exerciseId);
+    }
+  }
+
+  private scrollToNextExercise(currentExerciseId: string) {
+    const currentIndex = this.exerciseTargets.findIndex(el => el.id === currentExerciseId);
+    const nextExercise = this.exerciseTargets[currentIndex + 1];
+    if (nextExercise) {
+      setTimeout(() => {
+        nextExercise.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    }
+  }
+
   private updateAllUI() {
     this.exerciseTargets.forEach(exercise => {
       const exerciseId = exercise.id;
@@ -233,6 +260,16 @@ export default class ExercisesController extends Controller {
     const exercise = this.exerciseTargets.find(el => el.id === exerciseId);
     if (exercise) {
       exercise.classList.toggle('completed', isCompleted);
+    }
+
+    // Update toggle button
+    const button = this.toggleBtnTargets.find(el => el.dataset.exerciseId === exerciseId);
+    if (button) {
+      button.classList.toggle('completed', isCompleted);
+      const textSpan = button.querySelector('.toggle-text');
+      if (textSpan) {
+        textSpan.textContent = isCompleted ? 'Completed' : 'Mark as complete';
+      }
     }
 
     // Update TOC link
