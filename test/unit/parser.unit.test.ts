@@ -437,6 +437,22 @@ describe('Parser - Error Handling', () => {
   it('should throw on invalid token sequence', () => {
     assert.throws(() => parse('2 3'), /Expected EOF/);
   });
+
+  it('should include line and column in error messages', () => {
+    assert.throws(() => parse('2 $ 3'), /at line 1, column 3/);
+  });
+
+  it('should track line number correctly in multiline input', () => {
+    assert.throws(() => parse('1 +\n2 +\n$'), /at line 3, column 1/);
+  });
+
+  it('should track column correctly after newlines', () => {
+    assert.throws(() => parse('1 + 2\n  $'), /at line 2, column 3/);
+  });
+
+  it('should show correct position for syntax errors', () => {
+    assert.throws(() => parse('let x = 5'), /at line 1, column 10/);
+  });
 });
 
 describe('Parser - Function Calls', () => {

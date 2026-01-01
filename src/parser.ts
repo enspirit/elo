@@ -56,6 +56,8 @@ interface Token {
   type: TokenType;
   value: string;
   position: number;
+  line: number;
+  column: number;
 }
 
 /**
@@ -64,12 +66,16 @@ interface Token {
 interface LexerState {
   position: number;
   current: string;
+  line: number;
+  column: number;
 }
 
 class Lexer {
   private input: string;
   private position: number = 0;
   private current: string;
+  private line: number = 1;
+  private column: number = 1;
 
   constructor(input: string) {
     this.input = input;
@@ -77,15 +83,24 @@ class Lexer {
   }
 
   saveState(): LexerState {
-    return { position: this.position, current: this.current };
+    return { position: this.position, current: this.current, line: this.line, column: this.column };
   }
 
   restoreState(state: LexerState): void {
     this.position = state.position;
     this.current = state.current;
+    this.line = state.line;
+    this.column = state.column;
   }
 
   private advance(): void {
+    // Track line/column before moving
+    if (this.current === '\n') {
+      this.line++;
+      this.column = 1;
+    } else {
+      this.column++;
+    }
     this.position++;
     this.current = this.position < this.input.length ? this.input[this.position] : '';
   }
@@ -266,14 +281,16 @@ class Lexer {
     this.skipWhitespace();
 
     if (!this.current) {
-      return { type: 'EOF', value: '', position: this.position };
+      return { type: 'EOF', value: '', position: this.position, line: this.line, column: this.column };
     }
 
     const pos = this.position;
+    const line = this.line;
+    const col = this.column;
 
     // Numbers
     if (/[0-9]/.test(this.current)) {
-      return { type: 'NUMBER', value: this.readNumber(), position: pos };
+      return { type: 'NUMBER', value: this.readNumber(), position: pos, line, column: col };
     }
 
     // Date/DateTime literals: D2024-01-15 or D2024-01-15T10:30:00Z
@@ -285,9 +302,9 @@ class Lexer {
         const dateTimeStr = this.readDateOrDateTime();
         // Distinguish between DATE and DATETIME based on presence of 'T'
         if (dateTimeStr.includes('T')) {
-          return { type: 'DATETIME', value: dateTimeStr, position: pos };
+          return { type: 'DATETIME', value: dateTimeStr, position: pos, line, column: col };
         } else {
-          return { type: 'DATE', value: dateTimeStr, position: pos };
+          return { type: 'DATE', value: dateTimeStr, position: pos, line, column: col };
         }
       }
     }
@@ -298,7 +315,7 @@ class Lexer {
       const savedState = this.saveState();
       const durationStr = this.readDuration();
       if (durationStr.length > 1) {
-        return { type: 'DURATION', value: durationStr, position: pos };
+        return { type: 'DURATION', value: durationStr, position: pos, line, column: col };
       }
       // Not a valid duration, restore state and continue to identifier parsing
       this.restoreState(savedState);
@@ -309,51 +326,51 @@ class Lexer {
       this.advance(); // skip opening quote
       const str = this.readSingleQuotedString();
       this.advance(); // skip closing quote
-      return { type: 'STRING', value: str, position: pos };
+      return { type: 'STRING', value: str, position: pos, line, column: col };
     }
 
     // Identifiers and keywords (true, false, let, in, NOW, TODAY, TOMORROW, YESTERDAY)
     if (/[a-zA-Z_]/.test(this.current)) {
       const id = this.readIdentifier();
       if (id === 'true' || id === 'false') {
-        return { type: 'BOOLEAN', value: id, position: pos };
+        return { type: 'BOOLEAN', value: id, position: pos, line, column: col };
       }
       if (id === 'null') {
-        return { type: 'NULL', value: id, position: pos };
+        return { type: 'NULL', value: id, position: pos, line, column: col };
       }
       if (id === 'let') {
-        return { type: 'LET', value: id, position: pos };
+        return { type: 'LET', value: id, position: pos, line, column: col };
       }
       if (id === 'in') {
-        return { type: 'IN', value: id, position: pos };
+        return { type: 'IN', value: id, position: pos, line, column: col };
       }
       if (id === 'if') {
-        return { type: 'IF', value: id, position: pos };
+        return { type: 'IF', value: id, position: pos, line, column: col };
       }
       if (id === 'then') {
-        return { type: 'THEN', value: id, position: pos };
+        return { type: 'THEN', value: id, position: pos, line, column: col };
       }
       if (id === 'else') {
-        return { type: 'ELSE', value: id, position: pos };
+        return { type: 'ELSE', value: id, position: pos, line, column: col };
       }
       if (id === 'and') {
-        return { type: 'AND', value: id, position: pos };
+        return { type: 'AND', value: id, position: pos, line, column: col };
       }
       if (id === 'or') {
-        return { type: 'OR', value: id, position: pos };
+        return { type: 'OR', value: id, position: pos, line, column: col };
       }
       if (id === 'not') {
-        return { type: 'NOT', value: id, position: pos };
+        return { type: 'NOT', value: id, position: pos, line, column: col };
       }
       if (id === 'fn') {
-        return { type: 'FN', value: id, position: pos };
+        return { type: 'FN', value: id, position: pos, line, column: col };
       }
       // Uppercase identifiers: types, selectors, temporal keywords
       if (/^[A-Z]/.test(id)) {
-        return { type: 'UPPER_IDENTIFIER', value: id, position: pos };
+        return { type: 'UPPER_IDENTIFIER', value: id, position: pos, line, column: col };
       }
       // Lowercase identifiers: user variables
-      return { type: 'IDENTIFIER', value: id, position: pos };
+      return { type: 'IDENTIFIER', value: id, position: pos, line, column: col };
     }
 
     // Multi-character operators
@@ -364,54 +381,54 @@ class Lexer {
     if (char === '<' && next === '=') {
       this.advance();
       this.advance();
-      return { type: 'LTE', value: '<=', position: pos };
+      return { type: 'LTE', value: '<=', position: pos, line, column: col };
     }
     if (char === '>' && next === '=') {
       this.advance();
       this.advance();
-      return { type: 'GTE', value: '>=', position: pos };
+      return { type: 'GTE', value: '>=', position: pos, line, column: col };
     }
     if (char === '=') {
       if (next === '=') {
         this.advance();
         this.advance();
-        return { type: 'EQ', value: '==', position: pos };
+        return { type: 'EQ', value: '==', position: pos, line, column: col };
       }
       // Single = is ASSIGN
       this.advance();
-      return { type: 'ASSIGN', value: '=', position: pos };
+      return { type: 'ASSIGN', value: '=', position: pos, line, column: col };
     }
     if (char === '!' && next === '=') {
       this.advance();
       this.advance();
-      return { type: 'NEQ', value: '!=', position: pos };
+      return { type: 'NEQ', value: '!=', position: pos, line, column: col };
     }
     if (char === '&' && next === '&') {
       this.advance();
       this.advance();
-      return { type: 'AND', value: '&&', position: pos };
+      return { type: 'AND', value: '&&', position: pos, line, column: col };
     }
     if (char === '|') {
       if (next === '>') {
         // Pipe operator for chaining: a |> f(b)
         this.advance();
         this.advance();
-        return { type: 'PIPE_OP', value: '|>', position: pos };
+        return { type: 'PIPE_OP', value: '|>', position: pos, line, column: col };
       }
       if (next === '|') {
         this.advance();
         this.advance();
-        return { type: 'OR', value: '||', position: pos };
+        return { type: 'OR', value: '||', position: pos, line, column: col };
       }
       // Single pipe for predicate syntax: fn( x | body )
       this.advance();
-      return { type: 'PIPE', value: '|', position: pos };
+      return { type: 'PIPE', value: '|', position: pos, line, column: col };
     }
     // Arrow for lambda syntax: fn( x ~> body )
     if (char === '~' && next === '>') {
       this.advance();
       this.advance();
-      return { type: 'ARROW', value: '~>', position: pos };
+      return { type: 'ARROW', value: '~>', position: pos, line, column: col };
     }
     // Range operators: .. (inclusive) and ... (exclusive)
     if (char === '.' && next === '.') {
@@ -419,37 +436,37 @@ class Lexer {
       this.advance();
       if (this.current === '.') {
         this.advance();
-        return { type: 'RANGE_EXCL', value: '...', position: pos };
+        return { type: 'RANGE_EXCL', value: '...', position: pos, line, column: col };
       }
-      return { type: 'RANGE_INCL', value: '..', position: pos };
+      return { type: 'RANGE_INCL', value: '..', position: pos, line, column: col };
     }
 
     // Single-character operators
     this.advance();
 
     switch (char) {
-      case '+': return { type: 'PLUS', value: char, position: pos };
-      case '-': return { type: 'MINUS', value: char, position: pos };
-      case '*': return { type: 'STAR', value: char, position: pos };
-      case '/': return { type: 'SLASH', value: char, position: pos };
-      case '%': return { type: 'PERCENT', value: char, position: pos };
-      case '^': return { type: 'CARET', value: char, position: pos };
-      case '(': return { type: 'LPAREN', value: char, position: pos };
-      case ')': return { type: 'RPAREN', value: char, position: pos };
-      case '{': return { type: 'LBRACE', value: char, position: pos };
-      case '}': return { type: 'RBRACE', value: char, position: pos };
-      case '[': return { type: 'LBRACKET', value: char, position: pos };
-      case ']': return { type: 'RBRACKET', value: char, position: pos };
-      case ',': return { type: 'COMMA', value: char, position: pos };
-      case ':': return { type: 'COLON', value: char, position: pos };
-      case '?': return { type: 'QUESTION', value: char, position: pos };
+      case '+': return { type: 'PLUS', value: char, position: pos, line, column: col };
+      case '-': return { type: 'MINUS', value: char, position: pos, line, column: col };
+      case '*': return { type: 'STAR', value: char, position: pos, line, column: col };
+      case '/': return { type: 'SLASH', value: char, position: pos, line, column: col };
+      case '%': return { type: 'PERCENT', value: char, position: pos, line, column: col };
+      case '^': return { type: 'CARET', value: char, position: pos, line, column: col };
+      case '(': return { type: 'LPAREN', value: char, position: pos, line, column: col };
+      case ')': return { type: 'RPAREN', value: char, position: pos, line, column: col };
+      case '{': return { type: 'LBRACE', value: char, position: pos, line, column: col };
+      case '}': return { type: 'RBRACE', value: char, position: pos, line, column: col };
+      case '[': return { type: 'LBRACKET', value: char, position: pos, line, column: col };
+      case ']': return { type: 'RBRACKET', value: char, position: pos, line, column: col };
+      case ',': return { type: 'COMMA', value: char, position: pos, line, column: col };
+      case ':': return { type: 'COLON', value: char, position: pos, line, column: col };
+      case '?': return { type: 'QUESTION', value: char, position: pos, line, column: col };
       case '.':
-        return { type: 'DOT', value: char, position: pos };
-      case '<': return { type: 'LT', value: char, position: pos };
-      case '>': return { type: 'GT', value: char, position: pos };
-      case '!': return { type: 'NOT', value: char, position: pos };
+        return { type: 'DOT', value: char, position: pos, line, column: col };
+      case '<': return { type: 'LT', value: char, position: pos, line, column: col };
+      case '>': return { type: 'GT', value: char, position: pos, line, column: col };
+      case '!': return { type: 'NOT', value: char, position: pos, line, column: col };
       default:
-        throw new Error(`Unexpected character '${char}' at position ${pos}`);
+        throw new Error(`Unexpected character '${char}' at line ${line}, column ${col}`);
     }
   }
 }
@@ -522,12 +539,16 @@ export class Parser {
     this.depth = state.depth;
   }
 
+  private formatLocation(token: Token): string {
+    return `line ${token.line}, column ${token.column}`;
+  }
+
   private eat(tokenType: TokenType): void {
     if (this.currentToken.type === tokenType) {
       this.currentToken = this.lexer.nextToken();
     } else {
       throw new Error(
-        `Expected ${tokenType} but got ${this.currentToken.type} at position ${this.currentToken.position}`
+        `Expected ${tokenType} but got ${this.currentToken.type} at ${this.formatLocation(this.currentToken)}`
       );
     }
   }
@@ -601,7 +622,7 @@ export class Parser {
       }
 
       throw new Error(
-        `Unknown uppercase identifier '${name}' at position ${token.position}`
+        `Unknown uppercase identifier '${name}' at ${this.formatLocation(token)}`
       );
     }
 
@@ -680,7 +701,7 @@ export class Parser {
       return this.datapathParse();
     }
 
-    throw new Error(`Unexpected token ${token.type} at position ${token.position}`);
+    throw new Error(`Unexpected token ${token.type} at ${this.formatLocation(token)}`);
   }
 
   private postfix(): Expr {
@@ -907,7 +928,7 @@ export class Parser {
       const tok = this.currentToken as Token;
       if (tok.type !== 'IDENTIFIER' && tok.type !== 'UPPER_IDENTIFIER') {
         throw new Error(
-          `Expected function name after |> at position ${tok.position}`
+          `Expected function name after |> at ${this.formatLocation(tok)}`
         );
       }
 
@@ -1165,7 +1186,7 @@ export class Parser {
     // Must be a type name (UPPER_IDENTIFIER)
     if (this.currentToken.type !== 'UPPER_IDENTIFIER') {
       throw new Error(
-        `Expected type name, '[', or '{' at position ${this.currentToken.position}, got ${this.currentToken.type}`
+        `Expected type name, '[', or '{' at ${this.formatLocation(this.currentToken)}, got ${this.currentToken.type}`
       );
     }
 
@@ -1408,11 +1429,11 @@ export class Parser {
       // NUMBER token might contain multiple segments (e.g., "0.1" -> [0, 1])
       const numSegments = this.parseNumericPathSegments();
       if (numSegments === null || numSegments.length === 0) {
-        throw new Error(`Expected identifier or number after '.' at position ${this.currentToken.position}`);
+        throw new Error(`Expected identifier or number after '.' at ${this.formatLocation(this.currentToken)}`);
       }
       segments.push(...numSegments);
     } else {
-      throw new Error(`Expected identifier or number after '.' at position ${this.currentToken.position}`);
+      throw new Error(`Expected identifier or number after '.' at ${this.formatLocation(this.currentToken)}`);
     }
 
     // Parse additional segments
@@ -1438,11 +1459,11 @@ export class Parser {
         } else if (nextToken.type === 'NUMBER') {
           const numSegments = this.parseNumericPathSegments();
           if (numSegments === null || numSegments.length === 0) {
-            throw new Error(`Expected identifier or number after '.' at position ${this.currentToken.position}`);
+            throw new Error(`Expected identifier or number after '.' at ${this.formatLocation(this.currentToken)}`);
           }
           segments.push(...numSegments);
         } else {
-          throw new Error(`Expected identifier or number after '.' at position ${this.currentToken.position}`);
+          throw new Error(`Expected identifier or number after '.' at ${this.formatLocation(this.currentToken)}`);
         }
       } else if (token.type === 'NUMBER' && token.value.startsWith('.')) {
         // Handle NUMBER tokens that start with "." (e.g., ".0" tokenized as decimal)
