@@ -174,3 +174,28 @@ BEGIN
   END IF;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Deep merge two JSONB objects recursively
+CREATE OR REPLACE FUNCTION elo_deep_merge(a JSONB, b JSONB) RETURNS JSONB AS $$
+DECLARE
+  result JSONB;
+  key TEXT;
+  val JSONB;
+BEGIN
+  -- If either is not an object, b wins
+  IF jsonb_typeof(a) != 'object' OR jsonb_typeof(b) != 'object' THEN
+    RETURN b;
+  END IF;
+
+  result := a;
+  FOR key, val IN SELECT * FROM jsonb_each(b) LOOP
+    IF result ? key AND jsonb_typeof(result->key) = 'object' AND jsonb_typeof(val) = 'object' THEN
+      result := jsonb_set(result, ARRAY[key], elo_deep_merge(result->key, val));
+    ELSE
+      result := jsonb_set(result, ARRAY[key], val);
+    END IF;
+  END LOOP;
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;

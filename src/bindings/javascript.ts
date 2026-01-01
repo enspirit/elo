@@ -356,6 +356,10 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('fetch', [Types.any, Types.fn], helperCall('kFetch'));
   jsLib.register('patch', [Types.any, Types.fn, Types.any], helperCall('kPatch'));
 
+  // Data merge functions
+  jsLib.register('merge', [Types.any, Types.any], helperCall('kMerge'));
+  jsLib.register('deepMerge', [Types.any, Types.any], helperCall('kDeepMerge'));
+
   // Error handling
   jsLib.register('fail', [Types.string], (args, ctx) => {
     const message = ctx.emit(args[0]);

@@ -15,7 +15,7 @@ import Footer from '../components/Footer.astro';
         <a href="#list">List</a>
         <a href="#numeric">Numeric</a>
         <a href="#string">String</a>
-        <a href="#tuple">Tuple</a>
+        <a href="#data">Tuple (Data)</a>
       </nav>
     </aside>
     <article class="stdlib-content">
@@ -463,19 +463,31 @@ import Footer from '../components/Footer.astro';
         </div>
       </section>
 
-      <section class="stdlib-section" id="tuple" data-stdlib-search-target="section">
-        <h2>Tuple</h2>
-        <p>Functions for working with tuples (objects/records).</p>
+      <section class="stdlib-section" id="data" data-stdlib-search-target="section">
+        <h2>Tuple (Data)</h2>
+        <p>Functions for working with data structures (tuples and nested objects).</p>
         <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">deepMerge</div>
+            <div class="fn-sig">(a: Any, b: Any) → Any</div>
+            <p class="fn-desc">Recursively merges two objects. Nested objects are merged; other values from <code>b</code> override <code>a</code>.</p>
+            <div class="fn-example"><code class="example-code">deepMerge(&#123;x: &#123;a: 1&#125;&#125;, &#123;x: &#123;b: 2&#125;&#125;)</code><span class="fn-result">→ &#123;x: &#123;a: 1, b: 2&#125;&#125;</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">fetch</div>
-            <div class="fn-sig">(data: Tuple, path: DataPath) → Any | Null</div>
+            <div class="fn-sig">(data: Any, path: DataPath) → Any | Null</div>
             <p class="fn-desc">Navigates the data structure following the path. Returns <code>null</code> if any segment fails.</p>
             <div class="fn-example"><code class="example-code">fetch(&#123;name: 'Alice'&#125;, .name)</code><span class="fn-result">→ 'Alice'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">merge</div>
+            <div class="fn-sig">(a: Any, b: Any) → Any</div>
+            <p class="fn-desc">Shallow merges two objects. Properties from <code>b</code> override properties from <code>a</code>.</p>
+            <div class="fn-example"><code class="example-code">merge(&#123;a: 1&#125;, &#123;b: 2&#125;)</code><span class="fn-result">→ &#123;a: 1, b: 2&#125;</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">patch</div>
-            <div class="fn-sig">(data: Tuple, path: DataPath, value: Any) → Tuple</div>
+            <div class="fn-sig">(data: Any, path: DataPath, value: Any) → Any</div>
             <p class="fn-desc">Returns a new tuple with the value patched at the given path. Creates intermediate structures as needed.</p>
             <div class="fn-example"><code class="example-code">patch(&#123;&#125;, .user.name, 'Bob')</code><span class="fn-result">→ &#123;user: &#123;name: 'Bob'&#125;&#125;</span></div>
           </div>

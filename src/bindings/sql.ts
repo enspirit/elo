@@ -286,6 +286,19 @@ export function createSQLBinding(): StdLib<string> {
     return `elo_patch((${data})::jsonb, (${path})::text[], to_jsonb(${value}))`;
   });
 
+  // Data merge functions
+  sqlLib.register('merge', [Types.any, Types.any], (args, ctx) => {
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    // PostgreSQL jsonb || operator performs shallow merge
+    return `(${a})::jsonb || (${b})::jsonb`;
+  });
+  sqlLib.register('deepMerge', [Types.any, Types.any], (args, ctx) => {
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    return `elo_deep_merge((${a})::jsonb, (${b})::jsonb)`;
+  });
+
   // Error handling - uses elo_fail() PL/pgSQL function that raises an exception
   sqlLib.register('fail', [Types.string], (args, ctx) => `elo_fail(${ctx.emit(args[0])})`);
 

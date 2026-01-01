@@ -122,6 +122,18 @@ export const JS_HELPERS: Record<string, string> = {
     return obj;
   }
 }`,
+  kMerge: `function kMerge(a, b) {
+  return {...a, ...b};
+}`,
+  kDeepMerge: `function kDeepMerge(a, b) {
+  if (typeof a !== 'object' || a === null || Array.isArray(a)) return b;
+  if (typeof b !== 'object' || b === null || Array.isArray(b)) return b;
+  const result = {...a};
+  for (const key of Object.keys(b)) {
+    result[key] = kDeepMerge(a[key], b[key]);
+  }
+  return result;
+}`,
   // Type selectors
   kInt: `function kInt(v) {
   if (v === null || v === undefined) return null;
@@ -233,6 +245,12 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  k_deep_merge: `def k_deep_merge(a, b)
+  return b unless a.is_a?(Hash) && b.is_a?(Hash)
+  result = a.dup
+  b.each { |k, v| result[k] = k_deep_merge(a[k], v) }
+  result
+end`,
   k_patch: `def k_patch(d, p, v)
   return v if p.empty?
   seg = p[0]

@@ -293,6 +293,19 @@ export function createRubyBinding(): StdLib<string> {
     return `k_patch(${data}, ${path}, ${value})`;
   });
 
+  // Data merge functions
+  rubyLib.register('merge', [Types.any, Types.any], (args, ctx) => {
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    return `(${a}).merge(${b})`;
+  });
+  rubyLib.register('deepMerge', [Types.any, Types.any], (args, ctx) => {
+    ctx.requireHelper?.('k_deep_merge');
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    return `k_deep_merge(${a}, ${b})`;
+  });
+
   // Error handling
   rubyLib.register('fail', [Types.string], (args, ctx) => {
     const message = ctx.emit(args[0]);
