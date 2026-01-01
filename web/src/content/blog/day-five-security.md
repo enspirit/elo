@@ -19,9 +19,9 @@ Making security guarantees explicit isn't just documentation—it's a commitment
 
 Comparing `5 == 5` is easy. Comparing `{a: 1, b: [2, 3]} == {a: 1, b: [2, 3]}` is harder. Day five implemented proper deep equality across all targets:
 
-```
-[1, 2, 3] == [1, 2, 3]  // true
-{x: 1} == {x: 1}        // true
+```elo
+[1, 2, 3] == [1, 2, 3]  # true
+{x: 1} == {x: 1}        # true
 ```
 
 This required custom `kEq` helpers that recursively compare structures. The same Elo expression now produces consistent equality semantics in JavaScript, Ruby, and PostgreSQL.

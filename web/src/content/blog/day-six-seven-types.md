@@ -21,22 +21,22 @@ The exercises range from simple arithmetic to complex data transformations. They
 Day seven introduced something powerful: user-defined types. Inspired by [Finitio](https://finitio.io/), Elo now supports:
 
 **Subtype constraints:**
-```
+```elo
 type Positive = Int(x ~> x > 0)
 ```
 
 **Union types:**
-```
+```elo
 type StringOrNull = String | Null
 ```
 
 **Structured types:**
-```
+```elo
 type Person = { name: String, age?: Int }
 ```
 
 **Array types:**
-```
+```elo
 type Numbers = [Int]
 ```
 
@@ -46,7 +46,7 @@ The type definitions compile to runtime validation code. A `Positive` selector w
 
 Real-world data is messy. Not every field is always present. Elo now handles this gracefully:
 
-```
+```elo
 type Config = {
   required: String,
   optional?: Int
@@ -59,7 +59,7 @@ The `?` marks attributes that can be missing. When missing, they're simply absen
 
 Sometimes you want to validate known fields but preserve unknown ones:
 
-```
+```elo
 type Flexible = { known: String, ... }
 ```
 

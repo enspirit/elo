@@ -13,14 +13,14 @@ We started day two by looking at what we'd built. The compiler worked. Tests pas
 
 The JavaScript output looked like this:
 
-```
+```js
 ((x) => x + 1)(1)
 ```
 
 Technically correct. But when debugging generated code, this IIFE-wrapped style is nearly impossible to follow.
 The new output? Clean, readable imperative code:
 
-```
+```js
 (function() { let x = 1; return x + 1; })()
 ```
 
@@ -29,7 +29,7 @@ The new output? Clean, readable imperative code:
 The biggest feature of day two was error handling—but not the usual try/catch kind. Elo needed something portable across Ruby, JavaScript, and SQL.
 We designed an **alternative operator**. The `|` symbol means "try this, or else try that":
 
-```
+```elo
 Date<iso8601>(input) | Date<dmy>(input) | fail("Invalid date")
 ```
 

@@ -15,7 +15,7 @@ A programming language that can't handle data isn't very useful. Day three tackl
 
 A simple Elo expression like:
 
-```
+```elo
 [1, 2, 3].map(x ~> x * 2)
 ```
 
