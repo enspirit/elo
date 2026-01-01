@@ -1805,10 +1805,28 @@ body.light-theme .js-badge {
     align-items: stretch;
   }
 
+  /* Add chevron indicator for collapsible sections */
+  header nav .nav-group > a::after {
+    content: '▸';
+    margin-left: 0.5rem;
+    font-size: 0.7rem;
+    transition: transform 0.2s ease;
+  }
+
+  header nav .nav-group.mobile-expanded > a::after {
+    transform: rotate(90deg);
+  }
+
+  /* Hide submenu by default on mobile */
   header nav .nav-submenu {
-    display: flex;
+    display: none;
     flex-direction: column;
     background: var(--bg-primary);
+  }
+
+  /* Show submenu when section is expanded */
+  header nav .nav-group.mobile-expanded .nav-submenu {
+    display: flex;
   }
 
   header nav .nav-submenu a {

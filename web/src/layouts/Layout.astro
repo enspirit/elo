@@ -161,6 +161,19 @@ const url = (path: string) => `${base}${path}`;
       toggle?.addEventListener('click', () => {
         nav?.classList.toggle('mobile-open');
       });
+
+      // Make nav-group sections collapsible on mobile
+      const navGroups = document.querySelectorAll('.nav-group');
+      navGroups.forEach(group => {
+        const link = group.querySelector(':scope > a');
+        link?.addEventListener('click', (e) => {
+          // Only toggle on mobile (when hamburger is visible)
+          if (window.innerWidth <= 768) {
+            e.preventDefault();
+            group.classList.toggle('mobile-expanded');
+          }
+        });
+      });
     }
 
     // Apply syntax highlighting and init
