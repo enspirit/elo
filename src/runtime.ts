@@ -195,3 +195,75 @@ export const JS_HELPERS: Record<string, string> = {
   throw new Error((err.path || '.') + ': ' + (err.message || 'type error'));
 }`,
 };
+
+/**
+ * Ruby parser helper function snippets.
+ * These are embedded in compiled Ruby output when type definitions are used.
+ */
+export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  p_any: ['p_ok'],
+  p_string: ['p_ok', 'p_fail'],
+  p_int: ['p_ok', 'p_fail'],
+  p_bool: ['p_ok', 'p_fail'],
+  p_datetime: ['p_ok', 'p_fail'],
+  p_float: ['p_ok', 'p_fail'],
+  p_date: ['p_ok', 'p_fail'],
+  p_duration: ['p_ok', 'p_fail'],
+  p_data: ['p_ok', 'p_fail'],
+};
+
+export const RUBY_HELPERS: Record<string, string> = {
+  p_ok: `def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end`,
+  p_fail: `def p_fail(p, m = nil, c = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [] } end`,
+  p_any: `def p_any(v, p) p_ok(v, p) end`,
+  p_string: `def p_string(v, p)
+  return p_ok(v, p) if v.is_a?(String)
+  p_fail(p, "expected String, got #{v.nil? ? 'Null' : v.class}")
+end`,
+  p_int: `def p_int(v, p)
+  return p_ok(v, p) if v.is_a?(Integer)
+  return p_ok(Integer(v, 10), p) if v.is_a?(String) rescue nil
+  p_fail(p, "expected Int, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
+end`,
+  p_bool: `def p_bool(v, p)
+  return p_ok(v, p) if v == true || v == false
+  return p_ok(true, p) if v == 'true'
+  return p_ok(false, p) if v == 'false'
+  p_fail(p, "expected Bool, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
+end`,
+  p_datetime: `def p_datetime(v, p)
+  return p_ok(v, p) if v.is_a?(DateTime) || v.is_a?(Time)
+  return p_ok(DateTime.parse(v), p) if v.is_a?(String) rescue nil
+  p_fail(p, "expected Datetime, got #{v.nil? ? 'Null' : v.is_a?(String) ? 'invalid datetime ' + v.inspect : v.class}")
+end`,
+  p_float: `def p_float(v, p)
+  return p_ok(v, p) if v.is_a?(Numeric)
+  return p_ok(Float(v), p) if v.is_a?(String) rescue nil
+  p_fail(p, "expected Float, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
+end`,
+  p_date: `def p_date(v, p)
+  return p_ok(v.to_date, p) if v.is_a?(DateTime) || v.is_a?(Time)
+  return p_ok(v, p) if v.is_a?(Date)
+  return p_ok(Date.parse(v), p) if v.is_a?(String) && v.match?(/^\\d{4}-\\d{2}-\\d{2}$/) rescue nil
+  p_fail(p, "expected Date (YYYY-MM-DD), got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
+end`,
+  p_duration: `def p_duration(v, p)
+  return p_ok(v, p) if v.is_a?(ActiveSupport::Duration)
+  return p_ok(ActiveSupport::Duration.parse(v), p) if v.is_a?(String) rescue nil
+  p_fail(p, "expected Duration (ISO 8601), got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
+end`,
+  p_data: `def p_data(v, p)
+  return p_ok(JSON.parse(v), p) if v.is_a?(String) rescue p_fail(p, "invalid JSON: #{v.inspect}")
+  p_ok(v, p)
+end`,
+  p_unwrap: `def p_unwrap(r)
+  return r[:value] if r[:success]
+  find_error = ->(e) {
+    return e if e[:message] && !e[:message].empty?
+    return find_error.call(e[:cause][0]) if e[:cause] && e[:cause][0]
+    e
+  }
+  err = find_error.call(r)
+  raise "#{err[:path] || '.'}: #{err[:message] || 'type error'}"
+end`,
+};

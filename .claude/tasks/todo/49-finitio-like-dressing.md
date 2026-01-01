@@ -42,7 +42,7 @@ let Result = { ok: Bool } | { error: String } in data |> Result
 | Target | Status | Notes |
 |--------|--------|-------|
 | **JavaScript** | ✅ Complete | All constructs work, 31 acceptance tests |
-| **Ruby** | ❌ Pending | Throws "not implemented" error |
+| **Ruby** | ✅ Complete | All constructs work, same tests as JS |
 | **SQL** | ❌ Pending | Throws "not implemented" error |
 
 ### Implementation Details
@@ -64,6 +64,11 @@ let Result = { ok: Bool } | { error: String } in data |> Result
 - Generates parser functions with Result type: `{ success, path, value, cause }`
 - Runtime helpers: `pOk`, `pFail`, `pUnwrap`, `pAny`, `pString`, `pInt`, `pBool`, `pDatetime`
 - Inline parser functions wrapped in parens for immediate invocation
+
+**Ruby Compiler (`src/compilers/ruby.ts`):**
+- Generates parser lambdas with Result hash: `{ success:, path:, value:, cause: }`
+- Runtime helpers: `p_ok`, `p_fail`, `p_unwrap`, `p_any`, `p_string`, `p_int`, `p_bool`, `p_datetime`
+- Parser helpers wrapped in lambda immediately invoked (`.call`) for scoping
 
 **Test Coverage (`test/fixtures/type-definitions.elo`):**
 - 34 assertions covering all implemented constructs
