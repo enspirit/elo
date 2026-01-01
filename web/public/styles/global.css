@@ -2452,6 +2452,7 @@ body.light-theme .js-badge {
 
 .lesson.completed .lesson-header {
   margin-bottom: 0;
+  padding-bottom: 0.5rem;
 }
 
 .lesson.completed h2 {
