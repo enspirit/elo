@@ -27,6 +27,10 @@ const url = (path: string) => `${base}${path}`;
         <a href="#ex-filter-map" data-exercises-target="tocLink"><span class="toc-check"></span>Filter and Double</a>
         <a href="#ex-input" data-exercises-target="tocLink"><span class="toc-check"></span>Order Total</a>
         <a href="#ex-validate" data-exercises-target="tocLink"><span class="toc-check"></span>Validate Data</a>
+        <span class="toc-section">Use Cases</span>
+        <a href="#uc-validation">Form Validation</a>
+        <a href="#uc-order">Order Processing</a>
+        <a href="#uc-subscription">Subscription Logic</a>
         <span class="toc-section">Next</span>
         <a href="#chapter-next">What's Next?</a>
       </nav>
@@ -303,7 +307,7 @@ in
         </div>
         <p>The pipe version reads naturally: take this, then do that, then that.</p>
         <div class="lesson-example" data-action="click->doc#tryExample">
-          <pre class="example-code">'42' |> Int |> fn(n ~> n * 2)</pre>
+          <pre class="example-code">let double = fn(n ~> n * 2) in '42' |> Int |> double</pre>
         </div>
 
         <p class="lesson-tip">
@@ -735,6 +739,119 @@ in
   assert((&#123; name: 'Widget', price: '99' &#125; |> Product) == &#123; name: 'Widget', price: 99 &#125;)</pre>
           </div>
         </div>
+      </section>
+
+      <section class="usecases-section" id="usecases-intro">
+        <h2>Real-World Use Cases</h2>
+        <p class="usecases-intro">
+          Now that you've learned the fundamentals, let's see how Elo handles real-world scenarios.
+          These examples demonstrate practical applications that combine multiple features you've learned.
+        </p>
+      </section>
+
+      <section class="lesson" id="uc-validation">
+        <h3>Form Validation</h3>
+        <p>
+          APIs receive data that needs validation and normalization. This example validates a user registration payload,
+          ensuring fields have the right types and constraints.
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">let
+  Email = String(e | contains(e, '@') and length(e) >= 5),
+  Age = Int(a | a >= 13 and a <= 120),
+  Username = String(u | length(u) >= 3 and length(u) <= 20),
+  Registration = &#123;
+    username: Username,
+    email: Email,
+    age: Age,
+    newsletter :? Bool
+  &#125;
+in
+&#123;
+  username: 'alice',
+  email: 'alice@example.com',
+  age: '25',
+  newsletter: 'true'
+&#125; |> Registration</pre>
+        </div>
+        <p>
+          The type definition validates structure, coerces <code>age</code> from string to integer,
+          parses <code>newsletter</code> as boolean, and enforces constraints on each field.
+          If any validation fails, an error is thrown immediately.
+        </p>
+        <p class="lesson-tip">
+          <strong>Note:</strong> Type definitions compile to JavaScript and Ruby only.
+        </p>
+      </section>
+
+      <section class="lesson" id="uc-order">
+        <h3>Order Processing</h3>
+        <p>
+          E-commerce systems process orders to calculate totals with discounts.
+          This example shows how to transform order data using pipes and list operations.
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">let
+  order = &#123;
+    items: [
+      &#123; name: 'Widget', price: 25, quantity: 2 &#125;,
+      &#123; name: 'Gadget', price: 50, quantity: 1 &#125;,
+      &#123; name: 'Thing', price: 10, quantity: 5 &#125;
+    ],
+    discountPercent: 10
+  &#125;,
+  subtotal = (order.items
+    |> map(i ~> i.price * i.quantity)
+    |> reduce(0, fn(sum, x ~> sum + x))),
+  discount = subtotal * order.discountPercent / 100,
+  total = subtotal - discount
+in
+&#123; subtotal: subtotal, discount: discount, total: total &#125;</pre>
+        </div>
+        <p>
+          Data flows naturally through the pipeline: compute line totals, sum them, apply discount, return result.
+          The same expression runs in the browser (JS), server (Ruby), or as part of a larger SQL query.
+        </p>
+      </section>
+
+      <section class="lesson" id="uc-subscription">
+        <h3>Subscription Logic</h3>
+        <p>
+          SaaS applications need to check subscription status, trial periods, and renewal dates.
+          Elo's date arithmetic makes this business logic clear and portable.
+        </p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="example-code">let
+  subscription = &#123;
+    plan: 'pro',
+    startDate: D2024-01-15,
+    trialDays: 30,
+    billingCycle: P30D
+  &#125;,
+  trialEnd = subscription.startDate + P1D * subscription.trialDays,
+  isTrialActive = TODAY <= trialEnd,
+  nextBilling = if isTrialActive
+    then trialEnd
+    else subscription.startDate + subscription.billingCycle,
+  daysUntilBilling = if nextBilling > TODAY
+    then (nextBilling - TODAY) / P1D
+    else 0
+in
+&#123;
+  isTrialActive: isTrialActive,
+  trialEnd: trialEnd,
+  nextBilling: nextBilling,
+  daysUntilBilling: daysUntilBilling
+&#125;</pre>
+        </div>
+        <p>
+          Date operations like <code>+</code>, <code>-</code>, and comparisons work naturally.
+          Durations can be scaled and divided. The logic remains readable regardless of which runtime executes it.
+        </p>
+        <p class="lesson-tip">
+          <strong>Write once, run anywhere:</strong> This same subscription logic works in browser validation (JS),
+          server-side processing (Ruby), or database queries (SQL).
+        </p>
       </section>
 
       <section class="lesson" id="chapter-next">
