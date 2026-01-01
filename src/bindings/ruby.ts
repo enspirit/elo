@@ -285,6 +285,13 @@ export function createRubyBinding(): StdLib<string> {
     const path = ctx.emit(args[1]);
     return `(->(d, p) { p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg] : nil) } }).call(${data}, ${path})`;
   });
+  rubyLib.register('patch', [Types.any, Types.fn, Types.any], (args, ctx) => {
+    ctx.requireHelper?.('k_patch');
+    const data = ctx.emit(args[0]);
+    const path = ctx.emit(args[1]);
+    const value = ctx.emit(args[2]);
+    return `k_patch(${data}, ${path}, ${value})`;
+  });
 
   // Error handling
   rubyLib.register('fail', [Types.string], (args, ctx) => {

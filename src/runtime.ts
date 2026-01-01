@@ -102,6 +102,26 @@ export const JS_HELPERS: Record<string, string> = {
   }
   return current === undefined ? null : current;
 }`,
+  kPatch: `function kPatch(data, path, value) {
+  if (path.length === 0) return value;
+  const seg = path[0];
+  const rest = path.slice(1);
+  const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {};
+  if (typeof seg === 'number') {
+    if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array');
+    const arr = Array.isArray(data) ? [...data] : [];
+    while (arr.length <= seg) arr.push(null);
+    const existing = arr[seg];
+    arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value);
+    return arr;
+  } else {
+    if (Array.isArray(data)) throw new Error('cannot patch object key on array');
+    const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {};
+    const existing = obj[seg];
+    obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value);
+    return obj;
+  }
+}`,
   // Type selectors
   kInt: `function kInt(v) {
   if (v === null || v === undefined) return null;
@@ -213,6 +233,26 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  k_patch: `def k_patch(d, p, v)
+  return v if p.empty?
+  seg = p[0]
+  rest = p[1..]
+  next_default = rest.empty? ? nil : (rest[0].is_a?(Integer) ? [] : {})
+  if seg.is_a?(Integer)
+    raise 'cannot patch array index on non-array' if !d.nil? && !d.is_a?(Array)
+    arr = d.is_a?(Array) ? d.dup : []
+    arr[seg] = nil while arr.length <= seg
+    existing = arr[seg]
+    arr[seg] = k_patch(existing.nil? ? next_default : existing, rest, v)
+    arr
+  else
+    raise 'cannot patch object key on array' if d.is_a?(Array)
+    obj = d.is_a?(Hash) ? d.dup : {}
+    existing = obj[seg]
+    obj[seg] = k_patch(existing.nil? ? next_default : existing, rest, v)
+    obj
+  end
+end`,
   p_ok: `def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end`,
   p_fail: `def p_fail(p, m = nil, c = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [] } end`,
   p_any: `def p_any(v, p) p_ok(v, p) end`,

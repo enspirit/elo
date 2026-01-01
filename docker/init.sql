@@ -112,3 +112,65 @@ EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Data, got %', pg_typeof(v);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Patch a value at a path in JSONB, creating intermediate structures as needed
+CREATE OR REPLACE FUNCTION elo_patch(data JSONB, path TEXT[], value JSONB) RETURNS JSONB AS $$
+DECLARE
+  seg TEXT;
+  rest TEXT[];
+  next_default JSONB;
+  existing JSONB;
+  arr JSONB;
+  obj JSONB;
+  i INTEGER;
+  arr_len INTEGER;
+BEGIN
+  IF array_length(path, 1) IS NULL OR array_length(path, 1) = 0 THEN
+    RETURN value;
+  END IF;
+
+  seg := path[1];
+  rest := path[2:];
+
+  -- Determine what default structure to create for next level
+  IF array_length(rest, 1) IS NULL OR array_length(rest, 1) = 0 THEN
+    next_default := 'null'::jsonb;
+  ELSIF rest[1] ~ '^\d+$' THEN
+    next_default := '[]'::jsonb;
+  ELSE
+    next_default := '{}'::jsonb;
+  END IF;
+
+  -- Is this an array index?
+  IF seg ~ '^\d+$' THEN
+    i := seg::INTEGER;
+    IF data IS NOT NULL AND jsonb_typeof(data) != 'null' AND jsonb_typeof(data) != 'array' THEN
+      RAISE EXCEPTION 'cannot patch array index on non-array';
+    END IF;
+    arr := COALESCE(NULLIF(data, 'null'::jsonb), '[]'::jsonb);
+    arr_len := jsonb_array_length(arr);
+    -- Extend array with nulls if needed
+    WHILE arr_len <= i LOOP
+      arr := arr || 'null'::jsonb;
+      arr_len := arr_len + 1;
+    END LOOP;
+    existing := arr->i;
+    IF existing IS NULL OR jsonb_typeof(existing) = 'null' THEN
+      existing := next_default;
+    END IF;
+    arr := jsonb_set(arr, ARRAY[i::TEXT], elo_patch(existing, rest, value));
+    RETURN arr;
+  ELSE
+    -- Object key
+    IF data IS NOT NULL AND jsonb_typeof(data) != 'null' AND jsonb_typeof(data) = 'array' THEN
+      RAISE EXCEPTION 'cannot patch object key on array';
+    END IF;
+    obj := COALESCE(NULLIF(data, 'null'::jsonb), '{}'::jsonb);
+    existing := obj->seg;
+    IF existing IS NULL OR jsonb_typeof(existing) = 'null' THEN
+      existing := next_default;
+    END IF;
+    RETURN jsonb_set(obj, ARRAY[seg], elo_patch(existing, rest, value));
+  END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;

@@ -354,6 +354,7 @@ export function createJavaScriptBinding(): StdLib<string> {
 
   // Data path navigation
   jsLib.register('fetch', [Types.any, Types.fn], helperCall('kFetch'));
+  jsLib.register('patch', [Types.any, Types.fn, Types.any], helperCall('kPatch'));
 
   // Error handling
   jsLib.register('fail', [Types.string], (args, ctx) => {

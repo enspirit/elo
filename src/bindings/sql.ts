@@ -278,6 +278,13 @@ export function createSQLBinding(): StdLib<string> {
     // Convert path array to text array and use jsonb #> operator
     return `(${data})::jsonb #> (${path})::text[]`;
   });
+  sqlLib.register('patch', [Types.any, Types.fn, Types.any], (args, ctx) => {
+    const data = ctx.emit(args[0]);
+    const path = ctx.emit(args[1]);
+    const value = ctx.emit(args[2]);
+    // Use the elo_patch function which handles path creation
+    return `elo_patch((${data})::jsonb, (${path})::text[], to_jsonb(${value}))`;
+  });
 
   // Error handling - uses elo_fail() PL/pgSQL function that raises an exception
   sqlLib.register('fail', [Types.string], (args, ctx) => `elo_fail(${ctx.emit(args[0])})`);

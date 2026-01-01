@@ -473,6 +473,12 @@ import Footer from '../components/Footer.astro';
             <p class="fn-desc">Navigates the data structure following the path. Returns <code>null</code> if any segment fails.</p>
             <div class="fn-example"><code class="example-code">fetch(&#123;name: 'Alice'&#125;, .name)</code><span class="fn-result">→ 'Alice'</span></div>
           </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">patch</div>
+            <div class="fn-sig">(data: Tuple, path: DataPath, value: Any) → Tuple</div>
+            <p class="fn-desc">Returns a new tuple with the value patched at the given path. Creates intermediate structures as needed.</p>
+            <div class="fn-example"><code class="example-code">patch(&#123;&#125;, .user.name, 'Bob')</code><span class="fn-result">→ &#123;user: &#123;name: 'Bob'&#125;&#125;</span></div>
+          </div>
         </div>
       </section>
 
