@@ -92,7 +92,12 @@ regenerate_fixture() {
 
         # Only regenerate if expected file already exists (or targets explicitly specified)
         if [ -f "$expected_file" ] || [ ${#TARGET_LIST[@]} -gt 0 ]; then
-            $ELOC "$elo_file" -t "$target" -f "$expected_file"
+            # Use --execute for JS and Ruby so fixtures are self-executing
+            if [ "$target" = "js" ] || [ "$target" = "ruby" ]; then
+                $ELOC "$elo_file" -t "$target" --execute -f "$expected_file"
+            else
+                $ELOC "$elo_file" -t "$target" -f "$expected_file"
+            fi
             regenerated="$regenerated $target"
         fi
     done

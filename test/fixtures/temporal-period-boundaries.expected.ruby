@@ -1,15 +1,15 @@
-(raise "Assertion failed" unless Date.today.beginning_of_day <= DateTime.now; true)
-(raise "Assertion failed" unless Date.today.end_of_day >= DateTime.now; true)
-(raise "Assertion failed" unless Date.today.beginning_of_day < Date.today.end_of_day; true)
-(raise "Assertion failed" unless Date.today.beginning_of_week <= Date.today; true)
-(raise "Assertion failed" unless Date.today.end_of_week >= Date.today; true)
-(raise "Assertion failed" unless Date.today.beginning_of_week < Date.today.end_of_week; true)
-(raise "Assertion failed" unless Date.today.beginning_of_month <= Date.today; true)
-(raise "Assertion failed" unless Date.today.end_of_month >= Date.today; true)
-(raise "Assertion failed" unless Date.today.beginning_of_month < Date.today.end_of_month; true)
-(raise "Assertion failed" unless Date.today.beginning_of_quarter <= Date.today; true)
-(raise "Assertion failed" unless Date.today.end_of_quarter >= Date.today; true)
-(raise "Assertion failed" unless Date.today.beginning_of_quarter < Date.today.end_of_quarter; true)
-(raise "Assertion failed" unless Date.today.beginning_of_year <= Date.today; true)
-(raise "Assertion failed" unless Date.today.end_of_year >= Date.today; true)
-(raise "Assertion failed" unless Date.today.beginning_of_year < Date.today.end_of_year; true)
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_day <= DateTime.now; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.end_of_day >= DateTime.now; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_day < Date.today.end_of_day; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_week <= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.end_of_week >= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_week < Date.today.end_of_week; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_month <= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.end_of_month >= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_month < Date.today.end_of_month; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_quarter <= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.end_of_quarter >= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_quarter < Date.today.end_of_quarter; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_year <= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.end_of_year >= Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today.beginning_of_year < Date.today.end_of_year; true) }.call(nil);

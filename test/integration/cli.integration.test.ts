@@ -32,34 +32,37 @@ describe('CLI - Basic compilation', () => {
   it('should compile expression to JavaScript by default', () => {
     const result = eloc('-e "2 + 3"');
     // Type inference enables native JS for known int types
-    assert.strictEqual(result, '2 + 3');
+    // Output is always wrapped as function taking _ as input
+    assert.strictEqual(result, '(function(_) { return 2 + 3; })');
   });
 
   it('should compile expression to Ruby', () => {
     const result = eloc('-e "2 + 3" -t ruby');
-    assert.strictEqual(result, '2 + 3');
+    // Output is always wrapped as lambda taking _ as input
+    assert.strictEqual(result, '->(_) { 2 + 3 }');
   });
 
   it('should compile expression to SQL', () => {
     const result = eloc('-e "2 + 3" -t sql');
+    // SQL is not wrapped
     assert.strictEqual(result, '2 + 3');
   });
 
   it('should handle complex expressions', () => {
     const result = eloc('-e "2 + 3 * 4"');
     // Type inference enables native JS for known int types
-    assert.strictEqual(result, '2 + 3 * 4');
+    assert.strictEqual(result, '(function(_) { return 2 + 3 * 4; })');
   });
 
   it('should handle power operator in JavaScript', () => {
     const result = eloc('-e "2 ^ 3" -t js');
     // Type inference uses Math.pow for known numeric types
-    assert.strictEqual(result, 'Math.pow(2, 3)');
+    assert.strictEqual(result, '(function(_) { return Math.pow(2, 3); })');
   });
 
   it('should handle power operator in Ruby', () => {
     const result = eloc('-e "2 ^ 3" -t ruby');
-    assert.strictEqual(result, '2 ** 3');
+    assert.strictEqual(result, '->(_) { 2 ** 3 }');
   });
 
   it('should handle power operator in SQL', () => {
@@ -71,12 +74,12 @@ describe('CLI - Basic compilation', () => {
 describe('CLI - Temporal expressions', () => {
   it('should compile TODAY to JavaScript', () => {
     const result = eloc('-e "TODAY" -t js');
-    assert.strictEqual(result, "dayjs().startOf('day')");
+    assert.strictEqual(result, "(function(_) { return dayjs().startOf('day'); })");
   });
 
   it('should compile TODAY to Ruby', () => {
     const result = eloc('-e "TODAY" -t ruby');
-    assert.strictEqual(result, 'Date.today');
+    assert.strictEqual(result, '->(_) { Date.today }');
   });
 
   it('should compile TODAY to SQL', () => {
@@ -86,12 +89,12 @@ describe('CLI - Temporal expressions', () => {
 
   it('should compile NOW to JavaScript', () => {
     const result = eloc('-e "NOW" -t js');
-    assert.strictEqual(result, 'dayjs()');
+    assert.strictEqual(result, '(function(_) { return dayjs(); })');
   });
 
   it('should compile NOW to Ruby', () => {
     const result = eloc('-e "NOW" -t ruby');
-    assert.strictEqual(result, 'DateTime.now');
+    assert.strictEqual(result, '->(_) { DateTime.now }');
   });
 
   it('should compile NOW to SQL', () => {
@@ -105,7 +108,7 @@ describe('CLI - Prelude inclusion', () => {
     const result = eloc('-e "TODAY" -t ruby -p');
     assert.ok(result.includes("require 'date'"));
     assert.ok(result.includes("require 'active_support/all'"));
-    assert.ok(result.includes('Date.today'));
+    assert.ok(result.includes('->(_) { Date.today }'));
   });
 
   it('should include JavaScript prelude', () => {
@@ -132,7 +135,7 @@ describe('CLI - File input', () => {
     try {
       const result = eloc(`${inputFile}`);
       // Type inference enables native JS for known int types
-      assert.strictEqual(result, '2 + 3 * 4');
+      assert.strictEqual(result, '(function(_) { return 2 + 3 * 4; })');
     } finally {
       unlinkSync(inputFile);
     }
@@ -145,7 +148,7 @@ describe('CLI - File input', () => {
 
     try {
       const result = eloc(`${inputFile} -t ruby`);
-      assert.strictEqual(result, '2 ** 3');
+      assert.strictEqual(result, '->(_) { 2 ** 3 }');
     } finally {
       unlinkSync(inputFile);
     }
@@ -164,7 +167,7 @@ describe('CLI - File output', () => {
       const { readFileSync } = require('fs');
       const content = readFileSync(outputFile, 'utf-8').trim();
       // Type inference enables native JS for known int types
-      assert.strictEqual(content, '2 + 3');
+      assert.strictEqual(content, '(function(_) { return 2 + 3; })');
     } finally {
       try { unlinkSync(outputFile); } catch {}
     }
@@ -215,12 +218,12 @@ describe('CLI - Long options', () => {
   it('should accept --expression', () => {
     const result = eloc('--expression "2 + 3"');
     // Type inference enables native JS for known int types
-    assert.strictEqual(result, '2 + 3');
+    assert.strictEqual(result, '(function(_) { return 2 + 3; })');
   });
 
   it('should accept --target', () => {
     const result = eloc('-e "2 ^ 3" --target ruby');
-    assert.strictEqual(result, '2 ** 3');
+    assert.strictEqual(result, '->(_) { 2 ** 3 }');
   });
 
   it('should accept --prelude', () => {

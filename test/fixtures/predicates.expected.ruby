@@ -1,8 +1,8 @@
-(raise "Assertion failed" unless (isPositive = ->(x) { x > 0 }; isPositive.call(5)) == true; true)
-(raise "Assertion failed" unless (isPositive = ->(x) { x > 0 }; isPositive.call(-5)) == false; true)
-(raise "Assertion failed" unless (isInRange = ->(x) { x >= 0 && x <= 100 }; isInRange.call(50)) == true; true)
-(raise "Assertion failed" unless (isInRange = ->(x) { x >= 0 && x <= 100 }; isInRange.call(150)) == false; true)
-(raise "Assertion failed" unless (isEqual = ->(a, b) { a == b }; isEqual.call(5, 5)) == true; true)
-(raise "Assertion failed" unless (isEqual = ->(a, b) { a == b }; isEqual.call(5, 6)) == false; true)
-(raise "Assertion failed" unless (isTruthy = ->(x) { x }; isTruthy.call(true)) == true; true)
-(raise "Assertion failed" unless (isTruthy = ->(x) { x }; isTruthy.call(false)) == false; true)
+->(_) { (raise "Assertion failed" unless (isPositive = ->(x) { x > 0 }; isPositive.call(5)) == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (isPositive = ->(x) { x > 0 }; isPositive.call(-5)) == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (isInRange = ->(x) { x >= 0 && x <= 100 }; isInRange.call(50)) == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (isInRange = ->(x) { x >= 0 && x <= 100 }; isInRange.call(150)) == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (isEqual = ->(a, b) { a == b }; isEqual.call(5, 5)) == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (isEqual = ->(a, b) { a == b }; isEqual.call(5, 6)) == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (isTruthy = ->(x) { x }; isTruthy.call(true)) == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (isTruthy = ->(x) { x }; isTruthy.call(false)) == false; true) }.call(nil);

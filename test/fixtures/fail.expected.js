@@ -1,2 +1,1 @@
-(function() { throw new Error("error message"); })()
-
+(function(_) { return (function() { throw new Error("error message"); })(); })(null);

@@ -1,16 +1,15 @@
-(function() { if (!(dayjs().startOf('day') <= dayjs())) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().endOf('day') >= dayjs())) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('day') < dayjs().endOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('isoWeek') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().endOf('isoWeek') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('isoWeek') < dayjs().endOf('isoWeek'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('month') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().endOf('month') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('month') < dayjs().endOf('month'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('quarter') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().endOf('quarter') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('quarter') < dayjs().endOf('quarter'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('year') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().endOf('year') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs().startOf('year') < dayjs().endOf('year'))) throw new Error("Assertion failed"); return true; })()
-
+(function(_) { return (function() { if (!(dayjs().startOf('day') <= dayjs())) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().endOf('day') >= dayjs())) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('day') < dayjs().endOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('isoWeek') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().endOf('isoWeek') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('isoWeek') < dayjs().endOf('isoWeek'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('month') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().endOf('month') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('month') < dayjs().endOf('month'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('quarter') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().endOf('quarter') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('quarter') < dayjs().endOf('quarter'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('year') <= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().endOf('year') >= dayjs().startOf('day'))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs().startOf('year') < dayjs().endOf('year'))) throw new Error("Assertion failed"); return true; })(); })(null);

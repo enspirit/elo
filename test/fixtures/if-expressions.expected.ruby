@@ -1,9 +1,9 @@
-(raise "Assertion failed" unless (true) ? (1) : (2) == 1; true)
-(raise "Assertion failed" unless (5 > 3) ? ("yes") : ("no") == "yes"; true)
-(raise "Assertion failed" unless (1 > 2) ? ("a") : ((2 > 1) ? ("b") : ("c")) == "b"; true)
-(raise "Assertion failed" unless (10 > 5) ? (100 + 1) : (200 - 1) == 101; true)
-(raise "Assertion failed" unless (x = 10; (x > 5) ? ("big") : ("small")) == "big"; true)
-(raise "Assertion failed" unless (true) ? ((x = 1; x + 1)) : ((y = 2; y + 2)) == 2; true)
-(raise "Assertion failed" unless (true && true) ? (1) : (0) == 1; true)
-(raise "Assertion failed" unless (true) ? (true) : (false); true)
-(raise "Assertion failed" unless (5 > 3) ? (10 == 10) : (false); true)
+->(_) { (raise "Assertion failed" unless (true) ? (1) : (2) == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (5 > 3) ? ("yes") : ("no") == "yes"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (1 > 2) ? ("a") : ((2 > 1) ? ("b") : ("c")) == "b"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (10 > 5) ? (100 + 1) : (200 - 1) == 101; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (x = 10; (x > 5) ? ("big") : ("small")) == "big"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (true) ? ((x = 1; x + 1)) : ((y = 2; y + 2)) == 2; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (true && true) ? (1) : (0) == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (true) ? (true) : (false); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (5 > 3) ? (10 == 10) : (false); true) }.call(nil);

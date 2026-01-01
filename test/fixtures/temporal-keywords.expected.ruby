@@ -1,7 +1,7 @@
-(raise "Assertion failed" unless DateTime.now > DateTime.parse('2020-01-01T00:00:00Z'); true)
-(raise "Assertion failed" unless Date.today >= Date.parse('2020-01-01'); true)
-(raise "Assertion failed" unless Date.today + 1 > Date.today; true)
-(raise "Assertion failed" unless Date.today - 1 < Date.today; true)
-(raise "Assertion failed" unless Date.today + 1 > Date.today - 1; true)
-(raise "Assertion failed" unless DateTime.now > DateTime.parse('2024-01-01T00:00:00Z'); true)
-(raise "Assertion failed" unless Date.today > Date.parse('2024-01-01'); true)
+->(_) { (raise "Assertion failed" unless DateTime.now > DateTime.parse('2020-01-01T00:00:00Z'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today >= Date.parse('2020-01-01'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today + 1 > Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today - 1 < Date.today; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today + 1 > Date.today - 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.now > DateTime.parse('2024-01-01T00:00:00Z'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.today > Date.parse('2024-01-01'); true) }.call(nil);

@@ -34,8 +34,8 @@ for file in "$TEST_DIR"/*.expected.ruby; do
         continue
     fi
 
-    # Combine prelude with test file and run
-    if { echo "$PRELUDE"; cat "$file"; } | ruby - 2>/dev/null; then
+    # Fixtures now contain self-executing code, run directly with prelude
+    if { echo "$PRELUDE"; cat "$file"; } | ruby 2>/dev/null; then
         echo "  ✓ $(basename "$file")"
         ((PASSED++)) || true
     else

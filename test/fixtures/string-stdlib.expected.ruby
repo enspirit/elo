@@ -1,43 +1,43 @@
-(raise "Assertion failed" unless "hello".length == 5; true)
-(raise "Assertion failed" unless "".length == 0; true)
-(raise "Assertion failed" unless "abc def".length == 7; true)
-(raise "Assertion failed" unless "hello".upcase == "HELLO"; true)
-(raise "Assertion failed" unless "WORLD".downcase == "world"; true)
-(raise "Assertion failed" unless "MiXeD".upcase == "MIXED"; true)
-(raise "Assertion failed" unless "MiXeD".downcase == "mixed"; true)
-(raise "Assertion failed" unless "  hello  ".strip == "hello"; true)
-(raise "Assertion failed" unless "no spaces".strip == "no spaces"; true)
-(raise "Assertion failed" unless "   ".strip == ""; true)
-(raise "Assertion failed" unless "hello world".start_with?("hello"); true)
-(raise "Assertion failed" unless !"hello world".start_with?("world"); true)
-(raise "Assertion failed" unless "hello world".end_with?("world"); true)
-(raise "Assertion failed" unless !"hello world".end_with?("hello"); true)
-(raise "Assertion failed" unless "hello world".include?("lo wo"); true)
-(raise "Assertion failed" unless "hello world".include?("hello"); true)
-(raise "Assertion failed" unless !"hello world".include?("xyz"); true)
-(raise "Assertion failed" unless "hello"[0, 2] == "he"; true)
-(raise "Assertion failed" unless "hello"[1, 3] == "ell"; true)
-(raise "Assertion failed" unless "hello world"[6, 5] == "world"; true)
-(raise "Assertion failed" unless "hello"[2, 100] == "llo"; true)
-(raise "Assertion failed" unless "hello".concat(" world") == "hello world"; true)
-(raise "Assertion failed" unless "".concat("test") == "test"; true)
-(raise "Assertion failed" unless "hello world".index("world") == 6; true)
-(raise "Assertion failed" unless "hello world".index("o") == 4; true)
-(raise "Assertion failed" unless ("hello world".index("xyz")).nil? == true; true)
-(raise "Assertion failed" unless "hello world".sub("world", "there") == "hello there"; true)
-(raise "Assertion failed" unless "abab".sub("ab", "x") == "xab"; true)
-(raise "Assertion failed" unless "abab".gsub("ab", "x") == "xx"; true)
-(raise "Assertion failed" unless "".empty?; true)
-(raise "Assertion failed" unless !"hello".empty?; true)
-(raise "Assertion failed" unless "42".rjust(5, "0") == "00042"; true)
-(raise "Assertion failed" unless "hi".ljust(5, ".") == "hi..."; true)
-(raise "Assertion failed" unless "hello" + " " + "world" == "hello world"; true)
-(raise "Assertion failed" unless ("hello" + " " + "world").upcase == "HELLO WORLD"; true)
-(raise "Assertion failed" unless ("HELLO" + " " + "WORLD").downcase == "hello world"; true)
-(raise "Assertion failed" unless (" hello " + " world ").strip == "hello  world"; true)
-(raise "Assertion failed" unless ("ab" + "cd").length == 4; true)
-(raise "Assertion failed" unless "hi" * 3 == "hihihi"; true)
-(raise "Assertion failed" unless "hi" * 3 == "hihihi"; true)
-(raise "Assertion failed" unless "ab" * 2 == "abab"; true)
-(raise "Assertion failed" unless "" * 5 == ""; true)
-(raise "Assertion failed" unless "x" * 0 == ""; true)
+->(_) { (raise "Assertion failed" unless "hello".length == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "".length == 0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abc def".length == 7; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello".upcase == "HELLO"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "WORLD".downcase == "world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "MiXeD".upcase == "MIXED"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "MiXeD".downcase == "mixed"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "  hello  ".strip == "hello"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "no spaces".strip == "no spaces"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "   ".strip == ""; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".start_with?("hello"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello world".start_with?("world"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".end_with?("world"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello world".end_with?("hello"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".include?("lo wo"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".include?("hello"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello world".include?("xyz"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello"[0, 2] == "he"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello"[1, 3] == "ell"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world"[6, 5] == "world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello"[2, 100] == "llo"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello".concat(" world") == "hello world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "".concat("test") == "test"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".index("world") == 6; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".index("o") == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("hello world".index("xyz")).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".sub("world", "there") == "hello there"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abab".sub("ab", "x") == "xab"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abab".gsub("ab", "x") == "xx"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "".empty?; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello".empty?; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "42".rjust(5, "0") == "00042"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hi".ljust(5, ".") == "hi..."; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello" + " " + "world" == "hello world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("hello" + " " + "world").upcase == "HELLO WORLD"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("HELLO" + " " + "WORLD").downcase == "hello world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (" hello " + " world ").strip == "hello  world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("ab" + "cd").length == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hi" * 3 == "hihihi"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hi" * 3 == "hihihi"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "ab" * 2 == "abab"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "" * 5 == ""; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "x" * 0 == ""; true) }.call(nil);

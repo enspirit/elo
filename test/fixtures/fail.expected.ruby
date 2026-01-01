@@ -1,1 +1,1 @@
-raise "error message"
+->(_) { raise "error message" }.call(nil);

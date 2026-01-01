@@ -1,17 +1,17 @@
-(raise "Assertion failed" unless [1, 2, 3].length == 3; true)
-(raise "Assertion failed" unless [].length == 0; true)
-(raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 0) == 1; true)
-(raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 2) == 3; true)
-(raise "Assertion failed" unless [1, 2, 3].first == 1; true)
-(raise "Assertion failed" unless ([].first).nil? == true; true)
-(raise "Assertion failed" unless [1, 2, 3].last == 3; true)
-(raise "Assertion failed" unless ([].last).nil? == true; true)
-(raise "Assertion failed" unless [].empty? == true; true)
-(raise "Assertion failed" unless [1].empty? == false; true)
-(raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 100)).nil? == true; true)
-(raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], -1)).nil? == true; true)
-(raise "Assertion failed" unless [1, 2] + [3, 4] == [1, 2, 3, 4]; true)
-(raise "Assertion failed" unless [] + [1, 2] == [1, 2]; true)
-(raise "Assertion failed" unless [1, 2] + [] == [1, 2]; true)
-(raise "Assertion failed" unless [] + [] == []; true)
-(raise "Assertion failed" unless ["a"] + ["b", "c"] == ["a", "b", "c"]; true)
+->(_) { (raise "Assertion failed" unless [1, 2, 3].length == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].length == 0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 0) == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 2) == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3].first == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ([].first).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3].last == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ([].last).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].empty? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1].empty? == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 100)).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], -1)).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2] + [3, 4] == [1, 2, 3, 4]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [] + [1, 2] == [1, 2]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2] + [] == [1, 2]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [] + [] == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a"] + ["b", "c"] == ["a", "b", "c"]; true) }.call(nil);

@@ -11,6 +11,8 @@ import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
 export interface JavaScriptCompileOptions {
   /** If true, always wrap output as a function (even if _ is not used) */
   asFunction?: boolean;
+  /** If true, immediately execute the function with null as input */
+  execute?: boolean;
 }
 
 /**
@@ -51,16 +53,14 @@ export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptio
 /**
  * Compiles Elo expressions to JavaScript with metadata about input usage.
  * Use this when you need to know if the expression uses input.
+ *
+ * Every Elo program compiles to a function taking _ as input parameter.
+ * The usesInput field indicates whether _ is actually referenced.
  */
 export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptCompileOptions): JavaScriptCompileResult {
   const ir = transform(expr);
-  const needsInput = usesInput(ir) || options?.asFunction;
+  const actuallyUsesInput = usesInput(ir);
   const result = emitJSWithHelpers(ir);
-
-  // If no helpers needed and no input, return clean output
-  if (result.requiredHelpers.size === 0 && !needsInput) {
-    return { code: result.code, usesInput: false };
-  }
 
   // Resolve helper dependencies
   const allHelpers = new Set(result.requiredHelpers);
@@ -79,16 +79,13 @@ export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptComp
     .map(name => JS_HELPERS[name].replace(/\n\s*/g, ' '))
     .join(' ');
 
-  if (needsInput) {
-    // Wrap as a function taking _ as input parameter
-    if (result.requiredHelpers.size === 0) {
-      return { code: `(function(_) { return ${result.code}; })`, usesInput: true };
-    }
-    return { code: `(function(_) { ${helperDefs} return ${result.code}; })`, usesInput: true };
+  // Always wrap as a function taking _ as input parameter
+  // When execute is true, add (null) to call the function and ; to make it a statement
+  const suffix = options?.execute ? '(null);' : '';
+  if (result.requiredHelpers.size === 0) {
+    return { code: `(function(_) { return ${result.code}; })${suffix}`, usesInput: actuallyUsesInput };
   }
-
-  // Wrap in IIFE with required helper definitions
-  return { code: `(function() { ${helperDefs} return ${result.code}; })()`, usesInput: false };
+  return { code: `(function(_) { ${helperDefs} return ${result.code}; })${suffix}`, usesInput: actuallyUsesInput };
 }
 
 /**

@@ -1,21 +1,21 @@
-(raise "Assertion failed" unless 5.abs == 5; true)
-(raise "Assertion failed" unless -5.abs == 5; true)
-(raise "Assertion failed" unless 0.abs == 0; true)
-(raise "Assertion failed" unless -3.14.abs == 3.14; true)
-(raise "Assertion failed" unless 3.14.abs == 3.14; true)
-(raise "Assertion failed" unless 3.2.round == 3; true)
-(raise "Assertion failed" unless 3.5.round == 4; true)
-(raise "Assertion failed" unless 3.7.round == 4; true)
-(raise "Assertion failed" unless -3.2.round == -3; true)
-(raise "Assertion failed" unless -3.7.round == -4; true)
-(raise "Assertion failed" unless 5 == 5; true)
-(raise "Assertion failed" unless 3.2.floor == 3; true)
-(raise "Assertion failed" unless 3.9.floor == 3; true)
-(raise "Assertion failed" unless -3.2.floor == -4; true)
-(raise "Assertion failed" unless -3.9.floor == -4; true)
-(raise "Assertion failed" unless 5 == 5; true)
-(raise "Assertion failed" unless 3.2.ceil == 4; true)
-(raise "Assertion failed" unless 3.9.ceil == 4; true)
-(raise "Assertion failed" unless -3.2.ceil == -3; true)
-(raise "Assertion failed" unless -3.9.ceil == -3; true)
-(raise "Assertion failed" unless 5 == 5; true)
+->(_) { (raise "Assertion failed" unless 5.abs == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -5.abs == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 0.abs == 0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.14.abs == 3.14; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.14.abs == 3.14; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.2.round == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.5.round == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.7.round == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.2.round == -3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.7.round == -4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 5 == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.2.floor == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.9.floor == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.2.floor == -4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.9.floor == -4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 5 == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.2.ceil == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.9.ceil == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.2.ceil == -3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.9.ceil == -3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 5 == 5; true) }.call(nil);

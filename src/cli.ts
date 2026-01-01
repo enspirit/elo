@@ -26,6 +26,8 @@ interface Options {
   preludeOnly?: boolean;
   /** JSON input data to pass as _ (can be JSON string or @file path) */
   inputData?: string;
+  /** If true, output self-executing code (calls function with null/nil) */
+  execute?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
@@ -71,6 +73,11 @@ function parseArgs(args: string[]): Options {
         options.inputData = args[++i];
         break;
 
+      case '-x':
+      case '--execute':
+        options.execute = true;
+        break;
+
       case '-h':
       case '--help':
         printHelp();
@@ -108,6 +115,7 @@ Options:
   -e, --expression <expr>   Expression to compile (like ruby -e)
   -t, --target <lang>       Target language: ruby, js (default), sql
   -i, --input <data>        JSON input data for _ variable (or @file to read from file)
+  -x, --execute             Output self-executing code (calls function with null/nil)
   -p, --prelude             Include necessary library imports/requires
   --prelude-only            Output only the prelude (no expression needed)
   -f, --file <path>         Output to file instead of stdout
@@ -149,25 +157,32 @@ interface CompileResult {
   usesInput: boolean;
 }
 
-function compile(source: string, target: Target, includePrelude: boolean = false): CompileResult {
+interface CompileOptions {
+  includePrelude?: boolean;
+  execute?: boolean;
+}
+
+function compile(source: string, target: Target, options: CompileOptions = {}): CompileResult {
   const ast = parse(source);
+  const { includePrelude = false, execute = false } = options;
 
   let code: string;
   let usesInput: boolean;
   switch (target) {
     case 'ruby': {
-      const result = compileToRubyWithMeta(ast);
+      const result = compileToRubyWithMeta(ast, { execute });
       code = result.code;
       usesInput = result.usesInput;
       break;
     }
     case 'js': {
-      const result = compileToJavaScriptWithMeta(ast);
+      const result = compileToJavaScriptWithMeta(ast, { execute });
       code = result.code;
       usesInput = result.usesInput;
       break;
     }
     case 'sql': {
+      // SQL doesn't support execute option (no function wrapping)
       const result = compileToSQLWithMeta(ast);
       code = result.code;
       usesInput = result.usesInput;
@@ -263,7 +278,10 @@ function main() {
         if (trimmed === '' || trimmed.startsWith('#')) {
           return { code: '', usesInput: false };
         }
-        return compile(trimmed, options.target, index === 0 && options.prelude);
+        return compile(trimmed, options.target, {
+          includePrelude: index === 0 && options.prelude,
+          execute: options.execute
+        });
       } catch (error) {
         throw new Error(`Line ${index + 1}: ${error}`);
       }
@@ -311,12 +329,15 @@ function main() {
     return;
   }
 
+  // Join lines with newlines (semicolons are now part of each compiled line when execute is true)
   const output = results.map(r => r.code).join('\n');
 
   // Output the result
   if (options.outputFile) {
     try {
-      writeFileSync(options.outputFile, output + '\n', 'utf-8');
+      // Only add trailing newline if output doesn't already end with one
+      const finalOutput = output.endsWith('\n') ? output : output + '\n';
+      writeFileSync(options.outputFile, finalOutput, 'utf-8');
       console.error(`Compiled to ${options.outputFile}`);
     } catch (error) {
       console.error(`Error writing file ${options.outputFile}: ${error}`);

@@ -1,14 +1,14 @@
-(raise "Assertion failed" unless Date.parse('2024-06-15').year == 2024; true)
-(raise "Assertion failed" unless Date.parse('2023-01-01').year == 2023; true)
-(raise "Assertion failed" unless Date.parse('2024-06-15').month == 6; true)
-(raise "Assertion failed" unless Date.parse('2024-12-25').month == 12; true)
-(raise "Assertion failed" unless Date.parse('2024-01-01').month == 1; true)
-(raise "Assertion failed" unless Date.parse('2024-06-15').day == 15; true)
-(raise "Assertion failed" unless Date.parse('2024-12-25').day == 25; true)
-(raise "Assertion failed" unless Date.parse('2024-01-01').day == 1; true)
-(raise "Assertion failed" unless DateTime.parse('2024-06-15T14:30:00Z').hour == 14; true)
-(raise "Assertion failed" unless DateTime.parse('2024-06-15T00:00:00Z').hour == 0; true)
-(raise "Assertion failed" unless DateTime.parse('2024-06-15T23:59:59Z').hour == 23; true)
-(raise "Assertion failed" unless DateTime.parse('2024-06-15T14:30:00Z').minute == 30; true)
-(raise "Assertion failed" unless DateTime.parse('2024-06-15T00:00:00Z').minute == 0; true)
-(raise "Assertion failed" unless DateTime.parse('2024-06-15T23:59:59Z').minute == 59; true)
+->(_) { (raise "Assertion failed" unless Date.parse('2024-06-15').year == 2024; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2023-01-01').year == 2023; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-06-15').month == 6; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-12-25').month == 12; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-01').month == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-06-15').day == 15; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-12-25').day == 25; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-01').day == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-06-15T14:30:00Z').hour == 14; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-06-15T00:00:00Z').hour == 0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-06-15T23:59:59Z').hour == 23; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-06-15T14:30:00Z').minute == 30; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-06-15T00:00:00Z').minute == 0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-06-15T23:59:59Z').minute == 59; true) }.call(nil);

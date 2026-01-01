@@ -1,7 +1,7 @@
-(raise "Assertion failed" unless Date.parse('2024-01-15') > Date.parse('2024-01-10'); true)
-(raise "Assertion failed" unless !(Date.parse('2024-01-15') < Date.parse('2024-01-10')); true)
-(raise "Assertion failed" unless Date.parse('2024-01-15') >= Date.parse('2024-01-15'); true)
-(raise "Assertion failed" unless Date.parse('2024-01-15') <= Date.parse('2024-01-15'); true)
-(raise "Assertion failed" unless DateTime.parse('2024-01-15T10:30:00Z') > DateTime.parse('2024-01-15T09:00:00Z'); true)
-(raise "Assertion failed" unless DateTime.parse('2024-01-15T10:30:00Z') < DateTime.parse('2024-01-15T11:00:00Z'); true)
-(raise "Assertion failed" unless DateTime.parse('2024-01-15T10:30:00Z') >= DateTime.parse('2024-01-15T10:30:00Z'); true)
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-15') > Date.parse('2024-01-10'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(Date.parse('2024-01-15') < Date.parse('2024-01-10')); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-15') >= Date.parse('2024-01-15'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-15') <= Date.parse('2024-01-15'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-01-15T10:30:00Z') > DateTime.parse('2024-01-15T09:00:00Z'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-01-15T10:30:00Z') < DateTime.parse('2024-01-15T11:00:00Z'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-01-15T10:30:00Z') >= DateTime.parse('2024-01-15T10:30:00Z'); true) }.call(nil);

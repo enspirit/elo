@@ -70,7 +70,8 @@ export function compile<T = unknown>(
   const args = RUNTIME_DEPS.map(dep => runtime[dep]);
 
   // Create a function that injects all dependencies into scope
-  const factory = new Function(paramNames, `return ${jsCode};`);
+  // The compiled code is always a function taking _ as input, so call it with null
+  const factory = new Function(paramNames, `return (${jsCode})(null);`);
 
   return factory(...args) as T;
 }

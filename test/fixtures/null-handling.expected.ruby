@@ -1,14 +1,14 @@
-(raise "Assertion failed" unless (nil).nil? == true; true)
-(raise "Assertion failed" unless (42).nil? == false; true)
-(raise "Assertion failed" unless ("hello").nil? == false; true)
-(raise "Assertion failed" unless (true).nil? == false; true)
-(raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call(nil) == "Null"; true)
-(raise "Assertion failed" unless ->() { v = 42; return v unless v.nil?; 0 }.call == 42; true)
-(raise "Assertion failed" unless ->() { v = "hello"; return v unless v.nil?; "default" }.call == "hello"; true)
-(raise "Assertion failed" unless ->() { v = 1 + 1; return v unless v.nil?; 0 }.call == 2; true)
-(raise "Assertion failed" unless "hello".index("l") == 2; true)
-(raise "Assertion failed" unless ("hello".index("l")).nil? == false; true)
-(raise "Assertion failed" unless ("hello".index("x")).nil? == true; true)
-(raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call("hello".index("x")) == "Null"; true)
-(raise "Assertion failed" unless ->() { v = "hello".index("x"); return v unless v.nil?; -1 }.call == -1; true)
-(raise "Assertion failed" unless ->() { v = "hello".index("l"); return v unless v.nil?; -1 }.call == 2; true)
+->(_) { (raise "Assertion failed" unless (nil).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (42).nil? == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("hello").nil? == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (true).nil? == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call(nil) == "Null"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ->() { v = 42; return v unless v.nil?; 0 }.call == 42; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ->() { v = "hello"; return v unless v.nil?; "default" }.call == "hello"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ->() { v = 1 + 1; return v unless v.nil?; 0 }.call == 2; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello".index("l") == 2; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("hello".index("l")).nil? == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("hello".index("x")).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call("hello".index("x")) == "Null"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("x"); return v unless v.nil?; -1 }.call == -1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("l"); return v unless v.nil?; -1 }.call == 2; true) }.call(nil);

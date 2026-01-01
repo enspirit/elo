@@ -11,6 +11,8 @@ import { RUBY_HELPERS, RUBY_HELPER_DEPS } from '../runtime';
 export interface RubyCompileOptions {
   /** If true, always wrap output as a lambda (even if _ is not used) */
   asFunction?: boolean;
+  /** If true, immediately execute the lambda with nil as input */
+  execute?: boolean;
 }
 
 /**
@@ -92,16 +94,14 @@ export function compileToRuby(expr: Expr, options?: RubyCompileOptions): string 
 /**
  * Compiles Elo expressions to Ruby with metadata about input usage.
  * Use this when you need to know if the expression uses input.
+ *
+ * Every Elo program compiles to a lambda taking _ as input parameter.
+ * The usesInput field indicates whether _ is actually referenced.
  */
 export function compileToRubyWithMeta(expr: Expr, options?: RubyCompileOptions): RubyCompileResult {
   const ir = transform(expr);
-  const needsInput = usesInput(ir) || options?.asFunction;
+  const actuallyUsesInput = usesInput(ir);
   const result = emitRubyWithHelpers(ir);
-
-  // If no helpers needed and no input, return clean output
-  if (result.requiredHelpers.size === 0 && !needsInput) {
-    return { code: result.code, usesInput: false };
-  }
 
   // Resolve helper dependencies
   const allHelpers = new Set(result.requiredHelpers);
@@ -120,16 +120,13 @@ export function compileToRubyWithMeta(expr: Expr, options?: RubyCompileOptions):
     .map(name => RUBY_HELPERS[name].replace(/\n\s*/g, '; ').replace(/; end/, ' end'))
     .join('; ');
 
-  if (needsInput) {
-    // Wrap as a lambda taking _ as input parameter
-    if (result.requiredHelpers.size === 0) {
-      return { code: `->(_) { ${result.code} }`, usesInput: true };
-    }
-    return { code: `->(_) { ${helperDefs}; ${result.code} }`, usesInput: true };
+  // Always wrap as a lambda taking _ as input parameter
+  // When execute is true, add .call(nil) to call the lambda and ; to make it a statement
+  const suffix = options?.execute ? '.call(nil);' : '';
+  if (result.requiredHelpers.size === 0) {
+    return { code: `->(_) { ${result.code} }${suffix}`, usesInput: actuallyUsesInput };
   }
-
-  // Wrap in lambda and call it immediately to scope the helpers
-  return { code: `->() { ${helperDefs}; ${result.code} }.call`, usesInput: false };
+  return { code: `->(_) { ${helperDefs}; ${result.code} }${suffix}`, usesInput: actuallyUsesInput };
 }
 
 /**

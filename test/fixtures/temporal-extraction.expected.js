@@ -1,15 +1,14 @@
-(function() { if (!(dayjs('2024-06-15').year() == 2024)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2023-01-01').year() == 2023)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!((dayjs('2024-06-15').month() + 1) == 6)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!((dayjs('2024-12-25').month() + 1) == 12)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!((dayjs('2024-01-01').month() + 1) == 1)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-06-15').date() == 15)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-12-25').date() == 25)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-01-01').date() == 1)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-06-15T14:30:00Z').utc().hour() == 14)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-06-15T00:00:00Z').utc().hour() == 0)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-06-15T23:59:59Z').utc().hour() == 23)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-06-15T14:30:00Z').utc().minute() == 30)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-06-15T00:00:00Z').utc().minute() == 0)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(dayjs('2024-06-15T23:59:59Z').utc().minute() == 59)) throw new Error("Assertion failed"); return true; })()
-
+(function(_) { return (function() { if (!(dayjs('2024-06-15').year() == 2024)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2023-01-01').year() == 2023)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!((dayjs('2024-06-15').month() + 1) == 6)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!((dayjs('2024-12-25').month() + 1) == 12)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!((dayjs('2024-01-01').month() + 1) == 1)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-06-15').date() == 15)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-12-25').date() == 25)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-01-01').date() == 1)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-06-15T14:30:00Z').utc().hour() == 14)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-06-15T00:00:00Z').utc().hour() == 0)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-06-15T23:59:59Z').utc().hour() == 23)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-06-15T14:30:00Z').utc().minute() == 30)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-06-15T00:00:00Z').utc().minute() == 0)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(dayjs('2024-06-15T23:59:59Z').utc().minute() == 59)) throw new Error("Assertion failed"); return true; })(); })(null);

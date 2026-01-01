@@ -1,42 +1,42 @@
-(raise "Assertion failed" unless 42 == 42; true)
-(raise "Assertion failed" unless 40 + 2 == 42; true)
-(raise "Assertion failed" unless 42 != 43; true)
-(raise "Assertion failed" unless 3.14 == 3.14; true)
-(raise "Assertion failed" unless 3 + 0.14 == 3.14; true)
-(raise "Assertion failed" unless 3.14 != 3.15; true)
-(raise "Assertion failed" unless true == true; true)
-(raise "Assertion failed" unless false == false; true)
-(raise "Assertion failed" unless true != false; true)
-(raise "Assertion failed" unless (1 == 1) == true; true)
-(raise "Assertion failed" unless "hello" == "hello"; true)
-(raise "Assertion failed" unless "hel" + "lo" == "hello"; true)
-(raise "Assertion failed" unless "hello" != "world"; true)
-(raise "Assertion failed" unless Date.parse('2024-01-15') == Date.parse('2024-01-15'); true)
-(raise "Assertion failed" unless Date.parse('2024-01-14') + ActiveSupport::Duration.parse('P1D') == Date.parse('2024-01-15'); true)
-(raise "Assertion failed" unless Date.parse('2024-01-15') != Date.parse('2024-01-16'); true)
-(raise "Assertion failed" unless DateTime.parse('2024-01-15T10:00:00Z') == DateTime.parse('2024-01-15T10:00:00Z'); true)
-(raise "Assertion failed" unless DateTime.parse('2024-01-15T09:00:00Z') + ActiveSupport::Duration.parse('PT1H') == DateTime.parse('2024-01-15T10:00:00Z'); true)
-(raise "Assertion failed" unless DateTime.parse('2024-01-15T10:00:00Z') != DateTime.parse('2024-01-15T11:00:00Z'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P1D'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('P1D') + ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P2D'); true)
-(raise "Assertion failed" unless 2 * ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P2D'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('P2D') / 2 == ActiveSupport::Duration.parse('P1D'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('P1D') != ActiveSupport::Duration.parse('P2D'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('PT1H') == ActiveSupport::Duration.parse('PT1H'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('PT30M') + ActiveSupport::Duration.parse('PT30M') == ActiveSupport::Duration.parse('PT1H'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('PT1H') != ActiveSupport::Duration.parse('PT2H'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('P2D') - ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P1D'); true)
-(raise "Assertion failed" unless ActiveSupport::Duration.parse('PT2H') - ActiveSupport::Duration.parse('PT1H') == ActiveSupport::Duration.parse('PT1H'); true)
-(raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call(((DateTime.parse('2024-01-15T10:00:00Z') - DateTime.parse('2024-01-15T09:00:00Z')) * 86400).to_i.seconds) == "Duration"; true)
-(raise "Assertion failed" unless [1, 2, 3] == [1, 2, 3]; true)
-(raise "Assertion failed" unless [1, 2] != [1, 2, 3]; true)
-(raise "Assertion failed" unless [1, 2, 3] != [1, 2, 4]; true)
-(raise "Assertion failed" unless [] == []; true)
-(raise "Assertion failed" unless ["a", "b"] == ["a", "b"]; true)
-(raise "Assertion failed" unless {name: "Alice"} == {name: "Alice"}; true)
-(raise "Assertion failed" unless {a: 1, b: 2} == {a: 1, b: 2}; true)
-(raise "Assertion failed" unless {a: 1} != {a: 2}; true)
-(raise "Assertion failed" unless {a: 1} != {b: 1}; true)
-(raise "Assertion failed" unless {} == {}; true)
-(raise "Assertion failed" unless {nested: {x: 1}} == {nested: {x: 1}}; true)
-(raise "Assertion failed" unless [[1, 2], [3, 4]] == [[1, 2], [3, 4]]; true)
+->(_) { (raise "Assertion failed" unless 42 == 42; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 40 + 2 == 42; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 42 != 43; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.14 == 3.14; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3 + 0.14 == 3.14; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.14 != 3.15; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless true == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless false == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless true != false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (1 == 1) == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello" == "hello"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hel" + "lo" == "hello"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello" != "world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-15') == Date.parse('2024-01-15'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-14') + ActiveSupport::Duration.parse('P1D') == Date.parse('2024-01-15'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless Date.parse('2024-01-15') != Date.parse('2024-01-16'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-01-15T10:00:00Z') == DateTime.parse('2024-01-15T10:00:00Z'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-01-15T09:00:00Z') + ActiveSupport::Duration.parse('PT1H') == DateTime.parse('2024-01-15T10:00:00Z'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless DateTime.parse('2024-01-15T10:00:00Z') != DateTime.parse('2024-01-15T11:00:00Z'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P1D'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('P1D') + ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P2D'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 2 * ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P2D'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('P2D') / 2 == ActiveSupport::Duration.parse('P1D'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('P1D') != ActiveSupport::Duration.parse('P2D'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('PT1H') == ActiveSupport::Duration.parse('PT1H'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('PT30M') + ActiveSupport::Duration.parse('PT30M') == ActiveSupport::Duration.parse('PT1H'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('PT1H') != ActiveSupport::Duration.parse('PT2H'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('P2D') - ActiveSupport::Duration.parse('P1D') == ActiveSupport::Duration.parse('P1D'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse('PT2H') - ActiveSupport::Duration.parse('PT1H') == ActiveSupport::Duration.parse('PT1H'); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call(((DateTime.parse('2024-01-15T10:00:00Z') - DateTime.parse('2024-01-15T09:00:00Z')) * 86400).to_i.seconds) == "Duration"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3] == [1, 2, 3]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2] != [1, 2, 3]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3] != [1, 2, 4]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [] == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b"] == ["a", "b"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless {name: "Alice"} == {name: "Alice"}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless {a: 1, b: 2} == {a: 1, b: 2}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless {a: 1} != {a: 2}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless {a: 1} != {b: 1}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless {} == {}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless {nested: {x: 1}} == {nested: {x: 1}}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [[1, 2], [3, 4]] == [[1, 2], [3, 4]]; true) }.call(nil);

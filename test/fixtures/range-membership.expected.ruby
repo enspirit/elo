@@ -1,9 +1,9 @@
-(raise "Assertion failed" unless 5 >= 1 && 5 <= 10; true)
-(raise "Assertion failed" unless !(0 >= 1 && 0 <= 10); true)
-(raise "Assertion failed" unless !(0 >= 1 && 0 <= 10); true)
-(raise "Assertion failed" unless !(5 >= 1 && 5 < 5); true)
-(raise "Assertion failed" unless !(5 >= 1 && 5 < 5); true)
-(raise "Assertion failed" unless 5 >= 1 && 5 < 6; true)
-(raise "Assertion failed" unless 10 >= 1 && 10 <= 10; true)
-(raise "Assertion failed" unless !(11 >= 1 && 11 <= 10); true)
-(raise "Assertion failed" unless !(11 >= 1 && 11 <= 10); true)
+->(_) { (raise "Assertion failed" unless 5 >= 1 && 5 <= 10; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(0 >= 1 && 0 <= 10); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(0 >= 1 && 0 <= 10); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(5 >= 1 && 5 < 5); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(5 >= 1 && 5 < 5); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 5 >= 1 && 5 < 6; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 10 >= 1 && 10 <= 10; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(11 >= 1 && 11 <= 10); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(11 >= 1 && 11 <= 10); true) }.call(nil);

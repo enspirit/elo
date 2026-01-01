@@ -32,7 +32,9 @@ interface TestSuite {
 
 function tryReadFile(path: string): string[] | null {
   if (existsSync(path)) {
-    return readFileSync(path, 'utf-8').split('\n');
+    const content = readFileSync(path, 'utf-8');
+    // Remove trailing newline before splitting to match source line count
+    return content.replace(/\n$/, '').split('\n');
   }
   return null;
 }
@@ -53,7 +55,9 @@ function loadTestSuites(): TestSuite[] {
     const rubyPath = join(TEST_DIR, `${name}.expected.ruby`);
     const sqlPath = join(TEST_DIR, `${name}.expected.sql`);
 
-    const elo = readFileSync(eloPath, 'utf-8').split('\n');
+    const eloContent = readFileSync(eloPath, 'utf-8');
+    // Remove trailing newline before splitting to match generated fixture line counts
+    const elo = eloContent.replace(/\n$/, '').split('\n');
     const expectedJS = tryReadFile(jsPath);
     const expectedRuby = tryReadFile(rubyPath);
     const expectedSQL = tryReadFile(sqlPath);
@@ -121,8 +125,9 @@ for (const suite of testSuites) {
         const ast = parse(expr);
 
         // Test JavaScript compilation (if expected file exists)
+        // Fixtures are generated with --execute, so we use { execute: true }
         if (suite.expectedJS) {
-          const actualJS = compileToJavaScript(ast);
+          const actualJS = compileToJavaScript(ast, { execute: true });
           const expectedJS = suite.expectedJS[i].trim();
           assert.strictEqual(
             actualJS,
@@ -132,8 +137,9 @@ for (const suite of testSuites) {
         }
 
         // Test Ruby compilation (if expected file exists)
+        // Fixtures are generated with --execute, so we use { execute: true }
         if (suite.expectedRuby) {
-          const actualRuby = compileToRuby(ast);
+          const actualRuby = compileToRuby(ast, { execute: true });
           const expectedRuby = suite.expectedRuby[i].trim();
           assert.strictEqual(
             actualRuby,

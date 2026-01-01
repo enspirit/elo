@@ -1,5 +1,5 @@
-(raise "Assertion failed" unless "hello" == "hello"; true)
-(raise "Assertion failed" unless "hello world" == "hello world"; true)
-(raise "Assertion failed" unless "" == ""; true)
-(raise "Assertion failed" unless "test123" == "test123"; true)
-(raise "Assertion failed" unless "a" != "b"; true)
+->(_) { (raise "Assertion failed" unless "hello" == "hello"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world" == "hello world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "" == ""; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "test123" == "test123"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "a" != "b"; true) }.call(nil);

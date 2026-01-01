@@ -1,10 +1,9 @@
-(function() { if (!("hello".toUpperCase() == "HELLO")) throw new Error("Assertion failed"); return true; })()
-(function() { if (!("  HELLO  ".trim().toLowerCase() == "hello")) throw new Error("Assertion failed"); return true; })()
-(function() { if (!("42".padStart(5, "0") == "00042")) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(Math.abs(0 - 5) == 5)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!("hello world".replace("world", "elo") == "hello elo")) throw new Error("Assertion failed"); return true; })()
-(function() { if (!("hello".toUpperCase() == "HELLO")) throw new Error("Assertion failed"); return true; })()
-(function() { if (!("  HELLO  ".trim().toLowerCase() == "hello")) throw new Error("Assertion failed"); return true; })()
-(function() { if (!(Math.abs(0 - 5) == 5)) throw new Error("Assertion failed"); return true; })()
-(function() { if (!("hello".toUpperCase().padStart(10, "-") == "-----HELLO")) throw new Error("Assertion failed"); return true; })()
-
+(function(_) { return (function() { if (!("hello".toUpperCase() == "HELLO")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("  HELLO  ".trim().toLowerCase() == "hello")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("42".padStart(5, "0") == "00042")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Math.abs(0 - 5) == 5)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("hello world".replace("world", "elo") == "hello elo")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("hello".toUpperCase() == "HELLO")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("  HELLO  ".trim().toLowerCase() == "hello")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Math.abs(0 - 5) == 5)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("hello".toUpperCase().padStart(10, "-") == "-----HELLO")) throw new Error("Assertion failed"); return true; })(); })(null);
