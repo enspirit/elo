@@ -461,10 +461,11 @@ in &#123; name: 'Alice', age: '30' &#125; |> Person</pre>
         <h2>JavaScript API</h2>
         <p>Install with <code>npm install @enspirit/elo</code>.</p>
         <h3>compile()</h3>
+        <p>Every Elo expression compiles to a function that takes <code>_</code> (the implicit input) as parameter.</p>
         <pre class="code-js">import &#123; compile &#125; from '@enspirit/elo';
 import &#123; DateTime, Duration &#125; from 'luxon';
 
-const double = compile('fn(x ~> x * 2)', &#123; runtime: &#123; DateTime, Duration &#125; &#125;);
+const double = compile('_ * 2', &#123; runtime: &#123; DateTime, Duration &#125; &#125;);
 double(21); // => 42</pre>
         <h3>Lower-Level API</h3>
         <pre class="code-js">import &#123; parse, compileToJavaScript, compileToRuby, compileToSQL &#125; from '@enspirit/elo';

@@ -149,28 +149,28 @@ describe('Compilation with Any types in lambdas', () => {
 
   describe('String functions (already worked, still work)', () => {
     it('compiles upper inside lambda', () => {
-      const fn = compile<(arr: string[]) => string[]>(
+      const fn = compile<(_: null) => (arr: string[]) => string[]>(
         "fn(arr ~> arr |> map(fn(x ~> upper(x))))",
         { runtime }
-      );
+      )(null);
       assert.deepStrictEqual(fn(['a', 'b']), ['A', 'B']);
     });
 
     it('compiles lower inside lambda', () => {
-      const fn = compile<(arr: string[]) => string[]>(
+      const fn = compile<(_: null) => (arr: string[]) => string[]>(
         "fn(arr ~> arr |> map(fn(x ~> lower(x))))",
         { runtime }
-      );
+      )(null);
       assert.deepStrictEqual(fn(['A', 'B']), ['a', 'b']);
     });
   });
 
   describe('Arithmetic operators (already worked, still work)', () => {
     it('compiles add inside lambda', () => {
-      const fn = compile<(arr: number[]) => number[]>(
+      const fn = compile<(_: null) => (arr: number[]) => number[]>(
         "fn(arr ~> arr |> map(fn(x ~> x + 1)))",
         { runtime }
-      );
+      )(null);
       assert.deepStrictEqual(fn([1, 2, 3]), [2, 3, 4]);
     });
   });
@@ -178,37 +178,37 @@ describe('Compilation with Any types in lambdas', () => {
 
 describe('Runtime behavior with specialization', () => {
   it('abs works correctly at runtime', () => {
-    const fn = compile<(x: number) => number>(
+    const fn = compile<(_: null) => (x: number) => number>(
       "fn(x ~> abs(x))",
       { runtime }
-    );
+    )(null);
     assert.strictEqual(fn(-5), 5);
     assert.strictEqual(fn(5), 5);
   });
 
   it('round works correctly at runtime', () => {
-    const fn = compile<(x: number) => number>(
+    const fn = compile<(_: null) => (x: number) => number>(
       "fn(x ~> round(x))",
       { runtime }
-    );
+    )(null);
     assert.strictEqual(fn(1.4), 1);
     assert.strictEqual(fn(1.6), 2);
   });
 
   it('floor works correctly at runtime', () => {
-    const fn = compile<(x: number) => number>(
+    const fn = compile<(_: null) => (x: number) => number>(
       "fn(x ~> floor(x))",
       { runtime }
-    );
+    )(null);
     assert.strictEqual(fn(1.9), 1);
     assert.strictEqual(fn(-1.1), -2);
   });
 
   it('ceil works correctly at runtime', () => {
-    const fn = compile<(x: number) => number>(
+    const fn = compile<(_: null) => (x: number) => number>(
       "fn(x ~> ceil(x))",
       { runtime }
-    );
+    )(null);
     assert.strictEqual(fn(1.1), 2);
     assert.strictEqual(fn(-1.9), -1);
   });

@@ -152,22 +152,23 @@ Options:
 
 ## Using Elo in JavaScript/TypeScript
 
-The simplest way to use Elo is with the `compile()` function, which creates a callable JavaScript function from an Elo lambda expression:
+The simplest way to use Elo is with the `compile()` function, which creates a callable JavaScript function from an Elo expression:
 
 ```typescript
 import { compile } from '@enspirit/elo';
 import { DateTime, Duration } from 'luxon';
 
-// Compile a lambda to a callable function
-const double = compile<(x: number) => number>(
-  'fn(x ~> x * 2)',
+// Compile an expression to a callable function
+// Every Elo expression takes _ (implicit input) as parameter
+const addTen = compile<(x: number) => number>(
+  '_ + 10',
   { runtime: { DateTime, Duration } }
 );
-double(21); // => 42
+addTen(5); // => 15
 
 // Temporal expressions work too
 const inThisWeek = compile<(d: unknown) => boolean>(
-  'fn(d ~> d in SOW ... EOW)',
+  '_ in SOW ... EOW',
   { runtime: { DateTime, Duration } }
 );
 inThisWeek(DateTime.now()); // => true or false

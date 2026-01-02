@@ -14,22 +14,25 @@ const runtime = { DateTime, Duration };
  */
 
 describe('Playground Examples', () => {
+  // Helper to compile and evaluate an expression (calling with null since _ is not used)
+  const evaluate = <T>(code: string): T => compile<(_: null) => T>(code, { runtime })(null);
+
   it('arithmetic: should evaluate correctly', () => {
-    const result = compile('2 + 3 * 4', { runtime });
+    const result = evaluate<number>('2 + 3 * 4');
     assert.strictEqual(result, 14);
   });
 
   it('strings: should evaluate correctly', () => {
     const code = `let greeting = 'hello world' in
   upper(greeting)`;
-    const result = compile(code, { runtime });
+    const result = evaluate<string>(code);
     assert.strictEqual(result, 'HELLO WORLD');
   });
 
   it('booleans: should evaluate correctly', () => {
     const code = `let age = 25 in
   age >= 18 and age < 65`;
-    const result = compile(code, { runtime });
+    const result = evaluate<boolean>(code);
     assert.strictEqual(result, true);
   });
 
@@ -39,7 +42,7 @@ describe('Playground Examples', () => {
   else if score >= 80 then 'B'
   else if score >= 70 then 'C'
   else 'F'`;
-    const result = compile(code, { runtime });
+    const result = evaluate<string>(code);
     assert.strictEqual(result, 'B');
   });
 
@@ -48,7 +51,7 @@ describe('Playground Examples', () => {
     height = 5,
     area = width * height
 in area`;
-    const result = compile(code, { runtime });
+    const result = evaluate<number>(code);
     assert.strictEqual(result, 50);
   });
 
@@ -58,7 +61,7 @@ in area`;
   age: 30,
   city: 'Brussels'
 } in person.name`;
-    const result = compile(code, { runtime });
+    const result = evaluate<string>(code);
     assert.strictEqual(result, 'Alice');
   });
 
@@ -68,7 +71,7 @@ in area`;
   last: last(numbers),
   length: length(numbers)
 }`;
-    const result = compile(code, { runtime }) as Record<string, unknown>;
+    const result = evaluate<Record<string, unknown>>(code);
     assert.strictEqual(result.first, 1);
     assert.strictEqual(result.last, 5);
     assert.strictEqual(result.length, 5);
@@ -77,7 +80,7 @@ in area`;
   it('nulls: should evaluate correctly', () => {
     const code = `let value = null in
   value | 'default'`;
-    const result = compile(code, { runtime });
+    const result = evaluate<string>(code);
     assert.strictEqual(result, 'default');
   });
 
@@ -85,7 +88,7 @@ in area`;
     const code = `let double = fn(x ~> x * 2),
     add = fn(a, b ~> a + b)
 in add(double(5), 3)`;
-    const result = compile(code, { runtime });
+    const result = evaluate<number>(code);
     assert.strictEqual(result, 13);
   });
 
@@ -95,7 +98,7 @@ in add(double(5), 3)`;
   evens: filter(numbers, fn(x ~> x % 2 == 0)),
   sum: reduce(numbers, 0, fn(acc, x ~> acc + x))
 }`;
-    const result = compile(code, { runtime }) as Record<string, unknown>;
+    const result = evaluate<Record<string, unknown>>(code);
     assert.deepStrictEqual(result.doubled, [2, 4, 6, 8, 10]);
     assert.deepStrictEqual(result.evens, [2, 4]);
     assert.strictEqual(result.sum, 15);
@@ -106,7 +109,7 @@ in add(double(5), 3)`;
   |> trim
   |> upper
   |> length`;
-    const result = compile(code, { runtime });
+    const result = evaluate<number>(code);
     assert.strictEqual(result, 11);
   });
 
@@ -117,7 +120,7 @@ in {
   year: year(today),
   month: month(today)
 }`;
-    const result = compile(code, { runtime }) as Record<string, unknown>;
+    const result = evaluate<Record<string, unknown>>(code);
     assert.strictEqual(typeof result.year, 'number');
     assert.strictEqual(typeof result.month, 'number');
     assert.ok((result.month as number) >= 1 && (result.month as number) <= 12);
@@ -125,7 +128,7 @@ in {
 
   it('durations: should evaluate correctly', () => {
     const code = `P1D + PT2H`;
-    const result = compile(code, { runtime });
+    const result = evaluate<unknown>(code);
     assert.ok(Duration.isDuration(result));
   });
 });

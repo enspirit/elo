@@ -34,26 +34,27 @@ const RUNTIME_DEPS = ['DateTime', 'Duration'] as const;
 /**
  * Compiles an Elo expression to a callable JavaScript function.
  *
- * The expression should typically be a lambda, e.g.:
- *   compile('fn(x ~> x * 2)')
- *   compile('fn(x ~> x in SOW ... EOW)')
+ * Every Elo expression compiles to a function that takes `_` (the implicit input) as parameter.
+ * You call the returned function with your input value.
  *
  * @example
  * ```typescript
  * import { compile } from '@enspirit/elo';
  * import { DateTime, Duration } from 'luxon';
  *
- * const double = compile<(x: number) => number>(
- *   'fn(x ~> x * 2)',
+ * // Simple expression using _ (implicit input)
+ * const addTen = compile<(x: number) => number>(
+ *   '_ + 10',
  *   { runtime: { DateTime, Duration } }
  * );
- * double(21); // => 42
+ * addTen(5); // => 15
  *
- * const inThisWeek = compile<(x: Date) => boolean>(
- *   'fn(x ~> x in SOW ... EOW)',
+ * // Temporal expression
+ * const inThisWeek = compile<(d: unknown) => boolean>(
+ *   '_ in SOW ... EOW',
  *   { runtime: { DateTime, Duration } }
  * );
- * inThisWeek(new Date()); // => true or false
+ * inThisWeek(DateTime.now()); // => true or false
  * ```
  */
 export function compile<T = unknown>(
@@ -71,8 +72,8 @@ export function compile<T = unknown>(
   const args = RUNTIME_DEPS.map(dep => runtime[dep]);
 
   // Create a function that injects all dependencies into scope
-  // The compiled code is always a function taking _ as input, so call it with null
-  const factory = new Function(paramNames, `return (${jsCode})(null);`);
+  // The compiled code is a function taking _ as input
+  const factory = new Function(paramNames, `return ${jsCode};`);
 
   return factory(...args) as T;
 }
