@@ -314,10 +314,13 @@ See https://klaro.cards
 
 Elo follows a strict test-driven development methodology to ensure semantic equivalence across all three target languages (Ruby, JavaScript, SQL).
 
+**Getting started**: See [HACKING.md](HACKING.md) for:
+- Development environment setup (local or Docker)
+- Running the test suite
+- Project structure overview
+
 **For developers and AI assistants**: See [CLAUDE.md](CLAUDE.md) for:
-- Test-driven development workflow
-- Three-stage test methodology (unit → integration → acceptance)
+- Detailed development workflow
 - How to add new features and operators
 - Architecture documentation
-- Troubleshooting guide
 
