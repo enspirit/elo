@@ -791,3 +791,44 @@ export function highlightSQL(source: string): string {
     return `<span class="hl-sql-${token.category}">${escaped}</span>`;
   }).join('');
 }
+
+/**
+ * Highlight markdown code blocks with automatic language detection.
+ * Finds pre elements containing code elements with language-xxx classes,
+ * and applies highlighting directly to the pre (same as .example-code).
+ */
+export function highlightCodeBlocks(containerSelector: string): void {
+  const containers = document.querySelectorAll(containerSelector);
+  containers.forEach(container => {
+    // Find all pre > code[class*="language-"] patterns
+    const codeElements = container.querySelectorAll('pre > code[class*="language-"]');
+    codeElements.forEach(codeEl => {
+      const pre = codeEl.parentElement;
+      if (!pre) return;
+
+      const code = codeEl.textContent || '';
+      const classList = codeEl.className;
+
+      // Add example-code class for consistent styling
+      pre.classList.add('example-code');
+
+      // Detect language and apply highlighting to the pre element
+      if (classList.includes('language-elo')) {
+        pre.innerHTML = highlight(code);
+      } else if (classList.includes('language-js') || classList.includes('language-javascript') || classList.includes('language-ts') || classList.includes('language-typescript')) {
+        pre.innerHTML = highlightJS(code);
+      } else if (classList.includes('language-ruby') || classList.includes('language-rb')) {
+        pre.innerHTML = highlightRuby(code);
+      } else if (classList.includes('language-sql')) {
+        pre.innerHTML = highlightSQL(code);
+      } else {
+        // Default: try Elo highlighter for Elo-like code, otherwise JS
+        if (code.includes('let ') && code.includes(' in ') || code.includes('~>') || code.includes('_.')) {
+          pre.innerHTML = highlight(code);
+        } else {
+          pre.innerHTML = highlightJS(code);
+        }
+      }
+    });
+  });
+}

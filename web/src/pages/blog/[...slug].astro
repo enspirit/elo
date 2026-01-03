@@ -193,34 +193,3 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     margin: 2rem 0;
   }
 </style>
-
-<script>
-  import { highlight, highlightJS, highlightRuby, highlightSQL } from '../../scripts/highlighter';
-
-  document.addEventListener('DOMContentLoaded', () => {
-    // Highlight code blocks in blog posts based on language class
-    const codeBlocks = document.querySelectorAll('.post-content pre code');
-    codeBlocks.forEach(block => {
-      const code = block.textContent || '';
-      const classList = block.className;
-
-      // Detect language from class (Astro adds 'language-xxx' class)
-      if (classList.includes('language-elo')) {
-        block.innerHTML = highlight(code);
-      } else if (classList.includes('language-js') || classList.includes('language-javascript') || classList.includes('language-ts') || classList.includes('language-typescript')) {
-        block.innerHTML = highlightJS(code);
-      } else if (classList.includes('language-ruby') || classList.includes('language-rb')) {
-        block.innerHTML = highlightRuby(code);
-      } else if (classList.includes('language-sql')) {
-        block.innerHTML = highlightSQL(code);
-      } else {
-        // Default: try Elo highlighter for Elo-like code, otherwise JS
-        if (code.includes('let ') && code.includes(' in ') || code.includes('~>') || code.includes('_.')) {
-          block.innerHTML = highlight(code);
-        } else {
-          block.innerHTML = highlightJS(code);
-        }
-      }
-    });
-  });
-</script>

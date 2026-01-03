@@ -147,7 +147,7 @@ const url = (path: string) => `${base}${path}`;
     import StdlibSearchController from '../scripts/controllers/stdlib_search_controller';
     import LearnProgressController from '../scripts/controllers/learn_progress_controller';
     import ExercisesController from '../scripts/controllers/exercises_controller';
-    import { highlightAll, highlightAllJS } from '../scripts/highlighter';
+    import { highlightAll, highlightAllJS, highlightCodeBlocks } from '../scripts/highlighter';
 
     // Start Stimulus application
     const application = Application.start();
@@ -209,6 +209,9 @@ const url = (path: string) => `${base}${path}`;
     document.addEventListener('DOMContentLoaded', () => {
       highlightAll('.example-code');
       highlightAllJS('.code-js');
+      // Highlight markdown code blocks (blog posts, etc.) with language detection
+      // This finds pre > code[class*="language-"] and applies highlighting to the pre
+      highlightCodeBlocks('.post-content');
       initTheme();
       initMobileMenu();
     });
