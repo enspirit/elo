@@ -351,6 +351,16 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('Data', [Types.string], (args, ctx) => `elo_data(${ctx.emit(args[0])})`);
   sqlLib.register('Data', [Types.any], (args, ctx) => `elo_data(${ctx.emit(args[0])})`);
 
+  // String - convert any value to string (Elo literal format for complex types)
+  sqlLib.register('String', [Types.string], (args, ctx) => ctx.emit(args[0]));
+  sqlLib.register('String', [Types.int], (args, ctx) => `(${ctx.emit(args[0])})::TEXT`);
+  sqlLib.register('String', [Types.float], (args, ctx) => `(${ctx.emit(args[0])})::TEXT`);
+  sqlLib.register('String', [Types.bool], (args, ctx) => `(${ctx.emit(args[0])})::TEXT`);
+  sqlLib.register('String', [Types.null], (args, ctx) => `(${ctx.emit(args[0])})::TEXT`);
+  sqlLib.register('String', [Types.array], (args, ctx) => `elo_string(${ctx.emit(args[0])})`);
+  sqlLib.register('String', [Types.object], (args, ctx) => `elo_string(to_jsonb(${ctx.emit(args[0])}))`);
+  sqlLib.register('String', [Types.any], (args, ctx) => `elo_string(to_jsonb(${ctx.emit(args[0])}))`);
+
   // List manipulation functions
   // PostgreSQL doesn't have built-in array_reverse, use subquery with ordinality
   sqlLib.register('reverse', [Types.array], (args, ctx) => {

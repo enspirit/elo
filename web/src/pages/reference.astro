@@ -428,6 +428,11 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
           <p class="example-desc">Parses the string to the integer <code>123</code>.</p>
         </div>
         <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Convert to String</div>
+          <pre class="example-code">String(42) + ' items'</pre>
+          <p class="example-desc">Converts a value to its string representation.</p>
+        </div>
+        <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Parse Date</div>
           <pre class="example-code">Date('2024-12-25')</pre>
           <p class="example-desc">Parses ISO 8601 date string to a date value.</p>
@@ -437,7 +442,7 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
           <pre class="example-code">Data('&#123;"name": "Alice"&#125;').name</pre>
           <p class="example-desc">Parses a JSON string and accesses a property.</p>
         </div>
-        <p>Available: <code>Int()</code>, <code>Float()</code>, <code>Bool()</code>, <code>Date()</code>, <code>Datetime()</code>, <code>Duration()</code>, <code>Data()</code>.</p>
+        <p>Available: <code>Int()</code>, <code>Float()</code>, <code>Bool()</code>, <code>String()</code>, <code>Date()</code>, <code>Datetime()</code>, <code>Duration()</code>, <code>Data()</code>.</p>
       </section>
 
       <section class="doc-section" id="type-definitions">

@@ -22,4 +22,11 @@ CASE WHEN INTERVAL 'P1D' = INTERVAL 'P1D' THEN TRUE ELSE (SELECT pg_terminate_ba
 CASE WHEN elo_duration('P1D') = INTERVAL 'P1D' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN elo_duration('PT2H30M') = INTERVAL 'PT2H30M' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 TRUE /* assertFails not supported in SQL */
+CASE WHEN 'hello' = 'hello' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (123)::TEXT = '123' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (3.14)::TEXT = '3.14' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (TRUE)::TEXT = 'true' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (FALSE)::TEXT = 'false' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_string(ARRAY[1, 2, 3]) = '[1, 2, 3]' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_string(to_jsonb(jsonb_build_object('name', 'Alice'))) = '{name: ''Alice''}' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 

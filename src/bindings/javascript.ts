@@ -407,6 +407,16 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('Data', [Types.string], parserUnwrap('pData'));
   jsLib.register('Data', [Types.any], parserUnwrap('pData'));
 
+  // String - convert any value to string (Elo literal format for complex types)
+  jsLib.register('String', [Types.string], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('String', [Types.int], (args, ctx) => `String(${ctx.emit(args[0])})`);
+  jsLib.register('String', [Types.float], (args, ctx) => `String(${ctx.emit(args[0])})`);
+  jsLib.register('String', [Types.bool], (args, ctx) => `String(${ctx.emit(args[0])})`);
+  jsLib.register('String', [Types.null], (args, ctx) => `String(${ctx.emit(args[0])})`);
+  jsLib.register('String', [Types.array], helperCall('kString'));
+  jsLib.register('String', [Types.object], helperCall('kString'));
+  jsLib.register('String', [Types.any], helperCall('kString'));
+
   // List manipulation functions
   jsLib.register('reverse', [Types.array], (args, ctx) =>
     `[...${ctx.emit(args[0])}].reverse()`);

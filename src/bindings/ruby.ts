@@ -395,6 +395,25 @@ export function createRubyBinding(): StdLib<string> {
     return `(->(v) { case v when String; JSON.parse(v, symbolize_names: true) rescue raise ".: invalid JSON: #{v.inspect}" else v end }).call(${v})`;
   });
 
+  // String - convert any value to string (Elo literal format for complex types)
+  rubyLib.register('String', [Types.string], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('String', [Types.int], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
+  rubyLib.register('String', [Types.float], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
+  rubyLib.register('String', [Types.bool], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
+  rubyLib.register('String', [Types.null], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
+  rubyLib.register('String', [Types.array], (args, ctx) => {
+    ctx.requireHelper?.('k_string');
+    return `k_string(${ctx.emit(args[0])})`;
+  });
+  rubyLib.register('String', [Types.object], (args, ctx) => {
+    ctx.requireHelper?.('k_string');
+    return `k_string(${ctx.emit(args[0])})`;
+  });
+  rubyLib.register('String', [Types.any], (args, ctx) => {
+    ctx.requireHelper?.('k_string');
+    return `k_string(${ctx.emit(args[0])})`;
+  });
+
   // List manipulation functions
   rubyLib.register('reverse', [Types.array], (args, ctx) =>
     `${ctx.emit(args[0])}.reverse`);

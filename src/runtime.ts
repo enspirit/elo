@@ -176,6 +176,20 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
   return v;
 }`,
+  kString: `function kString(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string') return "'" + v.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'") + "'";
+  if (Duration.isDuration(v)) return v.toISO();
+  if (DateTime.isDateTime(v)) {
+    const iso = v.toISO();
+    return iso.includes('T') && !iso.endsWith('T00:00:00.000') ? 'D' + iso.substring(0, 19) : 'D' + iso.substring(0, 10);
+  }
+  if (Array.isArray(v)) return '[' + v.map(kString).join(', ') + ']';
+  if (typeof v === 'object') return '{' + Object.keys(v).map(k => k + ': ' + kString(v[k])).join(', ') + '}';
+  return String(v);
+}`,
 
   // Parser helpers - return Result: { success: boolean, path: string, message: string, value: any, cause: Result[] }
   pOk: `function pOk(v, p) { return { success: true, path: p, message: '', value: v, cause: [] }; }`,
@@ -323,5 +337,16 @@ end`,
   }
   err = find_error.call(r)
   raise "#{err[:path] || '.'}: #{err[:message] || 'type error'}"
+end`,
+  k_string: `def k_string(v)
+  return 'null' if v.nil?
+  return v ? 'true' : 'false' if v == true || v == false
+  return v.to_s if v.is_a?(Numeric)
+  return "'" + v.gsub("\\\\", "\\\\\\\\").gsub("'", "\\\\'") + "'" if v.is_a?(String)
+  return v.iso8601 if v.is_a?(ActiveSupport::Duration)
+  return v.strftime(v.to_time == v.to_date.to_time ? 'D%Y-%m-%d' : 'D%Y-%m-%dT%H:%M:%S') if v.is_a?(Date) || v.is_a?(DateTime) || v.is_a?(Time)
+  return '[' + v.map { |e| k_string(e) }.join(', ') + ']' if v.is_a?(Array)
+  return '{' + v.map { |k, val| k.to_s + ': ' + k_string(val) }.join(', ') + '}' if v.is_a?(Hash)
+  v.to_s
 end`,
 };

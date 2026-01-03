@@ -175,6 +175,59 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- String selector: convert any value to Elo literal format
+CREATE OR REPLACE FUNCTION elo_string(v JSONB) RETURNS TEXT AS $$
+DECLARE
+  t TEXT;
+  result TEXT;
+  elem JSONB;
+  key TEXT;
+  val JSONB;
+  first_elem BOOLEAN;
+BEGIN
+  IF v IS NULL THEN
+    RETURN 'null';
+  END IF;
+  t := jsonb_typeof(v);
+  IF t = 'null' THEN
+    RETURN 'null';
+  ELSIF t = 'boolean' THEN
+    RETURN CASE WHEN v::BOOLEAN THEN 'true' ELSE 'false' END;
+  ELSIF t = 'number' THEN
+    RETURN v#>>'{}';
+  ELSIF t = 'string' THEN
+    RETURN '''' || REPLACE(REPLACE(v#>>'{}', '\', '\\'), '''', '\''') || '''';
+  ELSIF t = 'array' THEN
+    result := '[';
+    first_elem := TRUE;
+    FOR elem IN SELECT * FROM jsonb_array_elements(v) LOOP
+      IF NOT first_elem THEN result := result || ', '; END IF;
+      result := result || elo_string(elem);
+      first_elem := FALSE;
+    END LOOP;
+    RETURN result || ']';
+  ELSIF t = 'object' THEN
+    result := '{';
+    first_elem := TRUE;
+    FOR key, val IN SELECT * FROM jsonb_each(v) LOOP
+      IF NOT first_elem THEN result := result || ', '; END IF;
+      result := result || key || ': ' || elo_string(val);
+      first_elem := FALSE;
+    END LOOP;
+    RETURN result || '}';
+  ELSE
+    RETURN v::TEXT;
+  END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- elo_string for arrays (native PostgreSQL arrays to Elo format)
+CREATE OR REPLACE FUNCTION elo_string(v ANYARRAY) RETURNS TEXT AS $$
+BEGIN
+  RETURN elo_string(to_jsonb(v));
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
 -- Deep merge two JSONB objects recursively
 CREATE OR REPLACE FUNCTION elo_deep_merge(a JSONB, b JSONB) RETURNS JSONB AS $$
 DECLARE
