@@ -154,7 +154,7 @@ import Footer from '../components/Footer.astro';
           <pre class="example-code">Data('&#123;"name": "Alice"&#125;').name</pre>
           <p class="example-desc">Parses a JSON string and accesses a property.</p>
         </div>
-        <p>Available: <code>Int()</code>, <code>Float()</code>, <code>Bool()</code>, <code>String()</code>, <code>Date()</code>, <code>Datetime()</code>, <code>Duration()</code>, <code>Data()</code>.</p>
+        <p>Available: <code>Int()</code>, <code>Float()</code>, <code>Bool()</code>, <code>String()</code>, <code>Null()</code>, <code>Date()</code>, <code>Datetime()</code>, <code>Duration()</code>, <code>Data()</code>.</p>
         <p class="note"><strong>Note:</strong> Type selectors can be combined into <a href="#data-schemas">Data Schemas</a> for validating complex data structures.</p>
       </section>
 
@@ -413,7 +413,7 @@ import Footer from '../components/Footer.astro';
         <p class="note"><strong>Note:</strong> Data schemas compile to JavaScript and Ruby only. SQL is not supported.</p>
 
         <h3>Basic Types</h3>
-        <p>All <a href="#type-selectors">type selectors</a> can be used as schema types: <code>Int</code>, <code>Float</code>, <code>Bool</code>, <code>String</code>, <code>Date</code>, <code>Datetime</code>, <code>Duration</code>, <code>Data</code>. Use <code>.</code> (dot) for any value.</p>
+        <p>All <a href="#type-selectors">type selectors</a> can be used as schema types: <code>Int</code>, <code>Float</code>, <code>Bool</code>, <code>String</code>, <code>Null</code>, <code>Date</code>, <code>Datetime</code>, <code>Duration</code>, <code>Data</code>. Use <code>.</code> (dot) for any value.</p>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Type Coercion</div>
           <pre class="example-code">let T = Int in '42' |> T</pre>

@@ -52,6 +52,12 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="example-code">Bool('true')</code><span class="fn-result">→ true</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">Null</div>
+            <div class="fn-sig">(value: Null) → Null</div>
+            <p class="fn-desc">Validates that a value is null. Throws on non-null input.</p>
+            <div class="fn-example"><code class="example-code">let T = Int|Null in null |> T</code><span class="fn-result">→ null</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Date</div>
             <div class="fn-sig">(value: String | Date) → Date</div>
             <p class="fn-desc">Parses an ISO date string (YYYY-MM-DD) to a Date. Throws on invalid input.</p>

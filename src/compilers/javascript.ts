@@ -297,6 +297,7 @@ function emitTypeExprParser(
       // Map type name to parser helper
       const parserMap: Record<string, string> = {
         'Any': 'pAny',
+        'Null': 'pNull',
         'String': 'pString',
         'Int': 'pInt',
         'Float': 'pFloat',

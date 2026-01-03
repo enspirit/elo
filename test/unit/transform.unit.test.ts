@@ -15,6 +15,9 @@ import {
   memberAccess,
   letExpr,
   lambda,
+  typeDef,
+  typeRef,
+  unionType,
 } from '../../src/ast';
 import { Types } from '../../src/types';
 import { inferType } from '../../src/ir';
@@ -737,5 +740,110 @@ describe('transform - depth limits', () => {
     }
     const ir = transform(ast);
     assert.strictEqual(ir.type, 'call');
+  });
+});
+
+describe('transform - type definitions', () => {
+  it('transforms typedef with built-in type selector Int', () => {
+    // let T = Int in 42
+    const ir = transform(typeDef('T', typeRef('Int'), literal(42)));
+    assert.strictEqual(ir.type, 'typedef');
+    if (ir.type === 'typedef') {
+      assert.strictEqual(ir.name, 'T');
+      assert.strictEqual(ir.typeExpr.kind, 'type_ref');
+      if (ir.typeExpr.kind === 'type_ref') {
+        assert.strictEqual(ir.typeExpr.name, 'Int');
+      }
+    }
+  });
+
+  it('transforms typedef with built-in type selector Null', () => {
+    // let T = Null in null
+    const ir = transform(typeDef('T', typeRef('Null'), literal(null as any)));
+    assert.strictEqual(ir.type, 'typedef');
+    if (ir.type === 'typedef') {
+      assert.strictEqual(ir.name, 'T');
+      assert.strictEqual(ir.typeExpr.kind, 'type_ref');
+      if (ir.typeExpr.kind === 'type_ref') {
+        assert.strictEqual(ir.typeExpr.name, 'Null');
+      }
+    }
+  });
+
+  it('transforms typedef with all built-in type selectors', () => {
+    // All built-in types should work: Any, Null, String, Int, Float, Bool, Boolean, Datetime
+    const builtinTypes = ['Any', 'Null', 'String', 'Int', 'Float', 'Bool', 'Boolean', 'Datetime'];
+    for (const typeName of builtinTypes) {
+      const ir = transform(typeDef('T', typeRef(typeName), literal(42)));
+      assert.strictEqual(ir.type, 'typedef');
+      if (ir.type === 'typedef') {
+        assert.strictEqual(ir.typeExpr.kind, 'type_ref');
+        if (ir.typeExpr.kind === 'type_ref') {
+          assert.strictEqual(ir.typeExpr.name, typeName);
+        }
+      }
+    }
+  });
+
+  it('rejects unknown type selector', () => {
+    // let T = Foo in 42 should fail with "Unknown type selector"
+    assert.throws(
+      () => transform(typeDef('T', typeRef('Foo'), literal(42))),
+      /Unknown type selector: 'Foo'/
+    );
+  });
+
+  it('rejects unknown type selector in union type', () => {
+    // let T = Int|Foo in 42 should fail with "Unknown type selector"
+    assert.throws(
+      () => transform(typeDef('T', unionType([typeRef('Int'), typeRef('Foo')]), literal(42))),
+      /Unknown type selector: 'Foo'/
+    );
+  });
+
+  it('allows user-defined type in nested typedef', () => {
+    // let A = String, B = A in body
+    // This parses as: typeDef('A', String, typeDef('B', A, body))
+    const ir = transform(
+      typeDef('A', typeRef('String'),
+        typeDef('B', typeRef('A'), literal(42))
+      )
+    );
+    assert.strictEqual(ir.type, 'typedef');
+    if (ir.type === 'typedef') {
+      assert.strictEqual(ir.name, 'A');
+      assert.strictEqual(ir.body.type, 'typedef');
+      if (ir.body.type === 'typedef') {
+        assert.strictEqual(ir.body.name, 'B');
+        assert.strictEqual(ir.body.typeExpr.kind, 'type_ref');
+        if (ir.body.typeExpr.kind === 'type_ref') {
+          assert.strictEqual(ir.body.typeExpr.name, 'A');
+        }
+      }
+    }
+  });
+
+  it('allows user-defined type in union with built-in types', () => {
+    // let Foo = Bool, X = Int|Foo in body
+    const ir = transform(
+      typeDef('Foo', typeRef('Bool'),
+        typeDef('X', unionType([typeRef('Int'), typeRef('Foo')]), literal(42))
+      )
+    );
+    assert.strictEqual(ir.type, 'typedef');
+    if (ir.type === 'typedef') {
+      assert.strictEqual(ir.body.type, 'typedef');
+      if (ir.body.type === 'typedef') {
+        assert.strictEqual(ir.body.typeExpr.kind, 'union_type');
+      }
+    }
+  });
+
+  it('rejects self-referential type in single typedef', () => {
+    // let Foo = Foo in 42 should fail (Foo is not yet defined when its type expr is parsed)
+    assert.throws(
+      () => transform(typeDef('Foo', typeRef('Foo'), literal(42))),
+      /Unknown type selector: 'Foo'/
+    );
   });
 });

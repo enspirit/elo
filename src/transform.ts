@@ -192,6 +192,20 @@ function transformWithDepth(
 }
 
 /**
+ * Built-in type selectors that can be used in type expressions
+ */
+const BUILTIN_TYPE_SELECTORS = new Set([
+  'Any',
+  'Null',
+  'String',
+  'Int',
+  'Float',
+  'Bool',
+  'Boolean',
+  'Datetime',
+]);
+
+/**
  * Transform an AST type expression to IR type expression
  */
 function transformTypeExprWithContext(
@@ -203,8 +217,18 @@ function transformTypeExprWithContext(
   allowUndefinedVariables: boolean
 ): IRTypeExpr {
   switch (typeExpr.kind) {
-    case 'type_ref':
-      return irTypeRef(typeExpr.name);
+    case 'type_ref': {
+      const name = typeExpr.name;
+      // Validate that the type reference is either a built-in type or a user-defined type in scope
+      if (!BUILTIN_TYPE_SELECTORS.has(name)) {
+        // Check if it's a user-defined type (uppercase identifier in environment as function type)
+        const envType = env.get(name);
+        if (!envType || envType.kind !== 'fn') {
+          throw new Error(`Unknown type selector: '${name}'`);
+        }
+      }
+      return irTypeRef(name);
+    }
 
     case 'type_schema': {
       const props = typeExpr.properties.map(prop => ({

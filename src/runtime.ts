@@ -17,6 +17,7 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   kNeq: ['kEq'],
   // Parser helpers depend on pOk/pFail
   pAny: ['pOk'],
+  pNull: ['pOk', 'pFail'],
   pString: ['pOk', 'pFail'],
   pInt: ['pOk', 'pFail'],
   pBool: ['pOk', 'pFail'],
@@ -195,6 +196,10 @@ export const JS_HELPERS: Record<string, string> = {
   pOk: `function pOk(v, p) { return { success: true, path: p, message: '', value: v, cause: [] }; }`,
   pFail: `function pFail(p, m, c) { return { success: false, path: p, message: m || '', value: null, cause: c || [] }; }`,
   pAny: `function pAny(v, p) { return pOk(v, p); }`,
+  pNull: `function pNull(v, p) {
+  if (v === null || v === undefined) return pOk(null, p);
+  return pFail(p, 'expected Null, got ' + typeof v);
+}`,
   pString: `function pString(v, p) {
   if (typeof v === 'string') return pOk(v, p);
   return pFail(p, 'expected String, got ' + (v === null ? 'Null' : typeof v));
@@ -248,6 +253,7 @@ export const JS_HELPERS: Record<string, string> = {
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   p_any: ['p_ok'],
+  p_null: ['p_ok', 'p_fail'],
   p_string: ['p_ok', 'p_fail'],
   p_int: ['p_ok', 'p_fail'],
   p_bool: ['p_ok', 'p_fail'],
@@ -288,6 +294,10 @@ end`,
   p_ok: `def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end`,
   p_fail: `def p_fail(p, m = nil, c = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [] } end`,
   p_any: `def p_any(v, p) p_ok(v, p) end`,
+  p_null: `def p_null(v, p)
+  return p_ok(nil, p) if v.nil?
+  p_fail(p, "expected Null, got #{v.class}")
+end`,
   p_string: `def p_string(v, p)
   return p_ok(v, p) if v.is_a?(String)
   p_fail(p, "expected String, got #{v.nil? ? 'Null' : v.class}")

@@ -75,3 +75,15 @@ assertFails(fn( ~> let Ints = [Int] in ['1', null, '3'] |> Ints ))
 assertFails(fn( ~> let T = Float in 'bad' |> T ))
 # Bool parsing failure
 assertFails(fn( ~> let T = Bool in 'bad' |> T ))
+# Null type selector
+assert((let T = Null in null |> T) == null)
+assertFails(fn( ~> let T = Null in 'not-null' |> T ))
+assertFails(fn( ~> let T = Null in 42 |> T ))
+assertFails(fn( ~> let T = Null in true |> T ))
+# Null in union type
+assert((let T = Int|Null in null |> T) == null)
+assert((let T = Int|Null in 42 |> T) == 42)
+assert((let T = Int|Null in '42' |> T) == 42)
+# Nullable object property
+assert((let T = { value: Int|Null } in { value: null } |> T) == { value: null })
+assert((let T = { value: Int|Null } in { value: 42 } |> T) == { value: 42 })
