@@ -89,7 +89,7 @@ const EXAMPLE_INPUTS: Record<string, string> = {
 };
 
 export default class PlaygroundController extends Controller {
-  static targets = ['editor', 'inputEditor', 'output', 'language', 'pretty', 'prelude', 'error', 'result', 'resultPanel', 'copyButton', 'saveButton', 'runButton', 'examples'];
+  static targets = ['editor', 'inputEditor', 'output', 'language', 'pretty', 'prelude', 'jsonOutput', 'error', 'result', 'resultPanel', 'copyButton', 'saveButton', 'runButton', 'examples'];
 
   declare editorTarget: HTMLDivElement;
   declare inputEditorTarget: HTMLDivElement;
@@ -97,6 +97,7 @@ export default class PlaygroundController extends Controller {
   declare languageTarget: HTMLSelectElement;
   declare prettyTarget: HTMLInputElement;
   declare preludeTarget: HTMLInputElement;
+  declare jsonOutputTarget: HTMLInputElement;
   declare errorTarget: HTMLDivElement;
   declare resultTarget: HTMLPreElement;
   declare resultPanelTarget: HTMLDivElement;
@@ -436,6 +437,9 @@ export default class PlaygroundController extends Controller {
   }
 
   private formatResult(value: any): string {
+    if (this.jsonOutputTarget.checked) {
+      return JSON.stringify(value, null, 2);
+    }
     return toEloCode(value);
   }
 

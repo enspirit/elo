@@ -66,7 +66,17 @@ import Layout from '../layouts/Layout.astro';
 
     <section class="output-panel">
       <div class="result-panel" data-playground-target="resultPanel">
-        <span class="result-label">Result:</span>
+        <div class="result-header">
+          <span class="result-label">Result:</span>
+          <label class="result-format-toggle">
+            <input
+              type="checkbox"
+              data-playground-target="jsonOutput"
+              data-action="change->playground#run"
+            />
+            JSON
+          </label>
+        </div>
         <pre class="result-value" data-playground-target="result"></pre>
       </div>
       <div class="error" data-playground-target="error"></div>
