@@ -2,6 +2,24 @@
 
 All notable changes to Elo are documented in this file.
 
+## [0.9.5] - 2026-01-03
+
+### Language Features
+- Add guard and check expressions for runtime validation
+- Add labeled subtype constraints (Finitio-style) with better error messages
+- Add polymorphic fetch for extracting multiple paths into tuples or lists
+
+### Playground
+- Add fetch-to-tuple and fetch-to-list examples
+- Reorganize examples dropdown to match Reference structure
+
+### Documentation
+- Document guards on home page, Try, and Learn sections
+- Add blog post about guards, checks, and polymorphic fetch
+
+### Fixes
+- Fix Ruby syntax error in labeled constraint error messages
+
 ## [0.9.4] - 2026-01-03
 
 ### Language Features
