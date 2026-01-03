@@ -77,11 +77,11 @@ in
         </div>
 
         <div class="unique-grid">
-          <div class="unique-example clickable" data-action="click->doc#tryExample">
-            <pre class="example-code">items
+          <div class="unique-example clickable" data-action="click->doc#tryExample" data-input='[{"price": 50}, {"price": 150}, {"price": 200}]'>
+            <pre class="example-code">_
   |> filter(i ~> i.price > 100)
   |> map(i ~> i.price * 1.21)
-  |> sum</pre>
+  |> reduce(0, fn(a, b ~> a + b))</pre>
           </div>
           <div class="unique-explain">
             <h4>Functional &amp; Portable</h4>

@@ -156,6 +156,8 @@ export default class PlaygroundController extends Controller {
       this.setCode(codeFromUrl);
       if (inputFromUrl) {
         this.setInputData(inputFromUrl);
+        // Auto-expand input accordion if input data was provided
+        this.inputAccordionTarget.classList.add('open');
       }
       // Clean URL without reload
       window.history.replaceState({}, '', window.location.pathname);
