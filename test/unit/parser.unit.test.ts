@@ -1656,3 +1656,114 @@ describe('Parser - Guard expressions', () => {
     }
   });
 });
+
+describe('Parser - Trailing Commas', () => {
+  it('should parse array with trailing comma', () => {
+    const ast = parse('[1, 2, 3,]');
+    assert.deepStrictEqual(ast, {
+      type: 'array',
+      elements: [
+        { type: 'literal', value: 1 },
+        { type: 'literal', value: 2 },
+        { type: 'literal', value: 3 }
+      ]
+    });
+  });
+
+  it('should parse array with single element and trailing comma', () => {
+    const ast = parse('[1,]');
+    assert.deepStrictEqual(ast, {
+      type: 'array',
+      elements: [{ type: 'literal', value: 1 }]
+    });
+  });
+
+  it('should parse object with trailing comma', () => {
+    const ast = parse('{a: 1, b: 2,}');
+    assert.strictEqual(ast.type, 'object');
+    if (ast.type === 'object') {
+      assert.strictEqual(ast.properties.length, 2);
+      assert.strictEqual(ast.properties[0].key, 'a');
+      assert.strictEqual(ast.properties[1].key, 'b');
+    }
+  });
+
+  it('should parse object with single property and trailing comma', () => {
+    const ast = parse('{a: 1,}');
+    assert.strictEqual(ast.type, 'object');
+    if (ast.type === 'object') {
+      assert.strictEqual(ast.properties.length, 1);
+      assert.strictEqual(ast.properties[0].key, 'a');
+    }
+  });
+
+  it('should parse type schema with trailing comma', () => {
+    const ast = parse('let T = { name: String, age: Int, } in x |> T');
+    assert.strictEqual(ast.type, 'typedef');
+    if (ast.type === 'typedef') {
+      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
+      if (ast.typeExpr.kind === 'type_schema') {
+        assert.strictEqual(ast.typeExpr.properties.length, 2);
+      }
+    }
+  });
+
+  it('should parse let with trailing comma', () => {
+    const ast = parse('let x = 2, y = 3, in x * y');
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.bindings.length, 1);
+      assert.strictEqual(ast.bindings[0].name, 'x');
+      assert.strictEqual(ast.body.type, 'let');
+    }
+  });
+
+  it('should parse let with single binding and trailing comma', () => {
+    const ast = parse('let x = 2, in x * 2');
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.bindings.length, 1);
+      assert.strictEqual(ast.bindings[0].name, 'x');
+      assert.strictEqual(ast.body.type, 'binary');
+    }
+  });
+
+  it('should parse guard with trailing comma', () => {
+    const ast = parse('guard x > 0, y > 0, in x + y');
+    assert.strictEqual(ast.type, 'guard');
+    if (ast.type === 'guard') {
+      assert.strictEqual(ast.constraints.length, 2);
+    }
+  });
+
+  it('should parse pipe guard with trailing comma', () => {
+    const ast = parse('guard(x | x > 0, x < 100,)');
+    assert.strictEqual(ast.type, 'lambda');
+    if (ast.type === 'lambda') {
+      assert.strictEqual(ast.body.type, 'guard');
+      if (ast.body.type === 'guard') {
+        assert.strictEqual(ast.body.constraints.length, 2);
+      }
+    }
+  });
+
+  it('should parse subtype constraint with trailing comma', () => {
+    const ast = parse('let T = Int(i | i > 0, i < 100,) in x |> T');
+    assert.strictEqual(ast.type, 'typedef');
+    if (ast.type === 'typedef') {
+      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
+      if (ast.typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.typeExpr.constraints.length, 2);
+      }
+    }
+  });
+
+  it('should parse type definition with trailing comma', () => {
+    const ast = parse('let T = String, in x |> T');
+    assert.strictEqual(ast.type, 'typedef');
+    if (ast.type === 'typedef') {
+      assert.strictEqual(ast.name, 'T');
+      assert.strictEqual(ast.typeExpr.kind, 'type_ref');
+    }
+  });
+});

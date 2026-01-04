@@ -1084,6 +1084,9 @@ export class Parser {
     );
   }
 
+  /**
+   * Trailing commas are allowed: let x=2, y=3, in x*y
+   */
   private letExpr(): Expr {
     this.eat('LET');
 
@@ -1105,6 +1108,9 @@ export class Parser {
     // Parse additional bindings
     while (this.currentToken.type === 'COMMA') {
       this.eat('COMMA');
+      // Allow trailing comma: check if next token ends bindings (IN, GUARD, CHECK)
+      const nextType = (this.currentToken as Token).type;
+      if (nextType === 'IN' || nextType === 'GUARD' || nextType === 'CHECK') break;
       const name = this.currentToken.value;
       this.eat('IDENTIFIER');
       this.eat('ASSIGN');
@@ -1132,6 +1138,7 @@ export class Parser {
    * Parse a type definition: let Person = { name: String, age: Int } in body
    * Called after 'let' when we see an UPPER_IDENTIFIER
    * Supports multiple bindings: let Person = {...}, Persons = [Person] in body
+   * Trailing commas are allowed: let Person = {...}, in body
    */
   private typeDefExpr(): Expr {
     const typeName = this.currentToken.value;
@@ -1145,7 +1152,12 @@ export class Parser {
       // Next binding could be another type def or a value binding
       // Use type assertion since eat() updates currentToken but TS doesn't track this
       const nextTokenType = this.currentToken.type as TokenType;
-      if (nextTokenType === 'UPPER_IDENTIFIER') {
+      // Allow trailing comma: check if next token is IN
+      if (nextTokenType === 'IN') {
+        this.eat('IN');
+        const body = this.expr();
+        return typeDef(typeName, typeExpr, body);
+      } else if (nextTokenType === 'UPPER_IDENTIFIER') {
         // Another type definition - recurse
         const body = this.typeDefExpr();
         return typeDef(typeName, typeExpr, body);
@@ -1164,6 +1176,7 @@ export class Parser {
   /**
    * Parse remaining let bindings after a comma (when mixing type and value bindings)
    * Returns a LetExpr with the remaining bindings
+   * Trailing commas are allowed
    */
   private parseLetBindingsAfterComma(): Expr {
     const bindings: LetBinding[] = [];
@@ -1178,6 +1191,8 @@ export class Parser {
     // Parse additional bindings
     while (this.currentToken.type === 'COMMA') {
       this.eat('COMMA');
+      // Allow trailing comma: check if next token is IN
+      if ((this.currentToken as Token).type === 'IN') break;
       const name = this.currentToken.value;
       this.eat('IDENTIFIER');
       this.eat('ASSIGN');
@@ -1261,6 +1276,7 @@ export class Parser {
    * - Labeled constraint: Int(i | positive: i > 0)
    * - Multiple constraints: Int(i | positive: i > 0, even: i % 2 == 0)
    * - String labels: Int(i | 'must be positive': i > 0)
+   * - Trailing commas are allowed: Int(i | i > 0,)
    */
   private subtypeConstraintExpr(baseType: TypeExpr): TypeExpr {
     this.eat('LPAREN');
@@ -1278,6 +1294,8 @@ export class Parser {
 
     while ((this.currentToken as Token).type === 'COMMA') {
       this.eat('COMMA');
+      // Allow trailing comma: check if next token closes the constraint
+      if ((this.currentToken as Token).type === 'RPAREN') break;
       constraints.push(this.parseConstraint());
     }
 
@@ -1337,6 +1355,7 @@ export class Parser {
 
   /**
    * Parse a type schema: { name: String, age: Int, nickname :? String, ... } or { name: String, ...: Int }
+   * Trailing commas are allowed: { name: String, age: Int, }
    * extras:
    * - { x: Int } - closed, no extra attrs allowed
    * - { x: Int, ... } - ignored, extra attrs allowed but not included
@@ -1449,6 +1468,7 @@ export class Parser {
   /**
    * Parse the body of a pipe-style guard after LPAREN has been consumed.
    * Returns null if not a valid pattern, restoring the saved state.
+   * Trailing commas are allowed: guard(i | i>0, i<0,)
    */
   private parsePipeGuardBody(guardType: 'guard' | 'check', savedState: ParserState): Expr | null {
     // Check for IDENTIFIER PIPE pattern
@@ -1472,6 +1492,8 @@ export class Parser {
 
     while ((this.currentToken as Token).type === 'COMMA') {
       this.eat('COMMA');
+      // Allow trailing comma: check if next token closes the guard
+      if ((this.currentToken as Token).type === 'RPAREN') break;
       constraints.push(this.parseConstraint());
     }
 
@@ -1487,6 +1509,7 @@ export class Parser {
   /**
    * Parse guard/check expression: guard [label:] condition[, ...] in body
    * Supports the guard...let...check...in sugar pattern
+   * Trailing commas are allowed: guard age > 0, length(name) > 0, in age
    */
   private guardExprParse(guardType: 'guard' | 'check'): Expr {
     this.eat(guardType === 'guard' ? 'GUARD' : 'CHECK');
@@ -1497,6 +1520,9 @@ export class Parser {
 
     while ((this.currentToken as Token).type === 'COMMA') {
       this.eat('COMMA');
+      // Allow trailing comma: check if next token ends constraints (IN, GUARD, CHECK)
+      const nextType = (this.currentToken as Token).type;
+      if (nextType === 'IN' || nextType === 'GUARD' || nextType === 'CHECK') break;
       constraints.push(this.parseConstraint());
     }
 
@@ -1553,6 +1579,7 @@ export class Parser {
 
   /**
    * Parse object literal: {key: value, key2: value2, ...}
+   * Trailing commas are allowed: {a: 1, b: 2,}
    */
   private objectParse(): Expr {
     this.eat('LBRACE');
@@ -1575,6 +1602,8 @@ export class Parser {
     // Parse additional properties
     while (this.currentToken.type === 'COMMA') {
       this.eat('COMMA');
+      // Allow trailing comma: check if next token closes the object
+      if ((this.currentToken as Token).type === 'RBRACE') break;
       const name = this.currentToken.value;
       this.eat('IDENTIFIER');
       this.eat('COLON');
@@ -1588,6 +1617,7 @@ export class Parser {
 
   /**
    * Parse array literal: [expr, expr, ...]
+   * Trailing commas are allowed: [1, 2, 3,]
    */
   private arrayParse(): Expr {
     this.eat('LBRACKET');
@@ -1606,6 +1636,8 @@ export class Parser {
     // Parse additional elements
     while (this.currentToken.type === 'COMMA') {
       this.eat('COMMA');
+      // Allow trailing comma: check if next token closes the array
+      if ((this.currentToken as Token).type === 'RBRACKET') break;
       elements.push(this.expr());
     }
 
