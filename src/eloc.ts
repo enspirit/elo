@@ -2,10 +2,12 @@
 
 import { readFileSync, writeFileSync } from 'fs';
 import { parse } from './parser';
+import { transform } from './transform';
 import { compileToRubyWithMeta } from './compilers/ruby';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
 import { getPrelude, Target as PreludeTarget } from './preludes';
+import { TypeCheckCollector } from './typecheck';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json');
@@ -28,6 +30,8 @@ interface Options {
   execute?: boolean;
   /** If true, strip guard/check assertions from output */
   stripGuards?: boolean;
+  /** If true, perform static type checking and report warnings */
+  typecheck?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
@@ -77,6 +81,10 @@ function parseArgs(args: string[]): Options {
         options.stripGuards = true;
         break;
 
+      case '--typecheck':
+        options.typecheck = true;
+        break;
+
       case '-h':
       case '--help':
         printHelp();
@@ -123,6 +131,7 @@ Options:
   -p, --prelude             Include necessary library imports/requires
   --prelude-only            Output only the prelude (no expression needed)
   --strip-guards            Strip guard/check assertions from output
+  --typecheck               Perform static type checking and report warnings to stderr
   -f, --file <path>         Output to file instead of stdout
   -v, --version             Show version number
   -h, --help                Show this help message
@@ -161,11 +170,17 @@ interface CompileOptions {
   includePrelude?: boolean;
   execute?: boolean;
   stripGuards?: boolean;
+  typeChecker?: TypeCheckCollector;
 }
 
 function compile(source: string, target: Target, options: CompileOptions = {}): string {
   const ast = parse(source);
-  const { includePrelude = false, execute = false, stripGuards = false } = options;
+  const { includePrelude = false, execute = false, stripGuards = false, typeChecker } = options;
+
+  // Run type checking if requested (transform with typeChecker collects warnings)
+  if (typeChecker) {
+    transform(ast, new Map(), new Set(), { typeChecker });
+  }
 
   let code: string;
   switch (target) {
@@ -241,6 +256,9 @@ function main() {
     process.exit(1);
   }
 
+  // Create type checker if requested
+  const typeChecker = options.typecheck ? new TypeCheckCollector() : undefined;
+
   // Compile each expression
   let results: string[];
   try {
@@ -254,7 +272,8 @@ function main() {
         return compile(trimmed, options.target, {
           includePrelude: index === 0 && options.prelude,
           execute: options.execute,
-          stripGuards: options.stripGuards
+          stripGuards: options.stripGuards,
+          typeChecker
         });
       } catch (error) {
         throw new Error(`Line ${index + 1}: ${error}`);
@@ -263,6 +282,13 @@ function main() {
   } catch (error) {
     console.error(`Compilation error: ${error}`);
     process.exit(1);
+  }
+
+  // Report type warnings to stderr
+  if (typeChecker && typeChecker.hasWarnings()) {
+    for (const warning of typeChecker.warnings) {
+      console.error(`Warning: ${warning.message}`);
+    }
   }
 
   // Join lines with newlines

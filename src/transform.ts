@@ -44,6 +44,7 @@ import {
 import { TypeExpr } from './ast';
 import { EloType, Types } from './types';
 import { eloTypeDefs } from './typedefs';
+import { TypeCheckCollector } from './typecheck';
 
 /**
  * Type environment: maps variable names to their inferred types
@@ -65,6 +66,10 @@ export interface TransformOptions {
    * If false (default), undefined variables throw an error to prevent access to host globals.
    */
   allowUndefinedVariables?: boolean;
+  /**
+   * If provided, collect type warnings during transformation.
+   */
+  typeChecker?: TypeCheckCollector;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -80,7 +85,8 @@ export function transform(
 ): IRExpr {
   const maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
   const allowUndefinedVariables = options.allowUndefinedVariables ?? false;
-  return transformWithDepth(expr, env, defining, 0, maxDepth, allowUndefinedVariables);
+  const typeChecker = options.typeChecker ?? null;
+  return transformWithDepth(expr, env, defining, 0, maxDepth, allowUndefinedVariables, typeChecker);
 }
 
 /**
@@ -92,14 +98,15 @@ function transformWithDepth(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRExpr {
   if (depth > maxDepth) {
     throw new Error(`Maximum transform depth exceeded (${maxDepth})`);
   }
   const nextDepth = depth + 1;
   const recurse = (e: Expr, newEnv: TypeEnv = env, newDefining: DefiningSet = defining) =>
-    transformWithDepth(e, newEnv, newDefining, nextDepth, maxDepth, allowUndefinedVariables);
+    transformWithDepth(e, newEnv, newDefining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
 
   switch (expr.type) {
     case 'literal':
@@ -129,22 +136,22 @@ function transformWithDepth(
       return irVariable(expr.name, env.get(expr.name) ?? Types.any);
 
     case 'binary':
-      return transformBinaryOp(expr.operator, expr.left, expr.right, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      return transformBinaryOp(expr.operator, expr.left, expr.right, env, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
 
     case 'unary':
-      return transformUnaryOp(expr.operator, expr.operand, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      return transformUnaryOp(expr.operator, expr.operand, env, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
 
     case 'temporal_keyword':
       return transformTemporalKeyword(expr.keyword);
 
     case 'function_call':
-      return transformFunctionCall(expr.name, expr.args, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      return transformFunctionCall(expr.name, expr.args, env, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
 
     case 'member_access':
       return irMemberAccess(recurse(expr.object), expr.property);
 
     case 'let':
-      return transformLet(expr.bindings, expr.body, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      return transformLet(expr.bindings, expr.body, env, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
 
     case 'if':
       return irIf(
@@ -154,7 +161,7 @@ function transformWithDepth(
       );
 
     case 'lambda':
-      return transformLambda(expr.params, expr.body, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      return transformLambda(expr.params, expr.body, env, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
 
     case 'object':
       return irObject(
@@ -168,7 +175,7 @@ function transformWithDepth(
       return irArray(expr.elements.map((el) => recurse(el)));
 
     case 'alternative':
-      return transformAlternative(expr.alternatives, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      return transformAlternative(expr.alternatives, env, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
 
     case 'apply': {
       const fnIR = recurse(expr.fn);
@@ -182,11 +189,11 @@ function transformWithDepth(
 
     case 'typedef': {
       // Transform type definition
-      const irTypeExpr = transformTypeExprWithContext(expr.typeExpr, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      const irTypeExpr = transformTypeExprWithContext(expr.typeExpr, env, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
       // Add type name to environment as a parser function type
       const newEnv = new Map(env);
       newEnv.set(expr.name, Types.fn);
-      const bodyIR = transformWithDepth(expr.body, newEnv, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      const bodyIR = transformWithDepth(expr.body, newEnv, defining, nextDepth, maxDepth, allowUndefinedVariables, typeChecker);
       return irTypeDef(expr.name, irTypeExpr, bodyIR);
     }
 
@@ -225,7 +232,8 @@ function transformTypeExprWithContext(
   defining: Set<string>,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRTypeExpr {
   switch (typeExpr.kind) {
     case 'type_ref': {
@@ -244,7 +252,7 @@ function transformTypeExprWithContext(
     case 'type_schema': {
       const props = typeExpr.properties.map(prop => ({
         key: prop.key,
-        typeExpr: transformTypeExprWithContext(prop.typeExpr, env, defining, depth, maxDepth, allowUndefinedVariables),
+        typeExpr: transformTypeExprWithContext(prop.typeExpr, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker),
         optional: prop.optional,
       }));
       // Transform extras if it's a TypeExpr, otherwise pass through as-is
@@ -252,32 +260,32 @@ function transformTypeExprWithContext(
       if (typeExpr.extras === 'closed' || typeExpr.extras === 'ignored' || typeExpr.extras === undefined) {
         extras = typeExpr.extras;
       } else {
-        extras = transformTypeExprWithContext(typeExpr.extras, env, defining, depth, maxDepth, allowUndefinedVariables);
+        extras = transformTypeExprWithContext(typeExpr.extras, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker);
       }
       return irTypeSchema(props, extras);
     }
 
     case 'subtype_constraint': {
       // Transform the base type
-      const baseTypeIR = transformTypeExprWithContext(typeExpr.baseType, env, defining, depth, maxDepth, allowUndefinedVariables);
+      const baseTypeIR = transformTypeExprWithContext(typeExpr.baseType, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker);
       // Transform each constraint with the variable in scope
       const constraintEnv = new Map(env);
       constraintEnv.set(typeExpr.variable, Types.any);
       const constraintsIR = typeExpr.constraints.map(c => ({
         label: c.label,
-        condition: transformWithDepth(c.condition, constraintEnv, defining, depth, maxDepth, allowUndefinedVariables)
+        condition: transformWithDepth(c.condition, constraintEnv, defining, depth, maxDepth, allowUndefinedVariables, typeChecker)
       }));
       return irSubtypeConstraint(baseTypeIR, typeExpr.variable, constraintsIR);
     }
 
     case 'array_type':
       return irArrayType(
-        transformTypeExprWithContext(typeExpr.elementType, env, defining, depth, maxDepth, allowUndefinedVariables)
+        transformTypeExprWithContext(typeExpr.elementType, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker)
       );
 
     case 'union_type':
       return irUnionType(
-        typeExpr.types.map(t => transformTypeExprWithContext(t, env, defining, depth, maxDepth, allowUndefinedVariables))
+        typeExpr.types.map(t => transformTypeExprWithContext(t, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker))
       );
   }
 }
@@ -307,10 +315,11 @@ function transformBinaryOp(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRExpr {
-  const leftIR = transformWithDepth(left, env, defining, depth, maxDepth, allowUndefinedVariables);
-  const rightIR = transformWithDepth(right, env, defining, depth, maxDepth, allowUndefinedVariables);
+  const leftIR = transformWithDepth(left, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker);
+  const rightIR = transformWithDepth(right, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker);
   const leftType = inferType(leftIR);
   const rightType = inferType(rightIR);
 
@@ -318,9 +327,24 @@ function transformBinaryOp(
   if (!fn) {
     throw new Error(`Unknown binary operator: ${operator}`);
   }
-  const resultType = eloTypeDefs.lookup(fn, [leftType, rightType]);
 
-  return irCall(fn, [leftIR, rightIR], [leftType, rightType], resultType);
+  const argTypes = [leftType, rightType];
+
+  // Type checking
+  if (typeChecker) {
+    // Check for 'any' type involvement
+    if (leftType.kind === 'any' || rightType.kind === 'any') {
+      typeChecker.warnAnyType(fn, argTypes);
+    }
+    // Check for missing signature
+    else if (!eloTypeDefs.has(fn, argTypes)) {
+      typeChecker.warnTypeMismatch(fn, argTypes);
+    }
+  }
+
+  const resultType = eloTypeDefs.lookup(fn, argTypes);
+
+  return irCall(fn, [leftIR, rightIR], argTypes, resultType);
 }
 
 /**
@@ -333,18 +357,34 @@ function transformUnaryOp(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRExpr {
-  const operandIR = transformWithDepth(operand, env, defining, depth, maxDepth, allowUndefinedVariables);
+  const operandIR = transformWithDepth(operand, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker);
   const operandType = inferType(operandIR);
 
   const fn = unaryOpNameMap[operator];
   if (!fn) {
     throw new Error(`Unknown unary operator: ${operator}`);
   }
-  const resultType = eloTypeDefs.lookup(fn, [operandType]);
 
-  return irCall(fn, [operandIR], [operandType], resultType);
+  const argTypes = [operandType];
+
+  // Type checking
+  if (typeChecker) {
+    // Check for 'any' type involvement
+    if (operandType.kind === 'any') {
+      typeChecker.warnAnyType(fn, argTypes);
+    }
+    // Check for missing signature
+    else if (!eloTypeDefs.has(fn, argTypes)) {
+      typeChecker.warnTypeMismatch(fn, argTypes);
+    }
+  }
+
+  const resultType = eloTypeDefs.lookup(fn, argTypes);
+
+  return irCall(fn, [operandIR], argTypes, resultType);
 }
 
 /**
@@ -421,14 +461,15 @@ function transformFunctionCall(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRExpr {
   // Check for recursive call
   if (defining.has(name)) {
     throw new Error(`Recursive function calls are not allowed: '${name}' cannot call itself`);
   }
 
-  const argsIR = args.map((arg) => transformWithDepth(arg, env, defining, depth, maxDepth, allowUndefinedVariables));
+  const argsIR = args.map((arg) => transformWithDepth(arg, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker));
   const argTypes = argsIR.map(inferType);
 
   // Check if the name is a variable holding a lambda
@@ -437,6 +478,19 @@ function transformFunctionCall(
     // Lambda application: emit irApply
     const fnVar = irVariable(name, varType);
     return irApply(fnVar, argsIR, argTypes, Types.any);
+  }
+
+  // Type checking for stdlib function call
+  if (typeChecker) {
+    // Check for 'any' type involvement
+    const hasAny = argTypes.some(t => t.kind === 'any');
+    if (hasAny) {
+      typeChecker.warnAnyType(name, argTypes);
+    }
+    // Check for missing signature (only if no 'any' types, since 'any' always matches via fallback)
+    else if (!eloTypeDefs.has(name, argTypes)) {
+      typeChecker.warnTypeMismatch(name, argTypes);
+    }
   }
 
   // stdlib function call
@@ -454,7 +508,8 @@ function transformLet(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRExpr {
   // Build a new environment with the bindings
   const newEnv = new Map(env);
@@ -464,13 +519,13 @@ function transformLet(
     const isLambda = binding.value.type === 'lambda';
     const newDefining = isLambda ? new Set([...defining, binding.name]) : defining;
 
-    const valueIR = transformWithDepth(binding.value, newEnv, newDefining, depth, maxDepth, allowUndefinedVariables);
+    const valueIR = transformWithDepth(binding.value, newEnv, newDefining, depth, maxDepth, allowUndefinedVariables, typeChecker);
     const valueType = inferType(valueIR);
     newEnv.set(binding.name, valueType);
     return { name: binding.name, value: valueIR };
   });
 
-  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth, allowUndefinedVariables);
+  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth, allowUndefinedVariables, typeChecker);
   return irLet(irBindings, bodyIR);
 }
 
@@ -484,7 +539,8 @@ function transformLambda(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRExpr {
   // Build a new environment with params as 'any' type
   const newEnv = new Map(env);
@@ -493,7 +549,7 @@ function transformLambda(
     return { name, inferredType: Types.any };
   });
 
-  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth, allowUndefinedVariables);
+  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth, allowUndefinedVariables, typeChecker);
   const resultType = inferType(bodyIR);
   return irLambda(irParams, bodyIR, resultType);
 }
@@ -511,10 +567,11 @@ function transformAlternative(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
+  typeChecker: TypeCheckCollector | null
 ): IRExpr {
   const irAlts = alternatives.map((alt) =>
-    transformWithDepth(alt, env, defining, depth, maxDepth, allowUndefinedVariables)
+    transformWithDepth(alt, env, defining, depth, maxDepth, allowUndefinedVariables, typeChecker)
   );
 
   // Infer result type: use first non-any type, or any if all are any
