@@ -1,0 +1,12 @@
+# Type mismatch: string - int has no signature
+'hello' - 5
+# Type mismatch: negation of string
+-'world'
+# Type mismatch: bool + bool has no signature
+true + false
+# Any type: input variable is any
+_.x + 1
+# Any type: member access returns any
+_.name |> upper
+# Type mismatch: upper expects string, not int
+upper(42)

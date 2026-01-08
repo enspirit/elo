@@ -35,4 +35,12 @@ fi
 
 echo ""
 
+# Test Type Checking
+echo "Typecheck Tests:"
+if ! "$SCRIPTS_DIR/test-typecheck.sh" "$TEST_DIR"; then
+    EXIT_CODE=1
+fi
+
+echo ""
+
 exit ${EXIT_CODE:-0}
