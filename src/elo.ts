@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'fs';
-import { parse } from './parser';
-import { compileToJavaScriptWithMeta } from './compilers/javascript';
-import { DateTime, Duration } from 'luxon';
-import { defaultFormats, getFormat, FormatRegistry } from './formats';
+import { readFileSync } from "fs";
+import { parse } from "./parser";
+import { compileToJavaScriptWithMeta } from "./compilers/javascript";
+import { DateTime, Duration } from "luxon";
+import { defaultFormats, getFormat, FormatRegistry } from "./formats";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const pkg = require('../../package.json');
+const pkg = require("../../package.json");
 
-type InputFormat = 'json' | 'csv';
-type OutputFormat = 'json' | 'elo' | 'csv';
+type InputFormat = "json" | "csv";
+type OutputFormat = "json" | "elo" | "csv";
 
 interface Options {
   expression?: string;
@@ -32,60 +32,68 @@ function parseArgs(args: string[]): Options {
     const arg = args[i];
 
     switch (arg) {
-      case '-e':
-      case '--expression':
+      case "-e":
+      case "--expression":
         options.expression = args[++i];
         break;
 
-      case '-d':
-      case '--data':
+      case "-d":
+      case "--data":
         options.inputData = args[++i];
         break;
 
-      case '--stdin':
+      case "--stdin":
         options.stdinData = true;
         break;
 
-      case '-f':
-      case '--input-format':
+      case "-f":
+      case "--input-format":
         options.inputFormat = args[++i] as InputFormat;
-        if (options.inputFormat !== 'json' && options.inputFormat !== 'csv') {
-          console.error(`Invalid input format: ${options.inputFormat}. Use 'json' or 'csv'.`);
+        if (options.inputFormat !== "json" && options.inputFormat !== "csv") {
+          console.error(
+            `Invalid input format: ${options.inputFormat}. Use 'json' or 'csv'.`,
+          );
           process.exit(1);
         }
         break;
 
-      case '-o':
-      case '--output-format':
+      case "-o":
+      case "--output-format":
         options.outputFormat = args[++i] as OutputFormat;
-        if (options.outputFormat !== 'json' && options.outputFormat !== 'elo' && options.outputFormat !== 'csv') {
-          console.error(`Invalid output format: ${options.outputFormat}. Use 'json', 'elo', or 'csv'.`);
+        if (
+          options.outputFormat !== "json" &&
+          options.outputFormat !== "elo" &&
+          options.outputFormat !== "csv"
+        ) {
+          console.error(
+            `Invalid output format: ${options.outputFormat}. Use 'json', 'elo', or 'csv'.`,
+          );
           process.exit(1);
         }
         break;
 
-      case '-h':
-      case '--help':
+      case "-h":
+      case "--help":
         printHelp();
         process.exit(0);
         break;
 
-      case '-v':
-      case '--version':
+      case "-v":
+      case "--version":
         console.log(`Elo ${pkg.version}`);
         process.exit(0);
         break;
 
-      case '-':
+      case "-":
         // Read expression from stdin
-        options.inputFile = '-';
+        options.inputFile = "-";
         break;
 
       default:
         // If it doesn't start with -, treat it as input file
-        if (!arg.startsWith('-') && !options.inputFile && !options.expression) {
+        if (!arg.startsWith("-") && !options.inputFile && !options.expression) {
           options.inputFile = arg;
-        } else if (!arg.startsWith('-')) {
+        } else if (!arg.startsWith("-")) {
           console.error(`Unknown argument: ${arg}`);
           printHelp();
           process.exit(1);
@@ -146,28 +154,32 @@ Examples:
  * Detect input format from file extension
  */
 function detectInputFormat(filePath: string): InputFormat {
-  if (filePath.endsWith('.csv')) {
-    return 'csv';
+  if (filePath.endsWith(".csv")) {
+    return "csv";
   }
-  return 'json';
+  return "json";
 }
 
 /**
  * Parse input data from CLI option (JSON/CSV string or @file path)
  */
-function parseInputData(inputData: string, format: InputFormat | undefined, formats: FormatRegistry): unknown {
+function parseInputData(
+  inputData: string,
+  format: InputFormat | undefined,
+  formats: FormatRegistry,
+): unknown {
   let dataString = inputData;
   let detectedFormat = format;
 
   // If starts with @, read from file
-  if (inputData.startsWith('@')) {
+  if (inputData.startsWith("@")) {
     const filePath = inputData.slice(1);
     // Auto-detect format from extension if not specified
     if (!detectedFormat) {
       detectedFormat = detectInputFormat(filePath);
     }
     try {
-      dataString = readFileSync(filePath, 'utf-8');
+      dataString = readFileSync(filePath, "utf-8");
     } catch (error) {
       console.error(`Error reading input file ${filePath}: ${error}`);
       process.exit(1);
@@ -176,13 +188,15 @@ function parseInputData(inputData: string, format: InputFormat | undefined, form
 
   // Default to JSON if not specified
   if (!detectedFormat) {
-    detectedFormat = 'json';
+    detectedFormat = "json";
   }
 
   try {
     return getFormat(formats, detectedFormat).parse(dataString);
   } catch (error) {
-    console.error(`Error parsing input ${detectedFormat.toUpperCase()}: ${error}`);
+    console.error(
+      `Error parsing input ${detectedFormat.toUpperCase()}: ${error}`,
+    );
     process.exit(1);
   }
 }
@@ -196,7 +210,7 @@ function evaluate(source: string, inputValue: unknown): unknown {
 
   // Create function with luxon DateTime and Duration in scope
   // The compiled code is always a function that takes _ as input
-  const execFn = new Function('DateTime', 'Duration', `return ${result.code}`);
+  const execFn = new Function("DateTime", "Duration", `return ${result.code}`);
   const fn = execFn(DateTime, Duration);
 
   return fn(inputValue);
@@ -222,42 +236,51 @@ function main() {
   } else if (options.inputFile) {
     try {
       // Use file descriptor 0 for stdin when input is '-'
-      const content = options.inputFile === '-'
-        ? readFileSync(0, 'utf-8')
-        : readFileSync(options.inputFile, 'utf-8');
+      const content =
+        options.inputFile === "-"
+          ? readFileSync(0, "utf-8")
+          : readFileSync(options.inputFile, "utf-8");
       // Split into lines - keep all lines but mark empty/comment lines as null
-      sources = content.split('\n').map(line => {
+      sources = content.split("\n").map((line) => {
         const trimmed = line.trim();
-        return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
+        return trimmed === "" || trimmed.startsWith("#") ? "" : line;
       });
     } catch (error) {
-      console.error(`Error reading ${options.inputFile === '-' ? 'stdin' : `file ${options.inputFile}`}: ${error}`);
+      console.error(
+        `Error reading ${options.inputFile === "-" ? "stdin" : `file ${options.inputFile}`}: ${error}`,
+      );
       process.exit(1);
     }
   } else {
-    console.error('Error: Must provide either -e <expression>, an input file, or - for stdin');
+    console.error(
+      "Error: Must provide either -e <expression>, an input file, or - for stdin",
+    );
     printHelp();
     process.exit(1);
   }
 
   // Get input data
   let inputValue: unknown = null;
-  const inputFormat = options.inputFormat || 'json';
+  const inputFormat = options.inputFormat || "json";
 
   if (options.stdinData) {
     try {
-      const stdinContent = readFileSync(0, 'utf-8');
+      const stdinContent = readFileSync(0, "utf-8");
       inputValue = getFormat(formats, inputFormat).parse(stdinContent);
     } catch (error) {
       console.error(`Error reading/parsing stdin: ${error}`);
       process.exit(1);
     }
   } else if (options.inputData) {
-    inputValue = parseInputData(options.inputData, options.inputFormat, formats);
+    inputValue = parseInputData(
+      options.inputData,
+      options.inputFormat,
+      formats,
+    );
   }
 
   // Evaluate each expression
-  const outputFormat = options.outputFormat || 'json';
+  const outputFormat = options.outputFormat || "json";
   const outputAdapter = getFormat(formats, outputFormat);
   const outputs: string[] = [];
   for (let i = 0; i < sources.length; i++) {
@@ -265,7 +288,7 @@ function main() {
     const trimmed = source.trim();
 
     // Skip empty lines and comments
-    if (trimmed === '' || trimmed.startsWith('#')) {
+    if (trimmed === "" || trimmed.startsWith("#")) {
       continue;
     }
 
@@ -279,7 +302,7 @@ function main() {
   }
 
   // Output results
-  console.log(outputs.join('\n'));
+  console.log(outputs.join("\n"));
 }
 
 main();

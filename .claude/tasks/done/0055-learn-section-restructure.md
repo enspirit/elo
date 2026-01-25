@@ -8,6 +8,7 @@ learning path.
 ## Current State
 
 9 lessons covering basics:
+
 1. Playing with Numbers - arithmetic
 2. Words, Words, Words - strings
 3. True or False? - booleans
@@ -21,6 +22,7 @@ learning path.
 ## Proposed Structure
 
 ### Basics (lessons 1-5, unchanged)
+
 1. Playing with Numbers - arithmetic
 2. Words, Words, Words - strings
 3. True or False? - booleans
@@ -28,6 +30,7 @@ learning path.
 5. Naming Things - let bindings
 
 ### Intermediate (lessons 6-10)
+
 6. Time Flies - dates, durations, NOW/TODAY (existing, minor updates)
 7. Bundling Data - objects (existing)
 8. **Lists of Things** - arrays `[1, 2, 3]`, `length()`, indexing (NEW)
@@ -35,6 +38,7 @@ learning path.
 10. Piping It Through - pipe operator (existing)
 
 ### Advanced (lessons 11-15, all NEW)
+
 11. **Transforming Lists** - `map`, `filter`, `reduce` with lambdas
 12. **Checking Lists** - `any`, `all` with predicates `fn(x | x > 0)`
 13. **Handling Missing Values** - `null`, `isNull()`, `|` fallback operator
@@ -63,6 +67,7 @@ learning path.
 ## Content Guidelines
 
 Each lesson should follow existing patterns:
+
 - Brief intro paragraph explaining the concept
 - 2-4 clickable examples with `data-action="click->doc#tryExample"`
 - A "lesson-tip" with practical advice or mental model
@@ -71,6 +76,7 @@ Each lesson should follow existing patterns:
 ## Examples for New Lessons
 
 ### Lesson 8: Lists of Things
+
 ```elo
 [1, 2, 3, 4, 5]
 ['apple', 'banana', 'cherry']
@@ -78,6 +84,7 @@ length([1, 2, 3])
 ```
 
 ### Lesson 11: Transforming Lists
+
 ```elo
 map([1, 2, 3], fn(x ~> x * 2))
 filter([1, 2, 3, 4, 5], fn(x | x > 2))
@@ -85,6 +92,7 @@ reduce([1, 2, 3, 4], 0, fn(acc, x ~> acc + x))
 ```
 
 ### Lesson 12: Checking Lists
+
 ```elo
 any([1, 2, 3], fn(x | x > 2))
 all([1, 2, 3], fn(x | x > 0))
@@ -92,6 +100,7 @@ let prices = [10, 20, 5] in all(prices, fn(p | p < 100))
 ```
 
 ### Lesson 13: Handling Missing Values
+
 ```elo
 null
 isNull(null)
@@ -100,6 +109,7 @@ let x = null in x | 0
 ```
 
 ### Lesson 14: Time Ranges
+
 ```elo
 TODAY in SOW ... EOW
 D2024-06-15 in SOM ... EOM
@@ -107,6 +117,7 @@ NOW in SOY ... EOY
 ```
 
 ### Lesson 15: Parsing Data
+
 ```elo
 Int('42')
 Date('2024-12-25')

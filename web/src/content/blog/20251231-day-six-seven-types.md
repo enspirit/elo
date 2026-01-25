@@ -21,21 +21,25 @@ The exercises range from simple arithmetic to complex data transformations. They
 Day seven introduced something powerful: user-defined types. Inspired by [Finitio](https://finitio.io/), Elo now supports:
 
 **Subtype constraints:**
+
 ```elo
 let Positive = Int(x | x > 0) in 42 |> Positive
 ```
 
 **Union types:**
+
 ```elo
 let StringOrNull = String | Null in null |> StringOrNull
 ```
 
 **Structured types:**
+
 ```elo
 let Person = { name: String, age :? Int } in { name: 'Alice' } |> Person
 ```
 
 **Array types:**
+
 ```elo
 let Numbers = [Int] in [1, 2, 3] |> Numbers
 ```

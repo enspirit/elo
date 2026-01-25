@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('../dist/src/elo.js');
+require("../dist/src/elo.js");

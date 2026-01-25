@@ -4,13 +4,13 @@ Add basic array stdlib functions for accessing array elements.
 
 ## Functions
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `length` | `Array -> Int` | Number of elements |
-| `at` | `(Array, Int) -> Any` | Element at index (0-based) |
-| `first` | `Array -> Any` | First element (or null) |
-| `last` | `Array -> Any` | Last element (or null) |
-| `isEmpty` | `Array -> Bool` | True if empty |
+| Function  | Signature             | Description                |
+| --------- | --------------------- | -------------------------- |
+| `length`  | `Array -> Int`        | Number of elements         |
+| `at`      | `(Array, Int) -> Any` | Element at index (0-based) |
+| `first`   | `Array -> Any`        | First element (or null)    |
+| `last`    | `Array -> Any`        | Last element (or null)     |
+| `isEmpty` | `Array -> Bool`       | True if empty              |
 
 ## Implementation
 

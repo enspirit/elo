@@ -4,6 +4,7 @@ The current `assert()` function works for acceptance tests but has no real-world
 use in larger programs because Elo has no statement sequencing.
 
 We need a way to express preconditions/postconditions that:
+
 1. Can be embedded in real programs (not just tests)
 2. Can be stripped at compile time (production builds)
 3. Include optional labels/messages for reasoning about code
@@ -92,6 +93,7 @@ data |> guard(x |
 ```
 
 Semantics:
+
 - `guard(x | condition)` returns `x` if condition is true, throws otherwise
 - Reuses constraint parsing from task 121
 

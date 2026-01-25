@@ -1,10 +1,10 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { compile } from '../../src/compile';
-import { parse } from '../../src/parser';
-import { DateTime, Duration } from 'luxon';
+import { describe, it } from "bun:test";
+import assert from "node:assert";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { compile } from "../../src/compile";
+import { parse } from "../../src/parser";
+import { DateTime, Duration } from "luxon";
 
 /**
  * Unified test for all website examples.
@@ -22,8 +22,8 @@ import { DateTime, Duration } from 'luxon';
  */
 
 const runtime = { DateTime, Duration };
-const webDir = path.join(process.cwd(), 'web/src');
-const blogDir = path.join(webDir, 'content/blog');
+const webDir = path.join(process.cwd(), "web/src");
+const blogDir = path.join(webDir, "content/blog");
 
 // Helper to compile and evaluate an expression
 function evaluate<T>(code: string, input: unknown = null): T {
@@ -33,33 +33,33 @@ function evaluate<T>(code: string, input: unknown = null): T {
 
 // Helper to read files
 function readFile(relativePath: string): string {
-  return fs.readFileSync(path.join(webDir, relativePath), 'utf-8');
+  return fs.readFileSync(path.join(webDir, relativePath), "utf-8");
 }
 
 function readBlogFile(filename: string): string {
-  return fs.readFileSync(path.join(blogDir, filename), 'utf-8');
+  return fs.readFileSync(path.join(blogDir, filename), "utf-8");
 }
 
 function getBlogFiles(): string[] {
   if (!fs.existsSync(blogDir)) return [];
-  return fs.readdirSync(blogDir).filter(f => f.endsWith('.md'));
+  return fs.readdirSync(blogDir).filter((f) => f.endsWith(".md"));
 }
 
 // Decode HTML entities
 function decodeHtml(html: string): string {
   return html
-    .replace(/&#123;/g, '{')
-    .replace(/&#125;/g, '}')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
+    .replace(/&#123;/g, "{")
+    .replace(/&#125;/g, "}")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
 }
 
 // Strip Astro template wrapper {`...`}
 function stripAstroWrapper(code: string): string {
-  if (code.startsWith('{`') && code.endsWith('`}')) {
+  if (code.startsWith("{`") && code.endsWith("`}")) {
     return code.slice(2, -2);
   }
   return code;
@@ -68,9 +68,9 @@ function stripAstroWrapper(code: string): string {
 // Check if example should be skipped
 function shouldSkip(code: string): boolean {
   // Skip exercise templates with ??? placeholders
-  if (code.includes('???')) return true;
+  if (code.includes("???")) return true;
   // Skip examples that deliberately fail
-  if (code.includes('fail(')) return true;
+  if (code.includes("fail(")) return true;
   return false;
 }
 
@@ -79,18 +79,20 @@ function parseExpected(expectedStr: string): unknown {
   const trimmed = expectedStr.trim();
 
   // Handle special values
-  if (trimmed === 'true') return true;
-  if (trimmed === 'false') return false;
-  if (trimmed === 'null') return null;
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  if (trimmed === "null") return null;
 
   // Handle quoted strings
-  if ((trimmed.startsWith("'") && trimmed.endsWith("'")) ||
-      (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+  if (
+    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+  ) {
     return trimmed.slice(1, -1);
   }
 
   // Handle arrays
-  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
     try {
       // Try JSON parse first
       return JSON.parse(trimmed);
@@ -106,15 +108,13 @@ function parseExpected(expectedStr: string): unknown {
   }
 
   // Handle objects/tuples - convert Elo syntax to JSON
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
     try {
       // Try JSON parse first
       return JSON.parse(trimmed);
     } catch {
       // Convert Elo object syntax to JSON: {name: 'Alice'} -> {"name": "Alice"}
-      const jsonStr = trimmed
-        .replace(/(\w+):/g, '"$1":')
-        .replace(/'/g, '"');
+      const jsonStr = trimmed.replace(/(\w+):/g, '"$1":').replace(/'/g, '"');
       try {
         return JSON.parse(jsonStr);
       } catch {
@@ -128,13 +128,13 @@ function parseExpected(expectedStr: string): unknown {
   if (!isNaN(num)) return num;
 
   // Handle date literals like D2024-01-15
-  if (trimmed.startsWith('D') && /^D\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-    return 'DateTime'; // Just check it's a DateTime
+  if (trimmed.startsWith("D") && /^D\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return "DateTime"; // Just check it's a DateTime
   }
 
   // Handle duration literals like P1D
-  if (trimmed.startsWith('P') && /^P\d/.test(trimmed)) {
-    return 'Duration'; // Just check it's a Duration
+  if (trimmed.startsWith("P") && /^P\d/.test(trimmed)) {
+    return "Duration"; // Just check it's a Duration
   }
 
   return trimmed;
@@ -143,29 +143,29 @@ function parseExpected(expectedStr: string): unknown {
 // Compare results, handling special types
 function resultsMatch(actual: unknown, expected: unknown): boolean {
   // Special type checks
-  if (expected === 'DateTime') {
+  if (expected === "DateTime") {
     return DateTime.isDateTime(actual);
   }
-  if (expected === 'Duration') {
+  if (expected === "Duration") {
     return Duration.isDuration(actual);
   }
 
   // For DateTime results, just check it's a DateTime
   if (DateTime.isDateTime(actual)) {
-    if (typeof expected === 'string' && expected.startsWith('D')) {
+    if (typeof expected === "string" && expected.startsWith("D")) {
       return true; // Accept any DateTime for date literal expectations
     }
   }
 
   // For Duration results, just check it's a Duration
   if (Duration.isDuration(actual)) {
-    if (typeof expected === 'string' && expected.startsWith('P')) {
+    if (typeof expected === "string" && expected.startsWith("P")) {
       return true; // Accept any Duration for duration literal expectations
     }
   }
 
   // Deep equality for objects/arrays
-  if (typeof actual === 'object' && typeof expected === 'object') {
+  if (typeof actual === "object" && typeof expected === "object") {
     try {
       assert.deepStrictEqual(actual, expected);
       return true;
@@ -196,7 +196,8 @@ function extractAstroExamples(content: string, source: string): Example[] {
 
   // Match pre or code with class="language-elo"
   // We need to also capture the parent context for data-input
-  const regex = /<(?:pre|code)\s+class="language-elo"[^>]*>([^<]+)<\/(?:pre|code)>/g;
+  const regex =
+    /<(?:pre|code)\s+class="language-elo"[^>]*>([^<]+)<\/(?:pre|code)>/g;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
@@ -256,7 +257,8 @@ function extractStdlibExamples(content: string): Example[] {
   const examples: Example[] = [];
 
   // Match code with class="language-elo" followed by fn-result span
-  const regex = /<code\s+class="language-elo">([^<]+)<\/code><span\s+class="fn-result">→\s*([^<]+)<\/span>/g;
+  const regex =
+    /<code\s+class="language-elo">([^<]+)<\/code><span\s+class="fn-result">→\s*([^<]+)<\/span>/g;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
@@ -289,7 +291,7 @@ function extractStdlibExamples(content: string): Example[] {
 
     const expected = parseExpected(decodeHtml(expectedStr));
 
-    examples.push({ code, input, expected, line, source: 'stdlib.astro' });
+    examples.push({ code, input, expected, line, source: "stdlib.astro" });
   }
 
   return examples;
@@ -303,16 +305,21 @@ function extractPlaygroundExamples(content: string): Example[] {
   const examples: Example[] = [];
 
   // Extract EXAMPLES constant
-  const examplesMatch = content.match(/const EXAMPLES:\s*Record<string,\s*string>\s*=\s*\{([\s\S]*?)\n\};/);
+  const examplesMatch = content.match(
+    /const EXAMPLES:\s*Record<string,\s*string>\s*=\s*\{([\s\S]*?)\n\};/,
+  );
   if (!examplesMatch) return examples;
 
   // Extract EXAMPLE_INPUTS constant
-  const inputsMatch = content.match(/const EXAMPLE_INPUTS:\s*Record<string,\s*ExampleInput>\s*=\s*\{([\s\S]*?)\n\};/);
+  const inputsMatch = content.match(
+    /const EXAMPLE_INPUTS:\s*Record<string,\s*ExampleInput>\s*=\s*\{([\s\S]*?)\n\};/,
+  );
   const inputs = new Map<string, { data: string; format: string }>();
 
   if (inputsMatch) {
     // Parse each input entry
-    const inputRegex = /'([^']+)':\s*\{\s*data:\s*`([^`]+)`,\s*format:\s*'([^']+)'\s*\}/g;
+    const inputRegex =
+      /'([^']+)':\s*\{\s*data:\s*`([^`]+)`,\s*format:\s*'([^']+)'\s*\}/g;
     let inputMatch;
     while ((inputMatch = inputRegex.exec(inputsMatch[1])) !== null) {
       inputs.set(inputMatch[1], { data: inputMatch[2], format: inputMatch[3] });
@@ -329,9 +336,9 @@ function extractPlaygroundExamples(content: string): Example[] {
 
     // Strip comment lines
     code = code
-      .split('\n')
-      .filter(line => !line.trim().startsWith('#'))
-      .join('\n')
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("#"))
+      .join("\n")
       .trim();
 
     if (shouldSkip(code)) continue;
@@ -341,11 +348,11 @@ function extractPlaygroundExamples(content: string): Example[] {
     const inputConfig = inputs.get(name);
     if (inputConfig) {
       // Skip CSV examples as they need special parsing
-      if (inputConfig.format === 'csv') {
+      if (inputConfig.format === "csv") {
         continue;
       }
       try {
-        if (inputConfig.format === 'json') {
+        if (inputConfig.format === "json") {
           input = JSON.parse(inputConfig.data);
         }
       } catch {
@@ -358,7 +365,7 @@ function extractPlaygroundExamples(content: string): Example[] {
       input,
       expected: undefined,
       line: 0, // Line not relevant for this source
-      source: `playground:${name}`
+      source: `playground:${name}`,
     });
   }
 
@@ -385,9 +392,9 @@ function extractBlogExamples(content: string, filename: string): Example[] {
 
     // Strip comment lines
     code = code
-      .split('\n')
-      .filter(line => !line.trim().startsWith('#'))
-      .join('\n')
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("#"))
+      .join("\n")
       .trim();
 
     if (shouldSkip(code)) continue;
@@ -397,7 +404,7 @@ function extractBlogExamples(content: string, filename: string): Example[] {
       input: null,
       expected: undefined,
       line,
-      source: `blog:${filename}`
+      source: `blog:${filename}`,
     });
   }
 
@@ -422,10 +429,10 @@ function testExample(example: Example): void {
       if (!resultsMatch(result, example.expected)) {
         assert.fail(
           `Result mismatch:\n` +
-          `  Code: ${example.code.slice(0, 80)}...\n` +
-          `  Input: ${JSON.stringify(example.input)}\n` +
-          `  Expected: ${JSON.stringify(example.expected)}\n` +
-          `  Actual: ${JSON.stringify(result)}`
+            `  Code: ${example.code.slice(0, 80)}...\n` +
+            `  Input: ${JSON.stringify(example.input)}\n` +
+            `  Expected: ${JSON.stringify(example.expected)}\n` +
+            `  Actual: ${JSON.stringify(result)}`,
         );
       }
     }
@@ -434,10 +441,10 @@ function testExample(example: Example): void {
     const error = e as Error;
     assert.fail(
       `Example failed:\n` +
-      `  Source: ${example.source}:${example.line}\n` +
-      `  Code: ${example.code}\n` +
-      `  Input: ${JSON.stringify(example.input)}\n` +
-      `  Error: ${error.message}`
+        `  Source: ${example.source}:${example.line}\n` +
+        `  Code: ${example.code}\n` +
+        `  Input: ${JSON.stringify(example.input)}\n` +
+        `  Error: ${error.message}`,
     );
   }
 }
@@ -446,11 +453,11 @@ function testExample(example: Example): void {
  * Create a short description for a test
  */
 function describeExample(example: Example): string {
-  const codePreview = example.code.slice(0, 50).replace(/\n/g, ' ');
-  if (example.source.startsWith('playground:')) {
-    return example.source.replace('playground:', '');
+  const codePreview = example.code.slice(0, 50).replace(/\n/g, " ");
+  if (example.source.startsWith("playground:")) {
+    return example.source.replace("playground:", "");
   }
-  if (example.source.startsWith('blog:')) {
+  if (example.source.startsWith("blog:")) {
     return `${example.source}:${example.line}`;
   }
   return `line ${example.line}: ${codePreview}...`;
@@ -460,28 +467,27 @@ function describeExample(example: Example): string {
 // Tests
 // ============================================================================
 
-describe('Website Examples', () => {
-
-  describe('learn.astro', () => {
-    const content = readFile('pages/learn.astro');
-    const examples = extractAstroExamples(content, 'learn.astro');
-
-    for (const example of examples) {
-      it(describeExample(example), () => testExample(example));
-    }
-  });
-
-  describe('reference.astro', () => {
-    const content = readFile('pages/reference.astro');
-    const examples = extractAstroExamples(content, 'reference.astro');
+describe("Website Examples", () => {
+  describe("learn.astro", () => {
+    const content = readFile("pages/learn.astro");
+    const examples = extractAstroExamples(content, "learn.astro");
 
     for (const example of examples) {
       it(describeExample(example), () => testExample(example));
     }
   });
 
-  describe('stdlib.astro', () => {
-    const content = readFile('pages/stdlib.astro');
+  describe("reference.astro", () => {
+    const content = readFile("pages/reference.astro");
+    const examples = extractAstroExamples(content, "reference.astro");
+
+    for (const example of examples) {
+      it(describeExample(example), () => testExample(example));
+    }
+  });
+
+  describe("stdlib.astro", () => {
+    const content = readFile("pages/stdlib.astro");
     const examples = extractStdlibExamples(content);
 
     for (const example of examples) {
@@ -489,17 +495,17 @@ describe('Website Examples', () => {
     }
   });
 
-  describe('index.astro', () => {
-    const content = readFile('pages/index.astro');
-    const examples = extractAstroExamples(content, 'index.astro');
+  describe("index.astro", () => {
+    const content = readFile("pages/index.astro");
+    const examples = extractAstroExamples(content, "index.astro");
 
     for (const example of examples) {
       it(describeExample(example), () => testExample(example));
     }
   });
 
-  describe('playground examples', () => {
-    const content = readFile('scripts/controllers/playground_controller.ts');
+  describe("playground examples", () => {
+    const content = readFile("scripts/controllers/playground_controller.ts");
     const examples = extractPlaygroundExamples(content);
 
     for (const example of examples) {
@@ -507,7 +513,7 @@ describe('Website Examples', () => {
     }
   });
 
-  describe('blog posts', () => {
+  describe("blog posts", () => {
     const blogFiles = getBlogFiles();
 
     for (const filename of blogFiles) {

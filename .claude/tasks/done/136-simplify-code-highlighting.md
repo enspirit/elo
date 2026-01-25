@@ -2,10 +2,10 @@
 
 The web implementation has too many different logics for code highlighting :
 
-* various `<pre class="">` and `<code class="...">`
-* highlightAll
-* highlightAllJS
-* highlightCodeBlocks
+- various `<pre class="">` and `<code class="...">`
+- highlightAll
+- highlightAllJS
+- highlightCodeBlocks
 
 ## Idea
 

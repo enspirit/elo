@@ -1,16 +1,686 @@
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const six = () => 6; return six(); })(), 6))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const product = () => 2 * 3; return product(); })(), 6))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => 42)(), 42))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => 2 * 3)(), 6))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kMul(l, r) { if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r); if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l); return l * r; } return (function() { if (!(kEq(((x) => kMul(x, 2))(5), 10))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => 42)(), 42))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kMul(l, r) { if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r); if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l); return l * r; } return (function() { if (!(kEq((() => { const double = (x) => kMul(x, 2); return double(5); })(), 10))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kAdd(l, r) { if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r); if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l); if (Duration.isDuration(l) && Duration.isDuration(r)) return Duration.fromMillis(l.toMillis() + r.toMillis()); return l + r; } function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const add = (x, y) => kAdd(x, y); return add(3, 4); })(), 7))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kMul(l, r) { if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r); if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l); return l * r; } return (function() { if (!(kEq((() => { const mul = (a, b) => kMul(a, b); return mul(6, 7); })(), 42))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kMul(l, r) { if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r); if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l); return l * r; } return (function() { if (!(kEq((() => { const abs = (x) => kMul(x, 2); return abs(-5); })(), -10))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kAdd(l, r) { if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r); if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l); if (Duration.isDuration(l) && Duration.isDuration(r)) return Duration.fromMillis(l.toMillis() + r.toMillis()); return l + r; } function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const round = (x) => kAdd(x, 1); return round(10); })(), 11))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const length = (s) => 42; return length("ignored"); })(), 42))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kAdd(l, r) { if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r); if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l); if (Duration.isDuration(l) && Duration.isDuration(r)) return Duration.fromMillis(l.toMillis() + r.toMillis()); return l + r; } function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kMul(l, r) { if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r); if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l); return l * r; } return (function() { if (!(kEq((() => { const nested = (x) => (() => { const inner = (y) => kMul(y, 2); return kAdd(inner(x), 1); })(); return nested(5); })(), 11))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const toUpper = (s) => s.toUpperCase(); return toUpper("hello"); })(), "HELLO"))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const toLower = (s) => s.toLowerCase(); return toLower("HELLO"); })(), "hello"))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((() => { const strLen = (s) => s.length; return strLen("hello"); })(), 5))) throw new Error("Assertion failed"); return true; })(); })(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const six = () => 6;
+          return six();
+        })(),
+        6,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const product = () => 2 * 3;
+          return product();
+        })(),
+        6,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (!kEq((() => 42)(), 42)) throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (!kEq((() => 2 * 3)(), 6)) throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kMul(l, r) {
+    if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r);
+    if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l);
+    return l * r;
+  }
+  return (function () {
+    if (!kEq(((x) => kMul(x, 2))(5), 10)) throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (!kEq((() => 42)(), 42)) throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kMul(l, r) {
+    if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r);
+    if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l);
+    return l * r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const double = (x) => kMul(x, 2);
+          return double(5);
+        })(),
+        10,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kAdd(l, r) {
+    if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
+    if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l);
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return Duration.fromMillis(l.toMillis() + r.toMillis());
+    return l + r;
+  }
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const add = (x, y) => kAdd(x, y);
+          return add(3, 4);
+        })(),
+        7,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kMul(l, r) {
+    if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r);
+    if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l);
+    return l * r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const mul = (a, b) => kMul(a, b);
+          return mul(6, 7);
+        })(),
+        42,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kMul(l, r) {
+    if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r);
+    if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l);
+    return l * r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const abs = (x) => kMul(x, 2);
+          return abs(-5);
+        })(),
+        -10,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kAdd(l, r) {
+    if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
+    if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l);
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return Duration.fromMillis(l.toMillis() + r.toMillis());
+    return l + r;
+  }
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const round = (x) => kAdd(x, 1);
+          return round(10);
+        })(),
+        11,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const length = (s) => 42;
+          return length("ignored");
+        })(),
+        42,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kAdd(l, r) {
+    if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
+    if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l);
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return Duration.fromMillis(l.toMillis() + r.toMillis());
+    return l + r;
+  }
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kMul(l, r) {
+    if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r);
+    if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l);
+    return l * r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const nested = (x) =>
+            (() => {
+              const inner = (y) => kMul(y, 2);
+              return kAdd(inner(x), 1);
+            })();
+          return nested(5);
+        })(),
+        11,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const toUpper = (s) => s.toUpperCase();
+          return toUpper("hello");
+        })(),
+        "HELLO",
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const toLower = (s) => s.toLowerCase();
+          return toLower("HELLO");
+        })(),
+        "hello",
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  return (function () {
+    if (
+      !kEq(
+        (() => {
+          const strLen = (s) => s.length;
+          return strLen("hello");
+        })(),
+        5,
+      )
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);

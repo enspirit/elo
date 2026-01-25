@@ -1,14 +1,14 @@
 ## Problem to solve
 
-* Programs could be wrong. Also compiled programs are sometimes more complex
+- Programs could be wrong. Also compiled programs are sometimes more complex
   than necessary because we need to generate kXXX functions (e.g. kMul) to cover
   all possible cases at runtime while some of them might be unnecessary.
-* A type inference + checker could be much greater for end users.
+- A type inference + checker could be much greater for end users.
 
 ## Idea
 
-* Add an optional --typecheck to the elo command
-* Check whether a known type inference algorithm could help us here. Make the
+- Add an optional --typecheck to the elo command
+- Check whether a known type inference algorithm could help us here. Make the
   analysis at least and let's see what is possible.
 
 ## Analysis
@@ -16,6 +16,7 @@
 ### Current State
 
 The Elo compiler already has type inference during the transform phase:
+
 - `src/transform.ts` infers types during AST → IR conversion
 - Types are stored in `IRCall.argTypes` and `IRCall.resultType`
 - `src/typedefs.ts` maps function signatures to result types
@@ -30,6 +31,7 @@ The Elo compiler already has type inference during the transform phase:
 ### Handling `any` Type
 
 The `any` type should suppress errors because:
+
 - Variables from input `_` have type `any` (unknown at compile time)
 - Lambda parameters have type `any`
 - These are legitimate cases where runtime type checking is needed

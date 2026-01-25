@@ -14,14 +14,17 @@ Reference and Stdlib sections in the web documentation.
 **44 fixture files** with inconsistent naming and organization:
 
 **Temporal files (7)** - scattered across multiple files:
+
 - temporal.elo, temporal-keywords.elo, temporal-period-boundaries.elo
 - temporal-extraction.elo, temporal-duration.elo, temporal-chained-duration.elo
 - temporal-let-binding.elo
 
 **Stdlib files (4)** - inconsistent naming:
+
 - numeric-stdlib.elo, array-stdlib.elo, string-stdlib.elo, stdlib-data.elo
 
 **Language constructs** - mixed organization:
+
 - Core: arithmetic.elo, operators.elo, equality.elo, boolean-expressions.elo
 - Expressions: variables.elo, let-expressions.elo, if-expressions.elo
 - Data: arrays.elo, objects.elo, member-access.elo, datapath.elo
@@ -31,6 +34,7 @@ Reference and Stdlib sections in the web documentation.
 ### Documentation Structure
 
 **Reference (docs.astro):**
+
 - Core: Types, Literals, Operators
 - Expressions: Variables, Conditionals, Ranges
 - Data: Tuples, Lists, Input Data
@@ -39,6 +43,7 @@ Reference and Stdlib sections in the web documentation.
 - Runtime: Assertions
 
 **Stdlib (stdlib.astro):**
+
 - Type Selectors
 - Any (typeOf, isNull)
 - Date, DateTime, Duration
@@ -87,7 +92,7 @@ test/fixtures/
 
 1. **Flat vs nested?** The proposed structure uses subdirectories. Alternative: flat with prefixes (e.g., `ref-operators.elo`, `stdlib-string.elo`)
 
-2. **Consolidation level?** Current temporal-* files have specific edge cases. Should we:
+2. **Consolidation level?** Current temporal-\* files have specific edge cases. Should we:
    - Merge all into 3 files (date, datetime, duration)?
    - Keep some granularity for debugging?
 

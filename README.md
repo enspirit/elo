@@ -66,6 +66,7 @@ npm run build
 ## Testing
 
 Elo uses a comprehensive test suite that verifies:
+
 - **Unit tests**: Parser, AST, and compiler components
 - **Integration tests**: End-to-end compilation output
 - **Acceptance tests**: Compiled code execution in real runtimes (Ruby, Node.js, PostgreSQL)
@@ -79,6 +80,7 @@ npm run test:acceptance
 ## Command Line Interface
 
 Elo provides two CLI tools:
+
 - `eloc` - The compiler (for developers integrating Elo into their products)
 - `elo` - The evaluator (for quickly running Elo expressions)
 
@@ -114,6 +116,7 @@ cat input.elo | ./bin/eloc - -t ruby
 ```
 
 Options:
+
 - `-e, --expression <expr>` - Expression to compile
 - `-t, --target <lang>` - Target language: `ruby`, `js` (default), `sql`
 - `-p, --prelude` - Include necessary library imports/requires
@@ -154,6 +157,7 @@ echo '{"x": 10}' | ./bin/elo -e "_.x * 2" --stdin
 ```
 
 Options:
+
 - `-e, --expression <expr>` - Expression to evaluate
 - `-d, --data <data>` - Input data for `_` variable (or `@file` to read from file)
 - `--stdin` - Read input data from stdin
@@ -166,22 +170,20 @@ Options:
 The simplest way to use Elo is with the `compile()` function, which creates a callable JavaScript function from an Elo expression:
 
 ```typescript
-import { compile } from '@enspirit/elo';
-import { DateTime, Duration } from 'luxon';
+import { compile } from "@enspirit/elo";
+import { DateTime, Duration } from "luxon";
 
 // Compile an expression to a callable function
 // Every Elo expression takes _ (implicit input) as parameter
-const addTen = compile<(x: number) => number>(
-  '_ + 10',
-  { runtime: { DateTime, Duration } }
-);
+const addTen = compile<(x: number) => number>("_ + 10", {
+  runtime: { DateTime, Duration },
+});
 addTen(5); // => 15
 
 // Temporal expressions work too
-const inThisWeek = compile<(d: unknown) => boolean>(
-  '_ in SOW ... EOW',
-  { runtime: { DateTime, Duration } }
-);
+const inThisWeek = compile<(d: unknown) => boolean>("_ in SOW ... EOW", {
+  runtime: { DateTime, Duration },
+});
 inThisWeek(DateTime.now()); // => true or false
 ```
 
@@ -196,7 +198,12 @@ The CLI and playground support multiple input/output formats (JSON, CSV). The fo
 For more control, you can use the lower-level parsing and compilation functions:
 
 ```typescript
-import { parse, compileToRuby, compileToJavaScript, compileToSQL } from '@enspirit/elo';
+import {
+  parse,
+  compileToRuby,
+  compileToJavaScript,
+  compileToSQL,
+} from "@enspirit/elo";
 
 // Parse an expression
 const ast = parse(`
@@ -216,13 +223,13 @@ console.log(compileToSQL(ast));
 ## Programmatic AST Construction
 
 ```typescript
-import { binary, variable, literal } from './src';
+import { binary, variable, literal } from "./src";
 
 // Build: (price * quantity) - discount
 const ast = binary(
-  '-',
-  binary('*', variable('price'), variable('quantity')),
-  variable('discount')
+  "-",
+  binary("*", variable("price"), variable("quantity")),
+  variable("discount"),
 );
 ```
 
@@ -330,12 +337,13 @@ See https://klaro.cards
 Elo follows a strict test-driven development methodology to ensure semantic equivalence across all three target languages (Ruby, JavaScript, SQL).
 
 **Getting started**: See [HACKING.md](HACKING.md) for:
+
 - Development environment setup (local or Docker)
 - Running the test suite
 - Project structure overview
 
 **For developers and AI assistants**: See [CLAUDE.md](CLAUDE.md) for:
+
 - Detailed development workflow
 - How to add new features and operators
 - Architecture documentation
-

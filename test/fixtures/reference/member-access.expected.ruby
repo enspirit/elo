@@ -1,4 +1,0 @@
-->(_) { (raise "Assertion failed" unless _[:person][:age] == 25; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless _[:employee][:salary] > 50000; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless _[:customer][:balance] + 100 == 600; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless _[:student][:gpa] >= 3 && _[:student][:enrolled]; true) }.call(nil);

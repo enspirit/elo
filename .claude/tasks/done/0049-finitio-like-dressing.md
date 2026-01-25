@@ -17,22 +17,22 @@
 
 ### Finitio Type Constructs Coverage
 
-| Finitio Construct | Elo Syntax | Status | Notes |
-|-------------------|------------|--------|-------|
-| **Any type** | `.` or `Any` | ✅ | Accepts any value |
-| **Base types** | `String`, `Int`, `Bool`, `Datetime` | ✅ | With coercion (e.g., `'42'` → `42`) |
-| **Subtype constraint** | `Int(i \| i > 0)` | ✅ | Predicate on dressed value |
-| **Union type** | `Int\|String` | ✅ | PEG-style: tries left-to-right |
-| **Sequence type** | `[Int]` | ✅ | Homogeneous arrays |
-| **Struct type** | `{ name: String }` | ✅ | Object schemas with property types |
-| **Named types** | `let Person = ... in` | ✅ | Uppercase let bindings |
-| **Tuple type** | `[Int, String]` | ❌ | Fixed-length positional - not implemented |
-| **Relation type** | `{{name: String}}` | ❌ | Set of tuples - not implemented |
-| **Set type** | `{Int}` | ❌ | Unique elements - not implemented |
-| **Optional attr** | `name :? String` | ✅ | Missing/null values become null |
-| **Closed struct** | `{ name: String }` | ✅ | Extra attributes cause failure (default) |
-| **Open struct (ignored)** | `{ name: String, ... }` | ✅ | Extra attrs allowed but not in output |
-| **Open struct (typed)** | `{ name: String, ...: Int }` | ✅ | Extra attrs must match type |
+| Finitio Construct         | Elo Syntax                          | Status | Notes                                     |
+| ------------------------- | ----------------------------------- | ------ | ----------------------------------------- |
+| **Any type**              | `.` or `Any`                        | ✅     | Accepts any value                         |
+| **Base types**            | `String`, `Int`, `Bool`, `Datetime` | ✅     | With coercion (e.g., `'42'` → `42`)       |
+| **Subtype constraint**    | `Int(i \| i > 0)`                   | ✅     | Predicate on dressed value                |
+| **Union type**            | `Int\|String`                       | ✅     | PEG-style: tries left-to-right            |
+| **Sequence type**         | `[Int]`                             | ✅     | Homogeneous arrays                        |
+| **Struct type**           | `{ name: String }`                  | ✅     | Object schemas with property types        |
+| **Named types**           | `let Person = ... in`               | ✅     | Uppercase let bindings                    |
+| **Tuple type**            | `[Int, String]`                     | ❌     | Fixed-length positional - not implemented |
+| **Relation type**         | `{{name: String}}`                  | ❌     | Set of tuples - not implemented           |
+| **Set type**              | `{Int}`                             | ❌     | Unique elements - not implemented         |
+| **Optional attr**         | `name :? String`                    | ✅     | Missing/null values become null           |
+| **Closed struct**         | `{ name: String }`                  | ✅     | Extra attributes cause failure (default)  |
+| **Open struct (ignored)** | `{ name: String, ... }`             | ✅     | Extra attrs allowed but not in output     |
+| **Open struct (typed)**   | `{ name: String, ...: Int }`        | ✅     | Extra attrs must match type               |
 
 ### Composition Support
 
@@ -54,38 +54,44 @@ let Result = { ok: Bool } | { error: String } in data |> Result
 
 ### Target Language Support
 
-| Target | Status | Notes |
-|--------|--------|-------|
-| **JavaScript** | ✅ Complete | All constructs work, 34 acceptance tests |
-| **Ruby** | ✅ Complete | All constructs work, same tests as JS |
-| **SQL** | ⊘ Not supported | SQL lacks lambda/function capabilities for Result-based parsing |
+| Target         | Status          | Notes                                                           |
+| -------------- | --------------- | --------------------------------------------------------------- |
+| **JavaScript** | ✅ Complete     | All constructs work, 34 acceptance tests                        |
+| **Ruby**       | ✅ Complete     | All constructs work, same tests as JS                           |
+| **SQL**        | ⊘ Not supported | SQL lacks lambda/function capabilities for Result-based parsing |
 
 ### Implementation Details
 
 **Parser (`src/parser.ts`):**
+
 - Uppercase let bindings (`let Person = ...`) trigger type expression parsing
 - `typeExpr()` handles: `.`, `Any`, `TypeName`, `TypeName(x \| pred)`, `[T]`, `{...}`, `T\|U`
 - Lexer fix: 'P' followed by non-duration chars tokenizes as identifier (not duration)
 
 **AST (`src/ast.ts`):**
+
 - `TypeExpr = TypeRef | TypeSchema | SubtypeConstraint | ArrayType | UnionType`
 - `TypeDef` node for `let TypeName = TypeExpr in body`
 
 **IR (`src/ir.ts`):**
+
 - Mirrors AST types with `IR` prefix
 - `IRTypeDef`, `IRTypeRef`, `IRTypeSchema`, `IRSubtypeConstraint`, `IRArrayType`, `IRUnionType`
 
 **JS Compiler (`src/compilers/javascript.ts`):**
+
 - Generates parser functions with Result type: `{ success, path, value, cause }`
 - Runtime helpers: `pOk`, `pFail`, `pUnwrap`, `pAny`, `pString`, `pInt`, `pBool`, `pDatetime`
 - Inline parser functions wrapped in parens for immediate invocation
 
 **Ruby Compiler (`src/compilers/ruby.ts`):**
+
 - Generates parser lambdas with Result hash: `{ success:, path:, value:, cause: }`
 - Runtime helpers: `p_ok`, `p_fail`, `p_unwrap`, `p_any`, `p_string`, `p_int`, `p_bool`, `p_datetime`
 - Parser helpers wrapped in lambda immediately invoked (`.call`) for scoping
 
 **Test Coverage (`test/fixtures/type-definitions.elo`):**
+
 - 34 assertions covering all implemented constructs
 - Tests for success cases, failure cases, and edge cases
 - assertFails() helper for testing error-throwing expressions
@@ -95,11 +101,13 @@ let Result = { ok: Bool } | { error: String } in data |> Result
 ## Next Steps
 
 **Task 49 is complete.** All sub-tasks done:
+
 - JavaScript and Ruby compilers implemented
 - README and website documentation added
 - All tests passing
 
 ### Not in scope
+
 - **SQL target** - SQL lacks lambda/function capabilities for Result-based parsing
 - Tuple types `[Int, String]` - low priority, rarely needed
 - Set types `{Int}` - would require runtime deduplication

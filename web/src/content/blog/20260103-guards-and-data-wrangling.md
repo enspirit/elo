@@ -4,6 +4,7 @@ date: 2026-01-03
 author: "Bernard Lambeau & Claude"
 lead: "New runtime validation primitives and improved data extraction make Elo more expressive for real-world data pipelines."
 ---
+
 The day after the 0.9.x release, we couldn't stop. Here's what landed in Elo today.
 
 ## Guards and Checks

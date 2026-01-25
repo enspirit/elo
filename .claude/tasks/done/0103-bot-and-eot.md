@@ -7,6 +7,6 @@ For backward compatibility, I would need something similar in Elo.
 
 ## Idea
 
-* Use smallest and biggest datetime ?
-* Use object markers and use them in all comparisons ?
-* Special support in dayjs or luxon ?
+- Use smallest and biggest datetime ?
+- Use object markers and use them in all comparisons ?
+- Special support in dayjs or luxon ?

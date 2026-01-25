@@ -7,11 +7,11 @@ wasn't visually obvious.
 
 ## Idea
 
-* Redesign as a vertical flow that shows the transformation pipeline:
+- Redesign as a vertical flow that shows the transformation pipeline:
   Input Data → Elo Program → Compiled → Output
-* Collapse rarely-used sections (Input Data, Compiled) by default
-* Make the primary workflow (write code, see output) more prominent
-* Use visual connectors to reinforce the flow concept
+- Collapse rarely-used sections (Input Data, Compiled) by default
+- Make the primary workflow (write code, see output) more prominent
+- Use visual connectors to reinforce the flow concept
 
 ## Solution Implemented
 

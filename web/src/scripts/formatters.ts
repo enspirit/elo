@@ -18,9 +18,9 @@ async function loadPrettierJS(): Promise<void> {
 
   // Load Prettier standalone and required plugins in parallel
   const [prettier, babelPlugin, estreePlugin] = await Promise.all([
-    import('https://esm.sh/prettier@3.4.2/standalone'),
-    import('https://esm.sh/prettier@3.4.2/plugins/babel'),
-    import('https://esm.sh/prettier@3.4.2/plugins/estree'),
+    import("https://esm.sh/prettier@3.4.2/standalone"),
+    import("https://esm.sh/prettier@3.4.2/plugins/babel"),
+    import("https://esm.sh/prettier@3.4.2/plugins/estree"),
   ]);
 
   prettierModule = prettier;
@@ -32,7 +32,7 @@ async function loadPrettierJS(): Promise<void> {
  */
 async function loadSqlFormatter(): Promise<void> {
   if (sqlFormatterModule) return;
-  sqlFormatterModule = await import('https://esm.sh/sql-formatter@15.4.10');
+  sqlFormatterModule = await import("https://esm.sh/sql-formatter@15.4.10");
 }
 
 /**
@@ -42,7 +42,7 @@ export async function formatJS(code: string): Promise<string> {
   try {
     await loadPrettierJS();
     const result = await prettierModule.format(code, {
-      parser: 'babel',
+      parser: "babel",
       plugins: prettierJSPlugins,
       printWidth: 60,
       semi: true,
@@ -64,9 +64,9 @@ export async function formatSQL(code: string): Promise<string> {
   try {
     await loadSqlFormatter();
     return sqlFormatterModule.format(code, {
-      language: 'postgresql',
+      language: "postgresql",
       tabWidth: 2,
-      keywordCase: 'upper',
+      keywordCase: "upper",
     });
   } catch {
     // Return original code if formatting fails
@@ -82,13 +82,13 @@ export async function formatSQL(code: string): Promise<string> {
  */
 export function formatRuby(code: string): string {
   // Insert newline after { in arrow lambdas
-  let result = code.replace(/(->\([^)]*\)\s*\{)\s*/g, '$1\n');
+  let result = code.replace(/(->\([^)]*\)\s*\{)\s*/g, "$1\n");
 
   // Insert newline before } (with optional .call)
-  result = result.replace(/\s*\}(\.call\(|$)/g, '\n}$1');
+  result = result.replace(/\s*\}(\.call\(|$)/g, "\n}$1");
 
   // Apply indentation
-  const lines = result.split('\n');
+  const lines = result.split("\n");
   const formatted: string[] = [];
   let indent = 0;
 
@@ -97,11 +97,11 @@ export function formatRuby(code: string): string {
     if (!trimmed) continue;
 
     // Decrease indent for lines starting with }
-    if (trimmed.startsWith('}')) {
+    if (trimmed.startsWith("}")) {
       indent = Math.max(0, indent - 1);
     }
 
-    formatted.push('  '.repeat(indent) + trimmed);
+    formatted.push("  ".repeat(indent) + trimmed);
 
     // Increase indent after arrow lambda opening
     if (/^->\([^)]*\)\s*\{$/.test(trimmed)) {
@@ -109,19 +109,22 @@ export function formatRuby(code: string): string {
     }
   }
 
-  return formatted.join('\n');
+  return formatted.join("\n");
 }
 
 /**
  * Format code based on language
  */
-export async function formatCode(code: string, language: 'javascript' | 'ruby' | 'sql'): Promise<string> {
+export async function formatCode(
+  code: string,
+  language: "javascript" | "ruby" | "sql",
+): Promise<string> {
   switch (language) {
-    case 'javascript':
+    case "javascript":
       return formatJS(code);
-    case 'sql':
+    case "sql":
       return formatSQL(code);
-    case 'ruby':
+    case "ruby":
       return formatRuby(code);
     default:
       return code;

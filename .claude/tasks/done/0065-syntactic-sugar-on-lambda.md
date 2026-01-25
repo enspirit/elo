@@ -14,7 +14,6 @@ This too:
 
 But it would be nicer to have this synactic sugar :
 
-
 ```
 [1,2,3] |> map(x ~> x * 2)
 ```

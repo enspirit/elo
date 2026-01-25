@@ -15,17 +15,18 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "test": "npm run test:unit && npm run test:integration && npm run test:acceptance",
-    "test:unit": "npm run build && node --test 'dist/test/unit/*.unit.test.js' 'dist/test/unit/**/*.unit.test.js'",
-    "test:integration": "npm run build && node --test 'dist/test/integration/*.integration.test.js' 'dist/test/integration/**/*.integration.test.js'",
+    "test": "bun run test:unit && bun run test:integration && bun run test:acceptance",
+    "test:unit": "bun run build && node --test 'dist/test/unit/*.unit.test.js' 'dist/test/unit/**/*.unit.test.js'",
+    "test:integration": "bun run build && node --test 'dist/test/integration/*.integration.test.js' 'dist/test/integration/**/*.integration.test.js'",
     "test:acceptance": "./test/acceptance/test-all.sh",
     "test:watch": "tsc --watch & node --test --watch --test-only dist/**/*.test.js",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "fixtures:regenerate": "./scripts/regenerate-fixtures.sh",
-    "build:web": "cd web && npm run build",
-    "dev:web": "cd web && npm run dev"
+    "build:web": "cd web && bun run build",
+    "dev:web": "cd web && bun run dev",
+    "format": "prettier --write ."
   },
   "keywords": [
     "compiler",
@@ -46,7 +47,8 @@
     "access": "public"
   },
   "dependencies": {
-    "luxon": "^3.5.0"
+    "luxon": "^3.5.0",
+    "prettier": "^3.8.1"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.0",

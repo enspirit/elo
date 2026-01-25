@@ -1,32 +1,37 @@
 ## Problem to solve
 
-* Elo is not strongly typed (so far)
-* We have very basic heuristics of type inference, not a real algo
-* So we end up with lots of variables with type `Any` when emitting code
-* And some expression fail to compile with 'Function not found'...
-* ...unless we doubly register lots of functions twice (see commit 16196c6902fef857a40fdcf69ff60f27cf703c23)
-* We have `typeGeneralizations`, that works the other way round.
+- Elo is not strongly typed (so far)
+- We have very basic heuristics of type inference, not a real algo
+- So we end up with lots of variables with type `Any` when emitting code
+- And some expression fail to compile with 'Function not found'...
+- ...unless we doubly register lots of functions twice (see commit 16196c6902fef857a40fdcf69ff60f27cf703c23)
+- We have `typeGeneralizations`, that works the other way round.
 
 ## Investigation Results
 
 ### The Problem
+
 When type inference results in `Any` types (from lambda parameters, member access, etc.),
 the stdlib lookup fails for functions that are only registered for specific types.
 
 **Current behavior**: `typeGeneralizations` goes from concrete → any:
+
 - Looking up `upper(String)` tries `upper:string`, then `upper:any`
 - But looking up `abs(Any)` only tries `abs:any`, not `abs:int` or `abs:float`
 
 **Affected functions** (not registered for Any):
+
 - Numeric: `abs`, `round`, `floor`, `ceil`
 - Temporal: `year`, `month`, `day`, `hour`, `minute`
 
 **Functions already working** (double-registered):
+
 - String: `upper`, `lower`, `trim`, `length`, etc.
 - Array iteration: `map`, `filter`, `reduce`, `any`, `all`
 - Arithmetic: `add`, `sub`, `mul`, etc. (have Any helper functions)
 
 ### Test File Created
+
 `test/unit/type-specialization.unit.test.ts` - 22 tests documenting the behavior
 
 ## Solution Implemented
@@ -46,6 +51,7 @@ the stdlib lookup fails for functions that are only registered for specific type
    because the int optimization (identity) would give wrong results for floats.
 
 ### Changes Made
+
 - `src/stdlib.ts` - Added type specialization fallback in lookup()
 - `src/bindings/javascript.ts` - Added `round(any)`, `floor(any)`, `ceil(any)`
 - `src/bindings/ruby.ts` - Added `round(any)`, `floor(any)`, `ceil(any)`
@@ -54,6 +60,7 @@ the stdlib lookup fails for functions that are only registered for specific type
 ### Why This Approach?
 
 The solution "kills many problems at once":
+
 - The fallback mechanism automatically works for functions where implementations are
   equivalent (like `abs` where both int and float use the same code)
 - Explicit Any registrations are only needed when implementations differ
@@ -62,6 +69,7 @@ The solution "kills many problems at once":
 - Simple, localized changes
 
 ### What Still Works
+
 - Type generalization (concrete → any) continues to work as before
 - Explicit Any registrations take priority over fallback
 - Arity checking prevents incorrect matches

@@ -19,15 +19,15 @@
    9. Responsive (responsive.css) - Mobile breakpoints
    =========================================== */
 
-@import url('tokens.css');
-@import url('base.css');
-@import url('layout.css');
-@import url('components.css');
-@import url('code.css');
-@import url('documentation.css');
-@import url('playground.css');
-@import url('pages/home.css');
-@import url('pages/stdlib.css');
-@import url('pages/about.css');
-@import url('pages/learn.css');
-@import url('responsive.css');
+@import url("tokens.css");
+@import url("base.css");
+@import url("layout.css");
+@import url("components.css");
+@import url("code.css");
+@import url("documentation.css");
+@import url("playground.css");
+@import url("pages/home.css");
+@import url("pages/stdlib.css");
+@import url("pages/about.css");
+@import url("pages/learn.css");
+@import url("responsive.css");

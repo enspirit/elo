@@ -1,7 +1,0 @@
-->(_) { (raise "Assertion failed" unless true; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 15 > 10; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 25 == 25; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 50 > 0 && 50 < 100; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 1 == 1 || 2 == 2; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless !false; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 150 > 100 && 15 >= 10 || true == true; true) }.call(nil);

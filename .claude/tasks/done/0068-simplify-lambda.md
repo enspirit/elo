@@ -8,5 +8,5 @@ by constraint syntax, e.g. `Int(i | i > 0)`. We don't even support that for now.
 
 ## Idea
 
-* Remove the predicate syntax, compilation & documentation
-* We'll reintroduce the syntax later, only on Type/Selector (with a capital)
+- Remove the predicate syntax, compilation & documentation
+- We'll reintroduce the syntax later, only on Type/Selector (with a capital)

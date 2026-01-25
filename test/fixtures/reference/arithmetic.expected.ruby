@@ -1,7 +1,0 @@
-->(_) { (raise "Assertion failed" unless 2 + 3 == 5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 2 + 3 * 4 == 14; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 2 ** 3 == 8; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 2 ** 3 + 1 == 9; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (5 + 5) * (10 - 3) / 2 == 35; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless -5 + 10 == 5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 10 % 3 + 8 / 2 == 5; true) }.call(nil);

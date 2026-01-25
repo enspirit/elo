@@ -1,13 +1,13 @@
 ## Problem to solve
 
 The current implement is such that the compiled code is a function taking
-`_` as parameter only if _ is actually used. Otherwise it's not a function.
+`_` as parameter only if \_ is actually used. Otherwise it's not a function.
 
 It seems like accidental complexity to me.
 
 ## Idea
 
-An Elo program should *always* be single function taking `_` as input and
+An Elo program should _always_ be single function taking `_` as input and
 returning an ouput value.
 
 Let's refactor the compiler to have that invariant. And update the documentation
@@ -18,6 +18,7 @@ accordingly.
 I've started this refactoring and the core changes are in place:
 
 ### Completed changes:
+
 1. **JavaScript compiler** (`src/compilers/javascript.ts`): Always wraps output as `(function(_) { return ...; })`
 2. **Ruby compiler** (`src/compilers/ruby.ts`): Always wraps output as `->(_) { ... }`
 3. **SQL compiler** (`src/compilers/sql.ts`): Always returns `usesInput: true` (SQL doesn't have function wrapping concept)
@@ -26,6 +27,7 @@ I've started this refactoring and the core changes are in place:
 6. **JavaScript compiler unit tests** (`test/unit/compilers/javascript.unit.test.ts`): Updated to expect wrapped output
 
 ### Remaining work:
+
 1. **Ruby compiler unit tests** - Need to update expected values (use `wrapRuby()` pattern)
 2. **Temporal unit tests** - Need to update expected JS/Ruby output
 3. **Other unit tests** - Several files need updating
@@ -33,6 +35,7 @@ I've started this refactoring and the core changes are in place:
 5. **Documentation** - README and website need updating
 
 ### Test status:
+
 - 105+ unit tests still failing due to expected output format changes
 - Integration tests need verification
 - Acceptance tests need verification after fixture regeneration

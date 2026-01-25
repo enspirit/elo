@@ -4,13 +4,13 @@ Add array iteration functions (map, filter) using existing lambda support.
 
 ## Functions
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `map` | `(Array, Fn) -> Array` | Transform each element |
-| `filter` | `(Array, Fn) -> Array` | Keep elements matching predicate |
-| `reduce` | `(Array, Any, Fn) -> Any` | Fold array to single value |
-| `any` | `(Array, Fn) -> Bool` | True if any element matches |
-| `all` | `(Array, Fn) -> Bool` | True if all elements match |
+| Function | Signature                 | Description                      |
+| -------- | ------------------------- | -------------------------------- |
+| `map`    | `(Array, Fn) -> Array`    | Transform each element           |
+| `filter` | `(Array, Fn) -> Array`    | Keep elements matching predicate |
+| `reduce` | `(Array, Any, Fn) -> Any` | Fold array to single value       |
+| `any`    | `(Array, Fn) -> Bool`     | True if any element matches      |
+| `all`    | `(Array, Fn) -> Bool`     | True if all elements match       |
 
 ## Implementation
 

@@ -5,6 +5,7 @@ This document provides instructions for AI assistants (like Claude) working on t
 ## Project Overview
 
 Elo is a small expression language that compiles to three target languages:
+
 - **Ruby**: Server-side scripting
 - **JavaScript**: Client-side execution
 - **PostgreSQL SQL**: Database queries
@@ -24,14 +25,14 @@ and on website (with example).
 
 Elo currently has the following components :
 
-* A parser (`src/parser.ts`)
-* AST types and factory (`src/ast.ts`)
-* Type system (`src/types.ts`)
-* Intermediate Representation with type inference (`src/ir.ts`, `src/transform.ts`)
-* Standard library abstraction for type-based dispatch (`src/stdlib.ts`)
-* One compiler per target language (`src/compilers/*.ts`)
-* A binary command (`bin/eloc` and `src/cli.ts`)
-* A try-elo website to demonstrate Elo (`web/`)
+- A parser (`src/parser.ts`)
+- AST types and factory (`src/ast.ts`)
+- Type system (`src/types.ts`)
+- Intermediate Representation with type inference (`src/ir.ts`, `src/transform.ts`)
+- Standard library abstraction for type-based dispatch (`src/stdlib.ts`)
+- One compiler per target language (`src/compilers/*.ts`)
+- A binary command (`bin/eloc` and `src/cli.ts`)
+- A try-elo website to demonstrate Elo (`web/`)
 
 ### Compilation Pipeline
 
@@ -43,18 +44,18 @@ Elo currently has the following components :
 
 Elo is developped in TDD. We have three levels of testing :
 
-* `npm run test:unit` : checks the behavior of core and utility functions
-* `npm run test:integration` : checks expected compilation output from sources
-* `npm run test:acceptance` : checks expected semantics against `ruby`, `node` and `psql`
+- `npm run test:unit` : checks the behavior of core and utility functions
+- `npm run test:integration` : checks expected compilation output from sources
+- `npm run test:acceptance` : checks expected semantics against `ruby`, `node` and `psql`
 
 **CRITICAL** : the three levels of tests MUST be maintained ; all tests MUST PASS at all times.
 
 The tests are organized as follows :
 
-* `test/unit/**/*.ts` are unit tests without dependencies
-* `test/fixtures/*` are elo expression files and their expected compilation in the target languages
-* `test/integration/**/*.ts` check the compiler and cli, using fixtures
-* `test/acceptance/**/*.ts` check the actual execution of generated code, using fixtures
+- `test/unit/**/*.ts` are unit tests without dependencies
+- `test/fixtures/*` are elo expression files and their expected compilation in the target languages
+- `test/integration/**/*.ts` check the compiler and cli, using fixtures
+- `test/acceptance/**/*.ts` check the actual execution of generated code, using fixtures
 
 **CRITICAL** when adding acceptance tests, every line of .elo files MUST have be an assert for
 testing to be effective.

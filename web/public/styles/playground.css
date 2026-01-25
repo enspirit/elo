@@ -160,7 +160,11 @@
 /* Flow result */
 .flow-body-output {
   min-height: 100px;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.03) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.08) 0%,
+    rgba(34, 197, 94, 0.03) 100%
+  );
 }
 
 .flow-result {
@@ -175,7 +179,7 @@
 }
 
 .flow-result:empty::before {
-  content: 'Click Run or press Ctrl+Enter';
+  content: "Click Run or press Ctrl+Enter";
   color: var(--text-secondary);
   font-style: italic;
   font-size: 0.875rem;
@@ -187,7 +191,11 @@
 }
 
 .flow-output .flow-header-static {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.1) 0%,
+    rgba(34, 197, 94, 0.05) 100%
+  );
 }
 
 .flow-output .flow-title {
@@ -200,7 +208,11 @@
 }
 
 .flow-output.has-error .flow-header-static {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.15) 0%,
+    rgba(239, 68, 68, 0.08) 100%
+  );
 }
 
 .flow-output.has-error .flow-title {
@@ -208,7 +220,11 @@
 }
 
 .flow-output.has-error .flow-body-output {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.1) 0%,
+    rgba(239, 68, 68, 0.05) 100%
+  );
 }
 
 /* Flow connector arrows */
@@ -245,7 +261,11 @@
 .flow-body-output .error {
   display: none;
   padding: var(--space-md);
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.06) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.12) 0%,
+    rgba(239, 68, 68, 0.06) 100%
+  );
   color: var(--error);
   font-family: var(--font-mono);
   font-size: 0.875rem;
@@ -391,7 +411,11 @@
   flex: 1;
   padding: var(--space-md);
   overflow: auto;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.03) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.08) 0%,
+    rgba(34, 197, 94, 0.03) 100%
+  );
 }
 
 .result-content .result-value {
@@ -408,7 +432,7 @@
 
 .result-content:empty::before,
 .result-content .result-value:empty::before {
-  content: 'Click Run or press Ctrl+Enter';
+  content: "Click Run or press Ctrl+Enter";
   color: var(--text-secondary);
   font-style: italic;
   font-size: 0.875rem;

@@ -100,7 +100,9 @@
   margin: var(--space-md) 0;
   overflow: hidden;
   cursor: pointer;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .lesson-example:hover {
@@ -135,7 +137,11 @@
 }
 
 .lesson-tip {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.1) 0%,
+    rgba(139, 92, 246, 0.1) 100%
+  );
   border-left: 4px solid var(--accent);
   padding: var(--space-md) 1.25rem;
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
@@ -162,7 +168,7 @@
 }
 
 .lesson-exercise a::before {
-  content: '\2192 ';
+  content: "\2192 ";
 }
 
 /* What's Next section */
@@ -249,7 +255,7 @@
 }
 
 .lesson-toggle.completed .toggle-check::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 3px;
   top: 0px;
@@ -274,7 +280,7 @@
 }
 
 .learn-toc nav a.completed .toc-check::before {
-  content: '\2713';
+  content: "\2713";
   font-size: 0.75rem;
   font-weight: bold;
 }
@@ -432,7 +438,7 @@
 }
 
 .exercise-toggle.completed .toggle-check::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 3px;
   top: 0px;
@@ -550,6 +556,6 @@
 }
 
 .exercise.completed .exercise-header h3::after {
-  content: ' \2713';
+  content: " \2713";
   color: var(--accent);
 }

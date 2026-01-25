@@ -1,6 +1,6 @@
 ## Problem to solve
 
-Claude Code often regenerates expected fixture files (test/fixtures/**/*.expected.*)
+Claude Code often regenerates expected fixture files (test/fixtures/\*_/_.expected.\*)
 using `bin/kc`. He keep asking for permissions all the time to do that, which is
 a bit annoying.
 

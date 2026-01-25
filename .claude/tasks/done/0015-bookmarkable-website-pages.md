@@ -9,6 +9,6 @@ How can we improve that ?
 
 Either :
 
-* Move to a multi-pages website
-* Or provide an implementation that hacks the URL in such a way that it looks
+- Move to a multi-pages website
+- Or provide an implementation that hacks the URL in such a way that it looks
   like a multi-pages website as far as SEO/bookmarks are concerned.

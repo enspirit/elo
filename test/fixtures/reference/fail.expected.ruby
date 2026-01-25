@@ -1,1 +1,0 @@
-->(_) { raise "error message" }.call(nil);

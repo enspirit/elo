@@ -1,6 +1,0 @@
-->(_) { (raise "Assertion failed" unless 100 * (1 - 0.2) == 80; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 90 + 90 * 0.1 == 99; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 1000 * (1 + 0.05) ** 10 > 1500; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 30 >= 18 && (50000 > 30000 || true == true); true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 0.8 * 100 == 80; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 70 / 1.75 ** 2 < 25; true) }.call(nil);

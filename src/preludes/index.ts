@@ -7,19 +7,12 @@
  * compiled output as needed, wrapped in an IIFE.
  */
 
-export type Target = 'javascript' | 'ruby' | 'sql';
+export type Target = "javascript";
 
 const javascriptPrelude = `const { DateTime, Duration } = require('luxon');`;
 
-const rubyPrelude = `require 'date'
-require 'active_support/all'`;
-
-const sqlPrelude = `-- No prelude needed for SQL`;
-
 const preludes: Record<Target, string> = {
   javascript: javascriptPrelude,
-  ruby: rubyPrelude,
-  sql: sqlPrelude
 };
 
 /**

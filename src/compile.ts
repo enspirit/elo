@@ -5,8 +5,8 @@
  * runtime dependency injection.
  */
 
-import { parse } from './parser';
-import { compileToJavaScript } from './compilers/javascript';
+import { parse } from "./parser";
+import { compileToJavaScript } from "./compilers/javascript";
 
 /**
  * Runtime dependencies that can be injected into compiled functions.
@@ -29,7 +29,7 @@ export interface CompileOptions {
  * List of runtime dependency names to inject.
  * Must match the keys in EloRuntime.
  */
-const RUNTIME_DEPS = ['DateTime', 'Duration'] as const;
+const RUNTIME_DEPS = ["DateTime", "Duration"] as const;
 
 /**
  * Compiles an Elo expression to a callable JavaScript function.
@@ -59,7 +59,7 @@ const RUNTIME_DEPS = ['DateTime', 'Duration'] as const;
  */
 export function compile<T = unknown>(
   source: string,
-  options?: CompileOptions
+  options?: CompileOptions,
 ): T {
   const ast = parse(source);
   const jsCode = compileToJavaScript(ast);
@@ -68,8 +68,8 @@ export function compile<T = unknown>(
   const runtime = options?.runtime ?? {};
 
   // Build parameter list and argument list for dependency injection
-  const paramNames = RUNTIME_DEPS.join(', ');
-  const args = RUNTIME_DEPS.map(dep => runtime[dep]);
+  const paramNames = RUNTIME_DEPS.join(", ");
+  const args = RUNTIME_DEPS.map((dep) => runtime[dep]);
 
   // Create a function that injects all dependencies into scope
   // The compiled code is a function taking _ as input

@@ -1,6 +1,0 @@
-->(_) { (raise "Assertion failed" unless "Hello, " + "World!" == "Hello, World!"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless {price: 25, quantity: 4}[:price] * {price: 25, quantity: 4}[:quantity] == 100; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "  hello  ".strip.upcase == "HELLO"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (width = 8; height = 5; width * height) == 40; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless [5, 12, 8, 20, 3, 15].select(&->(x) { x > 10 }).map(&->(x) { x * 2 }) == [24, 40, 30]; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (order = {price: 50, quantity: 3}; order[:price] * order[:quantity]) == 150; true) }.call(nil);

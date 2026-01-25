@@ -20,4 +20,4 @@ How will we distinguish from invoking a lambda and invoking a stdlib function ?
 ## Post-implementation discussion
 
 - Explain what happens if a user introduces a named lambda (let) that clashes with a stdlib function name. Add acceptance tests
-necessary to prove the wanted behavior (with assertions).
+  necessary to prove the wanted behavior (with assertions).

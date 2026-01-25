@@ -7,6 +7,7 @@ structure while keeping Stimulus for interactivity.
 ## Solution
 
 Migrate to Astro static site generator while:
+
 - Keeping all Stimulus controllers unchanged
 - Splitting content into pages and components
 - Maintaining GitHub Pages deployment
@@ -16,17 +17,19 @@ Migrate to Astro static site generator while:
 ### Phase 1: Astro Setup
 
 1. Initialize Astro in `web/` directory:
+
    ```bash
    cd web && npm create astro@latest . -- --template minimal
    ```
 
 2. Configure `astro.config.mjs`:
+
    ```js
-   import { defineConfig } from 'astro/config';
+   import { defineConfig } from "astro/config";
    export default defineConfig({
-     site: 'https://elo-lang.org',
-     base: '/',
-     output: 'static',
+     site: "https://elo-lang.org",
+     base: "/",
+     output: "static",
    });
    ```
 
@@ -85,11 +88,11 @@ Migrate to Astro static site generator while:
 
 8. Create `src/scripts/main.ts`:
    ```typescript
-   import { Application } from '@hotwired/stimulus';
-   import PlaygroundController from './controllers/playground_controller';
-   import TabsController from './controllers/tabs_controller';
-   import DocController from './controllers/doc_controller';
-   import StdlibSearchController from './controllers/stdlib_search_controller';
+   import { Application } from "@hotwired/stimulus";
+   import PlaygroundController from "./controllers/playground_controller";
+   import TabsController from "./controllers/tabs_controller";
+   import DocController from "./controllers/doc_controller";
+   import StdlibSearchController from "./controllers/stdlib_search_controller";
    // ... same as current main.ts
    ```
 
@@ -101,6 +104,7 @@ Migrate to Astro static site generator while:
 ### Phase 5: Update GitHub Actions
 
 11. Update `.github/workflows/deploy-pages.yml`:
+
     ```yaml
     jobs:
       build:
@@ -112,8 +116,8 @@ Migrate to Astro static site generator while:
           - name: Setup Node.js
             uses: actions/setup-node@v4
             with:
-              node-version: '20'
-              cache: 'npm'
+              node-version: "20"
+              cache: "npm"
 
           - name: Install root dependencies
             run: npm ci
@@ -166,6 +170,7 @@ Migrate to Astro static site generator while:
 ## Navigation Changes
 
 Current single-page with hash routing (`#learn`, `#doc`, `#stdlib`, `#try`) becomes:
+
 - `/` - Home with hero
 - `/learn` - Learn section (or `/learn/lesson-1`, etc.)
 - `/docs` - Language reference

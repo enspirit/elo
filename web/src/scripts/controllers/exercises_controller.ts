@@ -1,28 +1,34 @@
-import { Controller } from '@hotwired/stimulus';
-import { EditorView, keymap } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { bracketMatching } from '@codemirror/language';
-import { DateTime, Duration } from 'luxon';
-import {
-  parse,
-  compileToJavaScript,
-} from '@enspirit/elo';
-import { elo } from '../codemirror/elo-language';
-import { eloDarkTheme, eloLightTheme } from '../codemirror/elo-theme';
+import { Controller } from "@hotwired/stimulus";
+import { EditorView, keymap } from "@codemirror/view";
+import { EditorState } from "@codemirror/state";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { bracketMatching } from "@codemirror/language";
+import { DateTime, Duration } from "luxon";
+import { parse, compileToJavaScript } from "@enspirit/elo";
+import { elo } from "../codemirror/elo-language";
+import { eloDarkTheme, eloLightTheme } from "../codemirror/elo-theme";
 
 // Make luxon DateTime and Duration available globally for eval
 (window as any).DateTime = DateTime;
 (window as any).Duration = Duration;
 
-const STORAGE_KEY = 'elo-exercises-progress';
+const STORAGE_KEY = "elo-exercises-progress";
 
 interface ExerciseProgress {
   [exerciseId: string]: boolean;
 }
 
 export default class ExercisesController extends Controller {
-  static targets = ['exercise', 'editor', 'feedback', 'checkButton', 'solutionButton', 'solution', 'tocLink', 'toggleBtn'];
+  static targets = [
+    "exercise",
+    "editor",
+    "feedback",
+    "checkButton",
+    "solutionButton",
+    "solution",
+    "tocLink",
+    "toggleBtn",
+  ];
 
   declare exerciseTargets: HTMLElement[];
   declare editorTargets: HTMLElement[];
@@ -45,7 +51,7 @@ export default class ExercisesController extends Controller {
     // Watch for theme changes
     this.themeObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.attributeName === 'class') {
+        if (mutation.attributeName === "class") {
           this.reinitializeEditors();
         }
       }
@@ -58,7 +64,7 @@ export default class ExercisesController extends Controller {
       this.themeObserver.disconnect();
       this.themeObserver = null;
     }
-    this.editors.forEach(editor => editor.destroy());
+    this.editors.forEach((editor) => editor.destroy());
     this.editors.clear();
   }
 
@@ -86,13 +92,17 @@ export default class ExercisesController extends Controller {
       const exerciseId = editorEl.dataset.exerciseId;
       if (!exerciseId) return;
 
-      const initialCode = editorEl.dataset.initialCode || '';
+      const initialCode = editorEl.dataset.initialCode || "";
       this.createEditor(editorEl, exerciseId, initialCode);
     });
   }
 
-  private createEditor(container: HTMLElement, exerciseId: string, initialCode: string) {
-    const isLight = document.body.classList.contains('light-theme');
+  private createEditor(
+    container: HTMLElement,
+    exerciseId: string,
+    initialCode: string,
+  ) {
+    const isLight = document.body.classList.contains("light-theme");
     const theme = isLight ? eloLightTheme : eloDarkTheme;
 
     const editor = new EditorView({
@@ -104,10 +114,10 @@ export default class ExercisesController extends Controller {
           keymap.of([...defaultKeymap, ...historyKeymap]),
           elo(),
           ...theme,
-          EditorView.lineWrapping
-        ]
+          EditorView.lineWrapping,
+        ],
       }),
-      parent: container
+      parent: container,
     });
 
     this.editors.set(exerciseId, editor);
@@ -121,7 +131,7 @@ export default class ExercisesController extends Controller {
     });
 
     // Destroy all editors
-    this.editors.forEach(editor => editor.destroy());
+    this.editors.forEach((editor) => editor.destroy());
     this.editors.clear();
 
     // Reinitialize with saved code
@@ -129,8 +139,9 @@ export default class ExercisesController extends Controller {
       const exerciseId = editorEl.dataset.exerciseId;
       if (!exerciseId) return;
 
-      editorEl.innerHTML = '';
-      const code = codeState.get(exerciseId) || editorEl.dataset.initialCode || '';
+      editorEl.innerHTML = "";
+      const code =
+        codeState.get(exerciseId) || editorEl.dataset.initialCode || "";
       this.createEditor(editorEl, exerciseId, code);
     });
   }
@@ -144,7 +155,9 @@ export default class ExercisesController extends Controller {
     if (!editor) return;
 
     const code = editor.state.doc.toString();
-    const feedback = this.feedbackTargets.find(el => el.dataset.exerciseId === exerciseId);
+    const feedback = this.feedbackTargets.find(
+      (el) => el.dataset.exerciseId === exerciseId,
+    );
     if (!feedback) return;
 
     try {
@@ -154,33 +167,33 @@ export default class ExercisesController extends Controller {
 
       // All assertions passed if we get here without exception and result is true
       if (result === true) {
-        feedback.textContent = 'All assertions passed!';
-        feedback.className = 'exercise-feedback success';
+        feedback.textContent = "All assertions passed!";
+        feedback.className = "exercise-feedback success";
         this.markCompleted(exerciseId);
       } else {
         feedback.textContent = `Result: ${this.formatResult(result)} - Expected all assertions to pass (return true)`;
-        feedback.className = 'exercise-feedback error';
+        feedback.className = "exercise-feedback error";
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       // Check if it's an assertion failure
-      if (message.includes('Assertion failed')) {
+      if (message.includes("Assertion failed")) {
         feedback.textContent = message;
       } else {
         feedback.textContent = `Error: ${message}`;
       }
-      feedback.className = 'exercise-feedback error';
+      feedback.className = "exercise-feedback error";
     }
   }
 
   private formatResult(value: any): string {
-    if (value === undefined) return 'undefined';
-    if (value === null) return 'null';
-    if (typeof value === 'boolean') return value ? 'true' : 'false';
-    if (value && typeof value === 'object' && value.$d instanceof Date) {
+    if (value === undefined) return "undefined";
+    if (value === null) return "null";
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (value && typeof value === "object" && value.$d instanceof Date) {
       return value.format();
     }
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       try {
         return JSON.stringify(value);
       } catch {
@@ -201,12 +214,14 @@ export default class ExercisesController extends Controller {
     const exerciseId = button.dataset.exerciseId;
     if (!exerciseId) return;
 
-    const solution = this.solutionTargets.find(el => el.dataset.exerciseId === exerciseId);
+    const solution = this.solutionTargets.find(
+      (el) => el.dataset.exerciseId === exerciseId,
+    );
     if (!solution) return;
 
-    const isHidden = solution.classList.contains('hidden');
-    solution.classList.toggle('hidden', !isHidden);
-    button.textContent = isHidden ? 'Hide Solution' : 'Show Solution';
+    const isHidden = solution.classList.contains("hidden");
+    solution.classList.toggle("hidden", !isHidden);
+    button.textContent = isHidden ? "Hide Solution" : "Show Solution";
   }
 
   toggle(event: Event) {
@@ -226,17 +241,19 @@ export default class ExercisesController extends Controller {
   }
 
   private scrollToNextExercise(currentExerciseId: string) {
-    const currentIndex = this.exerciseTargets.findIndex(el => el.id === currentExerciseId);
+    const currentIndex = this.exerciseTargets.findIndex(
+      (el) => el.id === currentExerciseId,
+    );
     const nextExercise = this.exerciseTargets[currentIndex + 1];
     if (nextExercise) {
       setTimeout(() => {
-        nextExercise.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        nextExercise.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 300);
     }
   }
 
   private updateAllUI() {
-    this.exerciseTargets.forEach(exercise => {
+    this.exerciseTargets.forEach((exercise) => {
       const exerciseId = exercise.id;
       if (exerciseId) {
         this.updateExerciseUI(exerciseId);
@@ -248,25 +265,29 @@ export default class ExercisesController extends Controller {
     const isCompleted = !!this.progress[exerciseId];
 
     // Update exercise section
-    const exercise = this.exerciseTargets.find(el => el.id === exerciseId);
+    const exercise = this.exerciseTargets.find((el) => el.id === exerciseId);
     if (exercise) {
-      exercise.classList.toggle('completed', isCompleted);
+      exercise.classList.toggle("completed", isCompleted);
     }
 
     // Update toggle button
-    const button = this.toggleBtnTargets.find(el => el.dataset.exerciseId === exerciseId);
+    const button = this.toggleBtnTargets.find(
+      (el) => el.dataset.exerciseId === exerciseId,
+    );
     if (button) {
-      button.classList.toggle('completed', isCompleted);
-      const textSpan = button.querySelector('.toggle-text');
+      button.classList.toggle("completed", isCompleted);
+      const textSpan = button.querySelector(".toggle-text");
       if (textSpan) {
-        textSpan.textContent = isCompleted ? 'Completed' : 'Mark as complete';
+        textSpan.textContent = isCompleted ? "Completed" : "Mark as complete";
       }
     }
 
     // Update TOC link
-    const tocLink = this.tocLinkTargets.find(el => el.getAttribute('href') === `#${exerciseId}`);
+    const tocLink = this.tocLinkTargets.find(
+      (el) => el.getAttribute("href") === `#${exerciseId}`,
+    );
     if (tocLink) {
-      tocLink.classList.toggle('completed', isCompleted);
+      tocLink.classList.toggle("completed", isCompleted);
     }
   }
 }

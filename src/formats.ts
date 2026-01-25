@@ -21,8 +21,8 @@
  * };
  */
 
-import { parseCSV, toCSV } from './csv';
-import { toEloCode } from './serialize';
+import { parseCSV, toCSV } from "./csv";
+import { toEloCode } from "./serialize";
 
 /**
  * Interface for a data format adapter.
@@ -62,7 +62,7 @@ export interface FormatRegistry {
  */
 export const jsonAdapter: FormatAdapter = {
   parse: (input: string): unknown => JSON.parse(input),
-  serialize: (value: unknown): string => JSON.stringify(value)
+  serialize: (value: unknown): string => JSON.stringify(value),
 };
 
 /**
@@ -72,7 +72,7 @@ export const jsonAdapter: FormatAdapter = {
  */
 export const csvAdapter: FormatAdapter = {
   parse: (input: string): unknown => parseCSV(input),
-  serialize: (value: unknown): string => toCSV(value)
+  serialize: (value: unknown): string => toCSV(value),
 };
 
 /**
@@ -82,9 +82,11 @@ export const csvAdapter: FormatAdapter = {
  */
 export const eloAdapter: FormatAdapter = {
   parse: (_input: string): unknown => {
-    throw new Error('Elo format is output-only. Use the parser for Elo expressions.');
+    throw new Error(
+      "Elo format is output-only. Use the parser for Elo expressions.",
+    );
   },
-  serialize: (value: unknown): string => toEloCode(value)
+  serialize: (value: unknown): string => toEloCode(value),
 };
 
 /**
@@ -106,7 +108,7 @@ export const eloAdapter: FormatAdapter = {
 export const defaultFormats: FormatRegistry = {
   json: jsonAdapter,
   csv: csvAdapter,
-  elo: eloAdapter
+  elo: eloAdapter,
 };
 
 /**
@@ -116,10 +118,13 @@ export const defaultFormats: FormatRegistry = {
  * @returns The adapter
  * @throws Error if format is not found
  */
-export function getFormat(formats: FormatRegistry, name: string): FormatAdapter {
+export function getFormat(
+  formats: FormatRegistry,
+  name: string,
+): FormatAdapter {
   const adapter = formats[name];
   if (!adapter) {
-    const available = Object.keys(formats).join(', ');
+    const available = Object.keys(formats).join(", ");
     throw new Error(`Unknown format '${name}'. Available: ${available}`);
   }
   return adapter;

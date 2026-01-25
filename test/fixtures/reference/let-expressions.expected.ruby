@@ -1,9 +1,0 @@
-->(_) { (raise "Assertion failed" unless (x = 12; x) == 12; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (x = 12; y = 13; x + y) == 25; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (x = 5; y = 3; x + y) == 8; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (x = 2; y = 3; x * y) == 6; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (a = 10; b = 20; a + b) == 30; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (a = 5; b = a * 2; b) == 10; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (x = 2; y = x + 1; z = y + 1; z) == 4; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (x = 1; x = 2; x) == 2; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (x = 10; x + (x = 5; x)) == 15; true) }.call(nil);

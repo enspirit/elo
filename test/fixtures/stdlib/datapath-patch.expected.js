@@ -1,12 +1,757 @@
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({}), ["name"], "Alice"), ({name: "Alice"})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({name: "Alice"}), ["name"], "Bob"), ({name: "Bob"})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({name: "Alice"}), ["age"], 30), ({name: "Alice", age: 30})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({}), ["user", "name"], "Bob"), ({user: ({name: "Bob"})})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({}), ["foo", 0, "bar"], 12), ({foo: [({bar: 12})]})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({items: [1, 2, 3]}), ["items", 1], 99), ({items: [1, 99, 3]})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({items: [1]}), ["items", 3], 99), ({items: [1, null, null, 99]})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(null, ["x"], 1), ({x: 1})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { if (!(kEq(kPatch(({}), ["a", "b", "c"], 1), ({a: ({b: ({c: 1})})})))) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { try { (kPatch([], ["foo"], 1))(); throw new Error("Expected error but none thrown"); } catch(e) { if (e.message === "Expected error but none thrown") throw e; return true; } })(); })(null);
-(function(_) { function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { try { (kPatch([1, 2, 3], ["foo"], 1))(); throw new Error("Expected error but none thrown"); } catch(e) { if (e.message === "Expected error but none thrown") throw e; return true; } })(); })(null);
-(function(_) { function kPatch(data, path, value) { if (path.length === 0) return value; const seg = path[0]; const rest = path.slice(1); const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {}; if (typeof seg === 'number') { if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array'); const arr = Array.isArray(data) ? [...data] : []; while (arr.length <= seg) arr.push(null); const existing = arr[seg]; arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return arr; } else { if (Array.isArray(data)) throw new Error('cannot patch object key on array'); const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {}; const existing = obj[seg]; obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value); return obj; } } return (function() { try { (kPatch(({foo: []}), ["foo", "bar"], 1))(); throw new Error("Expected error but none thrown"); } catch(e) { if (e.message === "Expected error but none thrown") throw e; return true; } })(); })(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (!kEq(kPatch({}, ["name"], "Alice"), { name: "Alice" }))
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (!kEq(kPatch({ name: "Alice" }, ["name"], "Bob"), { name: "Bob" }))
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (
+      !kEq(kPatch({ name: "Alice" }, ["age"], 30), { name: "Alice", age: 30 })
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (!kEq(kPatch({}, ["user", "name"], "Bob"), { user: { name: "Bob" } }))
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (!kEq(kPatch({}, ["foo", 0, "bar"], 12), { foo: [{ bar: 12 }] }))
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (
+      !kEq(kPatch({ items: [1, 2, 3] }, ["items", 1], 99), {
+        items: [1, 99, 3],
+      })
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (
+      !kEq(kPatch({ items: [1] }, ["items", 3], 99), {
+        items: [1, null, null, 99],
+      })
+    )
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (!kEq(kPatch(null, ["x"], 1), { x: 1 }))
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kEq(l, r) {
+    if (Duration.isDuration(l) && Duration.isDuration(r))
+      return l.toMillis() === r.toMillis();
+    if (DateTime.isDateTime(l) && DateTime.isDateTime(r))
+      return l.toMillis() === r.toMillis();
+    if (Array.isArray(l) && Array.isArray(r)) {
+      if (l.length !== r.length) return false;
+      for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false;
+      return true;
+    }
+    if (
+      typeof l === "object" &&
+      typeof r === "object" &&
+      l !== null &&
+      r !== null &&
+      !Array.isArray(l) &&
+      !Array.isArray(r)
+    ) {
+      const keysL = Object.keys(l);
+      const keysR = Object.keys(r);
+      if (keysL.length !== keysR.length) return false;
+      for (const key of keysL)
+        if (!(key in r) || !kEq(l[key], r[key])) return false;
+      return true;
+    }
+    return l == r;
+  }
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    if (!kEq(kPatch({}, ["a", "b", "c"], 1), { a: { b: { c: 1 } } }))
+      throw new Error("Assertion failed");
+    return true;
+  })();
+})(null);
+(function (_) {
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    try {
+      kPatch([], ["foo"], 1)();
+      throw new Error("Expected error but none thrown");
+    } catch (e) {
+      if (e.message === "Expected error but none thrown") throw e;
+      return true;
+    }
+  })();
+})(null);
+(function (_) {
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    try {
+      kPatch([1, 2, 3], ["foo"], 1)();
+      throw new Error("Expected error but none thrown");
+    } catch (e) {
+      if (e.message === "Expected error but none thrown") throw e;
+      return true;
+    }
+  })();
+})(null);
+(function (_) {
+  function kPatch(data, path, value) {
+    if (path.length === 0) return value;
+    const seg = path[0];
+    const rest = path.slice(1);
+    const nextDefault =
+      rest.length === 0 ? null : typeof rest[0] === "number" ? [] : {};
+    if (typeof seg === "number") {
+      if (data !== null && data !== undefined && !Array.isArray(data))
+        throw new Error("cannot patch array index on non-array");
+      const arr = Array.isArray(data) ? [...data] : [];
+      while (arr.length <= seg) arr.push(null);
+      const existing = arr[seg];
+      arr[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return arr;
+    } else {
+      if (Array.isArray(data))
+        throw new Error("cannot patch object key on array");
+      const obj =
+        data !== null && data !== undefined && typeof data === "object"
+          ? { ...data }
+          : {};
+      const existing = obj[seg];
+      obj[seg] = kPatch(
+        existing === null || existing === undefined ? nextDefault : existing,
+        rest,
+        value,
+      );
+      return obj;
+    }
+  }
+  return (function () {
+    try {
+      kPatch({ foo: [] }, ["foo", "bar"], 1)();
+      throw new Error("Expected error but none thrown");
+    } catch (e) {
+      if (e.message === "Expected error but none thrown") throw e;
+      return true;
+    }
+  })();
+})(null);

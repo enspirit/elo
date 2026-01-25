@@ -1,6 +1,7 @@
 # Hacking on Elo with Claude Code
 
 This Docker setup provides a sandboxed environment with all tools needed to hack on Elo:
+
 - Node.js (for the compiler)
 - Ruby (for acceptance tests)
 - PostgreSQL (for acceptance tests)
@@ -56,12 +57,12 @@ PostgreSQL is pre-configured via environment variables. Just run `psql` to conne
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `make up` | Build and start containers |
-| `make down` | Stop containers |
-| `make shell` | Enter dev container |
-| `make restart` | Restart everything |
-| `make logs` | Follow container logs |
-| `make status` | Show container status |
-| `make clean` | Remove containers and images |
+| Command        | Description                  |
+| -------------- | ---------------------------- |
+| `make up`      | Build and start containers   |
+| `make down`    | Stop containers              |
+| `make shell`   | Enter dev container          |
+| `make restart` | Restart everything           |
+| `make logs`    | Follow container logs        |
+| `make status`  | Show container status        |
+| `make clean`   | Remove containers and images |

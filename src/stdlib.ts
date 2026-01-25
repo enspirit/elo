@@ -6,8 +6,8 @@
  * that are looked up by function name and argument types.
  */
 
-import { EloType, Types, typeName, typeEquals } from './types';
-import { IRExpr } from './ir';
+import { EloType, Types, typeName, typeEquals } from "./types";
+import { IRExpr } from "./ir";
 
 /**
  * A function signature: name + argument types
@@ -22,7 +22,7 @@ export interface FunctionSignature {
  * e.g., "add:int,int" or "neg:float"
  */
 export function signatureKey(name: string, argTypes: EloType[]): string {
-  const typeNames = argTypes.map(typeName).join(',');
+  const typeNames = argTypes.map(typeName).join(",");
   return typeNames ? `${name}:${typeNames}` : name;
 }
 
@@ -31,7 +31,9 @@ export function signatureKey(name: string, argTypes: EloType[]): string {
  * e.g., "foo(Int, String)" or "upper(Any)"
  */
 export function formatSignature(name: string, argTypes: EloType[]): string {
-  const typeNames = argTypes.map(t => typeName(t).charAt(0).toUpperCase() + typeName(t).slice(1)).join(', ');
+  const typeNames = argTypes
+    .map((t) => typeName(t).charAt(0).toUpperCase() + typeName(t).slice(1))
+    .join(", ");
   return `${name}(${typeNames})`;
 }
 
@@ -77,7 +79,7 @@ export function typeGeneralizations(argTypes: EloType[]): EloType[][] {
  */
 export interface EmitContext<T> {
   emit: (ir: IRExpr) => T;
-  emitWithParens: (ir: IRExpr, parentOp: string, side: 'left' | 'right') => T;
+  emitWithParens: (ir: IRExpr, parentOp: string, side: "left" | "right") => T;
   /** Track a required helper function (e.g., 'kAdd', 'kSub') */
   requireHelper?: (name: string) => void;
 }
@@ -92,12 +94,23 @@ export type FunctionEmitter<T> = (args: IRExpr[], ctx: EmitContext<T>) => T;
  */
 export class StdLib<T> {
   private implementations: Map<string, FunctionEmitter<T>> = new Map();
-  private fallback: ((name: string, args: IRExpr[], argTypes: EloType[], ctx: EmitContext<T>) => T) | null = null;
+  private fallback:
+    | ((
+        name: string,
+        args: IRExpr[],
+        argTypes: EloType[],
+        ctx: EmitContext<T>,
+      ) => T)
+    | null = null;
 
   /**
    * Register an implementation for a specific signature
    */
-  register(name: string, argTypes: EloType[], emitter: FunctionEmitter<T>): this {
+  register(
+    name: string,
+    argTypes: EloType[],
+    emitter: FunctionEmitter<T>,
+  ): this {
     const key = signatureKey(name, argTypes);
     this.implementations.set(key, emitter);
     return this;
@@ -106,7 +119,14 @@ export class StdLib<T> {
   /**
    * Register a fallback for unmatched signatures
    */
-  registerFallback(handler: (name: string, args: IRExpr[], argTypes: EloType[], ctx: EmitContext<T>) => T): this {
+  registerFallback(
+    handler: (
+      name: string,
+      args: IRExpr[],
+      argTypes: EloType[],
+      ctx: EmitContext<T>,
+    ) => T,
+  ): this {
     this.fallback = handler;
     return this;
   }
@@ -131,16 +151,17 @@ export class StdLib<T> {
 
     // If any argument type is 'any', try to find any implementation with matching arity
     // This is the "type specialization" fallback for dynamically-typed contexts
-    if (argTypes.some(t => typeEquals(t, Types.any))) {
+    if (argTypes.some((t) => typeEquals(t, Types.any))) {
       const arity = argTypes.length;
       for (const [key, impl] of this.implementations) {
         // Check if key matches: "name:type1,type2,..." or just "name" for nullary
-        const colonIdx = key.indexOf(':');
+        const colonIdx = key.indexOf(":");
         const keyName = colonIdx === -1 ? key : key.substring(0, colonIdx);
         if (keyName !== name) continue;
 
         // Check arity matches
-        const keyArity = colonIdx === -1 ? 0 : key.substring(colonIdx + 1).split(',').length;
+        const keyArity =
+          colonIdx === -1 ? 0 : key.substring(colonIdx + 1).split(",").length;
         if (keyArity === arity) {
           return impl;
         }
@@ -153,7 +174,12 @@ export class StdLib<T> {
   /**
    * Emit code for a function call
    */
-  emit(name: string, args: IRExpr[], argTypes: EloType[], ctx: EmitContext<T>): T {
+  emit(
+    name: string,
+    args: IRExpr[],
+    argTypes: EloType[],
+    ctx: EmitContext<T>,
+  ): T {
     const impl = this.lookup(name, argTypes);
     if (impl) {
       return impl(args, ctx);
@@ -170,11 +196,11 @@ export class StdLib<T> {
  */
 export function binaryOp<T>(
   op: string,
-  format: (left: T, right: T) => T
+  format: (left: T, right: T) => T,
 ): FunctionEmitter<T> {
   return (args, ctx) => {
-    const left = ctx.emitWithParens(args[0], op, 'left');
-    const right = ctx.emitWithParens(args[1], op, 'right');
+    const left = ctx.emitWithParens(args[0], op, "left");
+    const right = ctx.emitWithParens(args[1], op, "right");
     return format(left, right);
   };
 }
@@ -191,7 +217,7 @@ export function simpleBinaryOp(op: string): FunctionEmitter<string> {
  */
 export function unaryOp<T>(
   format: (operand: T, needsParens: boolean) => T,
-  needsParensCheck: (arg: IRExpr) => boolean
+  needsParensCheck: (arg: IRExpr) => boolean,
 ): FunctionEmitter<T> {
   return (args, ctx) => {
     const operand = ctx.emit(args[0]);
@@ -229,8 +255,23 @@ export function unaryMethod(method: string): FunctionEmitter<string> {
  * Check if an IR expression is a binary operation (needs parens for postfix method calls)
  */
 export function isBinaryOp(ir: IRExpr): boolean {
-  if (ir.type !== 'call') return false;
-  const binaryOps = ['add', 'sub', 'mul', 'div', 'mod', 'pow', 'lt', 'gt', 'lte', 'gte', 'eq', 'neq', 'and', 'or'];
+  if (ir.type !== "call") return false;
+  const binaryOps = [
+    "add",
+    "sub",
+    "mul",
+    "div",
+    "mod",
+    "pow",
+    "lt",
+    "gt",
+    "lte",
+    "gte",
+    "eq",
+    "neq",
+    "and",
+    "or",
+  ];
   return binaryOps.includes(ir.fn);
 }
 
@@ -251,7 +292,7 @@ export function rubyMethod(method: string): FunctionEmitter<string> {
  */
 export function fnCall(fnName: string): FunctionEmitter<string> {
   return (args, ctx) => {
-    const emittedArgs = args.map(a => ctx.emit(a)).join(', ');
+    const emittedArgs = args.map((a) => ctx.emit(a)).join(", ");
     return `${fnName}(${emittedArgs})`;
   };
 }
@@ -263,7 +304,7 @@ export function fnCall(fnName: string): FunctionEmitter<string> {
 export function helperCall(helperName: string): FunctionEmitter<string> {
   return (args, ctx) => {
     ctx.requireHelper?.(helperName);
-    const emittedArgs = args.map(a => ctx.emit(a)).join(', ');
+    const emittedArgs = args.map((a) => ctx.emit(a)).join(", ");
     return `${helperName}(${emittedArgs})`;
   };
 }

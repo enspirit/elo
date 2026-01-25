@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('../dist/src/eloc.js');
+require("../dist/src/eloc.js");

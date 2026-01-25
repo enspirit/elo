@@ -53,22 +53,24 @@ Date<iso8601> | Date<alternative> | fail("invalid date")
 ```
 
 **Why `|` works:**
+
 - Finitio precedent — consistent semantics across tools
 - Infix implies short-circuit — unlike `coalesce(a,b,c)` which looks eager
 - Grammar/regex intuition — `|` universally means "alternative"
 - Haskell's `<|>` — Alternative typeclass uses this exact pattern
 
 **Portable compilation:**
+
 - SQL: `COALESCE(a, b, c)`
 - JS: `(a) ?? (b) ?? (c)`
 - Ruby: `begin/rescue` blocks or helper
 
 ### What triggers fallback?
 
-| Trigger | Pros | Cons |
-|---------|------|------|
+| Trigger      | Pros                                 | Cons                                   |
+| ------------ | ------------------------------------ | -------------------------------------- |
 | `NoVal` only | Clean, maps to SQL NULL, predictable | Selectors must return NoVal on failure |
-| Exceptions | Catches all errors | Less predictable, harder in SQL |
+| Exceptions   | Catches all errors                   | Less predictable, harder in SQL        |
 
 **Decision: NoVal-based** — it's the portable "nothing" value.
 
@@ -84,12 +86,14 @@ With pure NoVal, we lose WHY something failed. Options considered:
 ## Chosen approach: Tagged NoVal
 
 NoVal can optionally carry a reason:
+
 ```
 NoVal                        -- simple absence
 NoVal("not valid iso8601")   -- absence with reason
 ```
 
 The `|` operator:
+
 1. If left is a value → return it
 2. If left is NoVal → try right side
 3. If all fail → last NoVal's reason is preserved
@@ -97,6 +101,7 @@ The `|` operator:
 `fail()` without arguments surfaces that reason.
 
 Compilation:
+
 - SQL: NULL (reason lost, acceptable)
 - JS/Ruby: Can preserve reason in a wrapper
 
@@ -105,11 +110,13 @@ Compilation:
 ### Current state
 
 NoVal is represented as native null:
+
 - JS: `null` / `undefined`
 - Ruby: `nil`
 - SQL: `NULL`
 
 Helper functions exist:
+
 - `isVal(x)` → checks x is not null
 - `orVal(x, default)` → returns x if value, else default
 - `typeOf(x)` → returns 'NoVal' for null values
@@ -125,6 +132,7 @@ the `|` operator compiles to code that:
 4. If all alternatives fail, the last error is available
 
 This means:
+
 - NoVal stays simple (null/nil/NULL)
 - Exceptions during evaluation become NoVal + tracked reason
 - `fail()` explicitly throws (and can use tracked reason)
@@ -138,6 +146,7 @@ alternative = comparison ("|" comparison)*
 ```
 
 Precedence (lowest to highest):
+
 1. `or`
 2. `and`
 3. `|` (alternative)
@@ -146,6 +155,7 @@ Precedence (lowest to highest):
 6. unary
 
 This means:
+
 - `a or b | c` → `a or (b | c)` — a, or (b else c)
 - `a and b | c` → `a and (b | c)` — a AND (b else c)
 - `a | b > 0` → `(a | b) > 0` — compare (a else b) to 0
@@ -154,17 +164,19 @@ This means:
 ### IR representation
 
 Option A: New IR node type
+
 ```typescript
 export interface IRAlternative {
-  type: 'alternative';
+  type: "alternative";
   alternatives: IRExpr[];
   resultType: EloType;
 }
 ```
 
 Option B: Treat as function call
+
 ```typescript
-irCall('alternative', [a, b, c], argTypes, resultType)
+irCall("alternative", [a, b, c], argTypes, resultType);
 ```
 
 **Decision: Option A** - cleaner semantics, special compilation needed anyway.
@@ -172,6 +184,7 @@ irCall('alternative', [a, b, c], argTypes, resultType)
 ### Compilation targets
 
 **JavaScript:**
+
 ```javascript
 // a | b | fail("error")
 (function() {
@@ -183,6 +196,7 @@ irCall('alternative', [a, b, c], argTypes, resultType)
 ```
 
 **Ruby:**
+
 ```ruby
 # a | b | fail("error")
 begin
@@ -194,6 +208,7 @@ end
 ```
 
 **SQL (PostgreSQL):**
+
 ```sql
 -- a | b | fail("error")
 COALESCE(<a>, <b>, elo_fail('error'))
@@ -213,15 +228,18 @@ $$ LANGUAGE plpgsql;
 ### The `fail` function
 
 Two signatures:
+
 1. `fail(message: String)` → always throws with given message
 2. `fail()` → throws with last captured error (if in `|` chain)
 
 For `fail()` without args to work, we need:
+
 - JS: access to `_err` variable in scope
 - Ruby: access to `_err` variable in scope
 - SQL: N/A (just returns NULL or we skip this variant)
 
 **Simpler approach**: Only support `fail(message)`. Users write:
+
 ```elo
 Date<iso8601>(s) | Date<dmy>(s) | fail("Invalid date: " ++ s)
 ```
@@ -229,6 +247,7 @@ Date<iso8601>(s) | Date<dmy>(s) | fail("Invalid date: " ++ s)
 ### Type inference
 
 For `a | b`:
+
 - If both have same type → that type
 - If one is NoVal → other's type
 - Otherwise → union type or `any`
@@ -269,11 +288,13 @@ The following was implemented:
 7. **Tests**: Added `alternative.elo` and `fail.elo` fixtures
 
 Example usage:
+
 ```elo
 indexOf('hello', 'x') | indexOf('hello', 'z') | -1
 ```
 
 Compiles to:
+
 - JS: `(function() { let _err = null; { try { let v = ...; if (v != null) return v; } catch(e) { _err = e.message; } } ... return null; })()`
 - Ruby: `->() { _err = nil; begin; v = ...; return v unless v.nil?; rescue => e; _err = e.message; end; ... nil }.call`
 - SQL: `COALESCE(...)`

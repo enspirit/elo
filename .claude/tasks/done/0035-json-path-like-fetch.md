@@ -9,9 +9,9 @@ which are ugly.
 Let's brainstorm about having a `fetch` stdlib function that would take
 an object and jsonpath-like literal.
 
-* Shall we use jsonpath ?
-* A simplification like $.x.1.y.z ?
-* Something closer to ruby's `dig` ?
+- Shall we use jsonpath ?
+- A simplification like $.x.1.y.z ?
+- Something closer to ruby's `dig` ?
 
 ## Brainstorming notes
 

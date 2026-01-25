@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   test:
@@ -25,38 +25,38 @@ jobs:
           --health-retries 5
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
 
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: '3.2'
-        bundler-cache: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: false
 
-    - name: Install Ruby dependencies
-      run: gem install activesupport
+      - name: Install Ruby dependencies
+        run: gem install activesupport
 
-    - name: Install Node.js dependencies
-      run: npm install
+      - name: Install Node.js dependencies
+        run: npm install
 
-    - name: Build project
-      run: npm run build
+      - name: Build project
+        run: npm run build
 
-    - name: Run all tests
-      run: npm test
-      env:
-        PGHOST: localhost
-        PGPORT: 5432
-        PGUSER: elo
-        PGPASSWORD: elo
-        PGDATABASE: elo
+      - name: Run all tests
+        run: npm test
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: elo
+          PGPASSWORD: elo
+          PGDATABASE: elo
 
   publish:
     needs: test
@@ -66,21 +66,21 @@ jobs:
       id-token: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
-        registry-url: 'https://registry.npmjs.org'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Build project
-      run: npm run build
+      - name: Build project
+        run: npm run build
 
-    - name: Publish to npm with provenance
-      run: npm publish --provenance --access public
+      - name: Publish to npm with provenance
+        run: npm publish --provenance --access public

@@ -1,9 +1,12 @@
-import { Expr } from '../ast';
-import { IRExpr, IRCall, usesInput } from '../ir';
-import { transform } from '../transform';
-import { EmitContext } from '../stdlib';
-import { createJavaScriptBinding, isNativeBinaryOp } from '../bindings/javascript';
-import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
+import { Expr } from "../ast";
+import { IRExpr, IRCall, usesInput } from "../ir";
+import { transform } from "../transform";
+import { EmitContext } from "../stdlib";
+import {
+  createJavaScriptBinding,
+  isNativeBinaryOp,
+} from "../bindings/javascript";
+import { JS_HELPERS, JS_HELPER_DEPS } from "../runtime";
 
 /**
  * JavaScript compilation options
@@ -47,7 +50,10 @@ interface EmitResult {
  * If the expression uses `_` (input variable), the output is a function
  * that takes `_` as a parameter instead of an IIFE.
  */
-export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptions): string {
+export function compileToJavaScript(
+  expr: Expr,
+  options?: JavaScriptCompileOptions,
+): string {
   const result = compileToJavaScriptWithMeta(expr, options);
   return result.code;
 }
@@ -59,7 +65,10 @@ export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptio
  * Every Elo program compiles to a function taking _ as input parameter.
  * The usesInput field indicates whether _ is actually referenced.
  */
-export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptCompileOptions): JavaScriptCompileResult {
+export function compileToJavaScriptWithMeta(
+  expr: Expr,
+  options?: JavaScriptCompileOptions,
+): JavaScriptCompileResult {
   const ir = transform(expr);
   const actuallyUsesInput = usesInput(ir);
   const emitOptions = { stripGuards: options?.stripGuards || false };
@@ -79,16 +88,22 @@ export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptComp
   // Build helper definitions (sorted for deterministic output)
   const helperDefs = Array.from(allHelpers)
     .sort()
-    .map(name => JS_HELPERS[name].replace(/\n\s*/g, ' '))
-    .join(' ');
+    .map((name) => JS_HELPERS[name].replace(/\n\s*/g, " "))
+    .join(" ");
 
   // Always wrap as a function taking _ as input parameter
   // When execute is true, add (null) to call the function and ; to make it a statement
-  const suffix = options?.execute ? '(null);' : '';
+  const suffix = options?.execute ? "(null);" : "";
   if (result.requiredHelpers.size === 0) {
-    return { code: `(function(_) { return ${result.code}; })${suffix}`, usesInput: actuallyUsesInput };
+    return {
+      code: `(function(_) { return ${result.code}; })${suffix}`,
+      usesInput: actuallyUsesInput,
+    };
   }
-  return { code: `(function(_) { ${helperDefs} return ${result.code}; })${suffix}`, usesInput: actuallyUsesInput };
+  return {
+    code: `(function(_) { ${helperDefs} return ${result.code}; })${suffix}`,
+    usesInput: actuallyUsesInput,
+  };
 }
 
 /**
@@ -111,27 +126,48 @@ function emitJSWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
  * JavaScript operator precedence (higher = binds tighter)
  */
 const JS_PRECEDENCE: Record<string, number> = {
-  '||': 1,
-  '&&': 2,
-  '==': 3, '!=': 3,
-  '<': 4, '>': 4, '<=': 4, '>=': 4,
-  '+': 5, '-': 5,
-  '*': 6, '/': 6, '%': 6,
+  "||": 1,
+  "&&": 2,
+  "==": 3,
+  "!=": 3,
+  "<": 4,
+  ">": 4,
+  "<=": 4,
+  ">=": 4,
+  "+": 5,
+  "-": 5,
+  "*": 6,
+  "/": 6,
+  "%": 6,
 };
 
 /**
  * Map IR function names to JS operators for precedence checking
  */
 const OP_MAP: Record<string, string> = {
-  'add': '+', 'sub': '-', 'mul': '*', 'div': '/', 'mod': '%',
-  'lt': '<', 'gt': '>', 'lte': '<=', 'gte': '>=',
-  'eq': '==', 'neq': '!=', 'and': '&&', 'or': '||',
+  add: "+",
+  sub: "-",
+  mul: "*",
+  div: "/",
+  mod: "%",
+  lt: "<",
+  gt: ">",
+  lte: "<=",
+  gte: ">=",
+  eq: "==",
+  neq: "!=",
+  and: "&&",
+  or: "||",
 };
 
 /**
  * Check if an IR expression needs parentheses when used as child of a binary op
  */
-function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): boolean {
+function needsParens(
+  child: IRExpr,
+  parentOp: string,
+  side: "left" | "right",
+): boolean {
   if (!isNativeBinaryOp(child)) return false;
 
   const call = child as IRCall;
@@ -142,7 +178,7 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
   const childPrec = JS_PRECEDENCE[childOp] || 0;
 
   if (childPrec < parentPrec) return true;
-  if (childPrec === parentPrec && side === 'right') return true;
+  if (childPrec === parentPrec && side === "right") return true;
 
   return false;
 }
@@ -153,7 +189,11 @@ const jsLib = createJavaScriptBinding();
 /**
  * Emit JavaScript code from IR
  */
-function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+function emitJS(
+  ir: IRExpr,
+  requiredHelpers?: Set<string>,
+  options?: EmitOptions,
+): string {
   const ctx: EmitContext<string> = {
     emit: (child) => emitJS(child, requiredHelpers, options),
     emitWithParens: (child, parentOp, side) => {
@@ -163,60 +203,64 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
       }
       return emitted;
     },
-    requireHelper: requiredHelpers ? (name) => requiredHelpers.add(name) : undefined,
+    requireHelper: requiredHelpers
+      ? (name) => requiredHelpers.add(name)
+      : undefined,
   };
 
   switch (ir.type) {
-    case 'int_literal':
-    case 'float_literal':
+    case "int_literal":
+    case "float_literal":
       return ir.value.toString();
 
-    case 'bool_literal':
+    case "bool_literal":
       return ir.value.toString();
 
-    case 'null_literal':
-      return 'null';
+    case "null_literal":
+      return "null";
 
-    case 'string_literal':
+    case "string_literal":
       return JSON.stringify(ir.value);
 
-    case 'date_literal':
+    case "date_literal":
       return `DateTime.fromISO('${ir.value}')`;
 
-    case 'datetime_literal':
+    case "datetime_literal":
       return `DateTime.fromISO('${ir.value}')`;
 
-    case 'duration_literal':
+    case "duration_literal":
       return `Duration.fromISO('${ir.value}')`;
 
-    case 'object_literal': {
-      const props = ir.properties.map(p => `${p.key}: ${ctx.emit(p.value)}`).join(', ');
+    case "object_literal": {
+      const props = ir.properties
+        .map((p) => `${p.key}: ${ctx.emit(p.value)}`)
+        .join(", ");
       // Wrap in parens to avoid parsing ambiguity with blocks
       return `({${props}})`;
     }
 
-    case 'array_literal': {
-      const elements = ir.elements.map(e => ctx.emit(e)).join(', ');
+    case "array_literal": {
+      const elements = ir.elements.map((e) => ctx.emit(e)).join(", ");
       return `[${elements}]`;
     }
 
-    case 'variable':
+    case "variable":
       return ir.name;
 
-    case 'member_access': {
+    case "member_access": {
       const object = ctx.emit(ir.object);
-      const needsParensForMember = ir.object.type === 'call';
+      const needsParensForMember = ir.object.type === "call";
       const objectExpr = needsParensForMember ? `(${object})` : object;
       return `${objectExpr}.${ir.property}`;
     }
 
-    case 'let': {
+    case "let": {
       // Collect consecutive let bindings, but stop if we encounter shadowing
       const allBindings: Array<{ name: string; value: string }> = [];
       const seenNames = new Set<string>();
       let current: IRExpr = ir;
 
-      while (current.type === 'let') {
+      while (current.type === "let") {
         let hasShadowing = false;
         for (const b of current.bindings) {
           if (seenNames.has(b.name)) {
@@ -235,80 +279,88 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
         current = current.body;
       }
 
-      const declarations = allBindings.map(b => `const ${b.name} = ${b.value};`).join(' ');
+      const declarations = allBindings
+        .map((b) => `const ${b.name} = ${b.value};`)
+        .join(" ");
       const body = ctx.emit(current);
       return `(() => { ${declarations} return ${body}; })()`;
     }
 
-    case 'call':
+    case "call":
       return jsLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
 
-    case 'if': {
+    case "if": {
       const cond = ctx.emit(ir.condition);
       const thenBranch = ctx.emit(ir.then);
       const elseBranch = ctx.emit(ir.else);
       return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
     }
 
-    case 'lambda': {
-      const params = ir.params.map(p => p.name).join(', ');
+    case "lambda": {
+      const params = ir.params.map((p) => p.name).join(", ");
       const body = ctx.emit(ir.body);
       return `(${params}) => ${body}`;
     }
 
-    case 'apply': {
+    case "apply": {
       const fn = ctx.emit(ir.fn);
-      const args = ir.args.map(a => ctx.emit(a)).join(', ');
+      const args = ir.args.map((a) => ctx.emit(a)).join(", ");
       // Wrap function in parens if it's a lambda expression
-      const needsParens = ir.fn.type === 'lambda';
+      const needsParens = ir.fn.type === "lambda";
       const fnExpr = needsParens ? `(${fn})` : fn;
       return `${fnExpr}(${args})`;
     }
 
-    case 'alternative': {
+    case "alternative": {
       // Compile to nullish coalescing chain: a ?? b ?? c
-      const alts = ir.alternatives.map(alt => {
+      const alts = ir.alternatives.map((alt) => {
         const code = ctx.emit(alt);
         // Wrap in parens if it's a complex expression
-        return alt.type === 'call' || alt.type === 'alternative' ? `(${code})` : code;
+        return alt.type === "call" || alt.type === "alternative"
+          ? `(${code})`
+          : code;
       });
-      return alts.join(' ?? ');
+      return alts.join(" ?? ");
     }
 
-    case 'datapath': {
+    case "datapath": {
       // Compile datapath as an array of segments
-      const segments = ir.segments.map(s =>
-        typeof s === 'string' ? JSON.stringify(s) : s.toString()
+      const segments = ir.segments.map((s) =>
+        typeof s === "string" ? JSON.stringify(s) : s.toString(),
       );
-      return `[${segments.join(', ')}]`;
+      return `[${segments.join(", ")}]`;
     }
 
-    case 'typedef': {
+    case "typedef": {
       // Generate parser function for the type and bind it
       // Wrap it so calling TypeName(value) auto-unwraps the result
       const parserCode = emitTypeExprParser(ir.typeExpr, ctx);
-      ctx.requireHelper?.('pUnwrap');
+      ctx.requireHelper?.("pUnwrap");
       const body = ctx.emit(ir.body);
       // The type name becomes a function that calls the parser and unwraps
       return `(() => { const _p_${ir.name} = ${parserCode}; const ${ir.name} = (v) => pUnwrap(_p_${ir.name}(v, '')); return ${body}; })()`;
     }
 
-    case 'guard': {
+    case "guard": {
       const body = ctx.emit(ir.body);
       // If stripGuards is enabled, just emit the body
       if (options?.stripGuards) {
         return body;
       }
       // Generate guard checks that throw on failure
-      const guardChecks = ir.constraints.map(c => {
-        const conditionCode = ctx.emit(c.condition);
-        const errorMsg = c.label
-          ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
-          : `${ir.guardType} failed`;
-        // Escape single quotes in the error message for JS string
-        const escapedMsg = errorMsg.replace(/'/g, "\\'");
-        return `if (!(${conditionCode})) throw new Error('${escapedMsg}');`;
-      }).join(' ');
+      const guardChecks = ir.constraints
+        .map((c) => {
+          const conditionCode = ctx.emit(c.condition);
+          const errorMsg = c.label
+            ? c.label.includes(" ")
+              ? c.label
+              : `${ir.guardType} '${c.label}' failed`
+            : `${ir.guardType} failed`;
+          // Escape single quotes in the error message for JS string
+          const escapedMsg = errorMsg.replace(/'/g, "\\'");
+          return `if (!(${conditionCode})) throw new Error('${escapedMsg}');`;
+        })
+        .join(" ");
       return `(() => { ${guardChecks} return ${body}; })()`;
     }
   }
@@ -318,21 +370,21 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
  * Emit a parser function for a type expression
  */
 function emitTypeExprParser(
-  typeExpr: import('../ir').IRTypeExpr,
-  ctx: EmitContext<string>
+  typeExpr: import("../ir").IRTypeExpr,
+  ctx: EmitContext<string>,
 ): string {
   switch (typeExpr.kind) {
-    case 'type_ref': {
+    case "type_ref": {
       // Map type name to parser helper
       const parserMap: Record<string, string> = {
-        'Any': 'pAny',
-        'Null': 'pNull',
-        'String': 'pString',
-        'Int': 'pInt',
-        'Float': 'pFloat',
-        'Bool': 'pBool',
-        'Boolean': 'pBool',
-        'Datetime': 'pDatetime',
+        Any: "pAny",
+        Null: "pNull",
+        String: "pString",
+        Int: "pInt",
+        Float: "pFloat",
+        Bool: "pBool",
+        Boolean: "pBool",
+        Datetime: "pDatetime",
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
@@ -342,41 +394,46 @@ function emitTypeExprParser(
       // Check if it's a user-defined type (uppercase identifier not in built-ins)
       // User-defined types are referenced as _p_TypeName
       const firstChar = typeExpr.name.charAt(0);
-      if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) {
+      if (
+        firstChar === firstChar.toUpperCase() &&
+        firstChar !== firstChar.toLowerCase()
+      ) {
         return `_p_${typeExpr.name}`;
       }
       throw new Error(`Unknown type in type definition: ${typeExpr.name}`);
     }
 
-    case 'type_schema': {
+    case "type_schema": {
       // Object schema: generate inline parser
-      ctx.requireHelper?.('pOk');
-      ctx.requireHelper?.('pFail');
-      const propParsers = typeExpr.properties.map(prop => {
+      ctx.requireHelper?.("pOk");
+      ctx.requireHelper?.("pFail");
+      const propParsers = typeExpr.properties.map((prop) => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
         return { key: prop.key, parser: propParser, optional: prop.optional };
       });
-      const knownKeys = typeExpr.properties.map(p => p.key);
+      const knownKeys = typeExpr.properties.map((p) => p.key);
 
       // Generate object parser - wrap parser in parens to handle inline functions
-      const propChecks = propParsers.map(({ key, parser, optional }) => {
-        if (optional) {
-          // Optional: if value is null/undefined, skip attribute; otherwise parse
-          return `if (v.${key} != null) { const _r_${key} = (${parser})(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, null, [_r_${key}]); _o.${key} = _r_${key}.value; }`;
-        }
-        // Required: parse and fail if not successful
-        return `const _r_${key} = (${parser})(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, null, [_r_${key}]); _o.${key} = _r_${key}.value;`;
-      }).join(' ');
+      const propChecks = propParsers
+        .map(({ key, parser, optional }) => {
+          if (optional) {
+            // Optional: if value is null/undefined, skip attribute; otherwise parse
+            return `if (v.${key} != null) { const _r_${key} = (${parser})(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, null, [_r_${key}]); _o.${key} = _r_${key}.value; }`;
+          }
+          // Required: parse and fail if not successful
+          return `const _r_${key} = (${parser})(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, null, [_r_${key}]); _o.${key} = _r_${key}.value;`;
+        })
+        .join(" ");
 
       // Handle extras based on the extras mode
       let extrasCheck: string;
-      if (typeExpr.extras === undefined || typeExpr.extras === 'closed') {
+      if (typeExpr.extras === undefined || typeExpr.extras === "closed") {
         // Closed: fail if any extra keys exist
         const knownKeysSet = JSON.stringify(knownKeys);
         extrasCheck = `const _ks = ${knownKeysSet}; for (const _k in v) { if (!_ks.includes(_k)) return pFail(p + '.' + _k, 'unexpected attribute'); }`;
-      } else if (typeExpr.extras === 'ignored') {
+      } else if (typeExpr.extras === "ignored") {
         // Ignored: no check, extras are silently ignored
-        extrasCheck = '';
+        extrasCheck = "";
       } else {
         // Typed extras: parse each extra key with the given type
         const extrasParser = emitTypeExprParser(typeExpr.extras, ctx);
@@ -387,47 +444,56 @@ function emitTypeExprParser(
       return `(v, p) => { if (typeof v !== 'object' || v === null) return pFail(p, 'expected object, got ' + (v === null ? 'Null' : typeof v)); const _o = {}; ${propChecks} ${extrasCheck} return pOk(_o, p); }`;
     }
 
-    case 'subtype_constraint': {
+    case "subtype_constraint": {
       // Subtype constraint: Int(i | i > 0) or Int(i | positive: i > 0, even: i % 2 == 0)
       // First parse with base type, then check all constraints
-      ctx.requireHelper?.('pOk');
-      ctx.requireHelper?.('pFail');
+      ctx.requireHelper?.("pOk");
+      ctx.requireHelper?.("pFail");
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = typeExpr.variable;
 
       // Generate constraint checks
-      const constraintChecks = typeExpr.constraints.map(c => {
-        const conditionCode = ctx.emit(c.condition);
-        const errorMsg = c.label
-          ? (c.label.includes(' ') ? c.label : `constraint '${c.label}' failed`)
-          : 'constraint failed';
-        // Escape single quotes in the error message for JS string
-        const escapedMsg = errorMsg.replace(/'/g, "\\'");
-        return `if (!(${conditionCode})) return pFail(p, '${escapedMsg}');`;
-      }).join(' ');
+      const constraintChecks = typeExpr.constraints
+        .map((c) => {
+          const conditionCode = ctx.emit(c.condition);
+          const errorMsg = c.label
+            ? c.label.includes(" ")
+              ? c.label
+              : `constraint '${c.label}' failed`
+            : "constraint failed";
+          // Escape single quotes in the error message for JS string
+          const escapedMsg = errorMsg.replace(/'/g, "\\'");
+          return `if (!(${conditionCode})) return pFail(p, '${escapedMsg}');`;
+        })
+        .join(" ");
 
       return `(v, p) => { const _r = ${baseParser}(v, p); if (!_r.success) return _r; const ${varName} = _r.value; ${constraintChecks} return _r; }`;
     }
 
-    case 'array_type': {
+    case "array_type": {
       // Array type: [Int]
       // Parse each element with the element type
-      ctx.requireHelper?.('pOk');
-      ctx.requireHelper?.('pFail');
+      ctx.requireHelper?.("pOk");
+      ctx.requireHelper?.("pFail");
       const elemParser = emitTypeExprParser(typeExpr.elementType, ctx);
 
       // Store element parser in variable to handle inline functions (like object schemas)
       return `(v, p) => { if (!Array.isArray(v)) return pFail(p, 'expected array, got ' + (v === null ? 'Null' : typeof v)); const _el = ${elemParser}; const _a = []; for (let _i = 0; _i < v.length; _i++) { const _r = _el(v[_i], p + '.' + _i); if (!_r.success) return pFail(p, null, [_r]); _a.push(_r.value); } return pOk(_a, p); }`;
     }
 
-    case 'union_type': {
+    case "union_type": {
       // Union type: Int|String
       // Try each type in order, return first successful parse (PEG-style)
-      ctx.requireHelper?.('pFail');
-      const parsers = typeExpr.types.map(t => emitTypeExprParser(t, ctx));
+      ctx.requireHelper?.("pFail");
+      const parsers = typeExpr.types.map((t) => emitTypeExprParser(t, ctx));
 
       // Generate tries: call each parser directly in order
-      const tries = parsers.map(p => `_r = (${p})(v, p); if (_r.success) return _r; _causes.push(_r);`).join(' ');
+      const tries = parsers
+        .map(
+          (p) =>
+            `_r = (${p})(v, p); if (_r.success) return _r; _causes.push(_r);`,
+        )
+        .join(" ");
 
       return `(v, p) => { let _r; const _causes = []; ${tries} return pFail(p, 'no union alternative matched', _causes); }`;
     }

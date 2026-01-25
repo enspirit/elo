@@ -16,7 +16,6 @@ time with `Unknown type selector Foo`
 
 But warn that if I do this, it should obviously work (and return true):
 
-
 ```elo
 let
   Foo = Bool,

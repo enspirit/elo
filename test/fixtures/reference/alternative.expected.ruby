@@ -1,7 +1,0 @@
-->(_) { (raise "Assertion failed" unless ->() { v = 42; return v unless v.nil?; 0 }.call == 42; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless ->() { v = "hello"; return v unless v.nil?; "default" }.call == "hello"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("l"); return v unless v.nil?; -1 }.call == 2; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("x"); return v unless v.nil?; -1 }.call == -1; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("x"); return v unless v.nil?; v = "hello".index("z"); return v unless v.nil?; -1 }.call == -1; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("x"); return v unless v.nil?; v = "hello".index("l"); return v unless v.nil?; -1 }.call == 2; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (x = 42; ->() { v = x; return v unless v.nil?; 0 }.call) == 42; true) }.call(nil);

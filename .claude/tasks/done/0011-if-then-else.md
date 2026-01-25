@@ -3,6 +3,7 @@
 Most real-world logic requires some conditional, such as if/then/else.
 
 But what kind of conditional construction should we favor ?
+
 - functional if/then/else ?
 - Imperative if/then/else ?
 - IIF like in Excel ?

@@ -14,20 +14,20 @@
  * Dependencies between helpers. If helper A uses helper B, A depends on B.
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
-  kNeq: ['kEq'],
-  kFetchObject: ['kFetch'],
-  kFetchArray: ['kFetch'],
+  kNeq: ["kEq"],
+  kFetchObject: ["kFetch"],
+  kFetchArray: ["kFetch"],
   // Parser helpers depend on pOk/pFail
-  pAny: ['pOk'],
-  pNull: ['pOk', 'pFail'],
-  pString: ['pOk', 'pFail'],
-  pInt: ['pOk', 'pFail'],
-  pBool: ['pOk', 'pFail'],
-  pDatetime: ['pOk', 'pFail'],
-  pFloat: ['pOk', 'pFail'],
-  pDate: ['pOk', 'pFail'],
-  pDuration: ['pOk', 'pFail'],
-  pData: ['pOk', 'pFail'],
+  pAny: ["pOk"],
+  pNull: ["pOk", "pFail"],
+  pString: ["pOk", "pFail"],
+  pInt: ["pOk", "pFail"],
+  pBool: ["pOk", "pFail"],
+  pDatetime: ["pOk", "pFail"],
+  pFloat: ["pOk", "pFail"],
+  pDate: ["pOk", "pFail"],
+  pDuration: ["pOk", "pFail"],
+  pData: ["pOk", "pFail"],
 };
 
 export const JS_HELPERS: Record<string, string> = {
@@ -257,118 +257,4 @@ export const JS_HELPERS: Record<string, string> = {
   const err = findError(r);
   throw new Error((err.path || '.') + ': ' + (err.message || 'type error'));
 }`,
-};
-
-/**
- * Ruby parser helper function snippets.
- * These are embedded in compiled Ruby output when type definitions are used.
- */
-export const RUBY_HELPER_DEPS: Record<string, string[]> = {
-  p_any: ['p_ok'],
-  p_null: ['p_ok', 'p_fail'],
-  p_string: ['p_ok', 'p_fail'],
-  p_int: ['p_ok', 'p_fail'],
-  p_bool: ['p_ok', 'p_fail'],
-  p_datetime: ['p_ok', 'p_fail'],
-  p_float: ['p_ok', 'p_fail'],
-  p_date: ['p_ok', 'p_fail'],
-  p_duration: ['p_ok', 'p_fail'],
-  p_data: ['p_ok', 'p_fail'],
-};
-
-export const RUBY_HELPERS: Record<string, string> = {
-  k_deep_merge: `def k_deep_merge(a, b)
-  return b unless a.is_a?(Hash) && b.is_a?(Hash)
-  result = a.dup
-  b.each { |k, v| result[k] = k_deep_merge(a[k], v) }
-  result
-end`,
-  k_patch: `def k_patch(d, p, v)
-  return v if p.empty?
-  seg = p[0]
-  rest = p[1..]
-  next_default = rest.empty? ? nil : (rest[0].is_a?(Integer) ? [] : {})
-  if seg.is_a?(Integer)
-    raise 'cannot patch array index on non-array' if !d.nil? && !d.is_a?(Array)
-    arr = d.is_a?(Array) ? d.dup : []
-    arr[seg] = nil while arr.length <= seg
-    existing = arr[seg]
-    arr[seg] = k_patch(existing.nil? ? next_default : existing, rest, v)
-    arr
-  else
-    raise 'cannot patch object key on array' if d.is_a?(Array)
-    obj = d.is_a?(Hash) ? d.dup : {}
-    existing = obj[seg]
-    obj[seg] = k_patch(existing.nil? ? next_default : existing, rest, v)
-    obj
-  end
-end`,
-  p_ok: `def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end`,
-  p_fail: `def p_fail(p, m = nil, c = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [] } end`,
-  p_any: `def p_any(v, p) p_ok(v, p) end`,
-  p_null: `def p_null(v, p)
-  return p_ok(nil, p) if v.nil?
-  p_fail(p, "expected Null, got #{v.class}")
-end`,
-  p_string: `def p_string(v, p)
-  return p_ok(v, p) if v.is_a?(String)
-  p_fail(p, "expected String, got #{v.nil? ? 'Null' : v.class}")
-end`,
-  p_int: `def p_int(v, p)
-  return p_ok(v, p) if v.is_a?(Integer)
-  return p_ok(Integer(v, 10), p) if v.is_a?(String) rescue nil
-  p_fail(p, "expected Int, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
-end`,
-  p_bool: `def p_bool(v, p)
-  return p_ok(v, p) if v == true || v == false
-  return p_ok(true, p) if v == 'true'
-  return p_ok(false, p) if v == 'false'
-  p_fail(p, "expected Bool, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
-end`,
-  p_datetime: `def p_datetime(v, p)
-  return p_ok(v, p) if v.is_a?(DateTime) || v.is_a?(Time)
-  return p_ok(DateTime.parse(v), p) if v.is_a?(String) rescue nil
-  p_fail(p, "expected Datetime, got #{v.nil? ? 'Null' : v.is_a?(String) ? 'invalid datetime ' + v.inspect : v.class}")
-end`,
-  p_float: `def p_float(v, p)
-  return p_ok(v, p) if v.is_a?(Numeric)
-  return p_ok(Float(v), p) if v.is_a?(String) rescue nil
-  p_fail(p, "expected Float, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
-end`,
-  p_date: `def p_date(v, p)
-  return p_ok(v.to_date, p) if v.is_a?(DateTime) || v.is_a?(Time)
-  return p_ok(v, p) if v.is_a?(Date)
-  return p_ok(Date.parse(v), p) if v.is_a?(String) && v.match?(/^\\d{4}-\\d{2}-\\d{2}$/) rescue nil
-  p_fail(p, "expected Date (YYYY-MM-DD), got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
-end`,
-  p_duration: `def p_duration(v, p)
-  return p_ok(v, p) if v.is_a?(ActiveSupport::Duration)
-  return p_ok(ActiveSupport::Duration.parse(v), p) if v.is_a?(String) rescue nil
-  p_fail(p, "expected Duration (ISO 8601), got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
-end`,
-  p_data: `def p_data(v, p)
-  return p_ok(JSON.parse(v), p) if v.is_a?(String) rescue p_fail(p, "invalid JSON: #{v.inspect}")
-  p_ok(v, p)
-end`,
-  p_unwrap: `def p_unwrap(r)
-  return r[:value] if r[:success]
-  find_error = ->(e) {
-    return e if e[:message] && !e[:message].empty?
-    return find_error.call(e[:cause][0]) if e[:cause] && e[:cause][0]
-    e
-  }
-  err = find_error.call(r)
-  raise "#{err[:path] || '.'}: #{err[:message] || 'type error'}"
-end`,
-  k_string: `def k_string(v)
-  return 'null' if v.nil?
-  return v ? 'true' : 'false' if v == true || v == false
-  return v.to_s if v.is_a?(Numeric)
-  return "'" + v.gsub("\\\\", "\\\\\\\\").gsub("'", "\\\\'") + "'" if v.is_a?(String)
-  return v.iso8601 if v.is_a?(ActiveSupport::Duration)
-  return v.strftime(v.to_time == v.to_date.to_time ? 'D%Y-%m-%d' : 'D%Y-%m-%dT%H:%M:%S') if v.is_a?(Date) || v.is_a?(DateTime) || v.is_a?(Time)
-  return '[' + v.map { |e| k_string(e) }.join(', ') + ']' if v.is_a?(Array)
-  return '{' + v.map { |k, val| k.to_s + ': ' + k_string(val) }.join(', ') + '}' if v.is_a?(Hash)
-  v.to_s
-end`,
 };

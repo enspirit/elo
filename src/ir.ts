@@ -9,7 +9,7 @@
  * This allows target compilers to generate optimal code based on types.
  */
 
-import { EloType, Types } from './types';
+import { EloType, Types } from "./types";
 
 /**
  * IR expression types
@@ -41,7 +41,7 @@ export type IRExpr =
  * Integer literal
  */
 export interface IRIntLiteral {
-  type: 'int_literal';
+  type: "int_literal";
   value: number;
 }
 
@@ -49,7 +49,7 @@ export interface IRIntLiteral {
  * Float literal
  */
 export interface IRFloatLiteral {
-  type: 'float_literal';
+  type: "float_literal";
   value: number;
 }
 
@@ -57,7 +57,7 @@ export interface IRFloatLiteral {
  * Boolean literal
  */
 export interface IRBoolLiteral {
-  type: 'bool_literal';
+  type: "bool_literal";
   value: boolean;
 }
 
@@ -65,14 +65,14 @@ export interface IRBoolLiteral {
  * Null literal
  */
 export interface IRNullLiteral {
-  type: 'null_literal';
+  type: "null_literal";
 }
 
 /**
  * String literal
  */
 export interface IRStringLiteral {
-  type: 'string_literal';
+  type: "string_literal";
   value: string;
 }
 
@@ -80,7 +80,7 @@ export interface IRStringLiteral {
  * Date literal (ISO8601 date)
  */
 export interface IRDateLiteral {
-  type: 'date_literal';
+  type: "date_literal";
   value: string;
 }
 
@@ -88,7 +88,7 @@ export interface IRDateLiteral {
  * DateTime literal (ISO8601 datetime)
  */
 export interface IRDateTimeLiteral {
-  type: 'datetime_literal';
+  type: "datetime_literal";
   value: string;
 }
 
@@ -96,7 +96,7 @@ export interface IRDateTimeLiteral {
  * Duration literal (ISO8601 duration)
  */
 export interface IRDurationLiteral {
-  type: 'duration_literal';
+  type: "duration_literal";
   value: string;
 }
 
@@ -112,7 +112,7 @@ export interface IRObjectProperty {
  * Object literal: {key: value, ...}
  */
 export interface IRObjectLiteral {
-  type: 'object_literal';
+  type: "object_literal";
   properties: IRObjectProperty[];
 }
 
@@ -120,7 +120,7 @@ export interface IRObjectLiteral {
  * Array literal: [expr, expr, ...]
  */
 export interface IRArrayLiteral {
-  type: 'array_literal';
+  type: "array_literal";
   elements: IRExpr[];
 }
 
@@ -128,7 +128,7 @@ export interface IRArrayLiteral {
  * Variable reference with inferred type
  */
 export interface IRVariable {
-  type: 'variable';
+  type: "variable";
   name: string;
   inferredType: EloType;
 }
@@ -141,7 +141,7 @@ export interface IRVariable {
  * of each argument, allowing compilers to dispatch to the correct implementation.
  */
 export interface IRCall {
-  type: 'call';
+  type: "call";
   fn: string;
   args: IRExpr[];
   argTypes: EloType[];
@@ -155,8 +155,8 @@ export interface IRCall {
  * a lambda expression that's been bound to a variable.
  */
 export interface IRApply {
-  type: 'apply';
-  fn: IRExpr;  // The lambda expression or variable holding a lambda
+  type: "apply";
+  fn: IRExpr; // The lambda expression or variable holding a lambda
   args: IRExpr[];
   argTypes: EloType[];
   resultType: EloType;
@@ -174,7 +174,7 @@ export interface IRLetBinding {
  * Let expression
  */
 export interface IRLet {
-  type: 'let';
+  type: "let";
   bindings: IRLetBinding[];
   body: IRExpr;
 }
@@ -183,7 +183,7 @@ export interface IRLet {
  * Member access (dot notation)
  */
 export interface IRMemberAccess {
-  type: 'member_access';
+  type: "member_access";
   object: IRExpr;
   property: string;
 }
@@ -192,7 +192,7 @@ export interface IRMemberAccess {
  * If expression: if condition then consequent else alternative
  */
 export interface IRIf {
-  type: 'if';
+  type: "if";
   condition: IRExpr;
   then: IRExpr;
   else: IRExpr;
@@ -210,10 +210,10 @@ export interface IRLambdaParam {
  * Lambda expression: fn( params ~> body )
  */
 export interface IRLambda {
-  type: 'lambda';
+  type: "lambda";
   params: IRLambdaParam[];
   body: IRExpr;
-  resultType: EloType;  // Type of the body
+  resultType: EloType; // Type of the body
 }
 
 /**
@@ -221,7 +221,7 @@ export interface IRLambda {
  * Evaluates alternatives left-to-right, returns first non-null value.
  */
 export interface IRAlternative {
-  type: 'alternative';
+  type: "alternative";
   alternatives: IRExpr[];
   resultType: EloType;
 }
@@ -232,21 +232,26 @@ export interface IRAlternative {
  * Segments can be property names (strings) or array indices (numbers).
  */
 export interface IRDataPath {
-  type: 'datapath';
+  type: "datapath";
   segments: (string | number)[];
 }
 
 /**
  * IR type expression (used in type definitions)
  */
-export type IRTypeExpr = IRTypeRef | IRTypeSchema | IRSubtypeConstraint | IRArrayType | IRUnionType;
+export type IRTypeExpr =
+  | IRTypeRef
+  | IRTypeSchema
+  | IRSubtypeConstraint
+  | IRArrayType
+  | IRUnionType;
 
 /**
  * Reference to a base type
  */
 export interface IRTypeRef {
-  kind: 'type_ref';
-  name: string;  // 'String', 'Int', 'Bool', 'Datetime', 'Any'
+  kind: "type_ref";
+  name: string; // 'String', 'Int', 'Bool', 'Datetime', 'Any'
 }
 
 /**
@@ -257,34 +262,34 @@ export interface IRTypeRef {
  * - IRTypeExpr: extra attributes are allowed and must match this type
  */
 export interface IRTypeSchema {
-  kind: 'type_schema';
+  kind: "type_schema";
   properties: IRTypeSchemaProperty[];
-  extras?: 'closed' | 'ignored' | IRTypeExpr;
+  extras?: "closed" | "ignored" | IRTypeExpr;
 }
 
 /**
  * A single constraint with optional label (IR version)
  */
 export interface IRConstraint {
-  label?: string;         // Optional label: 'positive' or 'must be positive'
-  condition: IRExpr;      // The constraint expression transformed to IR
+  label?: string; // Optional label: 'positive' or 'must be positive'
+  condition: IRExpr; // The constraint expression transformed to IR
 }
 
 /**
  * Subtype constraint: Int(i | i > 0) or Int(i | positive: i > 0, even: i % 2 == 0)
  */
 export interface IRSubtypeConstraint {
-  kind: 'subtype_constraint';
+  kind: "subtype_constraint";
   baseType: IRTypeExpr;
   variable: string;
-  constraints: IRConstraint[];  // One or more labeled constraints
+  constraints: IRConstraint[]; // One or more labeled constraints
 }
 
 /**
  * Array type: [Int]
  */
 export interface IRArrayType {
-  kind: 'array_type';
+  kind: "array_type";
   elementType: IRTypeExpr;
 }
 
@@ -293,7 +298,7 @@ export interface IRArrayType {
  * Tries each type in order, returns first successful parse
  */
 export interface IRUnionType {
-  kind: 'union_type';
+  kind: "union_type";
   types: IRTypeExpr[];
 }
 
@@ -303,14 +308,14 @@ export interface IRUnionType {
 export interface IRTypeSchemaProperty {
   key: string;
   typeExpr: IRTypeExpr;
-  optional?: boolean;  // true for `name :? Type` syntax
+  optional?: boolean; // true for `name :? Type` syntax
 }
 
 /**
  * Type definition: let Person = { name: String, age: Int } in body
  */
 export interface IRTypeDef {
-  type: 'typedef';
+  type: "typedef";
   name: string;
   typeExpr: IRTypeExpr;
   body: IRExpr;
@@ -322,10 +327,10 @@ export interface IRTypeDef {
  * guardType distinguishes preconditions (guard) from postconditions (check).
  */
 export interface IRGuard {
-  type: 'guard';
-  constraints: IRConstraint[];  // One or more labeled constraints
+  type: "guard";
+  constraints: IRConstraint[]; // One or more labeled constraints
   body: IRExpr;
-  guardType: 'guard' | 'check';  // Semantic distinction for clarity
+  guardType: "guard" | "check"; // Semantic distinction for clarity
 }
 
 /**
@@ -333,107 +338,149 @@ export interface IRGuard {
  */
 
 export function irInt(value: number): IRIntLiteral {
-  return { type: 'int_literal', value };
+  return { type: "int_literal", value };
 }
 
 export function irFloat(value: number): IRFloatLiteral {
-  return { type: 'float_literal', value };
+  return { type: "float_literal", value };
 }
 
 export function irBool(value: boolean): IRBoolLiteral {
-  return { type: 'bool_literal', value };
+  return { type: "bool_literal", value };
 }
 
 export function irNull(): IRNullLiteral {
-  return { type: 'null_literal' };
+  return { type: "null_literal" };
 }
 
 export function irString(value: string): IRStringLiteral {
-  return { type: 'string_literal', value };
+  return { type: "string_literal", value };
 }
 
 export function irDate(value: string): IRDateLiteral {
-  return { type: 'date_literal', value };
+  return { type: "date_literal", value };
 }
 
 export function irDateTime(value: string): IRDateTimeLiteral {
-  return { type: 'datetime_literal', value };
+  return { type: "datetime_literal", value };
 }
 
 export function irDuration(value: string): IRDurationLiteral {
-  return { type: 'duration_literal', value };
+  return { type: "duration_literal", value };
 }
 
 export function irObject(properties: IRObjectProperty[]): IRObjectLiteral {
-  return { type: 'object_literal', properties };
+  return { type: "object_literal", properties };
 }
 
 export function irArray(elements: IRExpr[]): IRArrayLiteral {
-  return { type: 'array_literal', elements };
+  return { type: "array_literal", elements };
 }
 
-export function irVariable(name: string, inferredType: EloType = Types.any): IRVariable {
-  return { type: 'variable', name, inferredType };
+export function irVariable(
+  name: string,
+  inferredType: EloType = Types.any,
+): IRVariable {
+  return { type: "variable", name, inferredType };
 }
 
-export function irCall(fn: string, args: IRExpr[], argTypes: EloType[], resultType: EloType = Types.any): IRCall {
-  return { type: 'call', fn, args, argTypes, resultType };
+export function irCall(
+  fn: string,
+  args: IRExpr[],
+  argTypes: EloType[],
+  resultType: EloType = Types.any,
+): IRCall {
+  return { type: "call", fn, args, argTypes, resultType };
 }
 
-export function irApply(fn: IRExpr, args: IRExpr[], argTypes: EloType[], resultType: EloType = Types.any): IRApply {
-  return { type: 'apply', fn, args, argTypes, resultType };
+export function irApply(
+  fn: IRExpr,
+  args: IRExpr[],
+  argTypes: EloType[],
+  resultType: EloType = Types.any,
+): IRApply {
+  return { type: "apply", fn, args, argTypes, resultType };
 }
 
 export function irLet(bindings: IRLetBinding[], body: IRExpr): IRLet {
-  return { type: 'let', bindings, body };
+  return { type: "let", bindings, body };
 }
 
-export function irMemberAccess(object: IRExpr, property: string): IRMemberAccess {
-  return { type: 'member_access', object, property };
+export function irMemberAccess(
+  object: IRExpr,
+  property: string,
+): IRMemberAccess {
+  return { type: "member_access", object, property };
 }
 
-export function irIf(condition: IRExpr, thenBranch: IRExpr, elseBranch: IRExpr): IRIf {
-  return { type: 'if', condition, then: thenBranch, else: elseBranch };
+export function irIf(
+  condition: IRExpr,
+  thenBranch: IRExpr,
+  elseBranch: IRExpr,
+): IRIf {
+  return { type: "if", condition, then: thenBranch, else: elseBranch };
 }
 
-export function irLambda(params: IRLambdaParam[], body: IRExpr, resultType: EloType): IRLambda {
-  return { type: 'lambda', params, body, resultType };
+export function irLambda(
+  params: IRLambdaParam[],
+  body: IRExpr,
+  resultType: EloType,
+): IRLambda {
+  return { type: "lambda", params, body, resultType };
 }
 
-export function irAlternative(alternatives: IRExpr[], resultType: EloType): IRAlternative {
-  return { type: 'alternative', alternatives, resultType };
+export function irAlternative(
+  alternatives: IRExpr[],
+  resultType: EloType,
+): IRAlternative {
+  return { type: "alternative", alternatives, resultType };
 }
 
 export function irDataPath(segments: (string | number)[]): IRDataPath {
-  return { type: 'datapath', segments };
+  return { type: "datapath", segments };
 }
 
 export function irTypeRef(name: string): IRTypeRef {
-  return { kind: 'type_ref', name };
+  return { kind: "type_ref", name };
 }
 
-export function irTypeSchema(properties: IRTypeSchemaProperty[], extras?: 'closed' | 'ignored' | IRTypeExpr): IRTypeSchema {
-  return { kind: 'type_schema', properties, extras };
+export function irTypeSchema(
+  properties: IRTypeSchemaProperty[],
+  extras?: "closed" | "ignored" | IRTypeExpr,
+): IRTypeSchema {
+  return { kind: "type_schema", properties, extras };
 }
 
-export function irSubtypeConstraint(baseType: IRTypeExpr, variable: string, constraints: IRConstraint[]): IRSubtypeConstraint {
-  return { kind: 'subtype_constraint', baseType, variable, constraints };
+export function irSubtypeConstraint(
+  baseType: IRTypeExpr,
+  variable: string,
+  constraints: IRConstraint[],
+): IRSubtypeConstraint {
+  return { kind: "subtype_constraint", baseType, variable, constraints };
 }
 
 export function irArrayType(elementType: IRTypeExpr): IRArrayType {
-  return { kind: 'array_type', elementType };
+  return { kind: "array_type", elementType };
 }
 
 export function irUnionType(types: IRTypeExpr[]): IRUnionType {
-  return { kind: 'union_type', types };
+  return { kind: "union_type", types };
 }
 
-export function irTypeDef(name: string, typeExpr: IRTypeExpr, body: IRExpr): IRTypeDef {
-  return { type: 'typedef', name, typeExpr, body };
+export function irTypeDef(
+  name: string,
+  typeExpr: IRTypeExpr,
+  body: IRExpr,
+): IRTypeDef {
+  return { type: "typedef", name, typeExpr, body };
 }
 
-export function irGuard(constraints: IRConstraint[], body: IRExpr, guardType: 'guard' | 'check' = 'guard'): IRGuard {
-  return { type: 'guard', constraints, body, guardType };
+export function irGuard(
+  constraints: IRConstraint[],
+  body: IRExpr,
+  guardType: "guard" | "check" = "guard",
+): IRGuard {
+  return { type: "guard", constraints, body, guardType };
 }
 
 /**
@@ -441,49 +488,49 @@ export function irGuard(constraints: IRConstraint[], body: IRExpr, guardType: 'g
  */
 export function inferType(ir: IRExpr): EloType {
   switch (ir.type) {
-    case 'int_literal':
+    case "int_literal":
       return Types.int;
-    case 'float_literal':
+    case "float_literal":
       return Types.float;
-    case 'bool_literal':
+    case "bool_literal":
       return Types.bool;
-    case 'null_literal':
+    case "null_literal":
       return Types.null;
-    case 'string_literal':
+    case "string_literal":
       return Types.string;
-    case 'date_literal':
+    case "date_literal":
       return Types.date;
-    case 'datetime_literal':
+    case "datetime_literal":
       return Types.datetime;
-    case 'duration_literal':
+    case "duration_literal":
       return Types.duration;
-    case 'object_literal':
+    case "object_literal":
       return Types.object;
-    case 'array_literal':
+    case "array_literal":
       return Types.array;
-    case 'variable':
+    case "variable":
       return ir.inferredType;
-    case 'call':
+    case "call":
       return ir.resultType;
-    case 'apply':
+    case "apply":
       return ir.resultType;
-    case 'let':
+    case "let":
       return inferType(ir.body);
-    case 'member_access':
+    case "member_access":
       return Types.any;
-    case 'if':
+    case "if":
       return inferType(ir.then);
-    case 'lambda':
+    case "lambda":
       return Types.fn;
-    case 'alternative':
+    case "alternative":
       return ir.resultType;
-    case 'datapath':
-      return Types.fn;  // DataPath is a function that takes data and returns a value
+    case "datapath":
+      return Types.fn; // DataPath is a function that takes data and returns a value
 
-    case 'typedef':
+    case "typedef":
       return inferType(ir.body);
 
-    case 'guard':
+    case "guard":
       return inferType(ir.body);
   }
 }
@@ -493,73 +540,85 @@ export function inferType(ir: IRExpr): EloType {
  * This is used to determine if the compiled output needs to be wrapped
  * as a function taking `_` as a parameter.
  */
-export function usesInput(ir: IRExpr, boundVars: Set<string> = new Set()): boolean {
+export function usesInput(
+  ir: IRExpr,
+  boundVars: Set<string> = new Set(),
+): boolean {
   switch (ir.type) {
-    case 'int_literal':
-    case 'float_literal':
-    case 'bool_literal':
-    case 'null_literal':
-    case 'string_literal':
-    case 'date_literal':
-    case 'datetime_literal':
-    case 'duration_literal':
+    case "int_literal":
+    case "float_literal":
+    case "bool_literal":
+    case "null_literal":
+    case "string_literal":
+    case "date_literal":
+    case "datetime_literal":
+    case "duration_literal":
       return false;
 
-    case 'variable':
-      return ir.name === '_' && !boundVars.has('_');
+    case "variable":
+      return ir.name === "_" && !boundVars.has("_");
 
-    case 'object_literal':
-      return ir.properties.some(p => usesInput(p.value, boundVars));
+    case "object_literal":
+      return ir.properties.some((p) => usesInput(p.value, boundVars));
 
-    case 'array_literal':
-      return ir.elements.some(e => usesInput(e, boundVars));
+    case "array_literal":
+      return ir.elements.some((e) => usesInput(e, boundVars));
 
-    case 'member_access':
+    case "member_access":
       return usesInput(ir.object, boundVars);
 
-    case 'call':
-      return ir.args.some(arg => usesInput(arg, boundVars));
+    case "call":
+      return ir.args.some((arg) => usesInput(arg, boundVars));
 
-    case 'apply':
-      return usesInput(ir.fn, boundVars) || ir.args.some(arg => usesInput(arg, boundVars));
+    case "apply":
+      return (
+        usesInput(ir.fn, boundVars) ||
+        ir.args.some((arg) => usesInput(arg, boundVars))
+      );
 
-    case 'let': {
+    case "let": {
       // Check binding values with current bound vars
-      const bindingsUseInput = ir.bindings.some(b => usesInput(b.value, boundVars));
+      const bindingsUseInput = ir.bindings.some((b) =>
+        usesInput(b.value, boundVars),
+      );
       // Add bound names for body check
       const newBound = new Set(boundVars);
-      ir.bindings.forEach(b => newBound.add(b.name));
+      ir.bindings.forEach((b) => newBound.add(b.name));
       return bindingsUseInput || usesInput(ir.body, newBound);
     }
 
-    case 'if':
-      return usesInput(ir.condition, boundVars) ||
-             usesInput(ir.then, boundVars) ||
-             usesInput(ir.else, boundVars);
+    case "if":
+      return (
+        usesInput(ir.condition, boundVars) ||
+        usesInput(ir.then, boundVars) ||
+        usesInput(ir.else, boundVars)
+      );
 
-    case 'lambda': {
+    case "lambda": {
       // Lambda params shadow outer variables
       const newBound = new Set(boundVars);
-      ir.params.forEach(p => newBound.add(p.name));
+      ir.params.forEach((p) => newBound.add(p.name));
       return usesInput(ir.body, newBound);
     }
 
-    case 'alternative':
-      return ir.alternatives.some(alt => usesInput(alt, boundVars));
+    case "alternative":
+      return ir.alternatives.some((alt) => usesInput(alt, boundVars));
 
-    case 'datapath':
-      return false;  // DataPath is a pure value, doesn't reference variables
+    case "datapath":
+      return false; // DataPath is a pure value, doesn't reference variables
 
-    case 'typedef': {
+    case "typedef": {
       // Type definitions add the type name to bound vars for the body
       const newBound = new Set(boundVars);
       newBound.add(ir.name);
       return usesInput(ir.body, newBound);
     }
 
-    case 'guard':
+    case "guard":
       // Check constraints and body for input usage
-      return ir.constraints.some(c => usesInput(c.condition, boundVars)) ||
-             usesInput(ir.body, boundVars);
+      return (
+        ir.constraints.some((c) => usesInput(c.condition, boundVars)) ||
+        usesInput(ir.body, boundVars)
+      );
   }
 }

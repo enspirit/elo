@@ -12,7 +12,7 @@ We must fix it.
 
 ## Idea
 
-* First fix the acceptance test infrastructure with a test that checks the
+- First fix the acceptance test infrastructure with a test that checks the
   fixture files are complete.
-* That new test should fail. Complete expected files to make it pass.
-* Then run the tests and see why temporal-extraction tests fail.
+- That new test should fail. Complete expected files to make it pass.
+- Then run the tests and see why temporal-extraction tests fail.

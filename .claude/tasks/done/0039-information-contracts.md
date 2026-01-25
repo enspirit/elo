@@ -78,6 +78,7 @@ assert(Datetime('2025-10-19T19:00:00') == D2025-10-19T19:00:00)
 ### Suggestions
 
 Before implementing, brainstorm:
+
 - What's the minimal subset that delivers value? (Maybe just `Int(str)`, `Float(str)`, `Date(str)`, `Datetime(str)` with strict ISO formats?)
 - How do failures propagate? (Return `null`? Throw? Require `Option`?)
 

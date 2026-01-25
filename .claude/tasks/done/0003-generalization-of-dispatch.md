@@ -21,9 +21,9 @@ one of Javascript.
 
 ## Method
 
-* The language does not change, so integration & acceptance tests should not
+- The language does not change, so integration & acceptance tests should not
   change
-* Start by adding necessary support in Stdlib and complete unit tests there.
-* Then simplify Ruby's compiler under full testing.
-* Then simplify SQL's compiler under full testing.
-* Then check whether Javascript's compile can be simplified as well.
+- Start by adding necessary support in Stdlib and complete unit tests there.
+- Then simplify Ruby's compiler under full testing.
+- Then simplify SQL's compiler under full testing.
+- Then check whether Javascript's compile can be simplified as well.

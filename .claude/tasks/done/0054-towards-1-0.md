@@ -18,6 +18,7 @@ Elo receives JSON input and needs to process it. This requires null + arrays sup
 - **54d** - Array iteration (`map`, `filter`) — uses existing `fn()`
 
 Design decisions:
+
 - Arrays are heterogeneous (can mix types)
 - Access syntax: TBD (`arr[0]` vs `at(arr, 0)`)
 
@@ -30,4 +31,3 @@ Design decisions:
 - [x] Stdlib review with /rigorous
 - [x] Run feature improvements on Try page
 - /sceptic pass before 1.0
-

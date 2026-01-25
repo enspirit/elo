@@ -8,9 +8,9 @@ I try Elo in a browser. I suspect other examples exist.
 
 ## Idea
 
-* How can we make sure that JS/Ruby globals are actually out of reach ?
-* Can we improve compilation to do so ?
-* Or should we put the responsibility on the runtime, and if yes how ?
+- How can we make sure that JS/Ruby globals are actually out of reach ?
+- Can we improve compilation to do so ?
+- Or should we put the responsibility on the runtime, and if yes how ?
 
 ## Solution Implemented
 

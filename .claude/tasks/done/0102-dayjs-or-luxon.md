@@ -6,5 +6,5 @@ have both at the same time in Klaro's bundle.
 
 ## Idea
 
-* What would be the cost of replacing dayjs by luxon here ?
-* Is one of them known to be "better" in any way ?
+- What would be the cost of replacing dayjs by luxon here ?
+- Is one of them known to be "better" in any way ?

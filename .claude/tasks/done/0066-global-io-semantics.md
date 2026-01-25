@@ -7,10 +7,10 @@ We need to add a simple data input/output semantics.
 
 ## Idea
 
-* Every Elo program has access to an input called `_`
-* And the implementation has access to side effects data tracking `$` (for
+- Every Elo program has access to an input called `_`
+- And the implementation has access to side effects data tracking `$` (for
   error messages to be tracked by `|`, for instance)
-* An Elo program is always a function that takes `_` and `$` as parameters
+- An Elo program is always a function that takes `_` and `$` as parameters
   and returns a single result (the evaluation of the program itself).
 
 ### Example
@@ -18,8 +18,9 @@ We need to add a simple data input/output semantics.
 The following program :
 
 ``elo
-_.budget * 1.21
-```
+\_.budget \* 1.21
+
+````
 
 would be valid, and would then generate something like :
 
@@ -27,14 +28,14 @@ would be valid, and would then generate something like :
 (function(_, $){
   // implementation here
 })
-```
+````
 
-* The compiler API approach would simply return that function (it already does
-something similar, I guess)
-* By default `eloc` would keep generating an invocation of that function,
-  using stdin's input string as _.
-* An option of `eloc` could skip the invocation.
-* The left part of the Try/Playground section would be split vertically to
+- The compiler API approach would simply return that function (it already does
+  something similar, I guess)
+- By default `eloc` would keep generating an invocation of that function,
+  using stdin's input string as \_.
+- An option of `eloc` could skip the invocation.
+- The left part of the Try/Playground section would be split vertically to
   accept an input at bottom (typically a json file)
 
 What do you think ?

@@ -16,5 +16,5 @@ once again.
 
 ## Post implementation comments
 
-* `Note: See Type Selectors for all available selectors ...`, good. Also add
+- `Note: See Type Selectors for all available selectors ...`, good. Also add
   a note towards `Data schemas` then.

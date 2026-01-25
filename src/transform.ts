@@ -9,7 +9,7 @@
  * - Tracks variable types through let bindings
  */
 
-import { Expr } from './ast';
+import { Expr } from "./ast";
 import {
   IRExpr,
   IRTypeExpr,
@@ -40,10 +40,10 @@ import {
   irUnionType,
   irGuard,
   inferType,
-} from './ir';
-import { TypeExpr } from './ast';
-import { EloType, Types } from './types';
-import { eloTypeDefs } from './typedefs';
+} from "./ir";
+import { TypeExpr } from "./ast";
+import { EloType, Types } from "./types";
+import { eloTypeDefs } from "./typedefs";
 
 /**
  * Type environment: maps variable names to their inferred types
@@ -76,11 +76,18 @@ export function transform(
   expr: Expr,
   env: TypeEnv = new Map(),
   defining: DefiningSet = new Set(),
-  options: TransformOptions = {}
+  options: TransformOptions = {},
 ): IRExpr {
   const maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
   const allowUndefinedVariables = options.allowUndefinedVariables ?? false;
-  return transformWithDepth(expr, env, defining, 0, maxDepth, allowUndefinedVariables);
+  return transformWithDepth(
+    expr,
+    env,
+    defining,
+    0,
+    maxDepth,
+    allowUndefinedVariables,
+  );
 }
 
 /**
@@ -92,112 +99,195 @@ function transformWithDepth(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRExpr {
   if (depth > maxDepth) {
     throw new Error(`Maximum transform depth exceeded (${maxDepth})`);
   }
   const nextDepth = depth + 1;
-  const recurse = (e: Expr, newEnv: TypeEnv = env, newDefining: DefiningSet = defining) =>
-    transformWithDepth(e, newEnv, newDefining, nextDepth, maxDepth, allowUndefinedVariables);
+  const recurse = (
+    e: Expr,
+    newEnv: TypeEnv = env,
+    newDefining: DefiningSet = defining,
+  ) =>
+    transformWithDepth(
+      e,
+      newEnv,
+      newDefining,
+      nextDepth,
+      maxDepth,
+      allowUndefinedVariables,
+    );
 
   switch (expr.type) {
-    case 'literal':
+    case "literal":
       return transformLiteral(expr.value);
 
-    case 'string':
+    case "string":
       return irString(expr.value);
 
-    case 'null':
+    case "null":
       return irNull();
 
-    case 'date':
+    case "date":
       return irDate(expr.value);
 
-    case 'datetime':
+    case "datetime":
       return irDateTime(expr.value);
 
-    case 'duration':
+    case "duration":
       return irDuration(expr.value);
 
-    case 'variable':
+    case "variable":
       // Allow _ (input variable) and variables defined in scope
       // Reject undefined variables to prevent access to host globals (unless allowUndefinedVariables is set)
-      if (!allowUndefinedVariables && expr.name !== '_' && !env.has(expr.name)) {
+      if (
+        !allowUndefinedVariables &&
+        expr.name !== "_" &&
+        !env.has(expr.name)
+      ) {
         throw new Error(`Undefined variable: '${expr.name}'`);
       }
       return irVariable(expr.name, env.get(expr.name) ?? Types.any);
 
-    case 'binary':
-      return transformBinaryOp(expr.operator, expr.left, expr.right, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+    case "binary":
+      return transformBinaryOp(
+        expr.operator,
+        expr.left,
+        expr.right,
+        env,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
 
-    case 'unary':
-      return transformUnaryOp(expr.operator, expr.operand, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+    case "unary":
+      return transformUnaryOp(
+        expr.operator,
+        expr.operand,
+        env,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
 
-    case 'temporal_keyword':
+    case "temporal_keyword":
       return transformTemporalKeyword(expr.keyword);
 
-    case 'function_call':
-      return transformFunctionCall(expr.name, expr.args, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+    case "function_call":
+      return transformFunctionCall(
+        expr.name,
+        expr.args,
+        env,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
 
-    case 'member_access':
+    case "member_access":
       return irMemberAccess(recurse(expr.object), expr.property);
 
-    case 'let':
-      return transformLet(expr.bindings, expr.body, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+    case "let":
+      return transformLet(
+        expr.bindings,
+        expr.body,
+        env,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
 
-    case 'if':
+    case "if":
       return irIf(
         recurse(expr.condition),
         recurse(expr.then),
-        recurse(expr.else)
+        recurse(expr.else),
       );
 
-    case 'lambda':
-      return transformLambda(expr.params, expr.body, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+    case "lambda":
+      return transformLambda(
+        expr.params,
+        expr.body,
+        env,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
 
-    case 'object':
+    case "object":
       return irObject(
         expr.properties.map((prop) => ({
           key: prop.key,
           value: recurse(prop.value),
-        }))
+        })),
       );
 
-    case 'array':
+    case "array":
       return irArray(expr.elements.map((el) => recurse(el)));
 
-    case 'alternative':
-      return transformAlternative(expr.alternatives, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+    case "alternative":
+      return transformAlternative(
+        expr.alternatives,
+        env,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
 
-    case 'apply': {
+    case "apply": {
       const fnIR = recurse(expr.fn);
       const argsIR = expr.args.map((arg) => recurse(arg));
       const argTypes = argsIR.map(inferType);
       return irApply(fnIR, argsIR, argTypes, Types.any);
     }
 
-    case 'datapath':
+    case "datapath":
       return irDataPath(expr.segments);
 
-    case 'typedef': {
+    case "typedef": {
       // Transform type definition
-      const irTypeExpr = transformTypeExprWithContext(expr.typeExpr, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      const irTypeExpr = transformTypeExprWithContext(
+        expr.typeExpr,
+        env,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
       // Add type name to environment as a parser function type
       const newEnv = new Map(env);
       newEnv.set(expr.name, Types.fn);
-      const bodyIR = transformWithDepth(expr.body, newEnv, defining, nextDepth, maxDepth, allowUndefinedVariables);
+      const bodyIR = transformWithDepth(
+        expr.body,
+        newEnv,
+        defining,
+        nextDepth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
       return irTypeDef(expr.name, irTypeExpr, bodyIR);
     }
 
-    case 'guard': {
+    case "guard": {
       // Transform guard expression
-      const constraintsIR = expr.constraints.map(c => ({
+      const constraintsIR = expr.constraints.map((c) => ({
         label: c.label,
-        condition: recurse(c.condition)
+        condition: recurse(c.condition),
       }));
       const bodyIR = recurse(expr.body);
       return irGuard(constraintsIR, bodyIR, expr.guardType);
+    }
+
+    case "do_call": {
+      // do is a host-special form for plugin programs.
+      // It must never reach expression compilation.
+      throw new Error("'do' is only allowed inside plugin-program bindings");
     }
   }
 }
@@ -206,14 +296,14 @@ function transformWithDepth(
  * Built-in type selectors that can be used in type expressions
  */
 const BUILTIN_TYPE_SELECTORS = new Set([
-  'Any',
-  'Null',
-  'String',
-  'Int',
-  'Float',
-  'Bool',
-  'Boolean',
-  'Datetime',
+  "Any",
+  "Null",
+  "String",
+  "Int",
+  "Float",
+  "Bool",
+  "Boolean",
+  "Datetime",
 ]);
 
 /**
@@ -225,59 +315,107 @@ function transformTypeExprWithContext(
   defining: Set<string>,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRTypeExpr {
   switch (typeExpr.kind) {
-    case 'type_ref': {
+    case "type_ref": {
       const name = typeExpr.name;
       // Validate that the type reference is either a built-in type or a user-defined type in scope
       if (!BUILTIN_TYPE_SELECTORS.has(name)) {
         // Check if it's a user-defined type (uppercase identifier in environment as function type)
         const envType = env.get(name);
-        if (!envType || envType.kind !== 'fn') {
+        if (!envType || envType.kind !== "fn") {
           throw new Error(`Unknown type selector: '${name}'`);
         }
       }
       return irTypeRef(name);
     }
 
-    case 'type_schema': {
-      const props = typeExpr.properties.map(prop => ({
+    case "type_schema": {
+      const props = typeExpr.properties.map((prop) => ({
         key: prop.key,
-        typeExpr: transformTypeExprWithContext(prop.typeExpr, env, defining, depth, maxDepth, allowUndefinedVariables),
+        typeExpr: transformTypeExprWithContext(
+          prop.typeExpr,
+          env,
+          defining,
+          depth,
+          maxDepth,
+          allowUndefinedVariables,
+        ),
         optional: prop.optional,
       }));
       // Transform extras if it's a TypeExpr, otherwise pass through as-is
-      let extras: 'closed' | 'ignored' | IRTypeExpr | undefined;
-      if (typeExpr.extras === 'closed' || typeExpr.extras === 'ignored' || typeExpr.extras === undefined) {
+      let extras: "closed" | "ignored" | IRTypeExpr | undefined;
+      if (
+        typeExpr.extras === "closed" ||
+        typeExpr.extras === "ignored" ||
+        typeExpr.extras === undefined
+      ) {
         extras = typeExpr.extras;
       } else {
-        extras = transformTypeExprWithContext(typeExpr.extras, env, defining, depth, maxDepth, allowUndefinedVariables);
+        extras = transformTypeExprWithContext(
+          typeExpr.extras,
+          env,
+          defining,
+          depth,
+          maxDepth,
+          allowUndefinedVariables,
+        );
       }
       return irTypeSchema(props, extras);
     }
 
-    case 'subtype_constraint': {
+    case "subtype_constraint": {
       // Transform the base type
-      const baseTypeIR = transformTypeExprWithContext(typeExpr.baseType, env, defining, depth, maxDepth, allowUndefinedVariables);
+      const baseTypeIR = transformTypeExprWithContext(
+        typeExpr.baseType,
+        env,
+        defining,
+        depth,
+        maxDepth,
+        allowUndefinedVariables,
+      );
       // Transform each constraint with the variable in scope
       const constraintEnv = new Map(env);
       constraintEnv.set(typeExpr.variable, Types.any);
-      const constraintsIR = typeExpr.constraints.map(c => ({
+      const constraintsIR = typeExpr.constraints.map((c) => ({
         label: c.label,
-        condition: transformWithDepth(c.condition, constraintEnv, defining, depth, maxDepth, allowUndefinedVariables)
+        condition: transformWithDepth(
+          c.condition,
+          constraintEnv,
+          defining,
+          depth,
+          maxDepth,
+          allowUndefinedVariables,
+        ),
       }));
       return irSubtypeConstraint(baseTypeIR, typeExpr.variable, constraintsIR);
     }
 
-    case 'array_type':
+    case "array_type":
       return irArrayType(
-        transformTypeExprWithContext(typeExpr.elementType, env, defining, depth, maxDepth, allowUndefinedVariables)
+        transformTypeExprWithContext(
+          typeExpr.elementType,
+          env,
+          defining,
+          depth,
+          maxDepth,
+          allowUndefinedVariables,
+        ),
       );
 
-    case 'union_type':
+    case "union_type":
       return irUnionType(
-        typeExpr.types.map(t => transformTypeExprWithContext(t, env, defining, depth, maxDepth, allowUndefinedVariables))
+        typeExpr.types.map((t) =>
+          transformTypeExprWithContext(
+            t,
+            env,
+            defining,
+            depth,
+            maxDepth,
+            allowUndefinedVariables,
+          ),
+        ),
       );
   }
 }
@@ -286,7 +424,7 @@ function transformTypeExprWithContext(
  * Transform a literal value (number or boolean)
  */
 function transformLiteral(value: number | boolean): IRExpr {
-  if (typeof value === 'boolean') {
+  if (typeof value === "boolean") {
     return irBool(value);
   }
   // Distinguish int from float
@@ -307,10 +445,24 @@ function transformBinaryOp(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRExpr {
-  const leftIR = transformWithDepth(left, env, defining, depth, maxDepth, allowUndefinedVariables);
-  const rightIR = transformWithDepth(right, env, defining, depth, maxDepth, allowUndefinedVariables);
+  const leftIR = transformWithDepth(
+    left,
+    env,
+    defining,
+    depth,
+    maxDepth,
+    allowUndefinedVariables,
+  );
+  const rightIR = transformWithDepth(
+    right,
+    env,
+    defining,
+    depth,
+    maxDepth,
+    allowUndefinedVariables,
+  );
   const leftType = inferType(leftIR);
   const rightType = inferType(rightIR);
 
@@ -333,9 +485,16 @@ function transformUnaryOp(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRExpr {
-  const operandIR = transformWithDepth(operand, env, defining, depth, maxDepth, allowUndefinedVariables);
+  const operandIR = transformWithDepth(
+    operand,
+    env,
+    defining,
+    depth,
+    maxDepth,
+    allowUndefinedVariables,
+  );
   const operandType = inferType(operandIR);
 
   const fn = unaryOpNameMap[operator];
@@ -351,57 +510,82 @@ function transformUnaryOp(
  * Transform a temporal keyword into a function call
  */
 function transformTemporalKeyword(keyword: string): IRExpr {
-  const today = () => irCall('today', [], [], Types.date);
-  const now = () => irCall('now', [], [], Types.datetime);
+  const today = () => irCall("today", [], [], Types.date);
+  const now = () => irCall("now", [], [], Types.datetime);
 
   switch (keyword) {
-    case 'TODAY':
+    case "TODAY":
       return today();
 
-    case 'NOW':
+    case "NOW":
       return now();
 
-    case 'TOMORROW':
-      return irCall('add', [today(), irDuration('P1D')], [Types.date, Types.duration], Types.date);
+    case "TOMORROW":
+      return irCall(
+        "add",
+        [today(), irDuration("P1D")],
+        [Types.date, Types.duration],
+        Types.date,
+      );
 
-    case 'YESTERDAY':
-      return irCall('sub', [today(), irDuration('P1D')], [Types.date, Types.duration], Types.date);
+    case "YESTERDAY":
+      return irCall(
+        "sub",
+        [today(), irDuration("P1D")],
+        [Types.date, Types.duration],
+        Types.date,
+      );
 
-    case 'SOD':
-      return irCall('start_of_day', [now()], [Types.datetime], Types.datetime);
+    case "SOD":
+      return irCall("start_of_day", [now()], [Types.datetime], Types.datetime);
 
-    case 'EOD':
-      return irCall('end_of_day', [now()], [Types.datetime], Types.datetime);
+    case "EOD":
+      return irCall("end_of_day", [now()], [Types.datetime], Types.datetime);
 
-    case 'SOW':
-      return irCall('start_of_week', [now()], [Types.datetime], Types.datetime);
+    case "SOW":
+      return irCall("start_of_week", [now()], [Types.datetime], Types.datetime);
 
-    case 'EOW':
-      return irCall('end_of_week', [now()], [Types.datetime], Types.datetime);
+    case "EOW":
+      return irCall("end_of_week", [now()], [Types.datetime], Types.datetime);
 
-    case 'SOM':
-      return irCall('start_of_month', [now()], [Types.datetime], Types.datetime);
+    case "SOM":
+      return irCall(
+        "start_of_month",
+        [now()],
+        [Types.datetime],
+        Types.datetime,
+      );
 
-    case 'EOM':
-      return irCall('end_of_month', [now()], [Types.datetime], Types.datetime);
+    case "EOM":
+      return irCall("end_of_month", [now()], [Types.datetime], Types.datetime);
 
-    case 'SOQ':
-      return irCall('start_of_quarter', [now()], [Types.datetime], Types.datetime);
+    case "SOQ":
+      return irCall(
+        "start_of_quarter",
+        [now()],
+        [Types.datetime],
+        Types.datetime,
+      );
 
-    case 'EOQ':
-      return irCall('end_of_quarter', [now()], [Types.datetime], Types.datetime);
+    case "EOQ":
+      return irCall(
+        "end_of_quarter",
+        [now()],
+        [Types.datetime],
+        Types.datetime,
+      );
 
-    case 'SOY':
-      return irCall('start_of_year', [now()], [Types.datetime], Types.datetime);
+    case "SOY":
+      return irCall("start_of_year", [now()], [Types.datetime], Types.datetime);
 
-    case 'EOY':
-      return irCall('end_of_year', [now()], [Types.datetime], Types.datetime);
+    case "EOY":
+      return irCall("end_of_year", [now()], [Types.datetime], Types.datetime);
 
-    case 'BOT':
-      return irCall('bot', [], [], Types.datetime);
+    case "BOT":
+      return irCall("bot", [], [], Types.datetime);
 
-    case 'EOT':
-      return irCall('eot', [], [], Types.datetime);
+    case "EOT":
+      return irCall("eot", [], [], Types.datetime);
 
     default:
       throw new Error(`Unknown temporal keyword: ${keyword}`);
@@ -421,19 +605,30 @@ function transformFunctionCall(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRExpr {
   // Check for recursive call
   if (defining.has(name)) {
-    throw new Error(`Recursive function calls are not allowed: '${name}' cannot call itself`);
+    throw new Error(
+      `Recursive function calls are not allowed: '${name}' cannot call itself`,
+    );
   }
 
-  const argsIR = args.map((arg) => transformWithDepth(arg, env, defining, depth, maxDepth, allowUndefinedVariables));
+  const argsIR = args.map((arg) =>
+    transformWithDepth(
+      arg,
+      env,
+      defining,
+      depth,
+      maxDepth,
+      allowUndefinedVariables,
+    ),
+  );
   const argTypes = argsIR.map(inferType);
 
   // Check if the name is a variable holding a lambda
   const varType = env.get(name);
-  if (varType && varType.kind === 'fn') {
+  if (varType && varType.kind === "fn") {
     // Lambda application: emit irApply
     const fnVar = irVariable(name, varType);
     return irApply(fnVar, argsIR, argTypes, Types.any);
@@ -454,23 +649,39 @@ function transformLet(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRExpr {
   // Build a new environment with the bindings
   const newEnv = new Map(env);
   const irBindings = bindings.map((binding) => {
     // If the value is a lambda, add the binding name to the defining set
     // to detect recursive calls within the lambda body
-    const isLambda = binding.value.type === 'lambda';
-    const newDefining = isLambda ? new Set([...defining, binding.name]) : defining;
+    const isLambda = binding.value.type === "lambda";
+    const newDefining = isLambda
+      ? new Set([...defining, binding.name])
+      : defining;
 
-    const valueIR = transformWithDepth(binding.value, newEnv, newDefining, depth, maxDepth, allowUndefinedVariables);
+    const valueIR = transformWithDepth(
+      binding.value,
+      newEnv,
+      newDefining,
+      depth,
+      maxDepth,
+      allowUndefinedVariables,
+    );
     const valueType = inferType(valueIR);
     newEnv.set(binding.name, valueType);
     return { name: binding.name, value: valueIR };
   });
 
-  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth, allowUndefinedVariables);
+  const bodyIR = transformWithDepth(
+    body,
+    newEnv,
+    defining,
+    depth,
+    maxDepth,
+    allowUndefinedVariables,
+  );
   return irLet(irBindings, bodyIR);
 }
 
@@ -484,7 +695,7 @@ function transformLambda(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRExpr {
   // Build a new environment with params as 'any' type
   const newEnv = new Map(env);
@@ -493,7 +704,14 @@ function transformLambda(
     return { name, inferredType: Types.any };
   });
 
-  const bodyIR = transformWithDepth(body, newEnv, defining, depth, maxDepth, allowUndefinedVariables);
+  const bodyIR = transformWithDepth(
+    body,
+    newEnv,
+    defining,
+    depth,
+    maxDepth,
+    allowUndefinedVariables,
+  );
   const resultType = inferType(bodyIR);
   return irLambda(irParams, bodyIR, resultType);
 }
@@ -511,17 +729,24 @@ function transformAlternative(
   defining: DefiningSet,
   depth: number,
   maxDepth: number,
-  allowUndefinedVariables: boolean
+  allowUndefinedVariables: boolean,
 ): IRExpr {
   const irAlts = alternatives.map((alt) =>
-    transformWithDepth(alt, env, defining, depth, maxDepth, allowUndefinedVariables)
+    transformWithDepth(
+      alt,
+      env,
+      defining,
+      depth,
+      maxDepth,
+      allowUndefinedVariables,
+    ),
   );
 
   // Infer result type: use first non-any type, or any if all are any
   let resultType: EloType = Types.any;
   for (const alt of irAlts) {
     const altType = inferType(alt);
-    if (altType.kind !== 'any') {
+    if (altType.kind !== "any") {
       resultType = altType;
       break;
     }
@@ -534,24 +759,24 @@ function transformAlternative(
  * Map operator symbols to function name prefixes
  */
 const opNameMap: Record<string, string> = {
-  '+': 'add',
-  '-': 'sub',
-  '*': 'mul',
-  '/': 'div',
-  '%': 'mod',
-  '^': 'pow',
-  '<': 'lt',
-  '>': 'gt',
-  '<=': 'lte',
-  '>=': 'gte',
-  '==': 'eq',
-  '!=': 'neq',
-  '&&': 'and',
-  '||': 'or',
+  "+": "add",
+  "-": "sub",
+  "*": "mul",
+  "/": "div",
+  "%": "mod",
+  "^": "pow",
+  "<": "lt",
+  ">": "gt",
+  "<=": "lte",
+  ">=": "gte",
+  "==": "eq",
+  "!=": "neq",
+  "&&": "and",
+  "||": "or",
 };
 
 const unaryOpNameMap: Record<string, string> = {
-  '-': 'neg',
-  '+': 'pos',
-  '!': 'not',
+  "-": "neg",
+  "+": "pos",
+  "!": "not",
 };

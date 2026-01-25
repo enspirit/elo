@@ -59,15 +59,15 @@ What would be the 5 main chapters =
 
 ### Proposed Structure (7 chapters)
 
-| # | Chapter | Content |
-|---|---------|---------|
-| 1 | Introduction | Hook with exciting example |
-| 2 | Extended Arithmetics | Numbers → Booleans → Strings → Dates → Durations |
-| 3 | Data Structures | Lists, Tuples, DataPaths, fetch() |
-| 4 | Functions | Stdlib examples, lambdas as values |
-| 5 | Program Structure | let, if/then/else, \|> pipe |
-| 6 | Advanced Processing | map/reduce, type selectors, null, \| |
-| 7 | Input Data | The `_` variable, runtime concept |
+| #   | Chapter              | Content                                          |
+| --- | -------------------- | ------------------------------------------------ |
+| 1   | Introduction         | Hook with exciting example                       |
+| 2   | Extended Arithmetics | Numbers → Booleans → Strings → Dates → Durations |
+| 3   | Data Structures      | Lists, Tuples, DataPaths, fetch()                |
+| 4   | Functions            | Stdlib examples, lambdas as values               |
+| 5   | Program Structure    | let, if/then/else, \|> pipe                      |
+| 6   | Advanced Processing  | map/reduce, type selectors, null, \|             |
+| 7   | Input Data           | The `_` variable, runtime concept                |
 
 ### Comparison
 
@@ -76,7 +76,8 @@ What would be the 5 main chapters =
 
 ### My Take
 
-The proposed structure tells a better *story*:
+The proposed structure tells a better _story_:
+
 1. "Look what Elo can do!" (excitement)
 2. "It's like a calculator, but for everything" (foundation)
 3. "Here's how to bundle data" (structures)

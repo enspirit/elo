@@ -19,6 +19,7 @@ K is designed to be safe by construction. Users should NOT be able to:
 ## Your Security Checks
 
 ### 1. Compiled Code Analysis
+
 For each target (Ruby, JS, SQL), verify:
 
 - **No eval or equivalent**: `eval()`, `Function()`, `EXECUTE`, etc.
@@ -28,15 +29,18 @@ For each target (Ruby, JS, SQL), verify:
 - **Safe regex**: No ReDoS vulnerabilities from user input
 
 ### 2. Compiler API Security
+
 - Can malicious K input crash the compiler?
 - Can crafted input cause excessive memory/CPU usage?
 - Are error messages safe (no path disclosure, no stack traces to users)?
 
 ### 3. Type System Safety
+
 - Can type confusion lead to security issues?
 - Are implicit conversions safe across all targets?
 
 ### 4. SQL-Specific Concerns
+
 - Is SQL injection possible through K expressions?
 - Are all values properly parameterized?
 - No dynamic table/column names from user input

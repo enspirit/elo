@@ -31,23 +31,27 @@ interface DurationInterface {
  * Type guard for Luxon DateTime
  */
 function isDateTime(value: unknown): value is DateTimeInterface {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== "object" || value === null) return false;
   const obj = value as Record<string, unknown>;
-  return typeof obj.toISO === 'function' &&
-         typeof obj.toISODate === 'function' &&
-         typeof obj.isValid === 'boolean';
+  return (
+    typeof obj.toISO === "function" &&
+    typeof obj.toISODate === "function" &&
+    typeof obj.isValid === "boolean"
+  );
 }
 
 /**
  * Type guard for Luxon Duration
  */
 function isDuration(value: unknown): value is DurationInterface {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== "object" || value === null) return false;
   const obj = value as Record<string, unknown>;
   // Duration has toISO but not toISODate
-  return typeof obj.toISO === 'function' &&
-         typeof obj.toISODate !== 'function' &&
-         typeof obj.isValid === 'boolean';
+  return (
+    typeof obj.toISO === "function" &&
+    typeof obj.toISODate !== "function" &&
+    typeof obj.isValid === "boolean"
+  );
 }
 
 /**
@@ -55,10 +59,9 @@ function isDuration(value: unknown): value is DurationInterface {
  * Date literals in Elo are rendered as D2024-01-15, while datetimes include time.
  */
 function isDateOnly(dt: DateTimeInterface): boolean {
-  return dt.hour === 0 &&
-         dt.minute === 0 &&
-         dt.second === 0 &&
-         dt.millisecond === 0;
+  return (
+    dt.hour === 0 && dt.minute === 0 && dt.second === 0 && dt.millisecond === 0
+  );
 }
 
 /**
@@ -74,7 +77,7 @@ function isValidIdentifier(s: string): boolean {
  * Only single quotes and backslashes need escaping.
  */
 function escapeString(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
 
 /**
@@ -97,25 +100,25 @@ function escapeString(s: string): string {
 export function toEloCode(value: unknown): string {
   // Handle null and undefined
   if (value === null || value === undefined) {
-    return 'null';
+    return "null";
   }
 
   // Handle booleans
-  if (typeof value === 'boolean') {
-    return value ? 'true' : 'false';
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
   }
 
   // Handle numbers
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     if (!Number.isFinite(value)) {
       // NaN, Infinity, -Infinity don't have Elo representations
-      return 'null';
+      return "null";
     }
     return String(value);
   }
 
   // Handle strings
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return `'${escapeString(value)}'`;
   }
 
@@ -123,7 +126,7 @@ export function toEloCode(value: unknown): string {
   if (isDuration(value)) {
     const iso = value.toISO();
     if (iso === null || !value.isValid) {
-      return 'null';
+      return "null";
     }
     return iso;
   }
@@ -131,40 +134,40 @@ export function toEloCode(value: unknown): string {
   // Handle Luxon DateTime
   if (isDateTime(value)) {
     if (!value.isValid) {
-      return 'null';
+      return "null";
     }
     if (isDateOnly(value)) {
       // Render as date literal: D2024-01-15
       const dateStr = value.toISODate();
-      return dateStr ? `D${dateStr}` : 'null';
+      return dateStr ? `D${dateStr}` : "null";
     }
     // Render as datetime literal: D2024-01-15T10:30:00Z
     const isoStr = value.toISO();
-    return isoStr ? `D${isoStr}` : 'null';
+    return isoStr ? `D${isoStr}` : "null";
   }
 
   // Handle arrays
   if (Array.isArray(value)) {
-    const elements = value.map(elem => toEloCode(elem));
-    return `[${elements.join(', ')}]`;
+    const elements = value.map((elem) => toEloCode(elem));
+    return `[${elements.join(", ")}]`;
   }
 
   // Handle functions (no direct Elo representation)
-  if (typeof value === 'function') {
-    return '<function>';
+  if (typeof value === "function") {
+    return "<function>";
   }
 
   // Handle plain objects
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     const entries = Object.entries(value);
     const props = entries.map(([key, val]) => {
       // Use identifier syntax if valid, otherwise quote the key
       const keyStr = isValidIdentifier(key) ? key : `'${escapeString(key)}'`;
       return `${keyStr}: ${toEloCode(val)}`;
     });
-    return `{${props.join(', ')}}`;
+    return `{${props.join(", ")}}`;
   }
 
   // Fallback for unknown types
-  return 'null';
+  return "null";
 }

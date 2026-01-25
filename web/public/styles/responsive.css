@@ -79,7 +79,7 @@
 
   /* Add chevron indicator for collapsible sections */
   header nav .nav-group > a::after {
-    content: '▸';
+    content: "▸";
     margin-left: var(--space-sm);
     font-size: 0.7rem;
     transition: transform var(--transition-normal);
@@ -118,7 +118,9 @@
     padding: 0.75rem var(--space-md);
   }
 
-  main:not(.doc-panel):not(.home-panel):not(.stdlib-panel):not(.blog-panel):not(.playground-flow) {
+  main:not(.doc-panel):not(.home-panel):not(.stdlib-panel):not(.blog-panel):not(
+      .playground-flow
+    ) {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;
   }

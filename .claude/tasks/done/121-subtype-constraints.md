@@ -35,12 +35,14 @@ Int(i | 'must be positive': i > 0)
 ### Label Forms
 
 Labels are optional and support two forms:
+
 - `IDENTIFIER COLON` → identifier label: `positive: i > 0`
 - `STRING COLON` → string message: `'must be positive': i > 0`
 
 ### Error Messages
 
 When constraint fails:
+
 - Identifier label: `"constraint 'positive' failed"`
 - String message: use as-is `"must be positive"`
 - No label: `"constraint failed"`

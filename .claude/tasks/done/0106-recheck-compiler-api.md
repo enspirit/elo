@@ -8,13 +8,12 @@ a function that takes `_` as input, `double` should be a function that returns
 a function, and not 42 at all.
 
 ```typescript
-import { compile } from '@enspirit/elo';
-import { DateTime, Duration } from 'luxon';
+import { compile } from "@enspirit/elo";
+import { DateTime, Duration } from "luxon";
 
-const double = compile<(x: number) => number>(
-  'fn(x ~> x * 2)',
-  { runtime: { DateTime, Duration } }
-);
+const double = compile<(x: number) => number>("fn(x ~> x * 2)", {
+  runtime: { DateTime, Duration },
+});
 double(21); // => 42
 ```
 

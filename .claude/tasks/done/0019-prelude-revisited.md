@@ -37,6 +37,6 @@ as proposed above.
 
 ## Post plan discussion
 
-* Yep. One more thing though: I think we can see those old `klang.{add,sub,mul,...}` functions as special cases in the stdlib. I would
- register kAdd, kSub, kMul, etc. to the stdlib and reuse the emit mechanism of the Stdlib class helper. This would help us remove
-KLANG_ARITHMETIC_HELPERS completely.
+- Yep. One more thing though: I think we can see those old `klang.{add,sub,mul,...}` functions as special cases in the stdlib. I would
+  register kAdd, kSub, kMul, etc. to the stdlib and reuse the emit mechanism of the Stdlib class helper. This would help us remove
+  KLANG_ARITHMETIC_HELPERS completely.
