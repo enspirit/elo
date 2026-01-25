@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.0
+
+### Minor Changes
+
+- feat(elo)!: fork Elo runtime for JS-only portable plugins
+  - Remove Ruby/SQL compilation targets
+  - Add plugin-program parser with plan/then syntax
+  - Add `do` AST node for capability calls
+  - Implement Strategy-1 planner/runtime driver
+  - Add `compilePlugin()`, `parseWithMeta()`, `compileFromAst()`, `compileExpression()`
+  - Add JSON boundary utilities (`isJsonValue`, `assertJsonValue`)
+  - Add golden tests for parsing, diagnostics, and planning
+
 All notable changes to Elo are documented in this file.
 
 ## [0.9.5] - 2026-01-03

@@ -1,6 +1,6 @@
 {
-  "name": "@enspirit/elo",
-  "version": "0.9.5",
+  "name": "@contextvm/elo",
+  "version": "0.10.0",
   "description": "A small expression language that compiles to JavaScript (JS-only fork)",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -16,7 +16,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "release": "bun run build && bun publish"
   },
   "keywords": [
     "compiler",
