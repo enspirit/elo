@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <!-- Elo Logo: Three flowing bars representing the three compilation targets -->
-  <!-- Also suggests a stylized "E" and the pipe/flow concept |> -->
-  <rect x="8" y="10" width="20" height="5" rx="2.5" fill="currentColor"/>
-  <rect x="8" y="21.5" width="28" height="5" rx="2.5" fill="currentColor"/>
-  <rect x="8" y="33" width="20" height="5" rx="2.5" fill="currentColor"/>
-  <!-- Arrow/flow indicator -->
-  <path d="M36 24L42 28V20L36 24Z" fill="currentColor"/>
-</svg>

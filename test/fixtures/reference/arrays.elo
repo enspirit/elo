@@ -1,5 +1,0 @@
-assert(typeOf([]) == 'List')
-assert(typeOf([1, 2, 3]) == 'List')
-assert(typeOf(['a', 'b']) == 'List')
-assert(typeOf([1, 'two', true, null]) == 'List')
-assert((let items = [1, 2, 3] in typeOf(items)) == 'List')

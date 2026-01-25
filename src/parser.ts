@@ -695,6 +695,7 @@ export class Parser {
   private currentToken: Token;
   private depth: number = 0;
   private maxDepth: number;
+  private disableRangeMembershipIn: boolean = false;
 
   constructor(input: string, options: ParserOptions = {}) {
     this.lexer = new Lexer(input);
@@ -1055,7 +1056,7 @@ export class Parser {
     // Handle range membership: expr in expr..expr or expr in expr...expr
     // Also handles: expr not in expr..expr (negated range membership)
     // Use speculative parsing - if no range operator found after IN, restore state
-    if (this.currentToken.type === "IN") {
+    if (!this.disableRangeMembershipIn && this.currentToken.type === "IN") {
       const result = this.tryParseRangeMembership(node, false);
       if (result !== null) {
         return result;
@@ -1064,7 +1065,7 @@ export class Parser {
     }
 
     // Handle "not in" for negated range membership
-    if (this.currentToken.type === "NOT") {
+    if (!this.disableRangeMembershipIn && this.currentToken.type === "NOT") {
       const result = this.tryParseRangeMembership(node, true);
       if (result !== null) {
         return result;
@@ -2069,6 +2070,20 @@ export class Parser {
     this.eat("EOF");
     return result;
   }
+
+  /**
+   * Parse an expression in a context where `in` is a delimiter token (e.g. plugin-program
+   * bindings), not a range-membership operator.
+   */
+  parseExprWithInDisabled(): Expr {
+    const prev = this.disableRangeMembershipIn;
+    this.disableRangeMembershipIn = true;
+    try {
+      return this.expr();
+    } finally {
+      this.disableRangeMembershipIn = prev;
+    }
+  }
 }
 
 /**
@@ -2107,6 +2122,7 @@ export function parsePluginProgram(
   const eat = (t: TokenType) => parser.eat(t);
   const current = () => parser.currentToken as Token;
   const parseExpr = () => parser.expr() as Expr;
+  const parseBindingExpr = () => parser.parseExprWithInDisabled() as Expr;
 
   const parseBindings = (): Array<{ name: string; value: Expr }> => {
     const bindings: Array<{ name: string; value: Expr }> = [];
@@ -2121,7 +2137,7 @@ export function parsePluginProgram(
     const name = first.value;
     eat("IDENTIFIER");
     eat("ASSIGN");
-    const value = parseExpr();
+    const value = parseBindingExpr();
     bindings.push({ name, value });
 
     // Parse additional bindings
@@ -2138,7 +2154,7 @@ export function parsePluginProgram(
       const n = tok.value;
       eat("IDENTIFIER");
       eat("ASSIGN");
-      const v = parseExpr();
+      const v = parseBindingExpr();
       bindings.push({ name: n, value: v });
     }
 

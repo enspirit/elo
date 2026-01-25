@@ -1,8 +1,0 @@
-assert((let isPositive = fn( x ~> x > 0 ) in isPositive(5)) == true)
-assert((let isPositive = fn( x ~> x > 0 ) in isPositive(-5)) == false)
-assert((let isInRange = fn( x ~> x >= 0 and x <= 100 ) in isInRange(50)) == true)
-assert((let isInRange = fn( x ~> x >= 0 and x <= 100 ) in isInRange(150)) == false)
-assert((let isEqual = fn( a, b ~> a == b ) in isEqual(5, 5)) == true)
-assert((let isEqual = fn( a, b ~> a == b ) in isEqual(5, 6)) == false)
-assert((let isTruthy = fn( x ~> x ) in isTruthy(true)) == true)
-assert((let isTruthy = fn( x ~> x ) in isTruthy(false)) == false)

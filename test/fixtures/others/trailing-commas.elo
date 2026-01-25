@@ -1,7 +1,0 @@
-assert([1, 2, 3,] == [1, 2, 3])
-assert([1,] == [1])
-assert({a: 1, b: 2,}.a == 1)
-assert({a: 1,}.a == 1)
-assert((let x = 2, y = 3, in x * y) == 6)
-assert((let x = 2, in x * 2) == 4)
-

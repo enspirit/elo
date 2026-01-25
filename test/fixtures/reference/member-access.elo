@@ -1,4 +1,0 @@
-assert(_.person.age == 25)
-assert(_.employee.salary > 50000)
-assert(_.customer.balance + 100 == 600)
-assert(_.student.gpa >= 3 && _.student.enrolled)

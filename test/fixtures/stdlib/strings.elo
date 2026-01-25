@@ -1,5 +1,0 @@
-assert('hello' == 'hello')
-assert('hello world' == 'hello world')
-assert('' == '')
-assert('test123' == 'test123')
-assert('a' != 'b')

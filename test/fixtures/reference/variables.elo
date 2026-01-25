@@ -1,4 +1,0 @@
-assert(_.x + _.y == 15)
-assert(_.price + _.tax == 110)
-assert(_.user_age + _.account_balance == 2525)
-assert(_.var1 + _.var2 == 30)

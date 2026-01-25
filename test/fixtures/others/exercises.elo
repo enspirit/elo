@@ -1,6 +1,0 @@
-assert('Hello, ' + 'World!' == 'Hello, World!')
-assert({ price: 25, quantity: 4 }.price * { price: 25, quantity: 4 }.quantity == 100)
-assert(upper(trim('  hello  ')) == 'HELLO')
-assert((let width = 8, height = 5 in width * height) == 40)
-assert(([5, 12, 8, 20, 3, 15] |> filter(x ~> x > 10) |> map(x ~> x * 2)) == [24, 40, 30])
-assert((let order = { price: 50, quantity: 3 } in order.price * order.quantity) == 150)

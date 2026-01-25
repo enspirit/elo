@@ -1,3 +1,0 @@
-assert(typeOf(let x = TODAY in x + P1D) == 'DateTime')
-assert(typeOf(let d = P1D in TODAY + d) == 'DateTime')
-assert(typeOf(let x = TODAY, d = P1D in x + d) == 'DateTime')

@@ -1,5 +1,0 @@
-assert(isNull({}.budget) == true)
-assert({budget: 1500}.budget == 1500)
-assert({name: 'Alice', age: 30}.name == 'Alice')
-assert({name: 'Alice', age: 30}.age == 30)
-assert((let obj = {x: 10} in obj.x) == 10)

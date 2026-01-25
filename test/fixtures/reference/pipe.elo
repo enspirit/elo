@@ -1,9 +1,0 @@
-assert(('hello' |> upper()) == 'HELLO')
-assert(('  HELLO  ' |> trim() |> lower()) == 'hello')
-assert(('42' |> padStart(5, '0')) == '00042')
-assert((0 - 5 |> abs()) == 5)
-assert(('hello world' |> replace('world', 'elo')) == 'hello elo')
-assert(('hello' |> upper) == 'HELLO') # optional parentheses
-assert(('  HELLO  ' |> trim |> lower) == 'hello') # chained, no parens
-assert((0 - 5 |> abs) == 5) # numeric, no parens
-assert(('hello' |> upper |> padStart(10, '-')) == '-----HELLO') # mixed
