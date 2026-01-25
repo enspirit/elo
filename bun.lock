@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "@enspirit/elo",
+      "name": "@contextvm/elo",
       "dependencies": {
         "luxon": "^3.5.0",
         "prettier": "^3.8.1",

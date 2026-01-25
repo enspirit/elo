@@ -170,7 +170,7 @@ Options:
 The simplest way to use Elo is with the `compile()` function, which creates a callable JavaScript function from an Elo expression:
 
 ```typescript
-import { compile } from "@enspirit/elo";
+import { compile } from "@contextvm/elo";
 import { DateTime, Duration } from "luxon";
 
 // Compile an expression to a callable function
@@ -203,7 +203,7 @@ import {
   compileToRuby,
   compileToJavaScript,
   compileToSQL,
-} from "@enspirit/elo";
+} from "@contextvm/elo";
 
 // Parse an expression
 const ast = parse(`

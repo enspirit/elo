@@ -39,7 +39,7 @@ const RUNTIME_DEPS = ["DateTime", "Duration"] as const;
  *
  * @example
  * ```typescript
- * import { compile } from '@enspirit/elo';
+ * import { compile } from '@contextvm/elo';
  * import { DateTime, Duration } from 'luxon';
  *
  * // Simple expression using _ (implicit input)

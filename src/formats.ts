@@ -7,13 +7,13 @@
  *
  * @example
  * // Using the built-in CSV adapter
- * import { defaultFormats } from '@enspirit/elo';
+ * import { defaultFormats } from '@contextvm/elo';
  * const data = defaultFormats.csv.parse('name,age\nAlice,30');
  *
  * @example
  * // Providing a custom adapter with PapaParse
  * import Papa from 'papaparse';
- * import { FormatAdapter } from '@enspirit/elo';
+ * import { FormatAdapter } from '@contextvm/elo';
  *
  * const csvAdapter: FormatAdapter = {
  *   parse: (s) => Papa.parse(s, { header: true }).data,
