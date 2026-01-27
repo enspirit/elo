@@ -2,6 +2,18 @@
 
 All notable changes to Elo are documented in this file.
 
+## [0.9.6] - 2026-01-27
+
+### Language Features
+- Allow trailing commas in lists, tuples, function arguments, and type definitions
+
+### Fixes
+- Fix blog post examples and add validation tests
+- Show error output when acceptance tests fail
+
+### Testing
+- Unify website example tests with full evaluation
+
 ## [0.9.5] - 2026-01-03
 
 ### Language Features
