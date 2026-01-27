@@ -5,7 +5,7 @@ All notable changes to Elo are documented in this file.
 ## [0.9.7] - 2026-01-27
 
 ### Security
-- Fix code injection vulnerability in date/datetime/duration literal emitters (all targets)
+- Fix code injection vulnerability in date/datetime/duration literal emitters (all targets) — reported by [naoyashiga](https://github.com/naoyashiga)
 
 ## [0.9.6] - 2026-01-27
 
