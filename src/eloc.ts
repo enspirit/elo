@@ -5,16 +5,18 @@ import { parse } from './parser';
 import { compileToRubyWithMeta } from './compilers/ruby';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
+import { compileToPythonWithMeta } from './compilers/python';
 import { getPrelude, Target as PreludeTarget } from './preludes';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json');
 
-type Target = 'ruby' | 'js' | 'sql';
+type Target = 'ruby' | 'js' | 'sql' | 'python';
 
 // Map CLI target names to prelude target names
 function toPreludeTarget(target: Target): PreludeTarget {
-  return target === 'js' ? 'javascript' : target;
+  if (target === 'js') return 'javascript';
+  return target;
 }
 
 interface Options {
@@ -52,8 +54,8 @@ function parseArgs(args: string[]): Options {
       case '-t':
       case '--target':
         const target = args[++i];
-        if (target !== 'ruby' && target !== 'js' && target !== 'sql') {
-          console.error(`Invalid target: ${target}. Must be one of: ruby, js, sql`);
+        if (target !== 'ruby' && target !== 'js' && target !== 'sql' && target !== 'python') {
+          console.error(`Invalid target: ${target}. Must be one of: ruby, js, sql, python`);
           process.exit(1);
         }
         options.target = target;
@@ -118,7 +120,7 @@ Usage:
 
 Options:
   -e, --expression <expr>   Expression to compile (like ruby -e)
-  -t, --target <lang>       Target language: ruby, js (default), sql
+  -t, --target <lang>       Target language: ruby, js (default), sql, python
   -x, --execute             Output self-executing code (calls function with null/nil)
   -p, --prelude             Include necessary library imports/requires
   --prelude-only            Output only the prelude (no expression needed)
@@ -183,6 +185,11 @@ function compile(source: string, target: Target, options: CompileOptions = {}): 
       // SQL doesn't support execute option (no function wrapping)
       // and guards already throw an error, so stripGuards is not needed
       const result = compileToSQLWithMeta(ast);
+      code = result.code;
+      break;
+    }
+    case 'python': {
+      const result = compileToPythonWithMeta(ast, { execute, stripGuards });
       code = result.code;
       break;
     }

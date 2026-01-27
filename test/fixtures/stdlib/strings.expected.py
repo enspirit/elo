@@ -1,0 +1,5 @@
+(lambda _: kAssert("hello" == "hello"))(None)
+(lambda _: kAssert("hello world" == "hello world"))(None)
+(lambda _: kAssert("" == ""))(None)
+(lambda _: kAssert("test123" == "test123"))(None)
+(lambda _: kAssert("a" != "b"))(None)

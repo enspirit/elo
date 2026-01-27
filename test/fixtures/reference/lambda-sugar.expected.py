@@ -1,0 +1,6 @@
+(lambda _: kAssert(kEq(list(map(lambda x: x * 2, [1, 2, 3])), [2, 4, 6])))(None)
+(lambda _: kAssert(kEq(list(map(lambda s: s + "!", ["a", "b"])), ["a!", "b!"])))(None)
+(lambda _: kAssert(kEq(list(map(lambda x: x * 2, [1, 2, 3])), [2, 4, 6])))(None)
+(lambda _: kAssert(kEq(list(map(lambda x: x + 10, [1, 2, 3])), [11, 12, 13])))(None)
+(lambda _: kAssert((double := lambda x: x * 2, double(5))[-1] == 10))(None)
+(lambda _: kAssert(kEq((add1 := lambda x: x + 1, list(map(add1, [1, 2, 3])))[-1], [2, 3, 4])))(None)

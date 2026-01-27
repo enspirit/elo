@@ -1,0 +1,5 @@
+(lambda _: kAssert(kTypeOf([]) == "List"))(None)
+(lambda _: kAssert(kTypeOf([1, 2, 3]) == "List"))(None)
+(lambda _: kAssert(kTypeOf(["a", "b"]) == "List"))(None)
+(lambda _: kAssert(kTypeOf([1, "two", True, None]) == "List"))(None)
+(lambda _: kAssert((items := [1, 2, 3], kTypeOf(items))[-1] == "List"))(None)

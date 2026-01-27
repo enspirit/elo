@@ -1,0 +1,1 @@
+(lambda _: kAssert(kTypeOf(kAdd(kAdd(_elo_dt(_dt.datetime.now().year, _dt.datetime.now().month, _dt.datetime.now().day), EloDuration.from_iso("P1M")), EloDuration.from_iso("PT12H"))) == "DateTime"))(None)

@@ -1,0 +1,8 @@
+(lambda _: kAssert((isPositive := lambda x: x > 0, isPositive(5))[-1] == True))(None)
+(lambda _: kAssert((isPositive := lambda x: x > 0, isPositive(-5))[-1] == False))(None)
+(lambda _: kAssert((isInRange := lambda x: x >= 0 and x <= 100, isInRange(50))[-1] == True))(None)
+(lambda _: kAssert((isInRange := lambda x: x >= 0 and x <= 100, isInRange(150))[-1] == False))(None)
+(lambda _: kAssert((isEqual := lambda a, b: a == b, isEqual(5, 5))[-1] == True))(None)
+(lambda _: kAssert((isEqual := lambda a, b: a == b, isEqual(5, 6))[-1] == False))(None)
+(lambda _: kAssert((isTruthy := lambda x: x, isTruthy(True))[-1] == True))(None)
+(lambda _: kAssert((isTruthy := lambda x: x, isTruthy(False))[-1] == False))(None)

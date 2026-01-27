@@ -1,0 +1,11 @@
+(lambda _: kAssert(kData("{\"name\": \"Alice\"}") == {"name": "Alice"}))(None)
+(lambda _: kAssert(kData("[1, 2, 3]") == [1, 2, 3]))(None)
+(lambda _: kAssert(kData("{\"user\": {\"name\": \"Bob\"}}").get("user").get("name") == "Bob"))(None)
+(lambda _: kAssert(kData("{\"active\": true}").get("active") == True))(None)
+(lambda _: kAssert(kData("{\"count\": 42}").get("count") == 42))(None)
+(lambda _: kAssert(kData([1, 2, 3]) == [1, 2, 3]))(None)
+(lambda _: kAssert(kData({"x": 10}).get("x") == 10))(None)
+(lambda _: kAssertFails(lambda : kData("not valid json")))(None)
+(lambda _: kAssert((kData(None) is None)))(None)
+(lambda _: kAssertFails(lambda : kData("invalid")))(None)
+

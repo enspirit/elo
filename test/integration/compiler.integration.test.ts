@@ -6,6 +6,7 @@ import { parse } from '../../src/parser';
 import { compileToJavaScript } from '../../src/compilers/javascript';
 import { compileToRuby } from '../../src/compilers/ruby';
 import { compileToSQL } from '../../src/compilers/sql';
+import { compileToPython } from '../../src/compilers/python';
 
 /**
  * Compiler tests using test fixtures from test/ directory.
@@ -54,6 +55,7 @@ interface TestSuite {
   expectedJS: string[] | null;
   expectedRuby: string[] | null;
   expectedSQL: string[] | null;
+  expectedPython: string[] | null;
 }
 
 function tryReadFile(path: string): string[] | null {
@@ -84,6 +86,7 @@ function loadTestSuites(): TestSuite[] {
       ? join(dir, `${baseName}.expected.ruby`)
       : join(dir, `${baseName}.expected.rb`);
     const sqlPath = join(dir, `${baseName}.expected.sql`);
+    const pythonPath = join(dir, `${baseName}.expected.py`);
 
     const eloContent = readFileSync(eloPath, 'utf-8');
     // Remove trailing newline before splitting to match generated fixture line counts
@@ -91,13 +94,15 @@ function loadTestSuites(): TestSuite[] {
     const expectedJS = tryReadFile(jsPath);
     const expectedRuby = tryReadFile(rubyPath);
     const expectedSQL = tryReadFile(sqlPath);
+    const expectedPython = tryReadFile(pythonPath);
 
     suites.push({
       name,
       elo,
       expectedJS,
       expectedRuby,
-      expectedSQL
+      expectedSQL,
+      expectedPython
     });
   }
 
@@ -135,6 +140,16 @@ describe('Fixture file completeness', () => {
           suite.expectedSQL!.length,
           eloLineCount,
           `${suite.name}.expected.sql has ${suite.expectedSQL!.length} lines but ${suite.name}.elo has ${eloLineCount} lines`
+        );
+      });
+    }
+
+    if (suite.expectedPython) {
+      it(`${suite.name}.expected.py should have same line count as .elo`, () => {
+        assert.strictEqual(
+          suite.expectedPython!.length,
+          eloLineCount,
+          `${suite.name}.expected.py has ${suite.expectedPython!.length} lines but ${suite.name}.elo has ${eloLineCount} lines`
         );
       });
     }
@@ -186,6 +201,17 @@ for (const suite of testSuites) {
             actualSQL,
             expectedSQL,
             `SQL compilation mismatch on line ${lineNum}`
+          );
+        }
+
+        // Test Python compilation (if expected file exists)
+        if (suite.expectedPython) {
+          const actualPython = compileToPython(ast, { execute: true });
+          const expectedPython = suite.expectedPython[i].trim();
+          assert.strictEqual(
+            actualPython,
+            expectedPython,
+            `Python compilation mismatch on line ${lineNum}`
           );
         }
       });

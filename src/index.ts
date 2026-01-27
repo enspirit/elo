@@ -12,6 +12,8 @@ export { compileToJavaScript, compileToJavaScriptWithMeta } from './compilers/ja
 export type { JavaScriptCompileOptions, JavaScriptCompileResult } from './compilers/javascript';
 export { compileToSQL } from './compilers/sql';
 export type { SQLCompileOptions } from './compilers/sql';
+export { compileToPython } from './compilers/python';
+export type { PythonCompileOptions } from './compilers/python';
 export { JS_HELPERS } from './runtime';
 export { getPrelude } from './preludes';
 export type { Target as PreludeTarget } from './preludes';

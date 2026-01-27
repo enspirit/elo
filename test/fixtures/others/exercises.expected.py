@@ -1,0 +1,6 @@
+(lambda _: kAssert("Hello, " + "World!" == "Hello, World!"))(None)
+(lambda _: kAssert({"price": 25, "quantity": 4}.get("price") * {"price": 25, "quantity": 4}.get("quantity") == 100))(None)
+(lambda _: kAssert("  hello  ".strip().upper() == "HELLO"))(None)
+(lambda _: kAssert((width := 8, height := 5, width * height)[-1] == 40))(None)
+(lambda _: kAssert(kEq(list(map(lambda x: x * 2, list(filter(lambda x: x > 10, [5, 12, 8, 20, 3, 15])))), [24, 40, 30])))(None)
+(lambda _: kAssert((order := {"price": 50, "quantity": 3}, order.get("price") * order.get("quantity"))[-1] == 150))(None)

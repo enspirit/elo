@@ -1,0 +1,6 @@
+(lambda _: kAssert(100 * (1 - 0.2) == 80))(None)
+(lambda _: kAssert(90 + 90 * 0.1 == 99))(None)
+(lambda _: kAssert(1000 * (1 + 0.05) ** 10 > 1500))(None)
+(lambda _: kAssert(30 >= 18 and (50000 > 30000 or True == True)))(None)
+(lambda _: kAssert(0.8 * 100 == 80))(None)
+(lambda _: kAssert(70 / 1.75 ** 2 < 25))(None)

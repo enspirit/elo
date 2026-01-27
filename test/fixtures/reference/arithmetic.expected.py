@@ -1,0 +1,7 @@
+(lambda _: kAssert(2 + 3 == 5))(None)
+(lambda _: kAssert(2 + 3 * 4 == 14))(None)
+(lambda _: kAssert(2 ** 3 == 8))(None)
+(lambda _: kAssert(2 ** 3 + 1 == 9))(None)
+(lambda _: kAssert((5 + 5) * (10 - 3) / 2 == 35))(None)
+(lambda _: kAssert(-5 + 10 == 5))(None)
+(lambda _: kAssert(10 % 3 + 8 / 2 == 5))(None)

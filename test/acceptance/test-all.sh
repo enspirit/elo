@@ -35,4 +35,12 @@ fi
 
 echo ""
 
+# Test Python
+echo "Python Tests:"
+if ! "$SCRIPTS_DIR/test-python.sh" "$TEST_DIR"; then
+    EXIT_CODE=1
+fi
+
+echo ""
+
 exit ${EXIT_CODE:-0}

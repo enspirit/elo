@@ -372,3 +372,298 @@ end`,
   v.to_s
 end`,
 };
+
+/**
+ * Python helper function snippets.
+ * These are embedded in compiled Python output when needed.
+ * Special entries starting with _ are import statements, not functions.
+ */
+export const PY_HELPER_DEPS: Record<string, string[]> = {
+  kEq: [],
+  kNeq: ['kEq'],
+  kFetch: [],
+  kFetchObject: ['kFetch'],
+  kFetchArray: ['kFetch'],
+  kDeepMerge: [],
+  kPatch: [],
+  kTypeOf: [],
+  kAssert: [],
+  kFail: [],
+  kAssertFails: [],
+  kAdd: [],
+  kSub: [],
+  kMul: [],
+  kDiv: [],
+  kMod: [],
+  kPow: [],
+  kNeg: [],
+  kBool: [],
+  kString: ['_elo_dur_to_iso'],
+  kParseDate: ['_elo_dt_helpers'],
+  kParseDatetime: ['_elo_dt_helpers'],
+  _elo_dt_helpers: ['_import_datetime', '_elo_duration'],
+  _elo_duration: ['_import_re'],
+};
+
+export const PY_HELPERS: Record<string, string> = {
+  _import_math: `import math`,
+  _import_functools: `import functools`,
+  _import_datetime: `import datetime as _dt`,
+  _import_re: `import re`,
+  _elo_duration: `class EloDuration:
+    __slots__ = ('_ms',)
+    def __init__(self, ms):
+        self._ms = ms
+    @staticmethod
+    def from_iso(s):
+        m = re.match(r'^P(?:(\\d+)Y)?(?:(\\d+)M)?(?:(\\d+)W)?(?:(\\d+)D)?(?:T(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+(?:\\.\\d+)?)S)?)?$', s)
+        if not m: raise Exception('Invalid ISO duration: ' + s)
+        yrs = int(m.group(1) or 0)
+        mos = int(m.group(2) or 0)
+        wks = int(m.group(3) or 0)
+        dys = int(m.group(4) or 0)
+        hrs = int(m.group(5) or 0)
+        mns = int(m.group(6) or 0)
+        scs = float(m.group(7) or 0)
+        total_days = yrs * 365 + mos * 30 + wks * 7 + dys
+        return EloDuration(((total_days * 24 + hrs) * 60 + mns) * 60000 + scs * 1000)
+    def to_ms(self): return self._ms
+    def plus(self, other):
+        if isinstance(other, EloDuration): return EloDuration(self._ms + other._ms)
+        if isinstance(other, _dt.datetime): return _elo_dt_plus(other, self)
+        raise Exception('Cannot add duration to ' + type(other).__name__)
+    def minus(self, other):
+        if isinstance(other, EloDuration): return EloDuration(self._ms - other._ms)
+        raise Exception('Cannot subtract ' + type(other).__name__ + ' from duration')
+    def scale(self, n): return EloDuration(self._ms * n)
+    def divide(self, n): return EloDuration(self._ms / n)
+    def negate(self): return EloDuration(-self._ms)
+    def __eq__(self, other): return isinstance(other, EloDuration) and self._ms == other._ms
+    def __ne__(self, other): return not self.__eq__(other)
+    def __lt__(self, other): return self._ms < other._ms
+    def __le__(self, other): return self._ms <= other._ms
+    def __gt__(self, other): return self._ms > other._ms
+    def __ge__(self, other): return self._ms >= other._ms
+    def __repr__(self): return f'EloDuration({self._ms}ms)'
+    def in_seconds(self): return self._ms / 1000.0
+    def in_minutes(self): return self._ms / 60000.0
+    def in_hours(self): return self._ms / 3600000.0
+    def in_days(self): return self._ms / 86400000.0
+    def in_weeks(self): return self._ms / 604800000.0
+    def in_months(self): return self._ms / (30.4375 * 86400000.0)
+    def in_quarters(self): return self._ms / (91.3125 * 86400000.0)
+    def in_years(self): return self._ms / (365.25 * 86400000.0)`,
+  _elo_dt_helpers: `def _elo_dt_plus(dt, dur):
+    from datetime import timedelta
+    return dt + timedelta(milliseconds=dur.to_ms())
+def _elo_dt_minus_dur(dt, dur):
+    from datetime import timedelta
+    return dt - timedelta(milliseconds=dur.to_ms())
+def _elo_dt_diff(a, b):
+    diff = a - b
+    return EloDuration(diff.total_seconds() * 1000)
+def _elo_dt(y, mo, d, h=0, mi=0, s=0):
+    return _dt.datetime(y, mo, d, h, mi, s)
+def _elo_start_of_day(dt):
+    return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+def _elo_end_of_day(dt):
+    return dt.replace(hour=23, minute=59, second=59, microsecond=999000)
+def _elo_start_of_week(dt):
+    d = dt - _dt.timedelta(days=dt.weekday())
+    return d.replace(hour=0, minute=0, second=0, microsecond=0)
+def _elo_end_of_week(dt):
+    d = dt + _dt.timedelta(days=6 - dt.weekday())
+    return d.replace(hour=23, minute=59, second=59, microsecond=999000)
+def _elo_start_of_month(dt):
+    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+def _elo_end_of_month(dt):
+    import calendar
+    last_day = calendar.monthrange(dt.year, dt.month)[1]
+    return dt.replace(day=last_day, hour=23, minute=59, second=59, microsecond=999000)
+def _elo_start_of_quarter(dt):
+    qm = ((dt.month - 1) // 3) * 3 + 1
+    return dt.replace(month=qm, day=1, hour=0, minute=0, second=0, microsecond=0)
+def _elo_end_of_quarter(dt):
+    import calendar
+    qm = ((dt.month - 1) // 3) * 3 + 3
+    last_day = calendar.monthrange(dt.year, qm)[1]
+    return dt.replace(month=qm, day=last_day, hour=23, minute=59, second=59, microsecond=999000)
+def _elo_start_of_year(dt):
+    return dt.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+def _elo_end_of_year(dt):
+    return dt.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999000)`,
+  kAssert: `def kAssert(cond, msg="Assertion failed"):
+    if not cond: raise Exception(msg)
+    return True`,
+  kFail: `def kFail(msg):
+    raise Exception(msg)`,
+  kAssertFails: `def kAssertFails(fn):
+    try:
+        fn()
+        raise Exception("Expected function to fail but it did not")
+    except Exception as e:
+        if str(e) == "Expected function to fail but it did not": raise
+        return True`,
+  kEq: `def kEq(l, r):
+    if isinstance(l, EloDuration) and isinstance(r, EloDuration): return l == r
+    if isinstance(l, _dt.datetime) and isinstance(r, _dt.datetime): return l == r
+    if isinstance(l, list) and isinstance(r, list):
+        if len(l) != len(r): return False
+        return all(kEq(a, b) for a, b in zip(l, r))
+    if isinstance(l, dict) and isinstance(r, dict):
+        if set(l.keys()) != set(r.keys()): return False
+        return all(kEq(l[k], r[k]) for k in l)
+    return l == r`,
+  kNeq: `def kNeq(l, r):
+    return not kEq(l, r)`,
+  kTypeOf: `def kTypeOf(v):
+    if v is None: return 'Null'
+    if isinstance(v, EloDuration): return 'Duration'
+    if isinstance(v, _dt.datetime): return 'DateTime'
+    if isinstance(v, bool): return 'Bool'
+    if isinstance(v, int): return 'Int'
+    if isinstance(v, float): return 'Float'
+    if isinstance(v, str): return 'String'
+    if isinstance(v, list): return 'List'
+    if isinstance(v, dict): return 'Tuple'
+    if callable(v): return 'Function'
+    return 'Unknown'`,
+  kFetch: `def kFetch(data, path):
+    current = data
+    for segment in path:
+        if current is None: return None
+        if isinstance(segment, int):
+            if not isinstance(current, list): return None
+            if segment >= len(current): return None
+            current = current[segment]
+        else:
+            if not isinstance(current, dict): return None
+            current = current.get(segment)
+    return current`,
+  kFetchObject: `def kFetchObject(data, paths):
+    return {key: kFetch(data, paths[key]) for key in paths}`,
+  kFetchArray: `def kFetchArray(data, paths):
+    return [kFetch(data, p) for p in paths]`,
+  kPatch: `def kPatch(data, path, value):
+    if len(path) == 0: return value
+    seg = path[0]
+    rest = path[1:]
+    next_default = None if len(rest) == 0 else ([] if isinstance(rest[0], int) else {})
+    if isinstance(seg, int):
+        if data is not None and not isinstance(data, list): raise Exception('cannot patch array index on non-array')
+        arr = list(data) if isinstance(data, list) else []
+        while len(arr) <= seg: arr.append(None)
+        existing = arr[seg]
+        arr[seg] = kPatch(next_default if existing is None else existing, rest, value)
+        return arr
+    else:
+        if isinstance(data, list): raise Exception('cannot patch object key on array')
+        obj = dict(data) if isinstance(data, dict) else {}
+        existing = obj.get(seg)
+        obj[seg] = kPatch(next_default if existing is None else existing, rest, value)
+        return obj`,
+  kDeepMerge: `def kDeepMerge(a, b):
+    if not isinstance(a, dict) or not isinstance(b, dict): return b
+    result = dict(a)
+    for key in b:
+        result[key] = kDeepMerge(a.get(key), b[key])
+    return result`,
+  kFirst: `def kFirst(arr):
+    return arr[0] if len(arr) > 0 else None`,
+  kLast: `def kLast(arr):
+    return arr[-1] if len(arr) > 0 else None`,
+  kAt: `def kAt(arr, idx):
+    if idx < 0 or idx >= len(arr): return None
+    return arr[idx]`,
+  kIndexOf: `def kIndexOf(s, sub):
+    idx = s.find(sub)
+    return None if idx == -1 else idx`,
+  kSplit: `def kSplit(s, sep):
+    if s == '': return []
+    return s.split(sep)`,
+  kData: `def kData(v):
+    import json
+    if v is None: return None
+    if isinstance(v, str):
+        try: return json.loads(v)
+        except: raise Exception('invalid JSON: ' + repr(v))
+    return v`,
+  kString: `def kString(v):
+    if v is None: return 'null'
+    if isinstance(v, bool): return 'true' if v else 'false'
+    if isinstance(v, int): return str(v)
+    if isinstance(v, float): return str(v)
+    if isinstance(v, str): return "'" + v.replace("\\\\", "\\\\\\\\").replace("'", "\\\\'") + "'"
+    if isinstance(v, EloDuration): return _elo_dur_to_iso(v)
+    if isinstance(v, _dt.datetime):
+        if v.hour == 0 and v.minute == 0 and v.second == 0: return 'D' + v.strftime('%Y-%m-%d')
+        return 'D' + v.strftime('%Y-%m-%dT%H:%M:%S')
+    if isinstance(v, list): return '[' + ', '.join(kString(e) for e in v) + ']'
+    if isinstance(v, dict): return '{' + ', '.join(k + ': ' + kString(v[k]) for k in v) + '}'
+    return str(v)`,
+  _elo_dur_to_iso: `def _elo_dur_to_iso(d):
+    ms = d.to_ms()
+    if ms == 0: return 'PT0S'
+    neg = ms < 0
+    ms = abs(ms)
+    secs = ms / 1000
+    days = int(secs // 86400); secs -= days * 86400
+    hours = int(secs // 3600); secs -= hours * 3600
+    mins = int(secs // 60); secs -= mins * 60
+    s = '-P' if neg else 'P'
+    if days: s += str(days) + 'D'
+    if hours or mins or secs: s += 'T'
+    if hours: s += str(hours) + 'H'
+    if mins: s += str(mins) + 'M'
+    if secs: s += str(int(secs) if secs == int(secs) else secs) + 'S'
+    return s`,
+  kAdd: `def kAdd(l, r):
+    if isinstance(l, _dt.datetime) and isinstance(r, EloDuration): return _elo_dt_plus(l, r)
+    if isinstance(l, EloDuration) and isinstance(r, _dt.datetime): return _elo_dt_plus(r, l)
+    if isinstance(l, EloDuration) and isinstance(r, EloDuration): return l.plus(r)
+    return l + r`,
+  kSub: `def kSub(l, r):
+    if isinstance(l, _dt.datetime) and isinstance(r, EloDuration): return _elo_dt_minus_dur(l, r)
+    if isinstance(l, _dt.datetime) and isinstance(r, _dt.datetime): return _elo_dt_diff(l, r)
+    if isinstance(l, EloDuration) and isinstance(r, EloDuration): return l.minus(r)
+    return l - r`,
+  kMul: `def kMul(l, r):
+    if isinstance(l, EloDuration): return l.scale(r)
+    if isinstance(r, EloDuration): return r.scale(l)
+    return l * r`,
+  kDiv: `def kDiv(l, r):
+    if isinstance(l, EloDuration) and isinstance(r, (int, float)): return l.divide(r)
+    return l / r`,
+  kMod: `def kMod(l, r):
+    return l % r`,
+  kPow: `def kPow(l, r):
+    return l ** r`,
+  kNeg: `def kNeg(v):
+    if isinstance(v, EloDuration): return v.negate()
+    return -v`,
+  kBool: `def kBool(v):
+    if isinstance(v, bool): return v
+    if isinstance(v, str):
+        if v == 'true': return True
+        if v == 'false': return False
+        raise Exception('Cannot convert to Bool: ' + repr(v))
+    raise Exception('Cannot convert to Bool: ' + repr(v))`,
+  kParseDate: `def kParseDate(v):
+    if isinstance(v, _dt.datetime): return _elo_dt(v.year, v.month, v.day)
+    if isinstance(v, str):
+        parts = v.split('-')
+        if len(parts) == 3: return _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
+    raise Exception('Cannot parse date: ' + repr(v))`,
+  kParseDatetime: `def kParseDatetime(v):
+    if isinstance(v, _dt.datetime): return v
+    if isinstance(v, str):
+        v2 = v.replace('Z', '')
+        if 'T' in v2:
+            dp, tp = v2.split('T')
+            dy, dm, dd = dp.split('-')
+            tps = tp.split(':')
+            return _elo_dt(int(dy), int(dm), int(dd), int(tps[0]), int(tps[1]), int(tps[2]) if len(tps) > 2 else 0)
+        parts = v2.split('-')
+        if len(parts) == 3: return _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
+    raise Exception('Cannot parse datetime: ' + repr(v))`,
+};

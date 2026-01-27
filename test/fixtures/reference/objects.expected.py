@@ -1,0 +1,5 @@
+(lambda _: kAssert(({}.get("budget") is None) == True))(None)
+(lambda _: kAssert({"budget": 1500}.get("budget") == 1500))(None)
+(lambda _: kAssert({"name": "Alice", "age": 30}.get("name") == "Alice"))(None)
+(lambda _: kAssert({"name": "Alice", "age": 30}.get("age") == 30))(None)
+(lambda _: kAssert((obj := {"x": 10}, obj.get("x"))[-1] == 10))(None)

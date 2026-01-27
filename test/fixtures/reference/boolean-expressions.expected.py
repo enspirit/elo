@@ -1,0 +1,7 @@
+(lambda _: kAssert(True))(None)
+(lambda _: kAssert(15 > 10))(None)
+(lambda _: kAssert(25 == 25))(None)
+(lambda _: kAssert(50 > 0 and 50 < 100))(None)
+(lambda _: kAssert(1 == 1 or 2 == 2))(None)
+(lambda _: kAssert(not False))(None)
+(lambda _: kAssert(150 > 100 and 15 >= 10 or True == True))(None)

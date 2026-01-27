@@ -1,0 +1,7 @@
+(lambda _: kAssert((_elo_dt(2024, 1, 15) > _elo_dt(2024, 1, 10))))(None)
+(lambda _: kAssert(not ((_elo_dt(2024, 1, 15) < _elo_dt(2024, 1, 10)))))(None)
+(lambda _: kAssert((_elo_dt(2024, 1, 15) >= _elo_dt(2024, 1, 15))))(None)
+(lambda _: kAssert((_elo_dt(2024, 1, 15) <= _elo_dt(2024, 1, 15))))(None)
+(lambda _: kAssert(_elo_dt(2024, 1, 15, 10, 30, 0) > _elo_dt(2024, 1, 15, 9, 0, 0)))(None)
+(lambda _: kAssert(_elo_dt(2024, 1, 15, 10, 30, 0) < _elo_dt(2024, 1, 15, 11, 0, 0)))(None)
+(lambda _: kAssert(_elo_dt(2024, 1, 15, 10, 30, 0) >= _elo_dt(2024, 1, 15, 10, 30, 0)))(None)
