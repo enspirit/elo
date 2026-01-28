@@ -9,8 +9,8 @@ import { tmpdir } from 'os';
  * CLI integration tests for the eloc and elo commands
  */
 
-const ELOC = './bin/eloc';
-const ELO = './bin/elo';
+const ELOC = process.platform === 'win32' ? 'node bin/eloc' : './bin/eloc';
+const ELO = process.platform === 'win32' ? 'node bin/elo' : './bin/elo';
 
 function eloc(args: string): string {
   return execSync(`${ELOC} ${args}`, { encoding: 'utf-8' }).trim();

@@ -40,12 +40,14 @@ while IFS= read -r -d '' file; do
     relpath="${file#$TEST_DIR/}"
 
     # Fixtures contain self-executing code, run with prelude
-    if { echo "$PRELUDE"; cat "$file"; } | python3 2>/dev/null; then
+    # Use python3 on Unix, python on Windows
+    PYTHON_CMD="${PYTHON_CMD:-python3}"
+    if { echo "$PRELUDE"; cat "$file"; } | $PYTHON_CMD 2>/dev/null; then
         echo "  ✓ $relpath"
         ((PASSED++)) || true
     else
         echo "  ✗ $relpath"
-        { echo "$PRELUDE"; cat "$file"; } | python3 || true
+        { echo "$PRELUDE"; cat "$file"; } | $PYTHON_CMD || true
         ((FAILED++)) || true
     fi
 done < <(find "$TEST_DIR" -type f -name "*.expected.py" -print0 | sort -z)
