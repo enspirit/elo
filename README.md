@@ -3,7 +3,7 @@
 [![CI](https://github.com/enspirit/elo/actions/workflows/ci.yml/badge.svg)](https://github.com/enspirit/elo/actions/workflows/ci.yml)
 
 A simple, well-designed, portable and safe data expression language that
-compiles to Ruby, Javascript and PostgreSQL.
+compiles to Ruby, JavaScript, Python and PostgreSQL.
 
 **[Try Elo online](https://elo-lang.org/)** - Interactive playground and documentation
 
@@ -55,6 +55,7 @@ See also the Related work section below.
 - **Multi-target compilation**:
   - Ruby (using `**` for power, `&&`/`||`/`!` for boolean logic, `Date.parse()`, `DateTime.parse()`, `ActiveSupport::Duration.parse()`)
   - JavaScript (using `Math.pow()` for power, `&&`/`||`/`!` for boolean logic, `new Date()`, `Duration.parse()`)
+  - Python (using `**` for power, `and`/`or`/`not` for boolean logic, `datetime` module)
   - PostgreSQL (using `POWER()` for power, `AND`/`OR`/`NOT` for boolean logic, `DATE`, `TIMESTAMP`, `INTERVAL` for temporals)
 
 ## Installation
@@ -94,6 +95,9 @@ The compiler translates Elo expressions to Ruby, JavaScript, or SQL:
 # Compile expression to Ruby
 ./bin/eloc -e "2 + 3 * 4" -t ruby
 
+# Compile expression to Python
+./bin/eloc -e "2 + 3 * 4" -t python
+
 # Compile expression to SQL
 ./bin/eloc -e "2 + 3 * 4" -t sql
 
@@ -116,7 +120,7 @@ cat input.elo | ./bin/eloc - -t ruby
 
 Options:
 - `-e, --expression <expr>` - Expression to compile
-- `-t, --target <lang>` - Target language: `ruby`, `js` (default), `sql`
+- `-t, --target <lang>` - Target language: `ruby`, `js` (default), `python`, `sql`
 - `-p, --prelude` - Include necessary library imports/requires
 - `--prelude-only` - Output only the prelude (no expression needed)
 - `-f, --file <path>` - Output to file instead of stdout
@@ -197,7 +201,7 @@ The CLI and playground support multiple input/output formats (JSON, CSV). The fo
 For more control, you can use the lower-level parsing and compilation functions:
 
 ```typescript
-import { parse, compileToRuby, compileToJavaScript, compileToSQL } from '@enspirit/elo';
+import { parse, compileToRuby, compileToJavaScript, compileToPython, compileToSQL } from '@enspirit/elo';
 
 // Parse an expression
 const ast = parse(`
@@ -211,6 +215,7 @@ const ast = parse(`
 // Compile to different targets
 console.log(compileToRuby(ast));
 console.log(compileToJavaScript(ast));
+console.log(compileToPython(ast));
 console.log(compileToSQL(ast));
 ```
 
