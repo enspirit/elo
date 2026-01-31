@@ -42,7 +42,7 @@ describe('Fixture validation', () => {
   const files = findEloFiles(TEST_DIR);
 
   for (const filePath of files) {
-    const fileName = filePath.split('/').pop()!;
+    const fileName = filePath.split(/[/\\]/).pop()!;
     const displayName = relative(TEST_DIR, filePath);
 
     if (EXEMPT_FILES.includes(fileName)) {
