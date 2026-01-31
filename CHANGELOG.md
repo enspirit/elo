@@ -4,13 +4,11 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
-### Language Features
-- Add Python as a fourth compilation target (JavaScript, Ruby, Python, SQL)
-- Full support for all Elo features in Python: arithmetic, strings, dates, durations, lambdas, data schemas, guards, and standard library
+## [0.9.8] - 2026-01-31
 
-### Website
-- Add Python target to playground, highlighter, and all documentation pages
-- Add blog post about Python support
+### Testing
+- Add Python compiler unit tests — contributed by [cyberpsychoz](https://github.com/cyberpsychoz)
+- Fix Windows compatibility in test scripts — contributed by [cyberpsychoz](https://github.com/cyberpsychoz)
 
 ## [0.9.7] - 2026-01-27
 
