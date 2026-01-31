@@ -458,7 +458,7 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile EOW to SQL', () => {
     const ast = parse('EOW');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('week', CURRENT_DATE) + INTERVAL '6 days'");
+    assert.strictEqual(compileToSQL(ast), "date_trunc('week', CURRENT_DATE) + INTERVAL '7 days' - INTERVAL '1 second'");
   });
 
   // Month boundaries (SOM/EOM)
@@ -505,7 +505,7 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile EOM to SQL', () => {
     const ast = parse('EOM');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day'");
+    assert.strictEqual(compileToSQL(ast), "date_trunc('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 second'");
   });
 
   // Quarter boundaries (SOQ/EOQ)
@@ -552,7 +552,7 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile EOQ to SQL', () => {
     const ast = parse('EOQ');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('quarter', CURRENT_DATE) + INTERVAL '3 months' - INTERVAL '1 day'");
+    assert.strictEqual(compileToSQL(ast), "date_trunc('quarter', CURRENT_DATE) + INTERVAL '3 months' - INTERVAL '1 second'");
   });
 
   // Year boundaries (SOY/EOY)
@@ -599,7 +599,7 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile EOY to SQL', () => {
     const ast = parse('EOY');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('year', CURRENT_DATE) + INTERVAL '1 year' - INTERVAL '1 day'");
+    assert.strictEqual(compileToSQL(ast), "date_trunc('year', CURRENT_DATE) + INTERVAL '1 year' - INTERVAL '1 second'");
   });
 
   // Expression tests

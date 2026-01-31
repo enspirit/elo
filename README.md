@@ -37,6 +37,7 @@ See also the Related work section below.
 - **Guards**: `guard condition in body` for runtime validation with `check` for postconditions
 - **Input variable**: `_` for accessing external data passed to expressions
 - **Array iteration**: `map`, `filter`, `reduce`, `any`, `all` (JS/Ruby only)
+- **Period boundaries**: `startOfDay`, `endOfDay`, `startOfWeek`, `endOfWeek`, `startOfMonth`, `endOfMonth`, `startOfQuarter`, `endOfQuarter`, `startOfYear`, `endOfYear`
 - **Duration conversion**: `inYears`, `inQuarters`, `inMonths`, `inWeeks`, `inDays`, `inHours`, `inMinutes`, `inSeconds` for converting durations to float values (approximate for calendar units)
 - **List functions**: `min`, `max`, `reverse`, `join(list, separator)`, `split(string, separator)`
 - **Literals**:

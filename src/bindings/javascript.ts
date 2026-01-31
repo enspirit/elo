@@ -77,8 +77,27 @@ export function createJavaScriptBinding(): StdLib<string> {
     'end_of_year': "endOf('year')",
   };
 
+  // camelCase aliases for use as stdlib functions on date/datetime values
+  const camelCaseMap: Record<string, string> = {
+    'startOfDay': "startOf('day')",
+    'endOfDay': "endOf('day')",
+    'startOfWeek': "startOf('week')",
+    'endOfWeek': "endOf('week')",
+    'startOfMonth': "startOf('month')",
+    'endOfMonth': "endOf('month')",
+    'startOfQuarter': "startOf('quarter')",
+    'endOfQuarter': "endOf('quarter')",
+    'startOfYear': "startOf('year')",
+    'endOfYear': "endOf('year')",
+  };
+
   for (const [fn, method] of Object.entries(periodBoundaryMap)) {
     jsLib.register(fn, [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
+  }
+  for (const [fn, method] of Object.entries(camelCaseMap)) {
+    for (const t of [Types.date, Types.datetime]) {
+      jsLib.register(fn, [t], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
+    }
   }
 
   // Numeric arithmetic - native JS operators only for known numeric types

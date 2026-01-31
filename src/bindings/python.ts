@@ -316,11 +316,32 @@ export function createPythonBinding(): StdLib<string> {
     'start_of_month', 'end_of_month', 'start_of_quarter', 'end_of_quarter',
     'start_of_year', 'end_of_year',
   ];
+  const camelToSnakeMap: Record<string, string> = {
+    'startOfDay': 'start_of_day',
+    'endOfDay': 'end_of_day',
+    'startOfWeek': 'start_of_week',
+    'endOfWeek': 'end_of_week',
+    'startOfMonth': 'start_of_month',
+    'endOfMonth': 'end_of_month',
+    'startOfQuarter': 'start_of_quarter',
+    'endOfQuarter': 'end_of_quarter',
+    'startOfYear': 'start_of_year',
+    'endOfYear': 'end_of_year',
+  };
+
   for (const fn of periodBoundaries) {
     pyLib.register(fn, [Types.datetime], (args, ctx) => {
       ctx.requireHelper?.('_elo_dt_helpers');
       return `_elo_${fn}(${ctx.emit(args[0])})`;
     });
+  }
+  for (const [fn, snakeFn] of Object.entries(camelToSnakeMap)) {
+    for (const t of [Types.date, Types.datetime]) {
+      pyLib.register(fn, [t], (args, ctx) => {
+        ctx.requireHelper?.('_elo_dt_helpers');
+        return `_elo_${snakeFn}(${ctx.emit(args[0])})`;
+      });
+    }
   }
 
   // Temporal extraction

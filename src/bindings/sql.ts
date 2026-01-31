@@ -53,13 +53,26 @@ export function createSQLBinding(): StdLib<string> {
     'start_of_day': { truncate: 'day' },
     'end_of_day': { truncate: 'day', end: "+ INTERVAL '1 day' - INTERVAL '1 second'" },
     'start_of_week': { truncate: 'week' },
-    'end_of_week': { truncate: 'week', end: "+ INTERVAL '6 days'" },
+    'end_of_week': { truncate: 'week', end: "+ INTERVAL '7 days' - INTERVAL '1 second'" },
     'start_of_month': { truncate: 'month' },
-    'end_of_month': { truncate: 'month', end: "+ INTERVAL '1 month' - INTERVAL '1 day'" },
+    'end_of_month': { truncate: 'month', end: "+ INTERVAL '1 month' - INTERVAL '1 second'" },
     'start_of_quarter': { truncate: 'quarter' },
-    'end_of_quarter': { truncate: 'quarter', end: "+ INTERVAL '3 months' - INTERVAL '1 day'" },
+    'end_of_quarter': { truncate: 'quarter', end: "+ INTERVAL '3 months' - INTERVAL '1 second'" },
     'start_of_year': { truncate: 'year' },
-    'end_of_year': { truncate: 'year', end: "+ INTERVAL '1 year' - INTERVAL '1 day'" },
+    'end_of_year': { truncate: 'year', end: "+ INTERVAL '1 year' - INTERVAL '1 second'" },
+  };
+
+  const camelCaseSQLMap: Record<string, { truncate: string; end?: string }> = {
+    'startOfDay': { truncate: 'day' },
+    'endOfDay': { truncate: 'day', end: "+ INTERVAL '1 day' - INTERVAL '1 second'" },
+    'startOfWeek': { truncate: 'week' },
+    'endOfWeek': { truncate: 'week', end: "+ INTERVAL '7 days' - INTERVAL '1 second'" },
+    'startOfMonth': { truncate: 'month' },
+    'endOfMonth': { truncate: 'month', end: "+ INTERVAL '1 month' - INTERVAL '1 second'" },
+    'startOfQuarter': { truncate: 'quarter' },
+    'endOfQuarter': { truncate: 'quarter', end: "+ INTERVAL '3 months' - INTERVAL '1 second'" },
+    'startOfYear': { truncate: 'year' },
+    'endOfYear': { truncate: 'year', end: "+ INTERVAL '1 year' - INTERVAL '1 second'" },
   };
 
   for (const [fn, { truncate, end }] of Object.entries(periodBoundarySQL)) {
@@ -74,6 +87,14 @@ export function createSQLBinding(): StdLib<string> {
       const truncated = `date_trunc('${truncate}', ${baseExpr})`;
       return end ? `${truncated} ${end}` : truncated;
     });
+  }
+  for (const [fn, { truncate, end }] of Object.entries(camelCaseSQLMap)) {
+    for (const t of [Types.date, Types.datetime]) {
+      sqlLib.register(fn, [t], (args, ctx) => {
+        const truncated = `date_trunc('${truncate}', ${ctx.emit(args[0])})`;
+        return end ? `${truncated} ${end}` : truncated;
+      });
+    }
   }
 
   // String concatenation uses || in SQL

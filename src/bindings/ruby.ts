@@ -51,6 +51,19 @@ export function createRubyBinding(): StdLib<string> {
     'end_of_year': 'end_of_year',
   };
 
+  const camelCaseMap: Record<string, string> = {
+    'startOfDay': 'beginning_of_day',
+    'endOfDay': 'end_of_day',
+    'startOfWeek': 'beginning_of_week',
+    'endOfWeek': 'end_of_week',
+    'startOfMonth': 'beginning_of_month',
+    'endOfMonth': 'end_of_month',
+    'startOfQuarter': 'beginning_of_quarter',
+    'endOfQuarter': 'end_of_quarter',
+    'startOfYear': 'beginning_of_year',
+    'endOfYear': 'end_of_year',
+  };
+
   for (const [fn, method] of Object.entries(periodBoundaryMap)) {
     rubyLib.register(fn, [Types.datetime], (args, ctx) => {
       const arg = args[0];
@@ -60,6 +73,10 @@ export function createRubyBinding(): StdLib<string> {
       }
       return `${ctx.emit(arg)}.${method}`;
     });
+  }
+  for (const [fn, method] of Object.entries(camelCaseMap)) {
+    rubyLib.register(fn, [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
+    rubyLib.register(fn, [Types.date], (args, ctx) => `${ctx.emit(args[0])}.to_datetime.${method}`);
   }
 
   // Ruby uses native operators for all types due to operator overloading
