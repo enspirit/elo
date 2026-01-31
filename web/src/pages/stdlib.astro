@@ -12,6 +12,7 @@ import Footer from '../components/Footer.astro';
         <a href="#date">Date</a>
         <a href="#datetime">DateTime</a>
         <a href="#duration">Duration</a>
+        <a href="#interval">Interval</a>
         <a href="#list">List</a>
         <a href="#numeric">Numeric</a>
         <a href="#string">String</a>
@@ -74,6 +75,12 @@ import Footer from '../components/Footer.astro';
             <div class="fn-sig">(value: String | Duration) → Duration</div>
             <p class="fn-desc">Parses an ISO 8601 duration string. Throws on invalid input.</p>
             <div class="fn-example"><code class="language-elo">Duration('P1D')</code><span class="fn-result">→ P1D</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">Interval</div>
+            <div class="fn-sig">(value: &#123;start: DateTime, end: DateTime&#125;) → Interval</div>
+            <p class="fn-desc">Constructs an interval from an object with <code>start</code> and <code>end</code> datetime properties. Use <code>start()</code> and <code>end()</code> to access boundaries.</p>
+            <div class="fn-example"><code class="language-elo">start(Interval(&#123;start: D2024-01-15T10:00:00Z, end: D2024-01-15T18:00:00Z&#125;))</code><span class="fn-result">→ D2024-01-15T10:00:00Z</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Data</div>
@@ -258,6 +265,25 @@ import Footer from '../components/Footer.astro';
             <div class="fn-sig">(Duration) → Float</div>
             <p class="fn-desc">Converts a duration to its total number of seconds.</p>
             <div class="fn-example"><code class="language-elo">P1D |> inSeconds</code><span class="fn-result">→ 86400.0</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stdlib-section" id="interval" data-stdlib-search-target="section">
+        <h2>Interval</h2>
+        <p>Functions for working with time intervals (ranges of datetimes).</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">start</div>
+            <div class="fn-sig">(i: Interval) → DateTime</div>
+            <p class="fn-desc">Returns the start datetime of the interval.</p>
+            <div class="fn-example"><code class="language-elo">start(Interval(&#123;start: D2024-01-15T10:00:00Z, end: D2024-01-15T18:00:00Z&#125;))</code><span class="fn-result">→ D2024-01-15T10:00:00Z</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">end</div>
+            <div class="fn-sig">(i: Interval) → DateTime</div>
+            <p class="fn-desc">Returns the end datetime of the interval.</p>
+            <div class="fn-example"><code class="language-elo">end(Interval(&#123;start: D2024-01-15T10:00:00Z, end: D2024-01-15T18:00:00Z&#125;))</code><span class="fn-result">→ D2024-01-15T18:00:00Z</span></div>
           </div>
         </div>
       </section>

@@ -1,0 +1,2 @@
+CASE WHEN lower(tstzrange(TIMESTAMP '2024-01-15 10:00:00', TIMESTAMP '2024-01-15 18:00:00')) = TIMESTAMP '2024-01-15 10:00:00' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN upper(tstzrange(TIMESTAMP '2024-01-15 10:00:00', TIMESTAMP '2024-01-15 18:00:00')) = TIMESTAMP '2024-01-15 18:00:00' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

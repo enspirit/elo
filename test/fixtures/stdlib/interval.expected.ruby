@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless (DateTime.parse("2024-01-15T10:00:00Z")..DateTime.parse("2024-01-15T18:00:00Z")).first == DateTime.parse("2024-01-15T10:00:00Z"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (DateTime.parse("2024-01-15T10:00:00Z")..DateTime.parse("2024-01-15T18:00:00Z")).last == DateTime.parse("2024-01-15T18:00:00Z"); true) }.call(nil);

@@ -402,6 +402,7 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kParseDate: ['_elo_dt_helpers'],
   kParseDatetime: ['_elo_dt_helpers'],
   _elo_dt_helpers: ['_import_datetime', '_elo_duration'],
+  _EloInterval: ['_import_collections'],
   _elo_duration: ['_import_re'],
   // Parser helpers
   pAny: ['pOk'],
@@ -422,6 +423,8 @@ export const PY_HELPERS: Record<string, string> = {
   _import_functools: `import functools`,
   _import_datetime: `import datetime as _dt`,
   _import_re: `import re`,
+  _import_collections: `from collections import namedtuple`,
+  _EloInterval: `EloInterval = namedtuple('EloInterval', ['start', 'end'])`,
   _elo_duration: `class EloDuration:
     __slots__ = ('_ms',)
     def __init__(self, ms):

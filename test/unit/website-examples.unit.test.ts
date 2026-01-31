@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { compile } from '../../src/compile';
 import { parse } from '../../src/parser';
-import { DateTime, Duration } from 'luxon';
+import { DateTime, Duration, Interval } from 'luxon';
 
 /**
  * Unified test for all website examples.
@@ -21,7 +21,7 @@ import { DateTime, Duration } from 'luxon';
  * - Blog posts (```elo fenced code blocks)
  */
 
-const runtime = { DateTime, Duration };
+const runtime = { DateTime, Duration, Interval };
 const webDir = path.join(process.cwd(), 'web/src');
 const blogDir = path.join(webDir, 'content/blog');
 

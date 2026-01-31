@@ -15,7 +15,7 @@ import { compileToJavaScript } from './compilers/javascript';
 export interface EloRuntime {
   DateTime?: unknown;
   Duration?: unknown;
-  // Future dependencies can be added here
+  Interval?: unknown;
 }
 
 /**
@@ -29,7 +29,7 @@ export interface CompileOptions {
  * List of runtime dependency names to inject.
  * Must match the keys in EloRuntime.
  */
-const RUNTIME_DEPS = ['DateTime', 'Duration'] as const;
+const RUNTIME_DEPS = ['DateTime', 'Duration', 'Interval'] as const;
 
 /**
  * Compiles an Elo expression to a callable JavaScript function.

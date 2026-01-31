@@ -446,6 +446,29 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('Duration', [Types.string], parserUnwrap('pDuration'));
   jsLib.register('Duration', [Types.any], parserUnwrap('pDuration'));
 
+  // Interval - construct from object with start/end properties
+  jsLib.register('Interval', [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Interval', [Types.object], (args, ctx) => {
+    const obj = args[0];
+    if (obj.type === 'object_literal') {
+      const startProp = obj.properties.find(p => p.key === 'start');
+      const endProp = obj.properties.find(p => p.key === 'end');
+      if (startProp && endProp) {
+        return `Interval.fromDateTimes(${ctx.emit(startProp.value)}, ${ctx.emit(endProp.value)})`;
+      }
+    }
+    const v = ctx.emit(args[0]);
+    return `Interval.fromDateTimes(${v}.start, ${v}.end)`;
+  });
+  jsLib.register('Interval', [Types.any], (args, ctx) => {
+    const v = ctx.emit(args[0]);
+    return `Interval.fromDateTimes(${v}.start, ${v}.end)`;
+  });
+
+  // Interval accessors
+  jsLib.register('start', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.start`);
+  jsLib.register('end', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.end`);
+
   // Data - identity for non-strings, parse JSON for strings
   jsLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
   jsLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));

@@ -394,6 +394,31 @@ export function createPythonBinding(): StdLib<string> {
   pyLib.register('Duration', [Types.duration], (args, ctx) => ctx.emit(args[0]));
   pyLib.register('Duration', [Types.any], (args, ctx) => `EloDuration.from_iso(${ctx.emit(args[0])})`);
 
+  // Interval - construct from object with start/end properties
+  pyLib.register('Interval', [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  pyLib.register('Interval', [Types.object], (args, ctx) => {
+    ctx.requireHelper?.('_EloInterval');
+    const obj = args[0];
+    if (obj.type === 'object_literal') {
+      const startProp = obj.properties.find(p => p.key === 'start');
+      const endProp = obj.properties.find(p => p.key === 'end');
+      if (startProp && endProp) {
+        return `EloInterval(${ctx.emit(startProp.value)}, ${ctx.emit(endProp.value)})`;
+      }
+    }
+    const v = ctx.emit(args[0]);
+    return `EloInterval(${v}["start"], ${v}["end"])`;
+  });
+  pyLib.register('Interval', [Types.any], (args, ctx) => {
+    ctx.requireHelper?.('_EloInterval');
+    const v = ctx.emit(args[0]);
+    return `EloInterval(${v}["start"], ${v}["end"])`;
+  });
+
+  // Interval accessors
+  pyLib.register('start', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.start`);
+  pyLib.register('end', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.end`);
+
   // Temporal equality - use kEq for datetime/duration comparisons
   pyLib.register('eq', [Types.datetime, Types.datetime], (args, ctx) => {
     ctx.requireHelper?.('kEq');

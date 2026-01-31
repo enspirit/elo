@@ -336,6 +336,15 @@ export function createTypeDefs(): TypeDefs {
   defs.register('Duration', [Types.string], Types.any); // may return null
   defs.register('Duration', [Types.any], Types.any);
 
+  // Interval({start: Datetime, end: Datetime}) - construct an Interval
+  defs.register('Interval', [Types.interval], Types.interval);
+  defs.register('Interval', [Types.object], Types.interval);
+  defs.register('Interval', [Types.any], Types.interval);
+
+  // Interval accessors
+  defs.register('start', [Types.interval], Types.datetime);
+  defs.register('end', [Types.interval], Types.datetime);
+
   // Fallback: unknown functions return any
   defs.registerFallback(() => Types.any);
 

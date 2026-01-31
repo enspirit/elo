@@ -57,6 +57,7 @@ import Footer from '../components/Footer.astro';
             <tr><td><code>String</code></td><td>Text strings</td><td><code>'hello'</code>, <code>'world'</code></td></tr>
             <tr><td><code>DateTime</code></td><td>Dates and timestamps</td><td><code>D2024-01-15</code>, <code>NOW</code>, <code>TODAY</code></td></tr>
             <tr><td><code>Duration</code></td><td>Time periods</td><td><code>P1D</code>, <code>PT2H30M</code>, <code>P1Y2M</code></td></tr>
+            <tr><td><code>Interval</code></td><td>Time ranges</td><td><code>Interval(&#123;start: NOW, end: EOD&#125;)</code></td></tr>
             <tr><td><code>Tuple</code></td><td>Key-value tuples</td><td><code>&#123;name: 'Alice', age: 30&#125;</code></td></tr>
             <tr><td><code>List</code></td><td>Ordered collections</td><td><code>[1, 2, 3]</code>, <code>['a', 'b']</code></td></tr>
             <tr><td><code>Function</code></td><td>Lambda functions</td><td><code>fn( x ~> x * 2 )</code></td></tr>
@@ -155,7 +156,7 @@ import Footer from '../components/Footer.astro';
           <pre class="language-elo">Data('&#123;"name": "Alice"&#125;').name</pre>
           <p class="example-desc">Parses a JSON string and accesses a property.</p>
         </div>
-        <p>Available: <code>Int()</code>, <code>Float()</code>, <code>Bool()</code>, <code>String()</code>, <code>Null()</code>, <code>Date()</code>, <code>Datetime()</code>, <code>Duration()</code>, <code>Data()</code>.</p>
+        <p>Available: <code>Int()</code>, <code>Float()</code>, <code>Bool()</code>, <code>String()</code>, <code>Null()</code>, <code>Date()</code>, <code>Datetime()</code>, <code>Duration()</code>, <code>Interval()</code>, <code>Data()</code>.</p>
         <p class="note"><strong>Note:</strong> Type selectors can be combined into <a href="#data-schemas">Data Schemas</a> for validating complex data structures.</p>
       </section>
 

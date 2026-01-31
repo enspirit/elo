@@ -31,7 +31,7 @@ See also the Related work section below.
 - **Unary operators**: `-`, `+`, `!`
 - **Pipe operator**: `|>` for function chaining (Elixir-style), parentheses optional
 - **Alternative operator**: `|` for fallback chains (returns first defined value)
-- **Type selectors**: `Int()`, `Float()`, `Bool()`, `String()`, `Null()`, `Date()`, `Datetime()`, `Duration()`, `Data()` for parsing and converting values
+- **Type selectors**: `Int()`, `Float()`, `Bool()`, `String()`, `Null()`, `Date()`, `Datetime()`, `Duration()`, `Interval()`, `Data()` for parsing and converting values
 - **Type definitions**: Finitio-like schema validation with `let Person = { name: String, age: Int } in data |> Person`
 - **Lambdas**: `fn(x ~> x * 2)` or `x ~> x * 2` (sugar) for anonymous functions
 - **Guards**: `guard condition in body` for runtime validation with `check` for postconditions
@@ -173,13 +173,13 @@ The simplest way to use Elo is with the `compile()` function, which creates a ca
 
 ```typescript
 import { compile } from '@enspirit/elo';
-import { DateTime, Duration } from 'luxon';
+import { DateTime, Duration, Interval } from 'luxon';
 
 // Compile an expression to a callable function
 // Every Elo expression takes _ (implicit input) as parameter
 const addTen = compile<(x: number) => number>(
   '_ + 10',
-  { runtime: { DateTime, Duration } }
+  { runtime: { DateTime, Duration, Interval } }
 );
 addTen(5); // => 15
 

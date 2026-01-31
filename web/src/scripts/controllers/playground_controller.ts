@@ -4,7 +4,7 @@ import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { bracketMatching } from '@codemirror/language';
 import { json } from '@codemirror/lang-json';
-import { DateTime, Duration } from 'luxon';
+import { DateTime, Duration, Interval } from 'luxon';
 import {
   parse,
   compileToRuby,
@@ -25,6 +25,7 @@ import { formatCode } from '../formatters';
 // Make luxon DateTime and Duration available globally for eval (used by compiled IIFE helpers)
 (window as any).DateTime = DateTime;
 (window as any).Duration = Duration;
+(window as any).Interval = Interval;
 
 type TargetLanguage = 'ruby' | 'javascript' | 'sql' | 'python';
 

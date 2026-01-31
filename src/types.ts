@@ -8,7 +8,7 @@
 /**
  * Primitive type kinds in Elo
  */
-export type TypeKind = 'int' | 'float' | 'bool' | 'null' | 'string' | 'date' | 'datetime' | 'duration' | 'fn' | 'object' | 'array' | 'any';
+export type TypeKind = 'int' | 'float' | 'bool' | 'null' | 'string' | 'date' | 'datetime' | 'duration' | 'interval' | 'fn' | 'object' | 'array' | 'any';
 
 /**
  * A Elo type
@@ -29,6 +29,7 @@ export const Types = {
   date: { kind: 'date' } as EloType,
   datetime: { kind: 'datetime' } as EloType,
   duration: { kind: 'duration' } as EloType,
+  interval: { kind: 'interval' } as EloType,
   fn: { kind: 'fn' } as EloType,
   object: { kind: 'object' } as EloType,
   array: { kind: 'array' } as EloType,
@@ -53,7 +54,7 @@ export function isNumeric(t: EloType): boolean {
  * Check if a type is temporal (date, datetime, or duration)
  */
 export function isTemporal(t: EloType): boolean {
-  return t.kind === 'date' || t.kind === 'datetime' || t.kind === 'duration';
+  return t.kind === 'date' || t.kind === 'datetime' || t.kind === 'duration' || t.kind === 'interval';
 }
 
 /**

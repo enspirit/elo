@@ -9,7 +9,7 @@
 
 export type Target = 'javascript' | 'ruby' | 'sql' | 'python';
 
-const javascriptPrelude = `const { DateTime, Duration } = require('luxon');`;
+const javascriptPrelude = `const { DateTime, Duration, Interval } = require('luxon');`;
 
 const rubyPrelude = `require 'date'
 require 'active_support/all'`;

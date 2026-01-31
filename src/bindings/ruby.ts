@@ -433,6 +433,29 @@ export function createRubyBinding(): StdLib<string> {
     return `(->(v) { case v when ActiveSupport::Duration; v when String; ActiveSupport::Duration.parse(v) rescue raise ".: expected Duration (ISO 8601), got #{v.inspect}" else raise ".: expected Duration, got #{v.class}" end }).call(${v})`;
   });
 
+  // Interval - construct from object with start/end properties
+  rubyLib.register('Interval', [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('Interval', [Types.object], (args, ctx) => {
+    const obj = args[0];
+    if (obj.type === 'object_literal') {
+      const startProp = obj.properties.find(p => p.key === 'start');
+      const endProp = obj.properties.find(p => p.key === 'end');
+      if (startProp && endProp) {
+        return `(${ctx.emit(startProp.value)}..${ctx.emit(endProp.value)})`;
+      }
+    }
+    const v = ctx.emit(args[0]);
+    return `(${v}[:start]..${v}[:end])`;
+  });
+  rubyLib.register('Interval', [Types.any], (args, ctx) => {
+    const v = ctx.emit(args[0]);
+    return `(${v}[:start]..${v}[:end])`;
+  });
+
+  // Interval accessors
+  rubyLib.register('start', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.first`);
+  rubyLib.register('end', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.last`);
+
   // Data - identity for non-strings, parse JSON for strings
   rubyLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
   rubyLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));

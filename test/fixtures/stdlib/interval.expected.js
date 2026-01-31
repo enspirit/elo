@@ -1,0 +1,2 @@
+(function(_) { return (function() { if (!(Interval.fromDateTimes(DateTime.fromISO("2024-01-15T10:00:00Z"), DateTime.fromISO("2024-01-15T18:00:00Z")).start.toMillis() === DateTime.fromISO("2024-01-15T10:00:00Z").toMillis())) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Interval.fromDateTimes(DateTime.fromISO("2024-01-15T10:00:00Z"), DateTime.fromISO("2024-01-15T18:00:00Z")).end.toMillis() === DateTime.fromISO("2024-01-15T18:00:00Z").toMillis())) throw new Error("Assertion failed"); return true; })(); })(null);

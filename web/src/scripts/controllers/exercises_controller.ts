@@ -3,7 +3,7 @@ import { EditorView, keymap } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { bracketMatching } from '@codemirror/language';
-import { DateTime, Duration } from 'luxon';
+import { DateTime, Duration, Interval } from 'luxon';
 import {
   parse,
   compileToJavaScript,
@@ -11,9 +11,10 @@ import {
 import { elo } from '../codemirror/elo-language';
 import { eloDarkTheme, eloLightTheme } from '../codemirror/elo-theme';
 
-// Make luxon DateTime and Duration available globally for eval
+// Make luxon DateTime, Duration, and Interval available globally for eval
 (window as any).DateTime = DateTime;
 (window as any).Duration = Duration;
+(window as any).Interval = Interval;
 
 const STORAGE_KEY = 'elo-exercises-progress';
 

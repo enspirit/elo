@@ -1,0 +1,2 @@
+assert(start(Interval({start: D2024-01-15T10:00:00Z, end: D2024-01-15T18:00:00Z})) == D2024-01-15T10:00:00Z)
+assert(end(Interval({start: D2024-01-15T10:00:00Z, end: D2024-01-15T18:00:00Z})) == D2024-01-15T18:00:00Z)

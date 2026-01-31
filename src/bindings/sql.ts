@@ -415,6 +415,29 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('Duration', [Types.string], (args, ctx) => `elo_duration(${ctx.emit(args[0])})`);
   sqlLib.register('Duration', [Types.any], (args, ctx) => `elo_duration(${ctx.emit(args[0])})`);
 
+  // Interval - construct from object with start/end properties
+  sqlLib.register('Interval', [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  sqlLib.register('Interval', [Types.object], (args, ctx) => {
+    const obj = args[0];
+    if (obj.type === 'object_literal') {
+      const startProp = obj.properties.find(p => p.key === 'start');
+      const endProp = obj.properties.find(p => p.key === 'end');
+      if (startProp && endProp) {
+        return `tstzrange(${ctx.emit(startProp.value)}, ${ctx.emit(endProp.value)})`;
+      }
+    }
+    const v = ctx.emit(args[0]);
+    return `tstzrange((${v})->>'start', (${v})->>'end')`;
+  });
+  sqlLib.register('Interval', [Types.any], (args, ctx) => {
+    const v = ctx.emit(args[0]);
+    return `tstzrange((${v})->>'start', (${v})->>'end')`;
+  });
+
+  // Interval accessors
+  sqlLib.register('start', [Types.interval], (args, ctx) => `lower(${ctx.emit(args[0])})`);
+  sqlLib.register('end', [Types.interval], (args, ctx) => `upper(${ctx.emit(args[0])})`);
+
   // Data - identity for non-strings, parse JSON for strings
   sqlLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
   sqlLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));

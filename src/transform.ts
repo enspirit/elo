@@ -214,6 +214,7 @@ const BUILTIN_TYPE_SELECTORS = new Set([
   'Bool',
   'Boolean',
   'Datetime',
+  'Interval',
 ]);
 
 /**
