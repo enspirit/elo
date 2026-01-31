@@ -38,7 +38,7 @@ See also the Related work section below.
 - **Input variable**: `_` for accessing external data passed to expressions
 - **Array iteration**: `map`, `filter`, `reduce`, `any`, `all` (JS/Ruby only)
 - **Duration conversion**: `inYears`, `inQuarters`, `inMonths`, `inWeeks`, `inDays`, `inHours`, `inMinutes`, `inSeconds` for converting durations to float values (approximate for calendar units)
-- **List functions**: `reverse`, `join(list, separator)`, `split(string, separator)`
+- **List functions**: `min`, `max`, `reverse`, `join(list, separator)`, `split(string, separator)`
 - **Literals**:
   - Numbers: `42`, `3.14`
   - Booleans: `true`, `false`

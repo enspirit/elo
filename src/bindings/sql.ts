@@ -195,6 +195,10 @@ export function createSQLBinding(): StdLib<string> {
     `${ctx.emit(args[0])}[1]`);
   sqlLib.register('last', [Types.array], (args, ctx) =>
     `${ctx.emit(args[0])}[CARDINALITY(${ctx.emit(args[0])})]`);
+  sqlLib.register('min', [Types.array], (args, ctx) =>
+    `(SELECT MIN(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
+  sqlLib.register('max', [Types.array], (args, ctx) =>
+    `(SELECT MAX(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
   sqlLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0) = 0)`);
 

@@ -189,6 +189,8 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('first', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.first`);
   rubyLib.register('last', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.last`);
   rubyLib.register('isEmpty', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.empty?`);
+  rubyLib.register('min', [Types.array], rubyMethod('min'));
+  rubyLib.register('max', [Types.array], rubyMethod('max'));
 
   // Array iteration functions (register for both array and any to support dynamic types)
   for (const t of [Types.array, Types.any]) {

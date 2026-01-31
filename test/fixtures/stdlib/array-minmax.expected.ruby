@@ -1,0 +1,8 @@
+->(_) { (raise "Assertion failed" unless [3, 1, 4, 1, 5].min == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [3, 1, 4, 1, 5].max == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [42].min == 42; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [42].max == 42; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [-3, -1, -4].min == -4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [-3, -1, -4].max == -1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ([].min).nil?; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ([].max).nil?; true) }.call(nil);
