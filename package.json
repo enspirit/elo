@@ -1,6 +1,6 @@
 {
   "name": "@enspirit/elo",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "A small expression language that compiles to Ruby, Javascript and PostgreSQL",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

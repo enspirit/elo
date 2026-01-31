@@ -4,6 +4,14 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.9] - 2026-01-31
+
+### Language Features
+- Allow pipe operator (`|>`) in `let` binding values without requiring parentheses
+
+### Fixes
+- Fix operator precedence bug in alternative expressions for JavaScript and Python compilers
+
 ## [0.9.8] - 2026-01-31
 
 ### Testing
