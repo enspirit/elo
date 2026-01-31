@@ -246,7 +246,7 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
         const tmpVar = `_alt${i}`;
         result = `(${tmpVar}) if (${tmpVar} := ${alt}) is not None else (${result})`;
       }
-      return result;
+      return `(${result})`;
     }
 
     case 'datapath': {

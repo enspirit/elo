@@ -272,7 +272,7 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
         // Wrap in parens if it's a complex expression
         return alt.type === 'call' || alt.type === 'alternative' ? `(${code})` : code;
       });
-      return alts.join(' ?? ');
+      return `(${alts.join(' ?? ')})`;
     }
 
     case 'datapath': {
