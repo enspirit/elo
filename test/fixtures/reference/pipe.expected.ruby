@@ -7,3 +7,5 @@
 ->(_) { (raise "Assertion failed" unless "  HELLO  ".strip.downcase == "hello"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (0 - 5).abs == 5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "hello".upcase.rjust(10, "-") == "-----HELLO"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (x = "hello".upcase; x) == "HELLO"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (x = "  hello  ".strip.upcase; x) == "HELLO"; true) }.call(nil);

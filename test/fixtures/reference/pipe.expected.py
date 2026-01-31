@@ -7,3 +7,5 @@
 (lambda _: kAssert("  HELLO  ".strip().lower() == "hello"))(None)
 (lambda _: kAssert(abs(0 - 5) == 5))(None)
 (lambda _: kAssert("hello".upper().rjust(10, "-") == "-----HELLO"))(None)
+(lambda _: kAssert((x := "hello".upper(), x)[-1] == "HELLO"))(None)
+(lambda _: kAssert((x := "  hello  ".strip().upper(), x)[-1] == "HELLO"))(None)

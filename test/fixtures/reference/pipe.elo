@@ -7,3 +7,5 @@ assert(('hello' |> upper) == 'HELLO') # optional parentheses
 assert(('  HELLO  ' |> trim |> lower) == 'hello') # chained, no parens
 assert((0 - 5 |> abs) == 5) # numeric, no parens
 assert(('hello' |> upper |> padStart(10, '-')) == '-----HELLO') # mixed
+assert((let x = 'hello' |> upper in x) == 'HELLO') # pipe in let binding
+assert((let x = '  hello  ' |> trim |> upper in x) == 'HELLO') # chained pipe in let binding

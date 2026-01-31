@@ -7,3 +7,5 @@ CASE WHEN UPPER('hello') = 'HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(p
 CASE WHEN LOWER(TRIM('  HELLO  ')) = 'hello' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN ABS(0 - 5) = 5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN LPAD(UPPER('hello'), 10, '-') = '-----HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT x FROM (SELECT UPPER('hello') AS x) AS _let) = 'HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT x FROM (SELECT UPPER(TRIM('  hello  ')) AS x) AS _let) = 'HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

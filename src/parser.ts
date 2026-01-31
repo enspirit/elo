@@ -1101,8 +1101,8 @@ export class Parser {
     const firstName = this.currentToken.value;
     this.eat('IDENTIFIER');
     this.eat('ASSIGN');
-    // Binding values parsed at logical_or level (prevents unparenthesized nested let in bindings)
-    const firstValue = this.logical_or();
+    // Binding values parsed at pipe level (pipe won't consume 'in'/'guard'/'check' keywords)
+    const firstValue = this.pipe();
     bindings.push({ name: firstName, value: firstValue });
 
     // Parse additional bindings
@@ -1114,7 +1114,7 @@ export class Parser {
       const name = this.currentToken.value;
       this.eat('IDENTIFIER');
       this.eat('ASSIGN');
-      const value = this.logical_or();
+      const value = this.pipe();
       bindings.push({ name, value });
     }
 
@@ -1185,7 +1185,7 @@ export class Parser {
     const firstName = this.currentToken.value;
     this.eat('IDENTIFIER');
     this.eat('ASSIGN');
-    const firstValue = this.logical_or();
+    const firstValue = this.pipe();
     bindings.push({ name: firstName, value: firstValue });
 
     // Parse additional bindings
@@ -1196,7 +1196,7 @@ export class Parser {
       const name = this.currentToken.value;
       this.eat('IDENTIFIER');
       this.eat('ASSIGN');
-      const value = this.logical_or();
+      const value = this.pipe();
       bindings.push({ name, value });
     }
 

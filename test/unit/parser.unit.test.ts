@@ -1096,6 +1096,33 @@ describe('Parser - Pipe Operator', () => {
     }
   });
 
+  it('should parse pipe in let binding value', () => {
+    const ast = parse("let test = 'hello' |> upper in test");
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.bindings[0].name, 'test');
+      assert.strictEqual(ast.bindings[0].value.type, 'function_call');
+      if (ast.bindings[0].value.type === 'function_call') {
+        assert.strictEqual(ast.bindings[0].value.name, 'upper');
+        assert.deepStrictEqual(ast.bindings[0].value.args, [{ type: 'string', value: 'hello' }]);
+      }
+      assert.deepStrictEqual(ast.body, { type: 'variable', name: 'test' });
+    }
+  });
+
+  it('should parse chained pipe in let binding value', () => {
+    const ast = parse("let x = '  hello  ' |> trim |> upper in x");
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      const val = ast.bindings[0].value;
+      assert.strictEqual(val.type, 'function_call');
+      if (val.type === 'function_call') {
+        assert.strictEqual(val.name, 'upper');
+        assert.strictEqual(val.args[0].type, 'function_call');
+      }
+    }
+  });
+
   it('should parse pipe in let body', () => {
     const ast = parse("let x = 'test' in x |> upper()");
     assert.strictEqual(ast.type, 'let');
