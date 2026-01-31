@@ -4,6 +4,16 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.10] - 2026-01-31
+
+### Standard Library
+- Add `min` and `max` functions for lists (returns `null` on empty lists)
+- Add `startOfDay`, `endOfDay`, `startOfWeek`, `endOfWeek`, `startOfMonth`, `endOfMonth`, `startOfQuarter`, `endOfQuarter`, `startOfYear`, `endOfYear` for Date and DateTime values
+
+### Fixes
+- Fix SQL `endOf` period boundaries: use second-level precision instead of day-level
+- Fix Ruby `startOf`/`endOf` on Date inputs to return DateTime consistently
+
 ## [0.9.9] - 2026-01-31
 
 ### Language Features
