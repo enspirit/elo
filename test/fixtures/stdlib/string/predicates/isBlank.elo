@@ -1,0 +1,4 @@
+assert(isBlank(''))
+assert(isBlank('   '))
+assert(!isBlank('hello'))
+assert(!isBlank(' hi '))

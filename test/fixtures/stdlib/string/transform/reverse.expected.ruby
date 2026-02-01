@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless "hello".reverse == "olleh"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "ab".reverse == "ba"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "".reverse == ""; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "a".reverse == "a"; true) }.call(nil);

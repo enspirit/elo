@@ -247,6 +247,9 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('upper', [Types.string], (args, ctx) => `UPPER(${ctx.emit(args[0])})`);
   sqlLib.register('lower', [Types.string], (args, ctx) => `LOWER(${ctx.emit(args[0])})`);
   sqlLib.register('trim', [Types.string], (args, ctx) => `TRIM(${ctx.emit(args[0])})`);
+  sqlLib.register('trimStart', [Types.string], (args, ctx) => `LTRIM(${ctx.emit(args[0])})`);
+  sqlLib.register('trimEnd', [Types.string], (args, ctx) => `RTRIM(${ctx.emit(args[0])})`);
+  sqlLib.register('reverse', [Types.string], (args, ctx) => `REVERSE(${ctx.emit(args[0])})`);
   sqlLib.register('startsWith', [Types.string, Types.string], (args, ctx) =>
     `starts_with(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
   sqlLib.register('endsWith', [Types.string, Types.string], (args, ctx) =>
@@ -268,6 +271,8 @@ export function createSQLBinding(): StdLib<string> {
     `REGEXP_REPLACE(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, 'g')`);
   sqlLib.register('isEmpty', [Types.string], (args, ctx) =>
     `(LENGTH(${ctx.emit(args[0])}) = 0)`);
+  sqlLib.register('isBlank', [Types.string], (args, ctx) =>
+    `(LENGTH(TRIM(${ctx.emit(args[0])})) = 0)`);
   sqlLib.register('padStart', [Types.string, Types.int, Types.string], (args, ctx) =>
     `LPAD(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   sqlLib.register('padEnd', [Types.string, Types.int, Types.string], (args, ctx) =>

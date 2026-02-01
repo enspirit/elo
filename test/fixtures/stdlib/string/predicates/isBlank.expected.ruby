@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless "".strip.empty?; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "   ".strip.empty?; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello".strip.empty?; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !" hi ".strip.empty?; true) }.call(nil);

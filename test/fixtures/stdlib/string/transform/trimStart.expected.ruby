@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless "  hello".lstrip == "hello"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "  hello  ".lstrip == "hello  "; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello".lstrip == "hello"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "   ".lstrip == ""; true) }.call(nil);

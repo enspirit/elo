@@ -1,0 +1,4 @@
+assert(reverse('hello') == 'olleh')
+assert(reverse('ab') == 'ba')
+assert(reverse('') == '')
+assert(reverse('a') == 'a')

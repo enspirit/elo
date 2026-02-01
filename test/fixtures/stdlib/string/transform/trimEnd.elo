@@ -1,0 +1,4 @@
+assert(trimEnd('hello  ') == 'hello')
+assert(trimEnd('  hello  ') == '  hello')
+assert(trimEnd('hello') == 'hello')
+assert(trimEnd('   ') == '')

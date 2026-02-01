@@ -202,6 +202,7 @@ export function createPythonBinding(): StdLib<string> {
   pyLib.register('length', [Types.array], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('count', [Types.array], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('isEmpty', [Types.string], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
+  pyLib.register('isBlank', [Types.string], (args, ctx) => `(len(${ctx.emit(args[0])}.strip()) == 0)`);
   pyLib.register('isEmpty', [Types.array], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
   pyLib.register('contains', [Types.array, Types.any], (args, ctx) =>
     `(${ctx.emit(args[1])} in ${ctx.emit(args[0])})`);
@@ -210,6 +211,9 @@ export function createPythonBinding(): StdLib<string> {
   pyLib.register('upper', [Types.string], pyMethod('upper()'));
   pyLib.register('lower', [Types.string], pyMethod('lower()'));
   pyLib.register('trim', [Types.string], pyMethod('strip()'));
+  pyLib.register('trimStart', [Types.string], pyMethod('lstrip()'));
+  pyLib.register('trimEnd', [Types.string], pyMethod('rstrip()'));
+  pyLib.register('reverse', [Types.string], (args, ctx) => `${ctx.emit(args[0])}[::-1]`);
   pyLib.register('startsWith', [Types.string, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.startswith(${ctx.emit(args[1])})`);
   pyLib.register('endsWith', [Types.string, Types.string], (args, ctx) =>

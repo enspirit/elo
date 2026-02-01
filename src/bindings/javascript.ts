@@ -303,6 +303,8 @@ export function createJavaScriptBinding(): StdLib<string> {
     jsLib.register('upper', [t], methodCall('.toUpperCase()'));
     jsLib.register('lower', [t], methodCall('.toLowerCase()'));
     jsLib.register('trim', [t], methodCall('.trim()'));
+    jsLib.register('trimStart', [t], methodCall('.trimStart()'));
+    jsLib.register('trimEnd', [t], methodCall('.trimEnd()'));
   }
   // Helper for method calls with arguments - wraps receiver in parens if needed
   const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
@@ -324,6 +326,10 @@ export function createJavaScriptBinding(): StdLib<string> {
       `(i => i === -1 ? null : i)(${wrapReceiver(args, ctx)}.indexOf(${ctx.emit(args[1])}))`);
     jsLib.register('isEmpty', [t], (args, ctx) =>
       `(${wrapReceiver(args, ctx)}.length === 0)`);
+    jsLib.register('isBlank', [t], (args, ctx) =>
+      `(${wrapReceiver(args, ctx)}.trim().length === 0)`);
+    jsLib.register('reverse', [t], (args, ctx) =>
+      `${wrapReceiver(args, ctx)}.split('').reverse().join('')`);
   }
 
   // String functions with three args

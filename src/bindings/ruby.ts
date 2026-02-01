@@ -249,7 +249,11 @@ export function createRubyBinding(): StdLib<string> {
     rubyLib.register('upper', [t], rubyMethod('upcase'));
     rubyLib.register('lower', [t], rubyMethod('downcase'));
     rubyLib.register('trim', [t], rubyMethod('strip'));
+    rubyLib.register('trimStart', [t], rubyMethod('lstrip'));
+    rubyLib.register('trimEnd', [t], rubyMethod('rstrip'));
+    rubyLib.register('reverse', [t], rubyMethod('reverse'));
     rubyLib.register('isEmpty', [t], rubyMethod('empty?'));
+    rubyLib.register('isBlank', [t], rubyMethod('strip.empty?'));
   }
   // Helper for method calls with arguments - wraps receiver in parens if needed
   const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {

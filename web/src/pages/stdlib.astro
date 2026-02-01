@@ -21,6 +21,11 @@ import Footer from '../components/Footer.astro';
         <a href="#list-summary" class="toc-sub">Summary</a>
         <a href="#numeric">Numeric</a>
         <a href="#string">String</a>
+        <a href="#string-arithmetic" class="toc-sub">Arithmetic</a>
+        <a href="#string-transform" class="toc-sub">Transform</a>
+        <a href="#string-predicates" class="toc-sub">Predicates</a>
+        <a href="#string-search" class="toc-sub">Search</a>
+        <a href="#string-summary" class="toc-sub">Summary</a>
         <a href="#data">Tuple (Data)</a>
       </nav>
     </aside>
@@ -540,6 +545,9 @@ import Footer from '../components/Footer.astro';
       <section class="stdlib-section" id="string" data-stdlib-search-target="section">
         <h2>String</h2>
         <p>Operators and functions for string manipulation.</p>
+
+        <h3 id="string-arithmetic" style="margin-top: 2rem;">Arithmetic</h3>
+        <p>I need to combine strings.</p>
         <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">+</div>
@@ -559,36 +567,11 @@ import Footer from '../components/Footer.astro';
             <p class="fn-desc">Concatenates two strings. Same as <code>+</code>.</p>
             <div class="fn-example"><code class="language-elo">concat('hello', ' world')</code><span class="fn-result">→ 'hello world'</span></div>
           </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">contains</div>
-            <div class="fn-sig">(s: String, sub: String) → Bool</div>
-            <p class="fn-desc">Returns true if the string contains the given substring.</p>
-            <div class="fn-example"><code class="language-elo">contains('hello', 'ell')</code><span class="fn-result">→ true</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">endsWith</div>
-            <div class="fn-sig">(s: String, suffix: String) → Bool</div>
-            <p class="fn-desc">Returns true if the string ends with the given suffix.</p>
-            <div class="fn-example"><code class="language-elo">endsWith('hello', 'lo')</code><span class="fn-result">→ true</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">indexOf</div>
-            <div class="fn-sig">(s: String, sub: String) → Int | Null</div>
-            <p class="fn-desc">Returns the index of the first occurrence, or <code>null</code> if not found.</p>
-            <div class="fn-example"><code class="language-elo">indexOf('hello', 'l')</code><span class="fn-result">→ 2</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">isEmpty</div>
-            <div class="fn-sig">(s: String) → Bool</div>
-            <p class="fn-desc">Returns true if the string is empty.</p>
-            <div class="fn-example"><code class="language-elo">isEmpty('')</code><span class="fn-result">→ true</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">length</div>
-            <div class="fn-sig">(s: String) → Int</div>
-            <p class="fn-desc">Returns the number of characters in the string.</p>
-            <div class="fn-example"><code class="language-elo">length('hello')</code><span class="fn-result">→ 5</span></div>
-          </div>
+        </div>
+
+        <h3 id="string-transform" style="margin-top: 2rem;">Transform</h3>
+        <p>I need to change a string.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">lower</div>
             <div class="fn-sig">(s: String) → String</div>
@@ -596,16 +579,28 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">lower('HELLO')</code><span class="fn-result">→ 'hello'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">padEnd</div>
-            <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
-            <p class="fn-desc">Pads the end of the string to reach the target length.</p>
-            <div class="fn-example"><code class="language-elo">padEnd('hi', 5, '.')</code><span class="fn-result">→ 'hi...'</span></div>
+            <div class="fn-name">upper</div>
+            <div class="fn-sig">(s: String) → String</div>
+            <p class="fn-desc">Converts all characters to uppercase.</p>
+            <div class="fn-example"><code class="language-elo">upper('hello')</code><span class="fn-result">→ 'HELLO'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">padStart</div>
-            <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
-            <p class="fn-desc">Pads the start of the string to reach the target length.</p>
-            <div class="fn-example"><code class="language-elo">padStart('42', 5, '0')</code><span class="fn-result">→ '00042'</span></div>
+            <div class="fn-name">trim</div>
+            <div class="fn-sig">(s: String) → String</div>
+            <p class="fn-desc">Removes leading and trailing whitespace.</p>
+            <div class="fn-example"><code class="language-elo">trim('  hi  ')</code><span class="fn-result">→ 'hi'</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">trimStart</div>
+            <div class="fn-sig">(s: String) → String</div>
+            <p class="fn-desc">Removes leading whitespace.</p>
+            <div class="fn-example"><code class="language-elo">trimStart('  hi  ')</code><span class="fn-result">→ 'hi  '</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">trimEnd</div>
+            <div class="fn-sig">(s: String) → String</div>
+            <p class="fn-desc">Removes trailing whitespace.</p>
+            <div class="fn-example"><code class="language-elo">trimEnd('  hi  ')</code><span class="fn-result">→ '  hi'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">replace</div>
@@ -620,16 +615,16 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">replaceAll('abab', 'ab', 'x')</code><span class="fn-result">→ 'xx'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">split</div>
-            <div class="fn-sig">(s: String, sep: String) → List</div>
-            <p class="fn-desc">Splits the string into a list using the separator.</p>
-            <div class="fn-example"><code class="language-elo">split('a,b,c', ',')</code><span class="fn-result">→ ['a', 'b', 'c']</span></div>
+            <div class="fn-name">padStart</div>
+            <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
+            <p class="fn-desc">Pads the start of the string to reach the target length.</p>
+            <div class="fn-example"><code class="language-elo">padStart('42', 5, '0')</code><span class="fn-result">→ '00042'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">startsWith</div>
-            <div class="fn-sig">(s: String, prefix: String) → Bool</div>
-            <p class="fn-desc">Returns true if the string starts with the given prefix.</p>
-            <div class="fn-example"><code class="language-elo">startsWith('hello', 'he')</code><span class="fn-result">→ true</span></div>
+            <div class="fn-name">padEnd</div>
+            <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
+            <p class="fn-desc">Pads the end of the string to reach the target length.</p>
+            <div class="fn-example"><code class="language-elo">padEnd('hi', 5, '.')</code><span class="fn-result">→ 'hi...'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">substring</div>
@@ -638,16 +633,73 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">substring('hello', 1, 3)</code><span class="fn-result">→ 'ell'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">trim</div>
-            <div class="fn-sig">(s: String) → String</div>
-            <p class="fn-desc">Removes leading and trailing whitespace.</p>
-            <div class="fn-example"><code class="language-elo">trim('  hi  ')</code><span class="fn-result">→ 'hi'</span></div>
+            <div class="fn-name">split</div>
+            <div class="fn-sig">(s: String, sep: String) → List</div>
+            <p class="fn-desc">Splits the string into a list using the separator.</p>
+            <div class="fn-example"><code class="language-elo">split('a,b,c', ',')</code><span class="fn-result">→ ['a', 'b', 'c']</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">upper</div>
+            <div class="fn-name">reverse</div>
             <div class="fn-sig">(s: String) → String</div>
-            <p class="fn-desc">Converts all characters to uppercase.</p>
-            <div class="fn-example"><code class="language-elo">upper('hello')</code><span class="fn-result">→ 'HELLO'</span></div>
+            <p class="fn-desc">Reverses the string.</p>
+            <div class="fn-example"><code class="language-elo">reverse('hello')</code><span class="fn-result">→ 'olleh'</span></div>
+          </div>
+        </div>
+
+        <h3 id="string-predicates" style="margin-top: 2rem;">Predicates</h3>
+        <p>I need to check something about a string.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">isEmpty</div>
+            <div class="fn-sig">(s: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string is empty.</p>
+            <div class="fn-example"><code class="language-elo">isEmpty('')</code><span class="fn-result">→ true</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">startsWith</div>
+            <div class="fn-sig">(s: String, prefix: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string starts with the given prefix.</p>
+            <div class="fn-example"><code class="language-elo">startsWith('hello', 'he')</code><span class="fn-result">→ true</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">endsWith</div>
+            <div class="fn-sig">(s: String, suffix: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string ends with the given suffix.</p>
+            <div class="fn-example"><code class="language-elo">endsWith('hello', 'lo')</code><span class="fn-result">→ true</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">isBlank</div>
+            <div class="fn-sig">(s: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string is empty or contains only whitespace.</p>
+            <div class="fn-example"><code class="language-elo">isBlank('   ')</code><span class="fn-result">→ true</span></div>
+          </div>
+        </div>
+
+        <h3 id="string-search" style="margin-top: 2rem;">Search</h3>
+        <p>I need to find something in a string.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">contains</div>
+            <div class="fn-sig">(s: String, sub: String) → Bool</div>
+            <p class="fn-desc">Returns true if the string contains the given substring.</p>
+            <div class="fn-example"><code class="language-elo">contains('hello', 'ell')</code><span class="fn-result">→ true</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">indexOf</div>
+            <div class="fn-sig">(s: String, sub: String) → Int | Null</div>
+            <p class="fn-desc">Returns the index of the first occurrence, or <code>null</code> if not found.</p>
+            <div class="fn-example"><code class="language-elo">indexOf('hello', 'l')</code><span class="fn-result">→ 2</span></div>
+          </div>
+        </div>
+
+        <h3 id="string-summary" style="margin-top: 2rem;">Summary</h3>
+        <p>I need a single value from a string.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">length</div>
+            <div class="fn-sig">(s: String) → Int</div>
+            <p class="fn-desc">Returns the number of characters in the string.</p>
+            <div class="fn-example"><code class="language-elo">length('hello')</code><span class="fn-result">→ 5</span></div>
           </div>
         </div>
       </section>
