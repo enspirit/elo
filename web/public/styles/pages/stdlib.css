@@ -51,11 +51,15 @@
 /* Stdlib Grid */
 .stdlib-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(max(280px, calc((100% - 3 * var(--space-md)) / 4)), 1fr));
   gap: var(--space-md);
+  grid-template-rows: auto;
 }
 
 .stdlib-fn {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 4;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -87,7 +91,9 @@
 
 .fn-example {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  align-self: end;
   gap: var(--space-sm);
   background: var(--bg-panel);
   padding: var(--space-sm) 0.75rem;
@@ -107,6 +113,7 @@
   font-size: 0.8125rem;
   color: var(--success);
   margin-left: auto;
+  white-space: nowrap;
 }
 
 .fn-desc {
@@ -170,7 +177,6 @@
 
 .stdlib-content {
   flex: 1;
-  max-width: 900px;
   padding: var(--space-xl);
   min-width: 0;
 }
