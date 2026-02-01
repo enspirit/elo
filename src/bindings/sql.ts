@@ -222,6 +222,8 @@ export function createSQLBinding(): StdLib<string> {
     `(SELECT MIN(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
   sqlLib.register('max', [Types.array], (args, ctx) =>
     `(SELECT MAX(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
+  sqlLib.register('sum', [Types.array], (args, ctx) =>
+    `COALESCE((SELECT SUM(v) FROM UNNEST(${ctx.emit(args[0])}) AS v), 0)`);
   sqlLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0) = 0)`);
 

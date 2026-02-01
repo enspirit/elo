@@ -260,6 +260,7 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   defs.register('length', [Types.array], Types.int);
   defs.register('count', [Types.array], Types.int);
+  defs.register('sum', [Types.array], Types.any);
   defs.register('at', [Types.array, Types.int], Types.any);
   defs.register('first', [Types.array], Types.any);
   defs.register('last', [Types.array], Types.any);

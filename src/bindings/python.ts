@@ -249,6 +249,8 @@ export function createPythonBinding(): StdLib<string> {
     `(lambda a: min(a) if a else None)(${ctx.emit(args[0])})`);
   pyLib.register('max', [Types.array], (args, ctx) =>
     `(lambda a: max(a) if a else None)(${ctx.emit(args[0])})`);
+  pyLib.register('sum', [Types.array], (args, ctx) =>
+    `sum(${ctx.emit(args[0])})`);
   pyLib.register('reverse', [Types.array], (args, ctx) =>
     `list(reversed(${ctx.emit(args[0])}))`);
   pyLib.register('join', [Types.array, Types.string], (args, ctx) =>

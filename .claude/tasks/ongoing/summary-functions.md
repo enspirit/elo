@@ -26,7 +26,7 @@ firstBy(List, DataPath)
 
 - [x] count(List) — added as alias for length
 - [x] Summary Functions subsection on stdlib page (with count, min, max)
-- [ ] sum(List, neutral = 0)
+- [x] sum(List) — returns sum of elements, 0 for empty list
 - [ ] avg(List)
 - [ ] firstBy(List, fn) / firstBy(List, DataPath)
 - [ ] lastBy(List, fn) / lastBy(List, DataPath)
