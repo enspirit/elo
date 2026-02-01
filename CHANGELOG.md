@@ -4,6 +4,12 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+### Standard Library
+- Add `count(List)` summary function (alias for `length`)
+- Add `sum(List)` and `sum(List, initial)` summary functions
+- Add `avg(List)` summary function (returns `null` on empty lists)
+- Add `firstBy(List, fn/DataPath)` and `lastBy(List, fn/DataPath)` summary functions (JS, Ruby, Python)
+
 ## [0.9.10] - 2026-01-31
 
 ### Standard Library
