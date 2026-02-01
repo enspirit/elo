@@ -224,6 +224,8 @@ export function createSQLBinding(): StdLib<string> {
     `(SELECT MAX(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
   sqlLib.register('sum', [Types.array], (args, ctx) =>
     `COALESCE((SELECT SUM(v) FROM UNNEST(${ctx.emit(args[0])}) AS v), 0)`);
+  sqlLib.register('avg', [Types.array], (args, ctx) =>
+    `(SELECT AVG(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
   sqlLib.register('sum', [Types.array, Types.any], (args, ctx) => {
     const initType = inferType(args[1]);
     const arr = ctx.emit(args[0]);

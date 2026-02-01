@@ -210,6 +210,8 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('min', [Types.array], rubyMethod('min'));
   rubyLib.register('max', [Types.array], rubyMethod('max'));
   rubyLib.register('sum', [Types.array], rubyMethod('sum'));
+  rubyLib.register('avg', [Types.array], (args, ctx) =>
+    `(lambda { |a| a.empty? ? nil : a.sum.to_f / a.length }).call(${ctx.emit(args[0])})`);
   rubyLib.register('sum', [Types.array, Types.any], (args, ctx) =>
     `${ctx.emit(args[0])}.sum(${ctx.emit(args[1])})`);
 

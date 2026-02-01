@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless (lambda { |a| a.empty? ? nil : a.sum.to_f / a.length }).call([1, 2, 3]) == 2; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (lambda { |a| a.empty? ? nil : a.sum.to_f / a.length }).call([4, 8]) == 6; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (lambda { |a| a.empty? ? nil : a.sum.to_f / a.length }).call([1.5, 2.5]) == 2; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((lambda { |a| a.empty? ? nil : a.sum.to_f / a.length }).call([])).nil?; true) }.call(nil);

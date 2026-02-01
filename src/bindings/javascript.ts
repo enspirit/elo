@@ -256,6 +256,8 @@ export function createJavaScriptBinding(): StdLib<string> {
     `(a => a.length === 0 ? null : Math.max(...a))(${ctx.emit(args[0])})`);
   jsLib.register('sum', [Types.array], (args, ctx) =>
     `${ctx.emit(args[0])}.reduce((a, b) => a + b, 0)`);
+  jsLib.register('avg', [Types.array], (args, ctx) =>
+    `(a => a.length === 0 ? null : a.reduce((x, y) => x + y, 0) / a.length)(${ctx.emit(args[0])})`);
   jsLib.register('sum', [Types.array, Types.any], (args, ctx) => {
     ctx.requireHelper?.('kAdd');
     return `${ctx.emit(args[0])}.reduce(kAdd, ${ctx.emit(args[1])})`;

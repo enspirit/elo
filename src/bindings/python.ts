@@ -251,6 +251,8 @@ export function createPythonBinding(): StdLib<string> {
     `(lambda a: max(a) if a else None)(${ctx.emit(args[0])})`);
   pyLib.register('sum', [Types.array], (args, ctx) =>
     `sum(${ctx.emit(args[0])})`);
+  pyLib.register('avg', [Types.array], (args, ctx) =>
+    `(lambda a: None if not a else sum(a) / len(a))(${ctx.emit(args[0])})`);
   pyLib.register('sum', [Types.array, Types.any], (args, ctx) => {
     ctx.requireHelper?.('_import_functools');
     ctx.requireHelper?.('kAdd');
