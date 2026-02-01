@@ -210,6 +210,8 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('min', [Types.array], rubyMethod('min'));
   rubyLib.register('max', [Types.array], rubyMethod('max'));
   rubyLib.register('sum', [Types.array], rubyMethod('sum'));
+  rubyLib.register('sum', [Types.array, Types.any], (args, ctx) =>
+    `${ctx.emit(args[0])}.sum(${ctx.emit(args[1])})`);
 
   // Array iteration functions (register for both array and any to support dynamic types)
   for (const t of [Types.array, Types.any]) {

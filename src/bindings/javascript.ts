@@ -256,6 +256,10 @@ export function createJavaScriptBinding(): StdLib<string> {
     `(a => a.length === 0 ? null : Math.max(...a))(${ctx.emit(args[0])})`);
   jsLib.register('sum', [Types.array], (args, ctx) =>
     `${ctx.emit(args[0])}.reduce((a, b) => a + b, 0)`);
+  jsLib.register('sum', [Types.array, Types.any], (args, ctx) => {
+    ctx.requireHelper?.('kAdd');
+    return `${ctx.emit(args[0])}.reduce(kAdd, ${ctx.emit(args[1])})`;
+  });
 
 
   // Array iteration functions (register for both array and any to support dynamic types)

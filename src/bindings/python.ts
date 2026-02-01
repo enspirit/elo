@@ -251,6 +251,11 @@ export function createPythonBinding(): StdLib<string> {
     `(lambda a: max(a) if a else None)(${ctx.emit(args[0])})`);
   pyLib.register('sum', [Types.array], (args, ctx) =>
     `sum(${ctx.emit(args[0])})`);
+  pyLib.register('sum', [Types.array, Types.any], (args, ctx) => {
+    ctx.requireHelper?.('_import_functools');
+    ctx.requireHelper?.('kAdd');
+    return `functools.reduce(kAdd, ${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
   pyLib.register('reverse', [Types.array], (args, ctx) =>
     `list(reversed(${ctx.emit(args[0])}))`);
   pyLib.register('join', [Types.array, Types.string], (args, ctx) =>

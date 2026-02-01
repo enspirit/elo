@@ -1,3 +1,7 @@
 ->(_) { (raise "Assertion failed" unless [1, 2, 3].sum == 6; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [].sum == 0; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [1.5, 2.5].sum == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b"].sum("") == "ab"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].sum("") == ""; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3].sum(10) == 16; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [ActiveSupport::Duration.parse("P1D"), ActiveSupport::Duration.parse("P2D")].sum(ActiveSupport::Duration.parse("P0D")) == ActiveSupport::Duration.parse("P3D"); true) }.call(nil);

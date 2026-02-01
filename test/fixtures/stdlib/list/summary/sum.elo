@@ -1,3 +1,7 @@
 assert(sum([1, 2, 3]) == 6)
 assert(sum([]) == 0)
 assert(sum([1.5, 2.5]) == 4.0)
+assert(sum(['a', 'b'], '') == 'ab')
+assert(sum([], '') == '')
+assert(sum([1, 2, 3], 10) == 16)
+assert(sum([P1D, P2D], P0D) == P3D)

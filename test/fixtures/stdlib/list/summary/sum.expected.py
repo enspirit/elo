@@ -1,3 +1,7 @@
 (lambda _: kAssert(sum([1, 2, 3]) == 6))(None)
 (lambda _: kAssert(sum([]) == 0))(None)
 (lambda _: kAssert(sum([1.5, 2.5]) == 4))(None)
+(lambda _: kAssert(functools.reduce(kAdd, ["a", "b"], "") == "ab"))(None)
+(lambda _: kAssert(functools.reduce(kAdd, [], "") == ""))(None)
+(lambda _: kAssert(functools.reduce(kAdd, [1, 2, 3], 10) == 16))(None)
+(lambda _: kAssert(functools.reduce(kAdd, [EloDuration.from_iso("P1D"), EloDuration.from_iso("P2D")], EloDuration.from_iso("P0D")) == EloDuration.from_iso("P3D")))(None)

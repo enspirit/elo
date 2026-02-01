@@ -4,7 +4,7 @@
  * This module defines how Elo IR functions are emitted as PostgreSQL SQL code.
  */
 
-import { IRExpr } from '../ir';
+import { IRExpr, inferType } from '../ir';
 import { Types } from '../types';
 import { StdLib, EmitContext, nullary, fnCall } from '../stdlib';
 
@@ -224,6 +224,15 @@ export function createSQLBinding(): StdLib<string> {
     `(SELECT MAX(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
   sqlLib.register('sum', [Types.array], (args, ctx) =>
     `COALESCE((SELECT SUM(v) FROM UNNEST(${ctx.emit(args[0])}) AS v), 0)`);
+  sqlLib.register('sum', [Types.array, Types.any], (args, ctx) => {
+    const initType = inferType(args[1]);
+    const arr = ctx.emit(args[0]);
+    const init = ctx.emit(args[1]);
+    if (initType === Types.string) {
+      return `(${init} || COALESCE((SELECT STRING_AGG(v, '') FROM UNNEST(${arr}) AS v), ''))`;
+    }
+    return `(${init} + COALESCE((SELECT SUM(v) FROM UNNEST(${arr}) AS v), 0))`;
+  });
   sqlLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0) = 0)`);
 

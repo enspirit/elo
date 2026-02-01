@@ -385,6 +385,9 @@ import Footer from '../components/Footer.astro';
             <div class="fn-sig">(list: List) → Int | Float</div>
             <p class="fn-desc">Returns the sum of all elements in the list. Returns 0 for an empty list.</p>
             <div class="fn-example"><code class="language-elo">sum([1, 2, 3])</code><span class="fn-result">→ 6</span></div>
+            <div class="fn-sig">(list: List, initial: Any) → Any</div>
+            <p class="fn-desc">Reduces the list using + with an initial value. Works with strings too.</p>
+            <div class="fn-example"><code class="language-elo">sum(['a', 'b'], '')</code><span class="fn-result">→ "ab"</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">min</div>
