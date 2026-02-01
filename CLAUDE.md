@@ -59,6 +59,21 @@ The tests are organized as follows :
 **CRITICAL** when adding acceptance tests, every line of .elo files MUST have be an assert for
 testing to be effective.
 
+### Generating expected fixture files
+
+**CRITICAL**: NEVER generate `.expected.*` files by hand or via `eloc` directly. Always use:
+
+```
+./scripts/regenerate-fixtures.sh [fixture-name]   # Regenerate specific fixture
+./scripts/regenerate-fixtures.sh                   # Regenerate all fixtures
+./scripts/regenerate-fixtures.sh -t js,python sum  # Specific targets only
+```
+
+The script builds the compiler, finds `.elo` files recursively under `test/fixtures/`,
+and generates matching `.expected.{js,ruby,sql,py}` files with correct flags (`--execute`
+for JS, Ruby, and Python). It only regenerates targets for which an expected file already
+exists, unless `-t` is used to force specific targets.
+
 ## Tasks & agents
 
 The list of tasks can be found in `.claude/tasks/todo` and `.claude/tasks/done`.

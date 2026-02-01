@@ -13,7 +13,7 @@ set -e
 FIXTURES_DIR="test/fixtures"
 ELOC="./bin/eloc"
 TARGETS=""
-FIXTURES=()
+FIXTURE_ARGS=()
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -26,7 +26,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [-t target[,target]] [fixture-name ...]"
             echo ""
             echo "Options:"
-            echo "  -t, --target  Target language(s): js, ruby, sql (comma-separated)"
+            echo "  -t, --target  Target language(s): js, ruby, sql, python (comma-separated)"
             echo "  -h, --help    Show this help"
             echo ""
             echo "Examples:"
@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
-            FIXTURES+=("$1")
+            FIXTURE_ARGS+=("$1")
             shift
             ;;
     esac
@@ -47,11 +47,24 @@ done
 echo "Building compiler..."
 npm run build --silent
 
-# If no fixtures specified, find all .elo files
-if [ ${#FIXTURES[@]} -eq 0 ]; then
-    for f in "$FIXTURES_DIR"/*.elo; do
-        base=$(basename "$f" .elo)
-        FIXTURES+=("$base")
+# Collect .elo files: either from arguments or by finding all recursively
+ELO_FILES=()
+if [ ${#FIXTURE_ARGS[@]} -eq 0 ]; then
+    while IFS= read -r -d '' f; do
+        ELO_FILES+=("$f")
+    done < <(find "$FIXTURES_DIR" -name '*.elo' -print0 | sort -z)
+else
+    for arg in "${FIXTURE_ARGS[@]}"; do
+        # Try exact path first, then search recursively
+        if [ -f "$arg" ]; then
+            ELO_FILES+=("$arg")
+        elif [ -f "$FIXTURES_DIR/${arg}.elo" ]; then
+            ELO_FILES+=("$FIXTURES_DIR/${arg}.elo")
+        else
+            while IFS= read -r -d '' f; do
+                ELO_FILES+=("$f")
+            done < <(find "$FIXTURES_DIR" -name "${arg}.elo" -print0 | sort -z)
+        fi
     done
 fi
 
@@ -63,18 +76,24 @@ else
 fi
 
 regenerate_fixture() {
-    local name="$1"
-    local elo_file="$FIXTURES_DIR/${name}.elo"
-
-    if [ ! -f "$elo_file" ]; then
-        echo "  ✗ $name (file not found: $elo_file)"
-        return 1
-    fi
+    local elo_file="$1"
+    local base="${elo_file%.elo}"
+    local display="${base#$FIXTURES_DIR/}"
 
     local regenerated=""
 
-    for target in js ruby sql; do
-        local expected_file="$FIXTURES_DIR/${name}.expected.${target}"
+    # Map target names to file extensions and execution flags
+    # js, ruby, python use --execute; sql does not
+    local all_targets="js ruby sql python"
+    local ext_for_python="py"
+
+    for target in $all_targets; do
+        # Determine file extension (python -> .py, others -> .<target>)
+        local ext="$target"
+        if [ "$target" = "python" ]; then
+            ext="py"
+        fi
+        local expected_file="${base}.expected.${ext}"
 
         # Skip if target list specified and this target not in it
         if [ ${#TARGET_LIST[@]} -gt 0 ]; then
@@ -92,8 +111,8 @@ regenerate_fixture() {
 
         # Only regenerate if expected file already exists (or targets explicitly specified)
         if [ -f "$expected_file" ] || [ ${#TARGET_LIST[@]} -gt 0 ]; then
-            # Use --execute for JS and Ruby so fixtures are self-executing
-            if [ "$target" = "js" ] || [ "$target" = "ruby" ]; then
+            # Use --execute for JS, Ruby, and Python so fixtures are self-executing
+            if [ "$target" = "js" ] || [ "$target" = "ruby" ] || [ "$target" = "python" ]; then
                 $ELOC "$elo_file" -t "$target" --execute -f "$expected_file"
             else
                 $ELOC "$elo_file" -t "$target" -f "$expected_file"
@@ -103,15 +122,15 @@ regenerate_fixture() {
     done
 
     if [ -n "$regenerated" ]; then
-        echo "  ✓ $name:$regenerated"
+        echo "  ✓ $display:$regenerated"
     else
-        echo "  ⊘ $name (no targets to regenerate)"
+        echo "  ⊘ $display (no targets to regenerate)"
     fi
 }
 
 echo "Regenerating fixtures..."
-for fixture in "${FIXTURES[@]}"; do
-    regenerate_fixture "$fixture"
+for elo_file in "${ELO_FILES[@]}"; do
+    regenerate_fixture "$elo_file"
 done
 
 echo "Done."
