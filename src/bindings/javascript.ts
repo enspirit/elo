@@ -241,6 +241,7 @@ export function createJavaScriptBinding(): StdLib<string> {
 
   // Array functions
   jsLib.register('length', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
+  jsLib.register('count', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
   jsLib.register('at', [Types.array, Types.int], (args, ctx) =>
     `${ctx.emit(args[0])}[${ctx.emit(args[1])}] ?? null`);
   jsLib.register('first', [Types.array], (args, ctx) =>

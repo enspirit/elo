@@ -1,0 +1,3 @@
+assert(count([1, 2, 3]) == 3)
+assert(count([]) == 0)
+assert(count(['a', 'b']) == 2)

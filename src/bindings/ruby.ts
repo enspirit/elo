@@ -200,6 +200,7 @@ export function createRubyBinding(): StdLib<string> {
 
   // Array functions
   rubyLib.register('length', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
+  rubyLib.register('count', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
   // Use lambda to ensure nil for negative indices (Ruby's native [-1] returns last element)
   rubyLib.register('at', [Types.array, Types.int], (args, ctx) =>
     `(->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);

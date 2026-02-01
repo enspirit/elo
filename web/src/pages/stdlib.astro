@@ -353,18 +353,6 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">length([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">max</div>
-            <div class="fn-sig">(list: List) → Any</div>
-            <p class="fn-desc">Returns the largest element of the list.</p>
-            <div class="fn-example"><code class="language-elo">max([3, 1, 4, 1, 5])</code><span class="fn-result">→ 5</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">min</div>
-            <div class="fn-sig">(list: List) → Any</div>
-            <p class="fn-desc">Returns the smallest element of the list.</p>
-            <div class="fn-example"><code class="language-elo">min([3, 1, 4, 1, 5])</code><span class="fn-result">→ 1</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">map</div>
             <div class="fn-sig">(list: List, fn: Function) → List</div>
             <p class="fn-desc">Returns a new list with <code>fn</code> applied to each element. <em>JS/Ruby only.</em></p>
@@ -381,6 +369,28 @@ import Footer from '../components/Footer.astro';
             <div class="fn-sig">(list: List) → List</div>
             <p class="fn-desc">Returns a new list with elements in reverse order.</p>
             <div class="fn-example"><code class="language-elo">reverse([1, 2, 3])</code><span class="fn-result">→ [3, 2, 1]</span></div>
+          </div>
+        </div>
+        <h3 style="margin-top: 2rem;">Summary Functions</h3>
+        <p>Aggregate functions that summarize list contents.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">count</div>
+            <div class="fn-sig">(list: List) → Int</div>
+            <p class="fn-desc">Returns the number of elements in the list. Alias for <code>length</code>.</p>
+            <div class="fn-example"><code class="language-elo">count([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">min</div>
+            <div class="fn-sig">(list: List) → Any</div>
+            <p class="fn-desc">Returns the smallest element of the list.</p>
+            <div class="fn-example"><code class="language-elo">min([3, 1, 4, 1, 5])</code><span class="fn-result">→ 1</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">max</div>
+            <div class="fn-sig">(list: List) → Any</div>
+            <p class="fn-desc">Returns the largest element of the list.</p>
+            <div class="fn-example"><code class="language-elo">max([3, 1, 4, 1, 5])</code><span class="fn-result">→ 5</span></div>
           </div>
         </div>
       </section>

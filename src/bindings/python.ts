@@ -200,6 +200,7 @@ export function createPythonBinding(): StdLib<string> {
   // String functions
   pyLib.register('length', [Types.string], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('length', [Types.array], (args, ctx) => `len(${ctx.emit(args[0])})`);
+  pyLib.register('count', [Types.array], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('isEmpty', [Types.string], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
   pyLib.register('isEmpty', [Types.array], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
   pyLib.register('upper', [Types.string], pyMethod('upper()'));

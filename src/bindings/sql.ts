@@ -210,6 +210,8 @@ export function createSQLBinding(): StdLib<string> {
   // Array functions
   sqlLib.register('length', [Types.array], (args, ctx) =>
     `COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0)`);
+  sqlLib.register('count', [Types.array], (args, ctx) =>
+    `COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0)`);
   sqlLib.register('at', [Types.array, Types.int], (args, ctx) =>
     `${ctx.emit(args[0])}[${ctx.emit(args[1])} + 1]`);
   sqlLib.register('first', [Types.array], (args, ctx) =>
