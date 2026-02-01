@@ -14,6 +14,11 @@ import Footer from '../components/Footer.astro';
         <a href="#duration">Duration</a>
         <a href="#interval">Interval</a>
         <a href="#list">List</a>
+        <a href="#list-arithmetic" class="toc-sub">Arithmetic</a>
+        <a href="#list-access" class="toc-sub">Element Access</a>
+        <a href="#list-predicates" class="toc-sub">Predicates</a>
+        <a href="#list-transform" class="toc-sub">Transform</a>
+        <a href="#list-summary" class="toc-sub">Summary</a>
         <a href="#numeric">Numeric</a>
         <a href="#string">String</a>
         <a href="#data">Tuple (Data)</a>
@@ -291,6 +296,9 @@ import Footer from '../components/Footer.astro';
       <section class="stdlib-section" id="list" data-stdlib-search-target="section">
         <h2>List</h2>
         <p>Operators and functions for working with lists.</p>
+
+        <h3 id="list-arithmetic" style="margin-top: 2rem;">Arithmetic</h3>
+        <p>I need to combine lists.</p>
         <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">+</div>
@@ -298,29 +306,16 @@ import Footer from '../components/Footer.astro';
             <p class="fn-desc">Concatenates two lists.</p>
             <div class="fn-example"><code class="language-elo">[1, 2] + [3, 4]</code><span class="fn-result">→ [1, 2, 3, 4]</span></div>
           </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">all</div>
-            <div class="fn-sig">(list: List, predicate: Function) → Bool</div>
-            <p class="fn-desc">Returns <code>true</code> if all elements satisfy predicate. <em>JS/Ruby only.</em></p>
-            <div class="fn-example"><code class="language-elo">all([1, 2, 3], fn(x ~> x > 0))</code><span class="fn-result">→ true</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">any</div>
-            <div class="fn-sig">(list: List, predicate: Function) → Bool</div>
-            <p class="fn-desc">Returns <code>true</code> if any element satisfies predicate. <em>JS/Ruby only.</em></p>
-            <div class="fn-example"><code class="language-elo">any([1, 2, 3], fn(x ~> x > 2))</code><span class="fn-result">→ true</span></div>
-          </div>
+        </div>
+
+        <h3 id="list-access" style="margin-top: 2rem;">Element Access</h3>
+        <p>I need to get a specific element.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">at</div>
             <div class="fn-sig">(list: List, index: Int) → Any</div>
             <p class="fn-desc">Returns the element at the given index (0-based).</p>
             <div class="fn-example"><code class="language-elo">at([1, 2, 3], 1)</code><span class="fn-result">→ 2</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">filter</div>
-            <div class="fn-sig">(list: List, predicate: Function) → List</div>
-            <p class="fn-desc">Returns elements where predicate returns <code>true</code>. <em>JS/Ruby only.</em></p>
-            <div class="fn-example"><code class="language-elo">filter([1, 2, 3, 4], fn(x ~> x > 2))</code><span class="fn-result">→ [3, 4]</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">first</div>
@@ -329,29 +324,51 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">first([1, 2, 3])</code><span class="fn-result">→ 1</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">isEmpty</div>
-            <div class="fn-sig">(list: List) → Bool</div>
-            <p class="fn-desc">Returns <code>true</code> if the list is empty.</p>
-            <div class="fn-example"><code class="language-elo">isEmpty([])</code><span class="fn-result">→ true</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">join</div>
-            <div class="fn-sig">(list: List, sep: String) → String</div>
-            <p class="fn-desc">Joins list elements into a string using the separator.</p>
-            <div class="fn-example"><code class="language-elo">join(['a', 'b', 'c'], ',')</code><span class="fn-result">→ 'a,b,c'</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">last</div>
             <div class="fn-sig">(list: List) → Any</div>
             <p class="fn-desc">Returns the last element of the list.</p>
             <div class="fn-example"><code class="language-elo">last([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">length</div>
-            <div class="fn-sig">(list: List) → Int</div>
-            <p class="fn-desc">Returns the number of elements in the list.</p>
-            <div class="fn-example"><code class="language-elo">length([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
+            <div class="fn-name">firstBy</div>
+            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
+            <p class="fn-desc">Returns the element with the smallest value of the given function or path. Returns null for an empty list.</p>
+            <div class="fn-example"><code class="language-elo">firstBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ "apple"</span></div>
           </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">lastBy</div>
+            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
+            <p class="fn-desc">Returns the element with the largest value of the given function or path. Returns null for an empty list.</p>
+            <div class="fn-example"><code class="language-elo">lastBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ "banana"</span></div>
+          </div>
+        </div>
+
+        <h3 id="list-predicates" style="margin-top: 2rem;">Predicates</h3>
+        <p>I need to check something about a list.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">isEmpty</div>
+            <div class="fn-sig">(list: List) → Bool</div>
+            <p class="fn-desc">Returns <code>true</code> if the list is empty.</p>
+            <div class="fn-example"><code class="language-elo">isEmpty([])</code><span class="fn-result">→ true</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">any</div>
+            <div class="fn-sig">(list: List, predicate: Function) → Bool</div>
+            <p class="fn-desc">Returns <code>true</code> if any element satisfies predicate. <em>JS/Ruby only.</em></p>
+            <div class="fn-example"><code class="language-elo">any([1, 2, 3], fn(x ~> x > 2))</code><span class="fn-result">→ true</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">all</div>
+            <div class="fn-sig">(list: List, predicate: Function) → Bool</div>
+            <p class="fn-desc">Returns <code>true</code> if all elements satisfy predicate. <em>JS/Ruby only.</em></p>
+            <div class="fn-example"><code class="language-elo">all([1, 2, 3], fn(x ~> x > 0))</code><span class="fn-result">→ true</span></div>
+          </div>
+        </div>
+
+        <h3 id="list-transform" style="margin-top: 2rem;">Transform</h3>
+        <p>I need to reshape my list.</p>
+        <div class="stdlib-grid" data-stdlib-search-target="grid">
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">map</div>
             <div class="fn-sig">(list: List, fn: Function) → List</div>
@@ -359,10 +376,10 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">map([1, 2, 3], fn(x ~> x * 2))</code><span class="fn-result">→ [2, 4, 6]</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">reduce</div>
-            <div class="fn-sig">(list: List, initial: Any, fn: Function) → Any</div>
-            <p class="fn-desc">Reduces the list to a single value. <em>JS/Ruby only.</em></p>
-            <div class="fn-example"><code class="language-elo">reduce([1, 2, 3], 0, fn(acc, x ~> acc + x))</code><span class="fn-result">→ 6</span></div>
+            <div class="fn-name">filter</div>
+            <div class="fn-sig">(list: List, predicate: Function) → List</div>
+            <p class="fn-desc">Returns elements where predicate returns <code>true</code>. <em>JS/Ruby only.</em></p>
+            <div class="fn-example"><code class="language-elo">filter([1, 2, 3, 4], fn(x ~> x > 2))</code><span class="fn-result">→ [3, 4]</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">reverse</div>
@@ -371,9 +388,22 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">reverse([1, 2, 3])</code><span class="fn-result">→ [3, 2, 1]</span></div>
           </div>
         </div>
-        <h3 style="margin-top: 2rem;">Summary Functions</h3>
-        <p>Aggregate functions that summarize list contents.</p>
+
+        <h3 id="list-summary" style="margin-top: 2rem;">Summary</h3>
+        <p>I need a single aggregate value from a list.</p>
         <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">join</div>
+            <div class="fn-sig">(list: List, sep: String) → String</div>
+            <p class="fn-desc">Joins list elements into a string using the separator.</p>
+            <div class="fn-example"><code class="language-elo">join(['a', 'b', 'c'], ',')</code><span class="fn-result">→ 'a,b,c'</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">length</div>
+            <div class="fn-sig">(list: List) → Int</div>
+            <p class="fn-desc">Returns the number of elements in the list.</p>
+            <div class="fn-example"><code class="language-elo">length([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
+          </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">count</div>
             <div class="fn-sig">(list: List) → Int</div>
@@ -408,16 +438,10 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">max([3, 1, 4, 1, 5])</code><span class="fn-result">→ 5</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">firstBy</div>
-            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
-            <p class="fn-desc">Returns the element with the smallest value of the given function or path. Returns null for an empty list.</p>
-            <div class="fn-example"><code class="language-elo">firstBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ "apple"</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">lastBy</div>
-            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
-            <p class="fn-desc">Returns the element with the largest value of the given function or path. Returns null for an empty list.</p>
-            <div class="fn-example"><code class="language-elo">lastBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ "banana"</span></div>
+            <div class="fn-name">reduce</div>
+            <div class="fn-sig">(list: List, initial: Any, fn: Function) → Any</div>
+            <p class="fn-desc">Reduces the list to a single value. <em>JS/Ruby only.</em></p>
+            <div class="fn-example"><code class="language-elo">reduce([1, 2, 3], 0, fn(acc, x ~> acc + x))</code><span class="fn-result">→ 6</span></div>
           </div>
         </div>
       </section>

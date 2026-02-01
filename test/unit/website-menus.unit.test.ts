@@ -120,20 +120,23 @@ describe('Website Menu Consistency', () => {
       // Extract sidebar links from stdlib.astro
       const sidebarLinks = extractHashLinks(stdlibContent, '<aside class="stdlib-toc">', '</aside>');
 
-      // Extract section IDs from page body
+      // Extract section IDs and subsection h3 IDs from page body
       const sectionIds = extractSectionIds(stdlibContent, 'stdlib-section');
+      const h3Regex = /<h3[^>]*id=["']([^"']+)["']/g;
+      const h3Ids = Array.from(stdlibContent.matchAll(h3Regex), m => m[1]);
+      const allIds = [...sectionIds, ...h3Ids];
 
-      // Every sidebar link should have a corresponding section
+      // Every sidebar link should have a corresponding section or subsection
       for (const link of sidebarLinks) {
         assert.ok(
-          sectionIds.includes(link),
-          `Sidebar link "#${link}" has no matching section in stdlib.astro body. ` +
-          `Add <section class="stdlib-section" id="${link}"> or remove the link.`
+          allIds.includes(link),
+          `Sidebar link "#${link}" has no matching section or subsection in stdlib.astro body. ` +
+          `Add <section class="stdlib-section" id="${link}"> or <h3 id="${link}"> or remove the link.`
         );
       }
 
-      // Every section should have a sidebar link
-      for (const id of sectionIds) {
+      // Every section and subsection should have a sidebar link
+      for (const id of allIds) {
         assert.ok(
           sidebarLinks.includes(id),
           `Section id="${id}" has no sidebar link in stdlib.astro. ` +

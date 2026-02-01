@@ -170,6 +170,11 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.stdlib-toc nav a.toc-sub {
+  padding-left: 1.5rem;
+  font-size: 0.75rem;
+}
+
 .stdlib-toc nav a.active {
   color: var(--accent);
   background: rgba(99, 102, 241, 0.1);
