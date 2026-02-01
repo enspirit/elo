@@ -519,6 +519,12 @@ export function createJavaScriptBinding(): StdLib<string> {
   // List manipulation functions
   jsLib.register('reverse', [Types.array], (args, ctx) =>
     `[...${ctx.emit(args[0])}].reverse()`);
+  jsLib.register('unique', [Types.array], (args, ctx) => {
+    ctx.requireHelper?.('kEq');
+    return `${ctx.emit(args[0])}.reduce((acc, x) => acc.some(y => kEq(x, y)) ? acc : [...acc, x], [])`;
+  });
+  jsLib.register('flat', [Types.array], (args, ctx) =>
+    `${ctx.emit(args[0])}.flat()`);
 
   // Join list elements with separator
   for (const t of [Types.array, Types.any]) {

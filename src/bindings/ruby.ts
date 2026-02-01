@@ -519,6 +519,9 @@ export function createRubyBinding(): StdLib<string> {
   // List manipulation functions
   rubyLib.register('reverse', [Types.array], (args, ctx) =>
     `${ctx.emit(args[0])}.reverse`);
+  rubyLib.register('unique', [Types.array], rubyMethod('uniq'));
+  rubyLib.register('flat', [Types.array], (args, ctx) =>
+    `${ctx.emit(args[0])}.flatten(1)`);
 
   // Join list elements with separator
   for (const t of [Types.array, Types.any]) {

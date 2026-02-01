@@ -273,6 +273,13 @@ export function createPythonBinding(): StdLib<string> {
   }
   pyLib.register('reverse', [Types.array], (args, ctx) =>
     `list(reversed(${ctx.emit(args[0])}))`);
+  pyLib.register('unique', [Types.array], (args, ctx) => {
+    ctx.requireHelper?.('kEq');
+    const arr = ctx.emit(args[0]);
+    return `(lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])(${arr})`;
+  });
+  pyLib.register('flat', [Types.array], (args, ctx) =>
+    `[x for sub in ${ctx.emit(args[0])} for x in sub]`);
   pyLib.register('join', [Types.array, Types.string], (args, ctx) =>
     `${ctx.emit(args[1])}.join(${ctx.emit(args[0])})`);
 

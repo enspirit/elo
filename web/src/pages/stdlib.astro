@@ -400,6 +400,18 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">reverse([1, 2, 3])</code><span class="fn-result">→ [3, 2, 1]</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">unique</div>
+            <div class="fn-sig">(list: List) → List</div>
+            <p class="fn-desc">Returns a new list with duplicate elements removed, preserving order.</p>
+            <div class="fn-example"><code class="language-elo">unique([1, 2, 3, 2, 1])</code><span class="fn-result">→ [1, 2, 3]</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">flat</div>
+            <div class="fn-sig">(list: List) → List</div>
+            <p class="fn-desc">Flattens a list of lists by one level.</p>
+            <div class="fn-example"><code class="language-elo">flat([[1, 2], [3, 4]])</code><span class="fn-result">→ [1, 2, 3, 4]</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">sort</div>
             <div class="fn-sig">(list: List) → List</div>
             <p class="fn-desc">Returns a new list with elements sorted in ascending order.</p>

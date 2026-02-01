@@ -1,0 +1,5 @@
+(lambda _: kAssert((lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])([1, 2, 3, 2, 1]) == [1, 2, 3]))(None)
+(lambda _: kAssert((lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])([1, 1, 1]) == [1]))(None)
+(lambda _: kAssert((lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])([]) == []))(None)
+(lambda _: kAssert((lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])(["a", "b", "a"]) == ["a", "b"]))(None)
+(lambda _: kAssert((lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])([EloDuration.from_iso("P1D"), EloDuration.from_iso("P2D"), EloDuration.from_iso("P1D")]) == [EloDuration.from_iso("P1D"), EloDuration.from_iso("P2D")]))(None)

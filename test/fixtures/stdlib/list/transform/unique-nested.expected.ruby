@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless [[1, 2], [3, 4], [1, 2]].uniq == [[1, 2], [3, 4]]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [{a: 1}, {b: 2}, {a: 1}].uniq == [{a: 1}, {b: 2}]; true) }.call(nil);

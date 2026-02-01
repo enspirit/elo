@@ -5,7 +5,7 @@ The List stdlib page has been reorganized into subsections by user intent:
 - **Arithmetic** (`+`) — "I need to combine lists."
 - **Element Access** (`at`, `first`, `last`, `firstBy`, `lastBy`, `find`) — "I need to get a specific element."
 - **Predicates** (`contains`, `isEmpty`, `any`, `all`) — "I need to check something about a list."
-- **Transform** (`map`, `filter`, `reverse`, `sort`, `sortBy`) — "I need to reshape my list."
+- **Transform** (`map`, `filter`, `reverse`, `unique`, `flat`, `sort`, `sortBy`) — "I need to reshape my list."
 - **Summary** (`join`, `length`, `count`, `sum`, `avg`, `min`, `max`, `reduce`) — "I need a single aggregate value from a list."
 
 ## TODO

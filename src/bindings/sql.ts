@@ -479,6 +479,12 @@ export function createSQLBinding(): StdLib<string> {
     const arr = ctx.emit(args[0]);
     return `(SELECT ARRAY_AGG(elem ORDER BY ord DESC) FROM UNNEST(${arr}) WITH ORDINALITY AS t(elem, ord))`;
   });
+  sqlLib.register('unique', [Types.array], (args, ctx) => {
+    const arr = ctx.emit(args[0]);
+    return `(SELECT ARRAY_AGG(v ORDER BY ord) FROM (SELECT DISTINCT ON (v) v, ord FROM UNNEST(${arr}) WITH ORDINALITY AS t(v, ord) ORDER BY v, ord) sub)`;
+  });
+  sqlLib.register('flat', [Types.array], (args, ctx) =>
+    `(SELECT ARRAY_AGG(elem) FROM UNNEST(${ctx.emit(args[0])}) AS sub, UNNEST(sub) AS elem)`);
 
   // Join list elements with separator
   sqlLib.register('join', [Types.array, Types.string], (args, ctx) =>

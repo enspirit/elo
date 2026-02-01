@@ -1,0 +1,5 @@
+assert(unique([1, 2, 3, 2, 1]) == [1, 2, 3])
+assert(unique([1, 1, 1]) == [1])
+assert(unique([]) == [])
+assert(unique(['a', 'b', 'a']) == ['a', 'b'])
+assert(unique([P1D, P2D, P1D]) == [P1D, P2D])

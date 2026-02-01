@@ -1,0 +1,5 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3, 2, 1].uniq == [1, 2, 3]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 1, 1].uniq == [1]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].uniq == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b", "a"].uniq == ["a", "b"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [ActiveSupport::Duration.parse("P1D"), ActiveSupport::Duration.parse("P2D"), ActiveSupport::Duration.parse("P1D")].uniq == [ActiveSupport::Duration.parse("P1D"), ActiveSupport::Duration.parse("P2D")]; true) }.call(nil);

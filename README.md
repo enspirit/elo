@@ -39,7 +39,7 @@ See also the Related work section below.
 - **Array iteration**: `map`, `filter`, `reduce`, `any`, `all` (JS/Ruby only)
 - **Period boundaries**: `startOfDay`, `endOfDay`, `startOfWeek`, `endOfWeek`, `startOfMonth`, `endOfMonth`, `startOfQuarter`, `endOfQuarter`, `startOfYear`, `endOfYear`
 - **Duration conversion**: `inYears`, `inQuarters`, `inMonths`, `inWeeks`, `inDays`, `inHours`, `inMinutes`, `inSeconds` for converting durations to float values (approximate for calendar units)
-- **List functions**: `contains`, `find`, `sort`, `sortBy`, `count`, `sum`, `sum(list, initial)`, `avg`, `min`, `max`, `firstBy`, `lastBy`, `reverse`, `join(list, separator)`, `split(string, separator)`
+- **List functions**: `contains`, `find`, `sort`, `sortBy`, `count`, `sum`, `sum(list, initial)`, `avg`, `min`, `max`, `firstBy`, `lastBy`, `reverse`, `unique`, `flat`, `join(list, separator)`, `split(string, separator)`
 - **Literals**:
   - Numbers: `42`, `3.14`
   - Booleans: `true`, `false`
