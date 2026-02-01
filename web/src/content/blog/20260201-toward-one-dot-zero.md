@@ -59,7 +59,6 @@ summarization:
 - **`count(list)`** — alias for `length`, but reads better in aggregation contexts
 - **`sum(list)`** and **`sum(list, initial)`** — numeric summation with an optional initial value for type-aware addition
 - **`avg(list)`** — arithmetic mean, returning `null` on empty lists
-- **`firstBy(list, fn)`** and **`lastBy(list, fn)`** — find the first/last element according to an ordering function or data path
 
 All of these compile to idiomatic code in JavaScript, Ruby, and Python (SQL
 support varies by function). Together with the existing `min`, `max`, `map`,

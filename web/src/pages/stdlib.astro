@@ -330,18 +330,6 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">last([1, 2, 3])</code><span class="fn-result">→ 3</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">firstBy</div>
-            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
-            <p class="fn-desc">Returns the element with the smallest value of the given function or path. Returns null for an empty list.</p>
-            <div class="fn-example"><code class="language-elo">firstBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ "apple"</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
-            <div class="fn-name">lastBy</div>
-            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
-            <p class="fn-desc">Returns the element with the largest value of the given function or path. Returns null for an empty list.</p>
-            <div class="fn-example"><code class="language-elo">lastBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ "banana"</span></div>
-          </div>
-          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">find</div>
             <div class="fn-sig">(list: List, predicate: Function) → Any | Null</div>
             <p class="fn-desc">Returns the first element that satisfies predicate. Returns null if none found. <em>JS/Ruby only.</em></p>

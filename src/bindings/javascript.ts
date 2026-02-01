@@ -266,16 +266,6 @@ export function createJavaScriptBinding(): StdLib<string> {
     ctx.requireHelper?.('kAdd');
     return `${ctx.emit(args[0])}.reduce(kAdd, ${ctx.emit(args[1])})`;
   });
-  for (const [name, cmp] of [['firstBy', '<'], ['lastBy', '>']] as const) {
-    jsLib.register(name, [Types.array, Types.fn], (args, ctx) => {
-      if (args[1].type === 'datapath') {
-        ctx.requireHelper?.('kFetch');
-        return `(a => a.length === 0 ? null : a.reduce((r, e) => kFetch(e, ${ctx.emit(args[1])}) ${cmp} kFetch(r, ${ctx.emit(args[1])}) ? e : r))(${ctx.emit(args[0])})`;
-      }
-      return `((f, a) => a.length === 0 ? null : a.reduce((r, e) => f(e) ${cmp} f(r) ? e : r))(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
-    });
-  }
-
 
   // Array iteration functions (register for both array and any to support dynamic types)
   for (const t of [Types.array, Types.any]) {

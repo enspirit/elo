@@ -1,5 +1,0 @@
-(lambda _: kAssert((lambda a: None if not a else min(a, key=lambda e: kFetch(e, ["a"])))([{"a": 3}, {"a": 1}, {"a": 2}]) == {"a": 1}))(None)
-(lambda _: kAssert((lambda a: None if not a else min(a, key=lambda x: kFetch(x, ["a"])))([{"a": 3}, {"a": 1}, {"a": 2}]) == {"a": 1}))(None)
-(lambda _: kAssert((lambda a: None if not a else min(a, key=lambda x: len(x)))(["banana", "apple", "cherry"]) == "apple"))(None)
-(lambda _: kAssert((lambda a: None if not a else min(a, key=lambda x: x))([3, 1, 2]) == 1))(None)
-(lambda _: kAssert(((lambda a: None if not a else min(a, key=lambda x: x))([]) is None)))(None)

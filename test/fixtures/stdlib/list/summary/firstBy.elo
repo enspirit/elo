@@ -1,5 +1,0 @@
-assert(firstBy([{a: 3}, {a: 1}, {a: 2}], .a) == {a: 1})
-assert(firstBy([{a: 3}, {a: 1}, {a: 2}], fn(x ~> fetch(x, .a))) == {a: 1})
-assert(firstBy(['banana', 'apple', 'cherry'], fn(x ~> length(x))) == 'apple')
-assert(firstBy([3, 1, 2], fn(x ~> x)) == 1)
-assert(isNull(firstBy([], fn(x ~> x))))
