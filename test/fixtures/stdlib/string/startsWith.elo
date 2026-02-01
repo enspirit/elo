@@ -1,0 +1,2 @@
+assert(startsWith('hello world', 'hello'))
+assert(!startsWith('hello world', 'world'))

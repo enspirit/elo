@@ -1,0 +1,5 @@
+(lambda _: kAssert(math.ceil(3.2) == 4))(None)
+(lambda _: kAssert(math.ceil(3.9) == 4))(None)
+(lambda _: kAssert(math.ceil(-3.2) == -3))(None)
+(lambda _: kAssert(math.ceil(-3.9) == -3))(None)
+(lambda _: kAssert(math.ceil(5) == 5))(None)

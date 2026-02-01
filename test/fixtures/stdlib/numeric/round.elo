@@ -1,0 +1,6 @@
+assert(round(3.2) == 3)
+assert(round(3.5) == 4)
+assert(round(3.7) == 4)
+assert(round(-3.2) == -3)
+assert(round(-3.7) == -4)
+assert(round(5.0) == 5)

@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless "".empty?; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello".empty?; true) }.call(nil);

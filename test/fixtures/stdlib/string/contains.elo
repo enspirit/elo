@@ -1,0 +1,3 @@
+assert(contains('hello world', 'lo wo'))
+assert(contains('hello world', 'hello'))
+assert(!contains('hello world', 'xyz'))

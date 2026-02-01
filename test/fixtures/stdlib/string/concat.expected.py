@@ -1,0 +1,8 @@
+(lambda _: kAssert("hello" + " world" == "hello world"))(None)
+(lambda _: kAssert("" + "test" == "test"))(None)
+(lambda _: kAssert("hello" + " " + "world" == "hello world"))(None)
+(lambda _: kAssert("hi" * 3 == "hihihi"))(None)
+(lambda _: kAssert(3 * "hi" == "hihihi"))(None)
+(lambda _: kAssert("ab" * 2 == "abab"))(None)
+(lambda _: kAssert("" * 5 == ""))(None)
+(lambda _: kAssert("x" * 0 == ""))(None)

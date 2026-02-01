@@ -1,0 +1,4 @@
+assert(split('a,b,c', ',') == ['a', 'b', 'c'])
+assert(split('hello world', ' ') == ['hello', 'world'])
+assert(split('one', ',') == ['one'])
+assert(split('', ',') == [])

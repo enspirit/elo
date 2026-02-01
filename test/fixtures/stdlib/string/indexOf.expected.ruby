@@ -1,0 +1,3 @@
+->(_) { (raise "Assertion failed" unless "hello world".index("world") == 6; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".index("o") == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("hello world".index("xyz")).nil? == true; true) }.call(nil);

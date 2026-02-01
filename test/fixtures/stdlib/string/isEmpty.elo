@@ -1,0 +1,2 @@
+assert(isEmpty(''))
+assert(!isEmpty('hello'))

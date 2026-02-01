@@ -1,0 +1,4 @@
+assert(reverse([1, 2, 3]) == [3, 2, 1])
+assert(reverse([]) == [])
+assert(reverse(['a', 'b', 'c']) == ['c', 'b', 'a'])
+assert(reverse([1]) == [1])

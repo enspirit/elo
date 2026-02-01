@@ -1,0 +1,3 @@
+->(_) { (raise "Assertion failed" unless "hello world".sub("world", "there") == "hello there"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abab".sub("ab", "x") == "xab"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abab".gsub("ab", "x") == "xx"; true) }.call(nil);

@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless ["a", "b", "c"].join(",") == "a,b,c"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["hello", "world"].join(" ") == "hello world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["one"].join("-") == "one"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].join(",") == ""; true) }.call(nil);

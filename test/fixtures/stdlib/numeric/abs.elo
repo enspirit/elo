@@ -1,0 +1,5 @@
+assert(abs(5) == 5)
+assert(abs(-5) == 5)
+assert(abs(0) == 0)
+assert(abs(-3.14) == 3.14)
+assert(abs(3.14) == 3.14)

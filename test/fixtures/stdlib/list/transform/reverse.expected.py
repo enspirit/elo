@@ -1,0 +1,4 @@
+(lambda _: kAssert(list(reversed([1, 2, 3])) == [3, 2, 1]))(None)
+(lambda _: kAssert(list(reversed([])) == []))(None)
+(lambda _: kAssert(list(reversed(["a", "b", "c"])) == ["c", "b", "a"]))(None)
+(lambda _: kAssert(list(reversed([1])) == [1]))(None)

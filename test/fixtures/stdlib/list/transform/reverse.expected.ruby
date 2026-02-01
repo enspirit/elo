@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3].reverse == [3, 2, 1]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].reverse == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b", "c"].reverse == ["c", "b", "a"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1].reverse == [1]; true) }.call(nil);

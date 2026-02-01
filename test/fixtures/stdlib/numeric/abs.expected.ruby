@@ -1,0 +1,5 @@
+->(_) { (raise "Assertion failed" unless 5.abs == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -5.abs == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 0.abs == 0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless -3.14.abs == 3.14; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.14.abs == 3.14; true) }.call(nil);

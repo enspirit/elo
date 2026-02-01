@@ -1,0 +1,8 @@
+assert(concat('hello', ' world') == 'hello world')
+assert(concat('', 'test') == 'test')
+assert('hello' + ' ' + 'world' == 'hello world')
+assert('hi' * 3 == 'hihihi')
+assert(3 * 'hi' == 'hihihi')
+assert('ab' * 2 == 'abab')
+assert('' * 5 == '')
+assert('x' * 0 == '')

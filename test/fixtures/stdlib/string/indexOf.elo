@@ -1,0 +1,3 @@
+assert(indexOf('hello world', 'world') == 6)
+assert(indexOf('hello world', 'o') == 4)
+assert(isNull(indexOf('hello world', 'xyz')) == true)

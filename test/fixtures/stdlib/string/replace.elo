@@ -1,0 +1,3 @@
+assert(replace('hello world', 'world', 'there') == 'hello there')
+assert(replace('abab', 'ab', 'x') == 'xab')
+assert(replaceAll('abab', 'ab', 'x') == 'xx')

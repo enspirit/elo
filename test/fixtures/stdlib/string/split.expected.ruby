@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless "a,b,c".split(",") == ["a", "b", "c"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".split(" ") == ["hello", "world"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "one".split(",") == ["one"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "".split(",") == []; true) }.call(nil);

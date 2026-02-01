@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless "hello world".start_with?("hello"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello world".start_with?("world"); true) }.call(nil);

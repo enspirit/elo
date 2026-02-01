@@ -1,0 +1,4 @@
+assert(trim('  hello  ') == 'hello')
+assert(trim('no spaces') == 'no spaces')
+assert(trim('   ') == '')
+assert(trim(' hello ' + ' world ') == 'hello  world')

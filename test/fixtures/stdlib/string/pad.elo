@@ -1,0 +1,2 @@
+assert(padStart('42', 5, '0') == '00042')
+assert(padEnd('hi', 5, '.') == 'hi...')

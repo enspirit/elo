@@ -1,0 +1,8 @@
+->(_) { (raise "Assertion failed" unless "hello".concat(" world") == "hello world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "".concat("test") == "test"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello" + " " + "world" == "hello world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hi" * 3 == "hihihi"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hi" * 3 == "hihihi"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "ab" * 2 == "abab"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "" * 5 == ""; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "x" * 0 == ""; true) }.call(nil);

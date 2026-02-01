@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless "hello".length == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "".length == 0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abc def".length == 7; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("ab" + "cd").length == 4; true) }.call(nil);

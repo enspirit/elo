@@ -1,0 +1,5 @@
+assert(floor(3.2) == 3)
+assert(floor(3.9) == 3)
+assert(floor(-3.2) == -4)
+assert(floor(-3.9) == -4)
+assert(floor(5.0) == 5)

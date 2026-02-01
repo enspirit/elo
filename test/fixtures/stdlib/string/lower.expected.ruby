@@ -1,0 +1,3 @@
+->(_) { (raise "Assertion failed" unless "WORLD".downcase == "world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "MiXeD".downcase == "mixed"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ("HELLO" + " " + "WORLD").downcase == "hello world"; true) }.call(nil);

@@ -1,0 +1,3 @@
+assert(lower('WORLD') == 'world')
+assert(lower('MiXeD') == 'mixed')
+assert(lower('HELLO' + ' ' + 'WORLD') == 'hello world')

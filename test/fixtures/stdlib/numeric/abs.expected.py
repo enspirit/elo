@@ -1,0 +1,5 @@
+(lambda _: kAssert(abs(5) == 5))(None)
+(lambda _: kAssert(abs(-5) == 5))(None)
+(lambda _: kAssert(abs(0) == 0))(None)
+(lambda _: kAssert(abs(-3.14) == 3.14))(None)
+(lambda _: kAssert(abs(3.14) == 3.14))(None)

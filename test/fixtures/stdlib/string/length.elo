@@ -1,0 +1,4 @@
+assert(length('hello') == 5)
+assert(length('') == 0)
+assert(length('abc def') == 7)
+assert(length('ab' + 'cd') == 4)

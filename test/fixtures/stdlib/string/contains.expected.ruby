@@ -1,0 +1,3 @@
+->(_) { (raise "Assertion failed" unless "hello world".include?("lo wo"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".include?("hello"); true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !"hello world".include?("xyz"); true) }.call(nil);

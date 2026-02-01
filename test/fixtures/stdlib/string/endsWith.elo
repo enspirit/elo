@@ -1,0 +1,2 @@
+assert(endsWith('hello world', 'world'))
+assert(!endsWith('hello world', 'hello'))

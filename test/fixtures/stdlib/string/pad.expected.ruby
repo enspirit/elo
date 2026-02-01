@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless "42".rjust(5, "0") == "00042"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hi".ljust(5, ".") == "hi..."; true) }.call(nil);

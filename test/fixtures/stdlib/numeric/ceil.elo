@@ -1,0 +1,5 @@
+assert(ceil(3.2) == 4)
+assert(ceil(3.9) == 4)
+assert(ceil(-3.2) == -3)
+assert(ceil(-3.9) == -3)
+assert(ceil(5.0) == 5)

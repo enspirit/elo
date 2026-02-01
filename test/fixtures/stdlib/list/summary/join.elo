@@ -1,0 +1,4 @@
+assert(join(['a', 'b', 'c'], ',') == 'a,b,c')
+assert(join(['hello', 'world'], ' ') == 'hello world')
+assert(join(['one'], '-') == 'one')
+assert(join([], ',') == '')

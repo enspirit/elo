@@ -1,0 +1,3 @@
+assert(upper('hello') == 'HELLO')
+assert(upper('MiXeD') == 'MIXED')
+assert(upper('hello' + ' ' + 'world') == 'HELLO WORLD')
