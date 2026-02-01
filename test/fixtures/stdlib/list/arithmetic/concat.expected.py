@@ -1,0 +1,5 @@
+(lambda _: kAssert(kEq([1, 2] + [3, 4], [1, 2, 3, 4])))(None)
+(lambda _: kAssert(kEq([] + [1, 2], [1, 2])))(None)
+(lambda _: kAssert(kEq([1, 2] + [], [1, 2])))(None)
+(lambda _: kAssert(kEq([] + [], [])))(None)
+(lambda _: kAssert(kEq(["a"] + ["b", "c"], ["a", "b", "c"])))(None)

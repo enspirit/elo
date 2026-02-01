@@ -1,0 +1,2 @@
+assert(filter([1, 2, 3, 4], fn(x ~> x > 2)) == [3, 4])
+assert(filter([], fn(x ~> x > 0)) == [])

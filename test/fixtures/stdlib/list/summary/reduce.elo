@@ -1,0 +1,2 @@
+assert(reduce([1, 2, 3], 0, fn(acc, x ~> acc + x)) == 6)
+assert(reduce(['a', 'b', 'c'], '', fn(acc, x ~> acc + x)) == 'abc')

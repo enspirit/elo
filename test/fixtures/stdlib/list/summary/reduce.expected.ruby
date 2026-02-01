@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3].reduce(0, &->(acc, x) { acc + x }) == 6; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b", "c"].reduce("", &->(acc, x) { acc + x }) == "abc"; true) }.call(nil);

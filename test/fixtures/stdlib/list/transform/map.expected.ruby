@@ -1,0 +1,3 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3].map(&->(x) { x * 2 }) == [2, 4, 6]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].map(&->(x) { x * 2 }) == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (x = 10; [1, 2, 3].map(&->(y) { x + y })) == [11, 12, 13]; true) }.call(nil);

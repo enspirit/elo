@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3, 4].select(&->(x) { x > 2 }) == [3, 4]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].select(&->(x) { x > 0 }) == []; true) }.call(nil);

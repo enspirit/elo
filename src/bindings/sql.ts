@@ -237,6 +237,10 @@ export function createSQLBinding(): StdLib<string> {
   });
   sqlLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0) = 0)`);
+  sqlLib.register('contains', [Types.array, Types.any], (args, ctx) =>
+    `(${ctx.emit(args[1])} = ANY(${ctx.emit(args[0])}))`);
+  sqlLib.register('sort', [Types.array], (args, ctx) =>
+    `(SELECT ARRAY_AGG(v ORDER BY v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
 
   // String functions
   sqlLib.register('length', [Types.string], (args, ctx) => `LENGTH(${ctx.emit(args[0])})`);

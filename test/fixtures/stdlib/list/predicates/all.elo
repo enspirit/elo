@@ -1,0 +1,2 @@
+assert(all([1, 2, 3], fn(x ~> x > 0)) == true)
+assert(all([1, 2, 3], fn(x ~> x > 2)) == false)

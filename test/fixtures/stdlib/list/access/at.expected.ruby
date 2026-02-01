@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 0) == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 2) == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 100)).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], -1)).nil? == true; true) }.call(nil);

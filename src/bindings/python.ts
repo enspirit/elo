@@ -203,6 +203,10 @@ export function createPythonBinding(): StdLib<string> {
   pyLib.register('count', [Types.array], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('isEmpty', [Types.string], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
   pyLib.register('isEmpty', [Types.array], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
+  pyLib.register('contains', [Types.array, Types.any], (args, ctx) =>
+    `(${ctx.emit(args[1])} in ${ctx.emit(args[0])})`);
+  pyLib.register('sort', [Types.array], (args, ctx) =>
+    `sorted(${ctx.emit(args[0])})`);
   pyLib.register('upper', [Types.string], pyMethod('upper()'));
   pyLib.register('lower', [Types.string], pyMethod('lower()'));
   pyLib.register('trim', [Types.string], pyMethod('strip()'));
@@ -285,6 +289,10 @@ export function createPythonBinding(): StdLib<string> {
     `any(map(${ctx.emit(args[1])}, ${ctx.emit(args[0])}))`);
   pyLib.register('all', [Types.array, Types.fn], (args, ctx) =>
     `all(map(${ctx.emit(args[1])}, ${ctx.emit(args[0])}))`);
+  pyLib.register('find', [Types.array, Types.fn], (args, ctx) =>
+    `next(filter(${ctx.emit(args[1])}, ${ctx.emit(args[0])}), None)`);
+  pyLib.register('sortBy', [Types.array, Types.fn], (args, ctx) =>
+    `sorted(${ctx.emit(args[0])}, key=${ctx.emit(args[1])})`);
 
   // Data/object functions
   pyLib.register('merge', [Types.object, Types.object], (args, ctx) =>

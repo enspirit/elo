@@ -1,0 +1,4 @@
+assert(find([1, 2, 3], fn(x ~> x > 1)) == 2)
+assert(find([1, 2, 3], fn(x ~> x > 5)) == null)
+assert(find([], fn(x ~> x > 0)) == null)
+assert(find(['apple', 'banana', 'cherry'], fn(x ~> length(x) > 5)) == 'banana')

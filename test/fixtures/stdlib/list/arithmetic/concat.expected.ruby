@@ -1,0 +1,5 @@
+->(_) { (raise "Assertion failed" unless [1, 2] + [3, 4] == [1, 2, 3, 4]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [] + [1, 2] == [1, 2]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2] + [] == [1, 2]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [] + [] == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a"] + ["b", "c"] == ["a", "b", "c"]; true) }.call(nil);

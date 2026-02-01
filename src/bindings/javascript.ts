@@ -250,6 +250,10 @@ export function createJavaScriptBinding(): StdLib<string> {
     `(a => a[a.length - 1] ?? null)(${ctx.emit(args[0])})`);
   jsLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(${ctx.emit(args[0])}.length === 0)`);
+  jsLib.register('contains', [Types.array, Types.any], (args, ctx) =>
+    `${ctx.emit(args[0])}.includes(${ctx.emit(args[1])})`);
+  jsLib.register('sort', [Types.array], (args, ctx) =>
+    `[...${ctx.emit(args[0])}].sort((a, b) => a < b ? -1 : a > b ? 1 : 0)`);
   jsLib.register('min', [Types.array], (args, ctx) =>
     `(a => a.length === 0 ? null : Math.min(...a))(${ctx.emit(args[0])})`);
   jsLib.register('max', [Types.array], (args, ctx) =>
@@ -285,6 +289,15 @@ export function createJavaScriptBinding(): StdLib<string> {
       `${ctx.emit(args[0])}.some(${ctx.emit(args[1])})`);
     jsLib.register('all', [t, Types.fn], (args, ctx) =>
       `${ctx.emit(args[0])}.every(${ctx.emit(args[1])})`);
+    jsLib.register('find', [t, Types.fn], (args, ctx) =>
+      `(${ctx.emit(args[0])}.find(${ctx.emit(args[1])}) ?? null)`);
+    jsLib.register('sortBy', [t, Types.fn], (args, ctx) => {
+      if (args[1].type === 'datapath') {
+        ctx.requireHelper?.('kFetch');
+        return `[...${ctx.emit(args[0])}].sort((a, b) => { const ka = kFetch(a, ${ctx.emit(args[1])}), kb = kFetch(b, ${ctx.emit(args[1])}); return ka < kb ? -1 : ka > kb ? 1 : 0; })`;
+      }
+      return `((f, a) => [...a].sort((x, y) => { const ka = f(x), kb = f(y); return ka < kb ? -1 : ka > kb ? 1 : 0; }))(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
+    });
   }
 
   // String functions (register for both string and any to support lambdas with unknown types)

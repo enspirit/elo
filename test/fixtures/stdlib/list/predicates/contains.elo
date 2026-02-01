@@ -1,0 +1,5 @@
+assert(contains([1, 2, 3], 2) == true)
+assert(contains([1, 2, 3], 4) == false)
+assert(contains([], 1) == false)
+assert(contains(['a', 'b', 'c'], 'b') == true)
+assert(contains(['a', 'b', 'c'], 'd') == false)

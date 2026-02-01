@@ -1,0 +1,5 @@
+(lambda _: kAssert((2 in [1, 2, 3]) == True))(None)
+(lambda _: kAssert((4 in [1, 2, 3]) == False))(None)
+(lambda _: kAssert((1 in []) == False))(None)
+(lambda _: kAssert(("b" in ["a", "b", "c"]) == True))(None)
+(lambda _: kAssert(("d" in ["a", "b", "c"]) == False))(None)

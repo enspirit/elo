@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3].all?(&->(x) { x > 0 }) == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3].all?(&->(x) { x > 2 }) == false; true) }.call(nil);

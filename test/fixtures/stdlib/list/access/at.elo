@@ -1,0 +1,4 @@
+assert(at([1, 2, 3], 0) == 1)
+assert(at([1, 2, 3], 2) == 3)
+assert(isNull(at([1, 2, 3], 100)) == true)
+assert(isNull(at([1, 2, 3], -1)) == true)

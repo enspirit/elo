@@ -1,0 +1,2 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3].length == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].length == 0; true) }.call(nil);

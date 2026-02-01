@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3].find(&->(x) { x > 1 }) == 2; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3].find(&->(x) { x > 5 }) == nil; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].find(&->(x) { x > 0 }) == nil; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["apple", "banana", "cherry"].find(&->(x) { x.length > 5 }) == "banana"; true) }.call(nil);

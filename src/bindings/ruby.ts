@@ -207,6 +207,9 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('first', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.first`);
   rubyLib.register('last', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.last`);
   rubyLib.register('isEmpty', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.empty?`);
+  rubyLib.register('contains', [Types.array, Types.any], (args, ctx) =>
+    `${ctx.emit(args[0])}.include?(${ctx.emit(args[1])})`);
+  rubyLib.register('sort', [Types.array], rubyMethod('sort'));
   rubyLib.register('min', [Types.array], rubyMethod('min'));
   rubyLib.register('max', [Types.array], rubyMethod('max'));
   rubyLib.register('sum', [Types.array], rubyMethod('sum'));
@@ -237,6 +240,16 @@ export function createRubyBinding(): StdLib<string> {
       `${ctx.emit(args[0])}.any?(&${ctx.emit(args[1])})`);
     rubyLib.register('all', [t, Types.fn], (args, ctx) =>
       `${ctx.emit(args[0])}.all?(&${ctx.emit(args[1])})`);
+    rubyLib.register('find', [t, Types.fn], (args, ctx) =>
+      `${ctx.emit(args[0])}.find(&${ctx.emit(args[1])})`);
+    rubyLib.register('sortBy', [t, Types.fn], (args, ctx) => {
+      const list = ctx.emit(args[0]);
+      if (args[1].type === 'datapath') {
+        const fetchLambda = '->(d, p) { p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg] : nil) } }';
+        return `(lambda { |a| f = ${fetchLambda}; a.sort_by { |e| f.call(e, ${ctx.emit(args[1])}) } }).call(${list})`;
+      }
+      return `${list}.sort_by(&${ctx.emit(args[1])})`;
+    });
   }
 
   // String functions (register for string and any to support lambdas with unknown types)

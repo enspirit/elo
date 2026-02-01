@@ -1,0 +1,5 @@
+->(_) { (raise "Assertion failed" unless [1, 2, 3].include?(2) == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2, 3].include?(4) == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].include?(1) == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b", "c"].include?("b") == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b", "c"].include?("d") == false; true) }.call(nil);

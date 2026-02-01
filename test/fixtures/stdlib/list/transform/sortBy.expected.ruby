@@ -1,0 +1,3 @@
+->(_) { (raise "Assertion failed" unless ["banana", "apple", "cherry"].sort_by(&->(x) { x.length }) == ["apple", "banana", "cherry"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [3, 1, 2].sort_by(&->(x) { x }) == [1, 2, 3]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].sort_by(&->(x) { x }) == []; true) }.call(nil);

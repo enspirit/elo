@@ -1,0 +1,4 @@
+(lambda _: kAssert((lambda a: min(a) if a else None)([3, 1, 4, 1, 5]) == 1))(None)
+(lambda _: kAssert((lambda a: min(a) if a else None)([42]) == 42))(None)
+(lambda _: kAssert((lambda a: min(a) if a else None)([-3, -1, -4]) == -4))(None)
+(lambda _: kAssert(((lambda a: min(a) if a else None)([]) is None)))(None)

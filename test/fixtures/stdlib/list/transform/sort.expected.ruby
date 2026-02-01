@@ -1,0 +1,4 @@
+->(_) { (raise "Assertion failed" unless [3, 1, 4, 1, 5].sort == [1, 1, 3, 4, 5]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["banana", "apple", "cherry"].sort == ["apple", "banana", "cherry"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [].sort == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1].sort == [1]; true) }.call(nil);

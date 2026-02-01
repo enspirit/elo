@@ -341,11 +341,23 @@ import Footer from '../components/Footer.astro';
             <p class="fn-desc">Returns the element with the largest value of the given function or path. Returns null for an empty list.</p>
             <div class="fn-example"><code class="language-elo">lastBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ "banana"</span></div>
           </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">find</div>
+            <div class="fn-sig">(list: List, predicate: Function) → Any | Null</div>
+            <p class="fn-desc">Returns the first element that satisfies predicate. Returns null if none found. <em>JS/Ruby only.</em></p>
+            <div class="fn-example"><code class="language-elo">find([1, 2, 3], fn(x ~> x > 1))</code><span class="fn-result">→ 2</span></div>
+          </div>
         </div>
 
         <h3 id="list-predicates" style="margin-top: 2rem;">Predicates</h3>
         <p>I need to check something about a list.</p>
         <div class="stdlib-grid" data-stdlib-search-target="grid">
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">contains</div>
+            <div class="fn-sig">(list: List, element: Any) → Bool</div>
+            <p class="fn-desc">Returns <code>true</code> if the list contains the given element.</p>
+            <div class="fn-example"><code class="language-elo">contains([1, 2, 3], 2)</code><span class="fn-result">→ true</span></div>
+          </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">isEmpty</div>
             <div class="fn-sig">(list: List) → Bool</div>
@@ -386,6 +398,18 @@ import Footer from '../components/Footer.astro';
             <div class="fn-sig">(list: List) → List</div>
             <p class="fn-desc">Returns a new list with elements in reverse order.</p>
             <div class="fn-example"><code class="language-elo">reverse([1, 2, 3])</code><span class="fn-result">→ [3, 2, 1]</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">sort</div>
+            <div class="fn-sig">(list: List) → List</div>
+            <p class="fn-desc">Returns a new list with elements sorted in ascending order.</p>
+            <div class="fn-example"><code class="language-elo">sort([3, 1, 4, 1, 5])</code><span class="fn-result">→ [1, 1, 3, 4, 5]</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">sortBy</div>
+            <div class="fn-sig">(list: List, fn | DataPath) → List</div>
+            <p class="fn-desc">Returns a new list sorted by the value of the given function or path. <em>JS/Ruby only.</em></p>
+            <div class="fn-example"><code class="language-elo">sortBy(['banana', 'apple', 'cherry'], fn(x ~> length(x)))</code><span class="fn-result">→ ['apple', 'banana', 'cherry']</span></div>
           </div>
         </div>
 
