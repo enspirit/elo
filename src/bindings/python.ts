@@ -258,6 +258,15 @@ export function createPythonBinding(): StdLib<string> {
     ctx.requireHelper?.('kAdd');
     return `functools.reduce(kAdd, ${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
+  for (const [name, builtin] of [['firstBy', 'min'], ['lastBy', 'max']] as const) {
+    pyLib.register(name, [Types.array, Types.fn], (args, ctx) => {
+      if (args[1].type === 'datapath') {
+        ctx.requireHelper?.('kFetch');
+        return `(lambda a: None if not a else ${builtin}(a, key=lambda e: kFetch(e, ${ctx.emit(args[1])})))(${ctx.emit(args[0])})`;
+      }
+      return `(lambda a: None if not a else ${builtin}(a, key=${ctx.emit(args[1])}))(${ctx.emit(args[0])})`;
+    });
+  }
   pyLib.register('reverse', [Types.array], (args, ctx) =>
     `list(reversed(${ctx.emit(args[0])}))`);
   pyLib.register('join', [Types.array, Types.string], (args, ctx) =>

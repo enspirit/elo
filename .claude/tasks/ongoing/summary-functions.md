@@ -28,5 +28,5 @@ firstBy(List, DataPath)
 - [x] Summary Functions subsection on stdlib page (with count, min, max)
 - [x] sum(List) — returns sum of elements, 0 for empty list
 - [x] avg(List)
-- [ ] firstBy(List, fn) / firstBy(List, DataPath)
-- [ ] lastBy(List, fn) / lastBy(List, DataPath)
+- [x] firstBy(List, fn) / firstBy(List, DataPath)
+- [x] lastBy(List, fn) / lastBy(List, DataPath)

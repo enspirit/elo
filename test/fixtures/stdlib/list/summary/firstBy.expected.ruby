@@ -1,0 +1,5 @@
+->(_) { (raise "Assertion failed" unless (lambda { |a| a.empty? ? nil : (f = ->(d, p) { p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg] : nil) } }; a.min_by { |e| f.call(e, [:a]) }) }).call([{a: 3}, {a: 1}, {a: 2}]) == {a: 1}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (lambda { |a| a.empty? ? nil : a.min_by(&->(x) { (->(d, p) { p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg] : nil) } }).call(x, [:a]) }) }).call([{a: 3}, {a: 1}, {a: 2}]) == {a: 1}; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (lambda { |a| a.empty? ? nil : a.min_by(&->(x) { x.length }) }).call(["banana", "apple", "cherry"]) == "apple"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (lambda { |a| a.empty? ? nil : a.min_by(&->(x) { x }) }).call([3, 1, 2]) == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((lambda { |a| a.empty? ? nil : a.min_by(&->(x) { x }) }).call([])).nil?; true) }.call(nil);

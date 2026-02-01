@@ -407,6 +407,18 @@ import Footer from '../components/Footer.astro';
             <p class="fn-desc">Returns the largest element of the list.</p>
             <div class="fn-example"><code class="language-elo">max([3, 1, 4, 1, 5])</code><span class="fn-result">→ 5</span></div>
           </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">firstBy</div>
+            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
+            <p class="fn-desc">Returns the element with the smallest value of the given function or path. Returns null for an empty list.</p>
+            <div class="fn-example"><code class="language-elo">firstBy([{a: 3}, {a: 1}, {a: 2}], .a)</code><span class="fn-result">→ {a: 1}</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">lastBy</div>
+            <div class="fn-sig">(list: List, fn | DataPath) → Any | Null</div>
+            <p class="fn-desc">Returns the element with the largest value of the given function or path. Returns null for an empty list.</p>
+            <div class="fn-example"><code class="language-elo">lastBy([{a: 3}, {a: 1}, {a: 2}], .a)</code><span class="fn-result">→ {a: 3}</span></div>
+          </div>
         </div>
       </section>
 

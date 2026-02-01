@@ -214,6 +214,16 @@ export function createRubyBinding(): StdLib<string> {
     `(lambda { |a| a.empty? ? nil : a.sum.to_f / a.length }).call(${ctx.emit(args[0])})`);
   rubyLib.register('sum', [Types.array, Types.any], (args, ctx) =>
     `${ctx.emit(args[0])}.sum(${ctx.emit(args[1])})`);
+  for (const [name, method] of [['firstBy', 'min_by'], ['lastBy', 'max_by']] as const) {
+    rubyLib.register(name, [Types.array, Types.fn], (args, ctx) => {
+      const list = ctx.emit(args[0]);
+      if (args[1].type === 'datapath') {
+        const fetchLambda = '->(d, p) { p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg] : nil) } }';
+        return `(lambda { |a| a.empty? ? nil : (f = ${fetchLambda}; a.${method} { |e| f.call(e, ${ctx.emit(args[1])}) }) }).call(${list})`;
+      }
+      return `(lambda { |a| a.empty? ? nil : a.${method}(&${ctx.emit(args[1])}) }).call(${list})`;
+    });
+  }
 
   // Array iteration functions (register for both array and any to support dynamic types)
   for (const t of [Types.array, Types.any]) {

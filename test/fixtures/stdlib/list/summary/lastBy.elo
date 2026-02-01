@@ -1,0 +1,5 @@
+assert(lastBy([{a: 3}, {a: 1}, {a: 2}], .a) == {a: 3})
+assert(lastBy([{a: 3}, {a: 1}, {a: 2}], fn(x ~> fetch(x, .a))) == {a: 3})
+assert(lastBy(['banana', 'apple', 'cherry'], fn(x ~> length(x))) == 'banana')
+assert(lastBy([3, 1, 2], fn(x ~> x)) == 3)
+assert(isNull(lastBy([], fn(x ~> x))))

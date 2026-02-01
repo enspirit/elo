@@ -1,0 +1,5 @@
+(lambda _: kAssert((lambda a: None if not a else max(a, key=lambda e: kFetch(e, ["a"])))([{"a": 3}, {"a": 1}, {"a": 2}]) == {"a": 3}))(None)
+(lambda _: kAssert((lambda a: None if not a else max(a, key=lambda x: kFetch(x, ["a"])))([{"a": 3}, {"a": 1}, {"a": 2}]) == {"a": 3}))(None)
+(lambda _: kAssert((lambda a: None if not a else max(a, key=lambda x: len(x)))(["banana", "apple", "cherry"]) == "banana"))(None)
+(lambda _: kAssert((lambda a: None if not a else max(a, key=lambda x: x))([3, 1, 2]) == 3))(None)
+(lambda _: kAssert(((lambda a: None if not a else max(a, key=lambda x: x))([]) is None)))(None)
