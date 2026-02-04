@@ -448,6 +448,25 @@ export function createPythonBinding(): StdLib<string> {
   pyLib.register('start', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.start`);
   pyLib.register('end', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.end`);
 
+  // Interval arithmetic
+  pyLib.register('union', [Types.interval, Types.interval], (args, ctx) => {
+    ctx.requireHelper?.('_EloInterval');
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    return `EloInterval(min(${a}.start, ${b}.start), max(${a}.end, ${b}.end))`;
+  });
+  pyLib.register('intersection', [Types.interval, Types.interval], (args, ctx) => {
+    ctx.requireHelper?.('kIntersection');
+    return `kIntersection(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
+
+  // Duration(Interval) - get the length of an interval
+  pyLib.register('Duration', [Types.interval], (args, ctx) => {
+    ctx.requireHelper?.('_elo_duration');
+    const v = ctx.emit(args[0]);
+    return `EloDuration.from_timedelta(${v}.end - ${v}.start)`;
+  });
+
   // Temporal equality - use kEq for datetime/duration comparisons
   pyLib.register('eq', [Types.datetime, Types.datetime], (args, ctx) => {
     ctx.requireHelper?.('kEq');

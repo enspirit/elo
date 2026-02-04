@@ -479,6 +479,24 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('start', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.first`);
   rubyLib.register('end', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.last`);
 
+  // Interval arithmetic
+  rubyLib.register('union', [Types.interval, Types.interval], (args, ctx) => {
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    return `([${a}.first, ${b}.first].min..[${a}.last, ${b}.last].max)`;
+  });
+  rubyLib.register('intersection', [Types.interval, Types.interval], (args, ctx) => {
+    ctx.requireHelper?.('k_intersection');
+    return `k_intersection(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
+
+  // Duration(Interval) - get the length of an interval
+  // Ruby DateTime subtraction returns days as a Rational, multiply by 86400 to get seconds
+  rubyLib.register('Duration', [Types.interval], (args, ctx) => {
+    const v = ctx.emit(args[0]);
+    return `ActiveSupport::Duration.build(((${v}.last - ${v}.first) * 86400).to_i)`;
+  });
+
   // Data - identity for non-strings, parse JSON for strings
   rubyLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
   rubyLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));

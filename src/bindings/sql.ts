@@ -462,6 +462,26 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('start', [Types.interval], (args, ctx) => `lower(${ctx.emit(args[0])})`);
   sqlLib.register('end', [Types.interval], (args, ctx) => `upper(${ctx.emit(args[0])})`);
 
+  // Interval arithmetic
+  sqlLib.register('union', [Types.interval, Types.interval], (args, ctx) => {
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    return `tstzrange(LEAST(lower(${a}), lower(${b})), GREATEST(upper(${a}), upper(${b})))`;
+  });
+  sqlLib.register('intersection', [Types.interval, Types.interval], (args, ctx) => {
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    // PostgreSQL: intersection is *, handle empty case with CASE
+    // Use '[]' bounds for the empty case to make lower/upper return the same value
+    return `(CASE WHEN ${a} && ${b} THEN ${a} * ${b} ELSE tstzrange(GREATEST(lower(${a}), lower(${b})), GREATEST(lower(${a}), lower(${b})), '[]') END)`;
+  });
+
+  // Duration(Interval) - get the length of an interval
+  sqlLib.register('Duration', [Types.interval], (args, ctx) => {
+    const v = ctx.emit(args[0]);
+    return `(upper(${v}) - lower(${v}))`;
+  });
+
   // Data - identity for non-strings, parse JSON for strings
   sqlLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
   sqlLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));

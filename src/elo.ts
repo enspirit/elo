@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { parse } from './parser';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
-import { DateTime, Duration } from 'luxon';
+import { DateTime, Duration, Interval } from 'luxon';
 import { defaultFormats, getFormat, FormatRegistry } from './formats';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -194,10 +194,10 @@ function evaluate(source: string, inputValue: unknown): unknown {
   const ast = parse(source);
   const result = compileToJavaScriptWithMeta(ast);
 
-  // Create function with luxon DateTime and Duration in scope
+  // Create function with luxon DateTime, Duration, and Interval in scope
   // The compiled code is always a function that takes _ as input
-  const execFn = new Function('DateTime', 'Duration', `return ${result.code}`);
-  const fn = execFn(DateTime, Duration);
+  const execFn = new Function('DateTime', 'Duration', 'Interval', `return ${result.code}`);
+  const fn = execFn(DateTime, Duration, Interval);
 
   return fn(inputValue);
 }

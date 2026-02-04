@@ -203,6 +203,11 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof v === 'object') return '{' + Object.keys(v).map(k => k + ': ' + kString(v[k])).join(', ') + '}';
   return String(v);
 }`,
+  kIntersection: `function kIntersection(a, b) {
+  const s = DateTime.max(a.start, b.start);
+  const e = DateTime.min(a.end, b.end);
+  return s >= e ? Interval.fromDateTimes(s, s) : Interval.fromDateTimes(s, e);
+}`,
 
   // Parser helpers - return Result: { success: boolean, path: string, message: string, value: any, cause: Result[] }
   pOk: `function pOk(v, p) { return { success: true, path: p, message: '', value: v, cause: [] }; }`,
@@ -303,6 +308,11 @@ end`,
     obj
   end
 end`,
+  k_intersection: `def k_intersection(a, b)
+  s = [a.first, b.first].max
+  e = [a.last, b.last].min
+  s >= e ? (s..s) : (s..e)
+end`,
   p_ok: `def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end`,
   p_fail: `def p_fail(p, m = nil, c = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [] } end`,
   p_any: `def p_any(v, p) p_ok(v, p) end`,
@@ -381,6 +391,7 @@ end`,
 export const PY_HELPER_DEPS: Record<string, string[]> = {
   kEq: [],
   kNeq: ['kEq'],
+  kIntersection: ['_EloInterval'],
   kFetch: [],
   kFetchObject: ['kFetch'],
   kFetchArray: ['kFetch'],
@@ -442,6 +453,9 @@ export const PY_HELPERS: Record<string, string> = {
         scs = float(m.group(7) or 0)
         total_days = yrs * 365 + mos * 30 + wks * 7 + dys
         return EloDuration(((total_days * 24 + hrs) * 60 + mns) * 60000 + scs * 1000)
+    @staticmethod
+    def from_timedelta(td):
+        return EloDuration(td.total_seconds() * 1000)
     def to_ms(self): return self._ms
     def plus(self, other):
         if isinstance(other, EloDuration): return EloDuration(self._ms + other._ms)
@@ -531,6 +545,10 @@ def _elo_end_of_year(dt):
     return l == r`,
   kNeq: `def kNeq(l, r):
     return not kEq(l, r)`,
+  kIntersection: `def kIntersection(a, b):
+    s = max(a.start, b.start)
+    e = min(a.end, b.end)
+    return EloInterval(s, s) if s >= e else EloInterval(s, e)`,
   kTypeOf: `def kTypeOf(v):
     if v is None: return 'Null'
     if isinstance(v, EloDuration): return 'Duration'

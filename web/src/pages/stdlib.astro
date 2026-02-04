@@ -82,9 +82,10 @@ import Footer from '../components/Footer.astro';
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Duration</div>
-            <div class="fn-sig">(value: String | Duration) → Duration</div>
-            <p class="fn-desc">Parses an ISO 8601 duration string. Throws on invalid input.</p>
+            <div class="fn-sig">(value: String | Duration | Interval) → Duration</div>
+            <p class="fn-desc">Parses an ISO 8601 duration string, or returns the length of an interval. Throws on invalid input.</p>
             <div class="fn-example"><code class="language-elo">Duration('P1D')</code><span class="fn-result">→ P1D</span></div>
+            <div class="fn-example"><code class="language-elo">Duration(Interval(&#123;start: D2024-01-01T10:00:00Z, end: D2024-01-01T12:00:00Z&#125;))</code><span class="fn-result">→ PT2H</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Interval</div>
@@ -294,6 +295,18 @@ import Footer from '../components/Footer.astro';
             <div class="fn-sig">(i: Interval) → DateTime</div>
             <p class="fn-desc">Returns the end datetime of the interval.</p>
             <div class="fn-example"><code class="language-elo">end(Interval(&#123;start: D2024-01-15T10:00:00Z, end: D2024-01-15T18:00:00Z&#125;))</code><span class="fn-result">→ D2024-01-15T18:00:00Z</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">union</div>
+            <div class="fn-sig">(i1: Interval, i2: Interval) → Interval</div>
+            <p class="fn-desc">Returns the bounding interval (min start, max end) of two intervals.</p>
+            <div class="fn-example"><code class="language-elo">end(union(Interval(&#123;start: D2024-01-01T10:00:00Z, end: D2024-01-01T12:00:00Z&#125;), Interval(&#123;start: D2024-01-01T11:00:00Z, end: D2024-01-01T14:00:00Z&#125;)))</code><span class="fn-result">→ D2024-01-01T14:00:00Z</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">intersection</div>
+            <div class="fn-sig">(i1: Interval, i2: Interval) → Interval</div>
+            <p class="fn-desc">Returns the overlapping portion of two intervals. If no overlap, returns an empty interval (start == end).</p>
+            <div class="fn-example"><code class="language-elo">start(intersection(Interval(&#123;start: D2024-01-01T10:00:00Z, end: D2024-01-01T14:00:00Z&#125;), Interval(&#123;start: D2024-01-01T12:00:00Z, end: D2024-01-01T16:00:00Z&#125;)))</code><span class="fn-result">→ D2024-01-01T12:00:00Z</span></div>
           </div>
         </div>
       </section>

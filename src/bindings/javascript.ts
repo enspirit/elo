@@ -496,6 +496,23 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('start', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.start`);
   jsLib.register('end', [Types.interval], (args, ctx) => `${ctx.emit(args[0])}.end`);
 
+  // Interval arithmetic
+  jsLib.register('union', [Types.interval, Types.interval], (args, ctx) => {
+    const a = ctx.emit(args[0]);
+    const b = ctx.emit(args[1]);
+    return `Interval.fromDateTimes(DateTime.min(${a}.start, ${b}.start), DateTime.max(${a}.end, ${b}.end))`;
+  });
+  jsLib.register('intersection', [Types.interval, Types.interval], (args, ctx) => {
+    ctx.requireHelper?.('kIntersection');
+    return `kIntersection(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
+
+  // Duration(Interval) - get the length of an interval
+  jsLib.register('Duration', [Types.interval], (args, ctx) => {
+    const v = ctx.emit(args[0]);
+    return `${v}.end.diff(${v}.start)`;
+  });
+
   // Data - identity for non-strings, parse JSON for strings
   jsLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
   jsLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));
