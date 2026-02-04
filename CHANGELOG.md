@@ -4,10 +4,17 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.11] - 2026-02-04
+
+### Language Features
+- Add `Interval` type with selector and `start`/`end` accessors
+
 ### Standard Library
 - Add `count(List)` summary function (alias for `length`)
 - Add `sum(List)` and `sum(List, initial)` summary functions
 - Add `avg(List)` summary function (returns `null` on empty lists)
+- Add `contains`, `find`, `sort`, `sortBy`, `unique`, `flat` List functions
+- Add `reverse`, `trimStart`, `trimEnd`, `isBlank` String functions
 
 ## [0.9.10] - 2026-01-31
 
