@@ -4,6 +4,18 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.12] - 2026-02-04
+
+### Standard Library
+- Add `union(Interval, Interval)` and `intersection(Interval, Interval)` arithmetic functions
+- Add `Duration(Interval)` conversion function
+
+### Security
+- Restrict member access and method calls to data types only, preventing exposure of runtime internals
+
+### Website
+- Indent stdlib subsections in mobile menu for better readability
+
 ## [0.9.11] - 2026-02-04
 
 ### Language Features
