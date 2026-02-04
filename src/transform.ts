@@ -42,7 +42,7 @@ import {
   inferType,
 } from './ir';
 import { TypeExpr } from './ast';
-import { EloType, Types } from './types';
+import { EloType, Types, TypeKind } from './types';
 import { eloTypeDefs } from './typedefs';
 
 /**
@@ -140,8 +140,22 @@ function transformWithDepth(
     case 'function_call':
       return transformFunctionCall(expr.name, expr.args, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
 
-    case 'member_access':
-      return irMemberAccess(recurse(expr.object), expr.property);
+    case 'member_access': {
+      const objectIR = recurse(expr.object);
+      const objectType = inferType(objectIR);
+
+      // Only allow member access on data types (any, object, array)
+      // This prevents exposing runtime internals like Luxon DateTime/Duration methods
+      const allowedTypes: TypeKind[] = ['any', 'object', 'array'];
+      if (!allowedTypes.includes(objectType.kind)) {
+        throw new Error(
+          `Member access '.${expr.property}' is not allowed on ${objectType.kind} type. ` +
+          `Use stdlib functions instead (e.g., 'start(interval)' not 'interval.start').`
+        );
+      }
+
+      return irMemberAccess(objectIR, expr.property);
+    }
 
     case 'let':
       return transformLet(expr.bindings, expr.body, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
@@ -174,6 +188,20 @@ function transformWithDepth(
       const fnIR = recurse(expr.fn);
       const argsIR = expr.args.map((arg) => recurse(arg));
       const argTypes = argsIR.map(inferType);
+
+      // Reject method-call syntax on member access unless it's a function stored in data
+      // This prevents calling runtime methods like DateTime.diff() or String.toUpperCase()
+      if (fnIR.type === 'member_access') {
+        const objectType = inferType(fnIR.object);
+        const allowedTypes: TypeKind[] = ['any', 'object', 'array'];
+        if (!allowedTypes.includes(objectType.kind)) {
+          throw new Error(
+            `Method call '.${fnIR.property}(...)' is not allowed on ${objectType.kind} type. ` +
+            `Use stdlib functions instead.`
+          );
+        }
+      }
+
       return irApply(fnIR, argsIR, argTypes, Types.any);
     }
 

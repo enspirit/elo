@@ -15,6 +15,7 @@ import {
   memberAccess,
   letExpr,
   lambda,
+  apply,
   typeDef,
   typeRef,
   unionType,
@@ -554,13 +555,126 @@ describe('transform - function calls', () => {
 });
 
 describe('transform - member access', () => {
-  it('transforms member access', () => {
-    // Use _ (input variable) which is always in scope
+  it('transforms member access on data (any type)', () => {
+    // Use _ (input variable) which is always in scope with any type
     const ir = transform(memberAccess(variable('_'), 'property'));
     assert.strictEqual(ir.type, 'member_access');
     if (ir.type === 'member_access') {
       assert.strictEqual(ir.property, 'property');
     }
+  });
+
+  it('transforms nested member access on data', () => {
+    // _.person.name - nested access on any type
+    const ir = transform(memberAccess(memberAccess(variable('_'), 'person'), 'name'));
+    assert.strictEqual(ir.type, 'member_access');
+  });
+
+  it('transforms member access on object literal', () => {
+    // {x: 1}.x
+    const obj = { type: 'object', properties: [{ key: 'x', value: literal(1) }] } as any;
+    const ir = transform(memberAccess(obj, 'x'));
+    assert.strictEqual(ir.type, 'member_access');
+  });
+
+  it('rejects member access on date type', () => {
+    // D2024-01-01.year should fail
+    assert.throws(
+      () => transform(memberAccess(dateLiteral('2024-01-01'), 'year')),
+      /Member access '\.year' is not allowed on date type/
+    );
+  });
+
+  it('rejects member access on datetime type', () => {
+    // D2024-01-01T00:00:00Z.hour should fail
+    assert.throws(
+      () => transform(memberAccess(dateTimeLiteral('2024-01-01T00:00:00Z'), 'hour')),
+      /Member access '\.hour' is not allowed on datetime type/
+    );
+  });
+
+  it('rejects member access on duration type', () => {
+    // PT1H.minutes should fail
+    assert.throws(
+      () => transform(memberAccess(durationLiteral('PT1H'), 'minutes')),
+      /Member access '\.minutes' is not allowed on duration type/
+    );
+  });
+
+  it('rejects member access on string type', () => {
+    // 'hello'.length should fail
+    assert.throws(
+      () => transform(memberAccess(stringLiteral('hello'), 'length')),
+      /Member access '\.length' is not allowed on string type/
+    );
+  });
+
+  it('rejects member access on int type', () => {
+    // 42.toString should fail
+    assert.throws(
+      () => transform(memberAccess(literal(42), 'toString')),
+      /Member access '\.toString' is not allowed on int type/
+    );
+  });
+
+  it('rejects member access on bool type', () => {
+    // true.valueOf should fail
+    assert.throws(
+      () => transform(memberAccess(literal(true), 'valueOf')),
+      /Member access '\.valueOf' is not allowed on bool type/
+    );
+  });
+
+  it('rejects member access on function type', () => {
+    // fn(x ~> x).name should fail
+    assert.throws(
+      () => transform(memberAccess(lambda(['x'], variable('x')), 'name')),
+      /Member access '\.name' is not allowed on fn type/
+    );
+  });
+});
+
+describe('transform - method calls (apply on member access)', () => {
+  it('allows calling function stored in data', () => {
+    // _.callback() - calling a function stored in data should work
+    const ir = transform(apply(memberAccess(variable('_'), 'callback'), []));
+    assert.strictEqual(ir.type, 'apply');
+  });
+
+  it('rejects method call on datetime (caught by member access restriction)', () => {
+    // D2024-01-01T00:00:00Z.diff(D2024-01-02T00:00:00Z) should fail
+    // The member access '.diff' is rejected before apply is processed
+    assert.throws(
+      () => transform(apply(
+        memberAccess(dateTimeLiteral('2024-01-01T00:00:00Z'), 'diff'),
+        [dateTimeLiteral('2024-01-02T00:00:00Z')]
+      )),
+      /Member access '\.diff' is not allowed on datetime type/
+    );
+  });
+
+  it('rejects method call on string (caught by member access restriction)', () => {
+    // 'hello'.toUpperCase() should fail
+    // The member access '.toUpperCase' is rejected before apply is processed
+    assert.throws(
+      () => transform(apply(
+        memberAccess(stringLiteral('hello'), 'toUpperCase'),
+        []
+      )),
+      /Member access '\.toUpperCase' is not allowed on string type/
+    );
+  });
+
+  it('rejects method call on duration (caught by member access restriction)', () => {
+    // PT1H.toMillis() should fail
+    // The member access '.toMillis' is rejected before apply is processed
+    assert.throws(
+      () => transform(apply(
+        memberAccess(durationLiteral('PT1H'), 'toMillis'),
+        []
+      )),
+      /Member access '\.toMillis' is not allowed on duration type/
+    );
   });
 });
 
