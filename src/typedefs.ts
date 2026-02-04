@@ -221,6 +221,18 @@ export function createTypeDefs(): TypeDefs {
   defs.register("ceil", [Types.float], Types.int);
 
   // ============================================
+  // Duration unit conversion (-> float)
+  // ============================================
+  defs.register("inYears", [Types.duration], Types.float);
+  defs.register("inQuarters", [Types.duration], Types.float);
+  defs.register("inMonths", [Types.duration], Types.float);
+  defs.register("inWeeks", [Types.duration], Types.float);
+  defs.register("inDays", [Types.duration], Types.float);
+  defs.register("inHours", [Types.duration], Types.float);
+  defs.register("inMinutes", [Types.duration], Types.float);
+  defs.register("inSeconds", [Types.duration], Types.float);
+
+  // ============================================
   // Temporal component extraction (-> int)
   // ============================================
   defs.register("year", [Types.date], Types.int);
@@ -275,6 +287,9 @@ export function createTypeDefs(): TypeDefs {
   // Array functions
   // ============================================
   defs.register("length", [Types.array], Types.int);
+  defs.register("count", [Types.array], Types.int);
+  defs.register("sum", [Types.array], Types.any);
+  defs.register("sum", [Types.array, Types.any], Types.any);
   defs.register("at", [Types.array, Types.int], Types.any);
   defs.register("first", [Types.array], Types.any);
   defs.register("last", [Types.array], Types.any);
@@ -359,6 +374,15 @@ export function createTypeDefs(): TypeDefs {
   defs.register("Duration", [Types.duration], Types.duration);
   defs.register("Duration", [Types.string], Types.any); // may return null
   defs.register("Duration", [Types.any], Types.any);
+
+  // Interval({start: Datetime, end: Datetime}) - construct an Interval
+  defs.register("Interval", [Types.interval], Types.interval);
+  defs.register("Interval", [Types.object], Types.interval);
+  defs.register("Interval", [Types.any], Types.interval);
+
+  // Interval accessors
+  defs.register("start", [Types.interval], Types.datetime);
+  defs.register("end", [Types.interval], Types.datetime);
 
   // Fallback: unknown functions return any
   defs.registerFallback(() => Types.any);

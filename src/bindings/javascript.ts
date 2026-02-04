@@ -72,12 +72,12 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register(
     "bot",
     [],
-    nullary("DateTime.fromISO('0001-01-01T00:00:00.000Z')"),
+    nullary('DateTime.fromISO("0001-01-01T00:00:00.000Z")'),
   );
   jsLib.register(
     "eot",
     [],
-    nullary("DateTime.fromISO('9999-12-31T23:59:59.999Z')"),
+    nullary('DateTime.fromISO("9999-12-31T23:59:59.999Z")'),
   );
 
   // Period boundary functions
@@ -94,12 +94,35 @@ export function createJavaScriptBinding(): StdLib<string> {
     end_of_year: "endOf('year')",
   };
 
+  // camelCase aliases for use as stdlib functions on date/datetime values
+  const camelCaseMap: Record<string, string> = {
+    startOfDay: "startOf('day')",
+    endOfDay: "endOf('day')",
+    startOfWeek: "startOf('week')",
+    endOfWeek: "endOf('week')",
+    startOfMonth: "startOf('month')",
+    endOfMonth: "endOf('month')",
+    startOfQuarter: "startOf('quarter')",
+    endOfQuarter: "endOf('quarter')",
+    startOfYear: "startOf('year')",
+    endOfYear: "endOf('year')",
+  };
+
   for (const [fn, method] of Object.entries(periodBoundaryMap)) {
     jsLib.register(
       fn,
       [Types.datetime],
       (args, ctx) => `${ctx.emit(args[0])}.${method}`,
     );
+  }
+  for (const [fn, method] of Object.entries(camelCaseMap)) {
+    for (const t of [Types.date, Types.datetime]) {
+      jsLib.register(
+        fn,
+        [t],
+        (args, ctx) => `${ctx.emit(args[0])}.${method}`,
+      );
+    }
   }
 
   // Numeric arithmetic - native JS operators only for known numeric types
@@ -337,6 +360,54 @@ export function createJavaScriptBinding(): StdLib<string> {
     [Types.array],
     (args, ctx) => `(${ctx.emit(args[0])}.length === 0)`,
   );
+  jsLib.register(
+    "count",
+    [Types.array],
+    (args, ctx) => `${ctx.emit(args[0])}.length`,
+  );
+  jsLib.register(
+    "contains",
+    [Types.array, Types.any],
+    (args, ctx) => `${ctx.emit(args[0])}.includes(${ctx.emit(args[1])})`,
+  );
+  jsLib.register(
+    "sort",
+    [Types.array],
+    (args, ctx) =>
+      `[...${ctx.emit(args[0])}].sort((a, b) => a < b ? -1 : a > b ? 1 : 0)`,
+  );
+  jsLib.register(
+    "min",
+    [Types.array],
+    (args, ctx) =>
+      `(a => a.length === 0 ? null : Math.min(...a))(${ctx.emit(args[0])})`,
+  );
+  jsLib.register(
+    "max",
+    [Types.array],
+    (args, ctx) =>
+      `(a => a.length === 0 ? null : Math.max(...a))(${ctx.emit(args[0])})`,
+  );
+  jsLib.register(
+    "sum",
+    [Types.array],
+    (args, ctx) =>
+      `${ctx.emit(args[0])}.reduce((a, b) => a + b, 0)`,
+  );
+  jsLib.register(
+    "avg",
+    [Types.array],
+    (args, ctx) =>
+      `(a => a.length === 0 ? null : a.reduce((x, y) => x + y, 0) / a.length)(${ctx.emit(args[0])})`,
+  );
+  jsLib.register(
+    "sum",
+    [Types.array, Types.any],
+    (args, ctx) => {
+      ctx.requireHelper?.("kAdd");
+      return `${ctx.emit(args[0])}.reduce(kAdd, ${ctx.emit(args[1])})`;
+    },
+  );
 
   // Array iteration functions (register for both array and any to support dynamic types)
   for (const t of [Types.array, Types.any]) {
@@ -366,6 +437,23 @@ export function createJavaScriptBinding(): StdLib<string> {
       [t, Types.fn],
       (args, ctx) => `${ctx.emit(args[0])}.every(${ctx.emit(args[1])})`,
     );
+    jsLib.register(
+      "find",
+      [t, Types.fn],
+      (args, ctx) =>
+        `(${ctx.emit(args[0])}.find(${ctx.emit(args[1])}) ?? null)`,
+    );
+    jsLib.register(
+      "sortBy",
+      [t, Types.fn],
+      (args, ctx) => {
+        if (args[1].type === "datapath") {
+          ctx.requireHelper?.("kFetch");
+          return `[...${ctx.emit(args[0])}].sort((a, b) => { const ka = kFetch(a, ${ctx.emit(args[1])}), kb = kFetch(b, ${ctx.emit(args[1])}); return ka < kb ? -1 : ka > kb ? 1 : 0; })`;
+        }
+        return `((f, a) => [...a].sort((x, y) => { const ka = f(x), kb = f(y); return ka < kb ? -1 : ka > kb ? 1 : 0; }))(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
+      },
+    );
   }
 
   // String functions (register for both string and any to support lambdas with unknown types)
@@ -383,6 +471,8 @@ export function createJavaScriptBinding(): StdLib<string> {
     jsLib.register("upper", [t], methodCall(".toUpperCase()"));
     jsLib.register("lower", [t], methodCall(".toLowerCase()"));
     jsLib.register("trim", [t], methodCall(".trim()"));
+    jsLib.register("trimStart", [t], methodCall(".trimStart()"));
+    jsLib.register("trimEnd", [t], methodCall(".trimEnd()"));
   }
   // Helper for method calls with arguments - wraps receiver in parens if needed
   const wrapReceiver = (
@@ -428,6 +518,17 @@ export function createJavaScriptBinding(): StdLib<string> {
       "isEmpty",
       [t],
       (args, ctx) => `(${wrapReceiver(args, ctx)}.length === 0)`,
+    );
+    jsLib.register(
+      "isBlank",
+      [t],
+      (args, ctx) => `(${wrapReceiver(args, ctx)}.trim().length === 0)`,
+    );
+    jsLib.register(
+      "reverse",
+      [t],
+      (args, ctx) =>
+        `${wrapReceiver(args, ctx)}.split('').reverse().join('')`,
     );
   }
 
@@ -479,6 +580,49 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register("ceil", [Types.int], (args, ctx) => ctx.emit(args[0]));
   jsLib.register("ceil", [Types.float], fnCall("Math.ceil"));
   jsLib.register("ceil", [Types.any], fnCall("Math.ceil")); // Safe for any numeric type
+
+  // Duration unit conversion functions
+  // Approximate units use standard conversions: 1y=365.25d, 1m=30.4375d, 1q=91.3125d
+  jsLib.register(
+    "inYears",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 31557600000)`,
+  );
+  jsLib.register(
+    "inQuarters",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 7889400000)`,
+  );
+  jsLib.register(
+    "inMonths",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 2629800000)`,
+  );
+  jsLib.register(
+    "inWeeks",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 604800000)`,
+  );
+  jsLib.register(
+    "inDays",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 86400000)`,
+  );
+  jsLib.register(
+    "inHours",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 3600000)`,
+  );
+  jsLib.register(
+    "inMinutes",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 60000)`,
+  );
+  jsLib.register(
+    "inSeconds",
+    [Types.duration],
+    (args, ctx) => `(${ctx.emit(args[0])}.toMillis() / 1000)`,
+  );
 
   // Temporal extraction functions
   jsLib.register(
@@ -617,6 +761,37 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register("Duration", [Types.string], parserUnwrap("pDuration"));
   jsLib.register("Duration", [Types.any], parserUnwrap("pDuration"));
 
+  // Interval - construct from object with start/end properties
+  jsLib.register("Interval", [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register("Interval", [Types.object], (args, ctx) => {
+    const obj = args[0];
+    if (obj.type === "object_literal") {
+      const startProp = obj.properties.find((p) => p.key === "start");
+      const endProp = obj.properties.find((p) => p.key === "end");
+      if (startProp && endProp) {
+        return `Interval.fromDateTimes(${ctx.emit(startProp.value)}, ${ctx.emit(endProp.value)})`;
+      }
+    }
+    const v = ctx.emit(args[0]);
+    return `Interval.fromDateTimes(${v}.start, ${v}.end)`;
+  });
+  jsLib.register("Interval", [Types.any], (args, ctx) => {
+    const v = ctx.emit(args[0]);
+    return `Interval.fromDateTimes(${v}.start, ${v}.end)`;
+  });
+
+  // Interval accessors
+  jsLib.register(
+    "start",
+    [Types.interval],
+    (args, ctx) => `${ctx.emit(args[0])}.start`,
+  );
+  jsLib.register(
+    "end",
+    [Types.interval],
+    (args, ctx) => `${ctx.emit(args[0])}.end`,
+  );
+
   // Data - identity for non-strings, parse JSON for strings
   jsLib.register("Data", [Types.array], (args, ctx) => ctx.emit(args[0]));
   jsLib.register("Data", [Types.object], (args, ctx) => ctx.emit(args[0]));
@@ -654,6 +829,19 @@ export function createJavaScriptBinding(): StdLib<string> {
     "reverse",
     [Types.array],
     (args, ctx) => `[...${ctx.emit(args[0])}].reverse()`,
+  );
+  jsLib.register(
+    "unique",
+    [Types.array],
+    (args, ctx) => {
+      ctx.requireHelper?.("kEq");
+      return `${ctx.emit(args[0])}.reduce((acc, x) => acc.some((y) => kEq(x, y)) ? acc : [...acc, x], [])`;
+    },
+  );
+  jsLib.register(
+    "flat",
+    [Types.array],
+    (args, ctx) => `${ctx.emit(args[0])}.flat()`,
   );
 
   // Join list elements with separator

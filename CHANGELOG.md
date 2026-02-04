@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.1
+
+### Synced from upstream (enspirit/elo)
+
+- Add String stdlib functions: `reverse`, `trimStart`, `trimEnd`, `isBlank`
+- Add Array/List stdlib functions: `count`, `contains`, `sort`, `min`, `max`, `sum`, `avg`, `find`, `sortBy`, `unique`, `flat`
+- Add Duration unit conversion functions: `inYears`, `inQuarters`, `inMonths`, `inWeeks`, `inDays`, `inHours`, `inMinutes`, `inSeconds`
+- Add Interval type with `Interval()` constructor and `start`/`end` accessors
+- Add camelCase period boundary aliases: `startOfDay`, `endOfDay`, `startOfWeek`, etc.
+- Security fix: Use double quotes in `bot` and `eot` datetime literals
+
 ## 0.10.0
 
 ### Minor Changes
