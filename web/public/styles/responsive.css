@@ -108,6 +108,11 @@
     border-radius: 0;
   }
 
+  header nav .nav-submenu a.toc-sub {
+    padding-left: calc(var(--space-xl) + 1rem);
+    font-size: 0.75rem;
+  }
+
   header nav .nav-submenu a:hover {
     color: var(--text-primary);
     background: rgba(255, 255, 255, 0.05);
