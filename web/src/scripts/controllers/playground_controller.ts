@@ -17,7 +17,7 @@ import {
   getFormat
 } from '@enspirit/elo';
 import type { PreludeTarget } from '@enspirit/elo';
-import { elo } from '../codemirror/elo-language';
+import { elo } from '@enspirit/codemirror-lang-elo';
 import { eloDarkTheme, eloLightTheme } from '../codemirror/elo-theme';
 import { highlightJS, highlightRuby, highlightSQL, highlightPython } from '../highlighter';
 import { formatCode } from '../formatters';

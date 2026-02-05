@@ -1,0 +1,279 @@
+# Number literal
+
+42
+
+==>
+
+Expression(Number)
+
+# Float literal
+
+3.14
+
+==>
+
+Expression(Number)
+
+# Boolean true
+
+true
+
+==>
+
+Expression(Boolean)
+
+# Boolean false
+
+false
+
+==>
+
+Expression(Boolean)
+
+# Null literal
+
+null
+
+==>
+
+Expression(Null)
+
+# String literal
+
+'hello'
+
+==>
+
+Expression(String)
+
+# Date literal
+
+D2024-01-15
+
+==>
+
+Expression(DateLiteral)
+
+# DateTime literal
+
+D2024-01-15T10:30:00Z
+
+==>
+
+Expression(DateTimeLiteral)
+
+# Duration literal
+
+P1Y2M3D
+
+==>
+
+Expression(DurationLiteral)
+
+# Duration with time
+
+PT1H30M
+
+==>
+
+Expression(DurationLiteral)
+
+# Temporal keyword NOW
+
+NOW
+
+==>
+
+Expression(TemporalKeyword)
+
+# Temporal keyword TODAY
+
+TODAY
+
+==>
+
+Expression(TemporalKeyword)
+
+# Variable
+
+x
+
+==>
+
+Expression(Variable(Identifier))
+
+# Arithmetic
+
+1 + 2
+
+==>
+
+Expression(Number, ArithOp, Number)
+
+# Comparison
+
+x > 5
+
+==>
+
+Expression(Variable(Identifier), CompareOp, Number)
+
+# Equality
+
+x == 5
+
+==>
+
+Expression(Variable(Identifier), CompareOp, Number)
+
+# Logical and
+
+true and false
+
+==>
+
+Expression(Boolean, and, Boolean)
+
+# Unary not
+
+not true
+
+==>
+
+Expression(not, Boolean)
+
+# Unary minus
+
+-5
+
+==>
+
+Expression(ArithOp, Number)
+
+# Function call
+
+upper('hello')
+
+==>
+
+Expression(FunctionCall(Identifier, ArgList("(", String, ")")))
+
+# Type call
+
+Int(3.14)
+
+==>
+
+Expression(TypeCall(TypeName, ArgList("(", Number, ")")))
+
+# Let expression
+
+let x = 5 in x + 1
+
+==>
+
+Expression(LetExpression(let, VariableDef(Identifier), "=", Number, in, Variable(Identifier), ArithOp, Number))
+
+# If expression
+
+if x > 0 then 1 else 0
+
+==>
+
+Expression(IfExpression(if, Variable(Identifier), CompareOp, Number, then, Number, else, Number))
+
+# Lambda expression
+
+fn(x ~> x * 2)
+
+==>
+
+Expression(LambdaExpression(fn, "(", Identifier, Arrow, Variable(Identifier), ArithOp, Number, ")"))
+
+# Lambda sugar
+
+x ~> x + 1
+
+==>
+
+Expression(LambdaSugar(Identifier, Arrow, Variable(Identifier), ArithOp, Number))
+
+# Pipe operator
+
+x |> upper
+
+==>
+
+Expression(Variable(Identifier), PipeOp, Identifier)
+
+# Pipe with args
+
+x |> substring(0, 3)
+
+==>
+
+Expression(Variable(Identifier), PipeOp, Identifier, ArgList("(", Number, Number, ")"))
+
+# Array literal
+
+[1, 2, 3]
+
+==>
+
+Expression(ArrayLiteral("[", Number, Number, Number, "]"))
+
+# Member access
+
+user.name
+
+==>
+
+Expression(Variable(Identifier), PropertyName(Identifier))
+
+# Guard expression
+
+guard x > 0 in x
+
+==>
+
+Expression(GuardExpression(guard, Variable(Identifier), CompareOp, Number, in, Variable(Identifier)))
+
+# Check expression
+
+check x > 0 in x
+
+==>
+
+Expression(CheckExpression(check, Variable(Identifier), CompareOp, Number, in, Variable(Identifier)))
+
+# DataPath
+
+.x
+
+==>
+
+Expression(DataPath(PropertyName(Identifier)))
+
+# Empty object
+
+{}
+
+==>
+
+Expression(ObjectLiteral("{", "}"))
+
+# Empty array
+
+[]
+
+==>
+
+Expression(ArrayLiteral("[", "]"))
+
+# Parenthesized expression
+
+(1 + 2) * 3
+
+==>
+
+Expression(ParenExpr("(", Number, ArithOp, Number, ")"), ArithOp, Number)

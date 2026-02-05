@@ -90,6 +90,7 @@ export const eloDarkHighlightStyle = HighlightStyle.define([
   { tag: tags.punctuation, color: '#a1a1aa' },
   { tag: tags.variableName, color: '#e4e4e7' },
   { tag: tags.function(tags.variableName), color: '#82aaff' },
+  { tag: tags.typeName, color: '#ffcb6b' },
   { tag: tags.propertyName, color: '#f07178' }
 ]);
 
@@ -104,6 +105,7 @@ export const eloLightHighlightStyle = HighlightStyle.define([
   { tag: tags.punctuation, color: '#64748b' },
   { tag: tags.variableName, color: '#1e293b' },
   { tag: tags.function(tags.variableName), color: '#2563eb' },
+  { tag: tags.typeName, color: '#b45309' },
   { tag: tags.propertyName, color: '#dc2626' }
 ]);
 

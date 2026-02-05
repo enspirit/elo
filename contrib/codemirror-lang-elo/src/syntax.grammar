@@ -1,0 +1,289 @@
+// Lezer grammar for the Elo expression language
+// https://elo-lang.org
+//
+// This is a simplified grammar focused on syntax highlighting,
+// bracket matching, and code folding. It does not attempt to
+// replicate all semantic rules of Elo's recursive descent parser.
+
+@top Expression { expression }
+
+@skip { space | LineComment }
+
+@precedence {
+  pipe @left,
+  or @left,
+  and @left,
+  alternative @left,
+  equality @left,
+  comparison @left,
+  add @left,
+  multiply @left,
+  power @right,
+  unary,
+  member @left,
+  call @left
+}
+
+expression {
+  LetExpression |
+  IfExpression |
+  GuardExpression |
+  CheckExpression |
+  pipeExpr
+}
+
+LetExpression {
+  kw<"let"> letBindings kw<"in"> expression |
+  kw<"let"> letBindings GuardExpression |
+  kw<"let"> letBindings CheckExpression
+}
+
+letBindings {
+  letBinding ("," letBinding)* ","?
+}
+
+letBinding {
+  TypeName "=" typeExpression |
+  VariableDef "=" expression
+}
+
+VariableDef { Identifier }
+
+IfExpression {
+  kw<"if"> expression kw<"then"> expression kw<"else"> expression
+}
+
+GuardExpression {
+  kw<"guard"> constraintList kw<"in"> expression |
+  kw<"guard"> constraintList GuardExpression |
+  kw<"guard"> constraintList CheckExpression
+}
+
+CheckExpression {
+  kw<"check"> constraintList kw<"in"> expression |
+  kw<"check"> constraintList GuardExpression |
+  kw<"check"> constraintList CheckExpression
+}
+
+constraintList {
+  constraintItem ("," constraintItem)* ","?
+}
+
+constraintItem {
+  Identifier ":" pipeExpr |
+  String ":" pipeExpr |
+  pipeExpr
+}
+
+pipeExpr {
+  pipeExpr !pipe PipeOp Identifier ArgList |
+  pipeExpr !pipe PipeOp TypeName ArgList |
+  pipeExpr !pipe PipeOp Identifier |
+  pipeExpr !pipe PipeOp TypeName |
+  logicalOr
+}
+
+logicalOr {
+  logicalOr !or (kw<"or"> | Or) logicalAnd |
+  logicalAnd
+}
+
+logicalAnd {
+  logicalAnd !and (kw<"and"> | And) alternativeExpr |
+  alternativeExpr
+}
+
+alternativeExpr {
+  alternativeExpr !alternative "|" equalityExpr |
+  equalityExpr
+}
+
+equalityExpr {
+  equalityExpr !equality CompareOp comparisonExpr |
+  comparisonExpr
+}
+
+comparisonExpr {
+  comparisonExpr !comparison CompareOp addExpr |
+  addExpr
+}
+
+addExpr {
+  addExpr !add ArithOp multiplyExpr |
+  multiplyExpr
+}
+
+multiplyExpr {
+  multiplyExpr !multiply ArithOp powerExpr |
+  powerExpr
+}
+
+powerExpr {
+  unaryExpr !power "^" powerExpr |
+  unaryExpr
+}
+
+unaryExpr {
+  !unary (kw<"not"> | Not) unaryExpr |
+  !unary ArithOp unaryExpr |
+  postfixExpr
+}
+
+postfixExpr {
+  postfixExpr !member "." PropertyName |
+  postfixExpr !call ArgList |
+  atom
+}
+
+PropertyName { Identifier | Number }
+
+ArgList {
+  "(" commaSep<expression> ")"
+}
+
+atom {
+  Number |
+  boolTrue |
+  boolFalse |
+  nullLit |
+  String |
+  DateLiteral |
+  DateTimeLiteral |
+  DurationLiteral |
+  TemporalKeyword |
+  LambdaSugar |
+  FunctionCall |
+  TypeCall |
+  Variable |
+  ParenExpr |
+  LambdaExpression |
+  ObjectLiteral |
+  ArrayLiteral |
+  DataPath
+}
+
+LambdaSugar {
+  Identifier Arrow pipeExpr
+}
+
+FunctionCall {
+  Identifier ~callOrVar ArgList
+}
+
+TypeCall {
+  TypeName ArgList
+}
+
+Variable { Identifier ~callOrVar }
+
+ParenExpr { "(" expression ")" }
+
+LambdaExpression {
+  kw<"fn"> "(" lambdaParams? Arrow expression ")"
+}
+
+lambdaParams {
+  Identifier ("," Identifier)*
+}
+
+ObjectLiteral {
+  "{" commaSep<ObjectProperty> "}"
+}
+
+ObjectProperty {
+  PropertyName ":" expression
+}
+
+ArrayLiteral {
+  "[" commaSep<expression> "]"
+}
+
+DataPath {
+  "." PropertyName
+}
+
+// Type expressions (used in let Type = ... in ...)
+
+typeExpression {
+  typePrimary ("|" typePrimary)*
+}
+
+typePrimary {
+  TypeName "(" Identifier "|" constraintList ")" |
+  TypeName |
+  "[" typeExpression "]" |
+  TypeSchema |
+  AnyTypeDot
+}
+
+AnyTypeDot { "." }
+
+TypeSchema {
+  "{" typeSchemaBody "}"
+}
+
+typeSchemaBody {
+  typeSchemaEntry ("," typeSchemaEntry)* ","? |
+  ""
+}
+
+typeSchemaEntry {
+  "..." (":" typeExpression)? |
+  Identifier ":" "?"? typeExpression
+}
+
+// Helpers
+
+commaSep<content> {
+  (content ("," content)* ","?)?
+}
+
+kw<word> { @specialize[@name={word}]<Identifier, word> }
+
+boolTrue { @specialize[@name=Boolean]<Identifier, "true"> }
+boolFalse { @specialize[@name=Boolean]<Identifier, "false"> }
+nullLit { @specialize[@name=Null]<Identifier, "null"> }
+
+// Tokens
+
+@tokens {
+  space { $[ \t\n\r]+ }
+
+  LineComment { "#" ![\n]* }
+
+  @precedence { LineComment, space }
+
+  String { "'" (![\\'] | "\\" _)* "'" }
+
+  Number { @digit+ ("." @digit+)? }
+
+  // Only lowercase identifiers; uppercase handled by external tokenizer
+  Identifier { $[a-z_] $[a-zA-Z0-9_]* }
+
+  @precedence { Number, "." }
+
+  PipeOp { "|>" }
+  Arrow { "~>" }
+  Or { "||" }
+  And { "&&" }
+  Not { "!" }
+  CompareOp { "==" | "!=" | "<=" | ">=" | "<" | ">" }
+  ArithOp { "+" | "-" | "*" | "/" | "%" }
+
+  @precedence { PipeOp, Or, "|" }
+  @precedence { CompareOp, Not }
+  @precedence { Number, "." }
+
+  "(" ")" "[" "]" "{" "}"
+  "," ":" "=" "." "|" "^" "?" "..."
+}
+
+@external tokens dateLiterals from "./tokens" {
+  DateLiteral,
+  DateTimeLiteral,
+  DurationLiteral,
+  TemporalKeyword,
+  TypeName
+}
+
+@detectDelim

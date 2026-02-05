@@ -8,7 +8,7 @@ import {
   parse,
   compileToJavaScript,
 } from '@enspirit/elo';
-import { elo } from '../codemirror/elo-language';
+import { elo } from '@enspirit/codemirror-lang-elo';
 import { eloDarkTheme, eloLightTheme } from '../codemirror/elo-theme';
 
 // Make luxon DateTime, Duration, and Interval available globally for eval

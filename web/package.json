@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
+    "@enspirit/codemirror-lang-elo": "file:../contrib/codemirror-lang-elo",
     "@enspirit/elo": "file:..",
     "@hotwired/stimulus": "^3.2.2",
     "luxon": "^3.5.0"
