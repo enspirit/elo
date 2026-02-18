@@ -546,13 +546,21 @@ function transformAlternative(
     transformWithDepth(alt, env, defining, depth, maxDepth, allowUndefinedVariables)
   );
 
-  // Infer result type: use first non-any type, or any if all are any
-  let resultType: EloType = Types.any;
-  for (const alt of irAlts) {
-    const altType = inferType(alt);
-    if (altType.kind !== 'any') {
-      resultType = altType;
-      break;
+  // Infer result type: if first alternative is any, result is any (runtime value is opaque).
+  // Otherwise, use first non-any type, or any if all are any.
+  const firstType = inferType(irAlts[0]);
+  let resultType: EloType = firstType;
+  if (firstType.kind === 'any') {
+    // First alternative is any, result must be any (we can't assume fallback types)
+    resultType = Types.any;
+  } else {
+    // Use first non-any type
+    for (const alt of irAlts) {
+      const altType = inferType(alt);
+      if (altType.kind !== 'any') {
+        resultType = altType;
+        break;
+      }
     }
   }
 

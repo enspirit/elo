@@ -5,3 +5,4 @@
 (lambda _: kAssert(((_alt0) if (_alt0 := kIndexOf("hello", "x")) is not None else ((_alt1) if (_alt1 := kIndexOf("hello", "z")) is not None else (-1))) == -1))(None)
 (lambda _: kAssert(((_alt0) if (_alt0 := kIndexOf("hello", "x")) is not None else ((_alt1) if (_alt1 := kIndexOf("hello", "l")) is not None else (-1))) == 2))(None)
 (lambda _: kAssert((x := 42, ((_alt0) if (_alt0 := x) is not None else (0)))[-1] == 42))(None)
+(lambda _: kAssert((tuple := {"x": "12"}, int(((_alt0) if (_alt0 := tuple.get("x")) is not None else (0))))[-1] == 12))(None)

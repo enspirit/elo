@@ -5,3 +5,4 @@
 ->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("x"); return v unless v.nil?; v = "hello".index("z"); return v unless v.nil?; -1 }.call == -1; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ->() { v = "hello".index("x"); return v unless v.nil?; v = "hello".index("l"); return v unless v.nil?; -1 }.call == 2; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (x = 42; ->() { v = x; return v unless v.nil?; 0 }.call) == 42; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (tuple = {x: "12"}; (->(v) { case v when Integer; v when Float; v.to_i when String; Integer(v) rescue raise ".: expected Int, got #{v.inspect}" else raise ".: expected Int, got #{v.class}" end }).call(->() { v = tuple[:x]; return v unless v.nil?; 0 }.call)) == 12; true) }.call(nil);
