@@ -729,13 +729,11 @@ import Footer from '../components/Footer.astro';
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">fetch</div>
-            <div class="fn-sig">(data: Any, path: DataPath) → Any | Null</div>
+            <div class="fn-sig">(data: Any, path: DataPath | String) → Any | Null</div>
             <div class="fn-sig">(data: Any, paths: Tuple) → Tuple</div>
-            <div class="fn-sig">(data: Any, paths: List) → List</div>
-            <p class="fn-desc">Navigates the data structure following the path. Returns <code>null</code> if any segment fails. Can fetch multiple paths into a tuple or list.</p>
-            <div class="fn-example"><code class="language-elo">fetch(&#123;name: 'Alice'&#125;, .name)</code><span class="fn-result">→ 'Alice'</span></div>
+            <p class="fn-desc">Navigates the data structure following the path. Returns <code>null</code> if any segment fails.</p>
+            <div class="fn-example"><code class="language-elo">fetch(&#123;user: &#123;name: 'Bob'&#125;&#125;, .user.name)</code><span class="fn-result">→ 'Bob'</span></div>
             <div class="fn-example"><code class="language-elo">fetch(&#123;a: 1, b: 2&#125;, &#123;x: .a, y: .b&#125;)</code><span class="fn-result">→ &#123;x: 1, y: 2&#125;</span></div>
-            <div class="fn-example"><code class="language-elo">fetch(&#123;a: 1, b: 2&#125;, [.a, .b])</code><span class="fn-result">→ [1, 2]</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">merge</div>

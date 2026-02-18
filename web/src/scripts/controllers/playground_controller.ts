@@ -87,9 +87,8 @@ fetch(_, {
   userCity: .user.address.city,
   itemCount: .order.items.0
 })`,
-  'fetch-list': `# Extract paths into a list, then process
-fetch(_, [.scores.0, .scores.1, .scores.2])
-  |> reduce(0, fn(sum, x ~> sum + x))`,
+  'fetch-list': `# Dynamic path access with strings and arrays
+let key = 'name' in fetch(_, key)`,
   'type-simple': `let Person = { name: String, age: Int } in
 { name: 'Alice', age: '30' } |> Person`,
   'type-validation': `let
@@ -141,7 +140,7 @@ Carol,35,London`, format: 'csv' },
   },
   "order": { "items": [3, 5, 2] }
 }`, format: 'json' },
-  'fetch-list': { data: `{"scores": [85, 92, 78]}`, format: 'json' },
+  'fetch-list': { data: `{"name": "Alice", "age": 30}`, format: 'json' },
   'type-validation': { data: `{"name": "Alice", "age": "30"}`, format: 'json' },
   'guard-labeled': { data: `{"age": 25}`, format: 'json' }
 };

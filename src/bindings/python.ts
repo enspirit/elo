@@ -305,13 +305,17 @@ export function createPythonBinding(): StdLib<string> {
   });
 
   // Fetch
-  pyLib.register('fetch', [Types.any, Types.any], (args, ctx) => {
+  pyLib.register('fetch', [Types.any, Types.fn], (args, ctx) => {
     ctx.requireHelper?.('kFetch');
     return `kFetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
+  pyLib.register('fetch', [Types.any, Types.string], (args, ctx) => {
+    ctx.requireHelper?.('kFetch');
+    return `kFetch(${ctx.emit(args[0])}, [${ctx.emit(args[1])}])`;
+  });
   pyLib.register('fetch', [Types.any, Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kFetchArray');
-    return `kFetchArray(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+    ctx.requireHelper?.('kFetch');
+    return `kFetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('fetch', [Types.any, Types.object], (args, ctx) => {
     ctx.requireHelper?.('kFetchObject');

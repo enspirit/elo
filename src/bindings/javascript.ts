@@ -426,8 +426,14 @@ export function createJavaScriptBinding(): StdLib<string> {
 
   // Data path navigation
   jsLib.register('fetch', [Types.any, Types.fn], helperCall('kFetch'));
+  jsLib.register('fetch', [Types.any, Types.string], (args, ctx) => {
+    ctx.requireHelper?.('kFetch');
+    const data = ctx.emit(args[0]);
+    const key = ctx.emit(args[1]);
+    return `kFetch(${data}, [${key}])`;
+  });
+  jsLib.register('fetch', [Types.any, Types.array], helperCall('kFetch'));
   jsLib.register('fetch', [Types.any, Types.object], helperCall('kFetchObject'));
-  jsLib.register('fetch', [Types.any, Types.array], helperCall('kFetchArray'));
   jsLib.register('patch', [Types.any, Types.fn, Types.any], helperCall('kPatch'));
 
   // Data merge functions

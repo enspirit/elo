@@ -112,15 +112,15 @@ let data = { user: { name: 'Alice', email: 'alice@example.com' } } in
   })
 ```
 
-Same result, less noise. It also works with lists:
+Same result, less noise. You can also use dynamic keys:
 
 ```elo
-let data = { scores: [85, 92, 78] } in
-  fetch(data, [.scores.0, .scores.1, .scores.2])
-    |> reduce(0, fn(sum, x ~> sum + x))
+let data = { name: 'Alice' } in
+let key = 'name' in
+  fetch(data, key)
 ```
 
-Extract multiple paths in one call, then pipe the result to further processing.
+String keys and array paths work the same as path literals.
 
 ## What's Next
 
