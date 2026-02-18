@@ -4,6 +4,13 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.13] - 2026-02-18
+
+### Fixes
+- Fix `Int()` conversion on alternative expressions with any-typed first value (e.g., `Int(tuple.x|0)` now correctly converts string values)
+- Unify `fetch` path semantics: `fetch(data, 'key')` now works as single-segment path, and `fetch(data, ['a', 'b'])` traverses `data.a.b` consistently with `fetch(data, .a.b)`.
+  **Warning**: code using `fetch(data, [.a, .b])` to extract multiple values into an array will break; use `[fetch(data, .a), fetch(data, .b)]` instead.
+
 ## [0.9.12] - 2026-02-04
 
 ### Standard Library
