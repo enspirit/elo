@@ -2,3 +2,7 @@ assert(max([3, 1, 4, 1, 5]) == 5)
 assert(max([42]) == 42)
 assert(max([-3, -1, -4]) == -1)
 assert(isNull(max([])))
+
+# max on datetime arrays preserves type (regression test)
+assert(typeOf(max([SOD, SOD - P1D])) == 'DateTime')
+assert(max([SOD, SOD - P1D]) == SOD)

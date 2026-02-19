@@ -4,6 +4,9 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+### Fixes
+- Fix `min` and `max` on DateTime arrays in JavaScript: preserve DateTime type instead of converting to Int
+
 ## [0.9.13] - 2026-02-18
 
 ### Fixes

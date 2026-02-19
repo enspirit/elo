@@ -255,9 +255,9 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('sort', [Types.array], (args, ctx) =>
     `[...${ctx.emit(args[0])}].sort((a, b) => a < b ? -1 : a > b ? 1 : 0)`);
   jsLib.register('min', [Types.array], (args, ctx) =>
-    `(a => a.length === 0 ? null : Math.min(...a))(${ctx.emit(args[0])})`);
+    `(a => a.length === 0 ? null : a.reduce((x, y) => x < y ? x : y))(${ctx.emit(args[0])})`);
   jsLib.register('max', [Types.array], (args, ctx) =>
-    `(a => a.length === 0 ? null : Math.max(...a))(${ctx.emit(args[0])})`);
+    `(a => a.length === 0 ? null : a.reduce((x, y) => x > y ? x : y))(${ctx.emit(args[0])})`);
   jsLib.register('sum', [Types.array], (args, ctx) =>
     `${ctx.emit(args[0])}.reduce((a, b) => a + b, 0)`);
   jsLib.register('avg', [Types.array], (args, ctx) =>
