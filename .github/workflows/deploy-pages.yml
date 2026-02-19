@@ -30,6 +30,9 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
+      - name: Build codemirror-lang-elo
+        run: cd contrib/codemirror-lang-elo && npm ci && npm run prepare
+
       - name: Install web dependencies
         run: cd web && npm ci
 
