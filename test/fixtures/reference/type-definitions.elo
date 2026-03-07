@@ -56,6 +56,9 @@ assert((let T = Float in 42 |> T) == 42.0)
 # Bool type coercion in schema
 assert((let Config = { enabled: Bool } in { enabled: 'true' } |> Config) == { enabled: true })
 assert((let Config = { enabled: Bool } in { enabled: 'false' } |> Config) == { enabled: false })
+# Date type coercion in schema
+assert((let Event = { date: Date } in (({ date: '2024-01-15' } |> Event).date |> year)) == 2024)
+assertFails(fn( ~> let T = Date in 'bad' |> T ))
 # Datetime type coercion in schema
 assert((let Event = { date: Datetime } in (({ date: '2024-01-15T10:30:00' } |> Event).date |> year)) == 2024)
 # Deeply nested struct schemas

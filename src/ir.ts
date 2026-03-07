@@ -246,7 +246,7 @@ export type IRTypeExpr = IRTypeRef | IRTypeSchema | IRSubtypeConstraint | IRArra
  */
 export interface IRTypeRef {
   kind: 'type_ref';
-  name: string;  // 'String', 'Int', 'Bool', 'Datetime', 'Any'
+  name: string;  // 'String', 'Int', 'Bool', 'Date', 'Datetime', 'Any'
 }
 
 /**

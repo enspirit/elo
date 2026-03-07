@@ -885,8 +885,8 @@ describe('transform - type definitions', () => {
   });
 
   it('transforms typedef with all built-in type selectors', () => {
-    // All built-in types should work: Any, Null, String, Int, Float, Bool, Boolean, Datetime
-    const builtinTypes = ['Any', 'Null', 'String', 'Int', 'Float', 'Bool', 'Boolean', 'Datetime'];
+    // All built-in types should work: Any, Null, String, Int, Float, Bool, Boolean, Date, Datetime
+    const builtinTypes = ['Any', 'Null', 'String', 'Int', 'Float', 'Bool', 'Boolean', 'Date', 'Datetime'];
     for (const typeName of builtinTypes) {
       const ir = transform(typeDef('T', typeRef(typeName), literal(42)));
       assert.strictEqual(ir.type, 'typedef');

@@ -335,11 +335,11 @@ export function dataPath(segments: (string | number)[]): DataPath {
 export type TypeExpr = TypeRef | TypeSchema | SubtypeConstraint | ArrayType | UnionType;
 
 /**
- * Reference to a base type: String, Int, Bool, Datetime, Any
+ * Reference to a base type: String, Int, Bool, Date, Datetime, Any
  */
 export interface TypeRef {
   kind: 'type_ref';
-  name: string;  // 'String', 'Int', 'Bool', 'Datetime', 'Any'
+  name: string;  // 'String', 'Int', 'Bool', 'Date', 'Datetime', 'Any'
 }
 
 /**

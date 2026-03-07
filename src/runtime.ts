@@ -417,6 +417,7 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   pInt: ['pOk', 'pFail'],
   pFloat: ['pOk', 'pFail'],
   pBool: ['pOk', 'pFail'],
+  pDate: ['pOk', 'pFail', 'kParseDate'],
   pDatetime: ['pOk', 'pFail', 'kParseDatetime'],
   pSchema: ['pOk', 'pFail'],
   pArray: ['pOk', 'pFail'],
@@ -732,6 +733,12 @@ def _elo_end_of_year(dt):
     if v == "true": return pOk(True, p)
     if v == "false": return pOk(False, p)
     return pFail(p, "expected Bool, got " + ("Null" if v is None else repr(v) if isinstance(v, str) else type(v).__name__))`,
+  pDate: `def pDate(v, p):
+    if isinstance(v, _dt.datetime): return pOk(kParseDate(v), p)
+    if isinstance(v, str):
+        try: return pOk(kParseDate(v), p)
+        except: pass
+    return pFail(p, "expected Date (YYYY-MM-DD), got " + ("Null" if v is None else repr(v) if isinstance(v, str) else type(v).__name__))`,
   pDatetime: `def pDatetime(v, p):
     if isinstance(v, _dt.datetime): return pOk(v, p)
     if isinstance(v, str):

@@ -4,6 +4,9 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+### Language
+- Add `Date` as a built-in type selector for data schemas (e.g., `let Event = { date: Date } in data |> Event`)
+
 ## [0.9.14] - 2026-02-19
 
 ### Fixes

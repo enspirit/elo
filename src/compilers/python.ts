@@ -304,6 +304,7 @@ function emitTypeExprParser(
         'Float': 'pFloat',
         'Bool': 'pBool',
         'Boolean': 'pBool',
+        'Date': 'pDate',
         'Datetime': 'pDatetime',
       };
       const parserName = parserMap[typeExpr.name];
