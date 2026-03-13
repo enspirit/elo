@@ -88,6 +88,30 @@ describe('Parser - String Literals', () => {
     });
   });
 
+  it('should parse string with escaped newline', () => {
+    const ast = parse("'hello\\nworld'");
+    assert.deepStrictEqual(ast, {
+      type: 'string',
+      value: 'hello\nworld'
+    });
+  });
+
+  it('should parse string with escaped tab', () => {
+    const ast = parse("'col1\\tcol2'");
+    assert.deepStrictEqual(ast, {
+      type: 'string',
+      value: 'col1\tcol2'
+    });
+  });
+
+  it('should parse string with multiple escape sequences', () => {
+    const ast = parse("'line1\\nline2\\nline3'");
+    assert.deepStrictEqual(ast, {
+      type: 'string',
+      value: 'line1\nline2\nline3'
+    });
+  });
+
   it('should parse string with numbers', () => {
     const ast = parse("'test123'");
     assert.deepStrictEqual(ast, {

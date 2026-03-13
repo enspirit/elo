@@ -7,6 +7,7 @@
 import { IRExpr, inferType } from '../ir';
 import { Types } from '../types';
 import { StdLib, EmitContext, nullary, fnCall } from '../stdlib';
+import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
  * Map IR function names to SQL operators
@@ -517,6 +518,17 @@ export function createSQLBinding(): StdLib<string> {
   // Split string into list
   sqlLib.register('split', [Types.string, Types.string], (args, ctx) =>
     `string_to_array(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+
+  // Extract - pattern matching with mustache-style templates
+  sqlLib.register('extract', [Types.string, Types.string], (args, ctx) => {
+    const template = parseExtractTemplate((args[1] as { value: string }).value);
+    const pattern = buildExtractPattern(template);
+    // Escape single quotes for SQL string
+    const escapedPattern = pattern.replace(/'/g, "''");
+    const matchPairs = template.fields.map((f, i) => `'${f}', _m[${i + 1}]`).join(', ');
+    const nullPairs = template.fields.map(f => `'${f}', NULL`).join(', ');
+    return `(SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object(${matchPairs}) ELSE jsonb_build_object(${nullPairs}) END FROM (SELECT regexp_match(${ctx.emit(args[0])}, '${escapedPattern}')) AS _t(_m))`;
+  });
 
   // No fallback - unknown functions should fail at compile time
   // (StdLib.emit() will throw if no implementation is found)

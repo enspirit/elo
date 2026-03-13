@@ -256,6 +256,11 @@ export function createTypeDefs(): TypeDefs {
   defs.register('padEnd', [Types.string, Types.int, Types.string], Types.string);
 
   // ============================================
+  // String extraction
+  // ============================================
+  defs.register('extract', [Types.string, Types.string], Types.object); // returns object with null fields on no match
+
+  // ============================================
   // Array functions
   // ============================================
   defs.register('length', [Types.array], Types.int);

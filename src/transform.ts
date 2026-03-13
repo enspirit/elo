@@ -44,6 +44,7 @@ import {
 import { TypeExpr } from './ast';
 import { EloType, Types, TypeKind } from './types';
 import { eloTypeDefs } from './typedefs';
+import { parseExtractTemplate } from './extract';
 
 /**
  * Type environment: maps variable names to their inferred types
@@ -456,6 +457,18 @@ function transformFunctionCall(
   // Check for recursive call
   if (defining.has(name)) {
     throw new Error(`Recursive function calls are not allowed: '${name}' cannot call itself`);
+  }
+
+  // Validate extract() template at compile time
+  if (name === 'extract') {
+    if (args.length !== 2) {
+      throw new Error(`extract() requires exactly 2 arguments (text, template), got ${args.length}`);
+    }
+    if (args[1].type !== 'string') {
+      throw new Error(`extract() template (2nd argument) must be a string literal`);
+    }
+    // Validate the template parses correctly (throws on errors)
+    parseExtractTemplate(args[1].value);
   }
 
   const argsIR = args.map((arg) => transformWithDepth(arg, env, defining, depth, maxDepth, allowUndefinedVariables));

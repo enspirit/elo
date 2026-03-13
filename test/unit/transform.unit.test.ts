@@ -961,3 +961,46 @@ describe('transform - type definitions', () => {
     );
   });
 });
+
+describe('transform - extract validation', () => {
+  it('transforms valid extract call', () => {
+    const ir = transform(functionCall('extract', [
+      stringLiteral('From: John <john@acme.com>'),
+      stringLiteral('From: {{name}} <{{email}}>')
+    ]));
+    assert.strictEqual(ir.type, 'call');
+    if (ir.type === 'call') {
+      assert.strictEqual(ir.fn, 'extract');
+      assert.deepStrictEqual(ir.resultType, Types.object);
+    }
+  });
+
+  it('rejects extract with non-literal template', () => {
+    assert.throws(
+      () => transform(functionCall('extract', [
+        stringLiteral('hello'),
+        variable('_')
+      ])),
+      /extract\(\) template.*must be a string literal/
+    );
+  });
+
+  it('rejects extract with invalid template', () => {
+    assert.throws(
+      () => transform(functionCall('extract', [
+        stringLiteral('hello'),
+        stringLiteral('no placeholders here')
+      ])),
+      /at least one/
+    );
+  });
+
+  it('rejects extract with wrong number of arguments', () => {
+    assert.throws(
+      () => transform(functionCall('extract', [
+        stringLiteral('hello')
+      ])),
+      /extract\(\) requires exactly 2 arguments/
+    );
+  });
+});

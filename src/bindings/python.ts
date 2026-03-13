@@ -7,6 +7,7 @@
 import { IRExpr } from '../ir';
 import { Types } from '../types';
 import { StdLib, simpleBinaryOp, helperCall, isBinaryOp, FunctionEmitter } from '../stdlib';
+import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
  * Map IR function names to Python operators
@@ -490,6 +491,18 @@ export function createPythonBinding(): StdLib<string> {
     pyLib.register('lte', [t, t], simpleBinaryOp('<='));
     pyLib.register('gte', [t, t], simpleBinaryOp('>='));
   }
+
+  // Extract - pattern matching with mustache-style templates
+  pyLib.register('extract', [Types.string, Types.string], (args, ctx) => {
+    ctx.requireHelper?.('_import_re');
+    const template = parseExtractTemplate((args[1] as { value: string }).value);
+    const pattern = buildExtractPattern(template);
+    // Escape single quotes for Python string
+    const escapedPattern = pattern.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const matchObj = template.fields.map((f, i) => `"${f}": _m.group(${i + 1})`).join(', ');
+    const nullObj = template.fields.map(f => `"${f}": None`).join(', ');
+    return `(lambda s: (lambda _m: {${matchObj}} if _m else {${nullObj}})(re.search('${escapedPattern}', s)))(${ctx.emit(args[0])})`;
+  });
 
   // Fallback for dynamic-typed operations
   pyLib.registerFallback((name, args, argTypes, ctx) => {

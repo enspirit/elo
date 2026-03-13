@@ -7,6 +7,7 @@
 import { IRExpr } from '../ir';
 import { Types } from '../types';
 import { StdLib, EmitContext, simpleBinaryOp, nullary, rubyMethod, isBinaryOp } from '../stdlib';
+import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
  * Map IR function names to Ruby operators
@@ -551,6 +552,19 @@ export function createRubyBinding(): StdLib<string> {
   for (const t of [Types.string, Types.any]) {
     rubyLib.register('split', [t, Types.string], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.split(${ctx.emit(args[1])})`);
+  }
+
+  // Extract - pattern matching with mustache-style templates
+  for (const t of [Types.string, Types.any]) {
+    rubyLib.register('extract', [t, Types.string], (args, ctx) => {
+      const template = parseExtractTemplate((args[1] as { value: string }).value);
+      const pattern = buildExtractPattern(template);
+      const matchObj = template.fields.map((f, i) => `${f}: _m[${i + 1}]`).join(', ');
+      const nullObj = template.fields.map(f => `${f}: nil`).join(', ');
+      // Escape / in pattern for Ruby regex literal
+      const escapedPattern = pattern.replace(/\//g, '\\/');
+      return `(->(s) { _m = s.match(/${escapedPattern}/); _m ? {${matchObj}} : {${nullObj}} }).call(${ctx.emit(args[0])})`;
+    });
   }
 
   // No fallback - unknown functions should fail at compile time

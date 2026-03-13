@@ -178,8 +178,8 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
       return 'nil';
 
     case 'string_literal': {
-      // Ruby double-quoted strings: escape backslash and double quote
-      const escaped = ir.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      // Ruby double-quoted strings: escape backslash, double quote, and control chars
+      const escaped = ir.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
       return `"${escaped}"`;
     }
 

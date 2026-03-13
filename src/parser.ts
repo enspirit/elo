@@ -186,14 +186,20 @@ class Lexer {
     let str = '';
     while (this.current && this.current !== "'") {
       // Handle escape sequences
-      if (this.current === '\\' && this.peek() === "'") {
-        this.advance(); // skip backslash
-        str += "'";
-        this.advance();
-      } else if (this.current === '\\' && this.peek() === '\\') {
-        this.advance(); // skip first backslash
-        str += '\\';
-        this.advance();
+      if (this.current === '\\') {
+        const next = this.peek();
+        if (next === "'") {
+          this.advance(); str += "'"; this.advance();
+        } else if (next === '\\') {
+          this.advance(); str += '\\'; this.advance();
+        } else if (next === 'n') {
+          this.advance(); str += '\n'; this.advance();
+        } else if (next === 't') {
+          this.advance(); str += '\t'; this.advance();
+        } else {
+          str += this.current;
+          this.advance();
+        }
       } else {
         str += this.current;
         this.advance();

@@ -8,6 +8,7 @@
 import { IRExpr } from '../ir';
 import { Types } from '../types';
 import { StdLib, simpleBinaryOp, nullary, fnCall, helperCall, FunctionEmitter } from '../stdlib';
+import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
  * Helper for type selector using Finitio parser + pUnwrap.
@@ -559,6 +560,17 @@ export function createJavaScriptBinding(): StdLib<string> {
       const str = wrapReceiver(args, ctx);
       const sep = ctx.emit(args[1]);
       return `(${str} === '' ? [] : ${str}.split(${sep}))`;
+    });
+  }
+
+  // Extract - pattern matching with mustache-style templates
+  for (const t of [Types.string, Types.any]) {
+    jsLib.register('extract', [t, Types.string], (args, ctx) => {
+      const template = parseExtractTemplate((args[1] as { value: string }).value);
+      const pattern = buildExtractPattern(template);
+      const matchObj = template.fields.map((f, i) => `${f}: _m[${i + 1}]`).join(', ');
+      const nullObj = template.fields.map(f => `${f}: null`).join(', ');
+      return `(function() { var _m = ${ctx.emit(args[0])}.match(/${pattern.replace(/\//g, '\\/')}/); return _m ? {${matchObj}} : {${nullObj}}; })()`;
     });
   }
 

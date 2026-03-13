@@ -703,6 +703,12 @@ import Footer from '../components/Footer.astro';
             <p class="fn-desc">Returns the index of the first occurrence, or <code>null</code> if not found.</p>
             <div class="fn-example"><code class="language-elo">indexOf('hello', 'l')</code><span class="fn-result">→ 2</span></div>
           </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">extract</div>
+            <div class="fn-sig">(s: String, template: String) → Tuple</div>
+            <p class="fn-desc">Extracts named fields from a string using a mustache-style template. Returns a tuple with the extracted values, or a tuple with <code>null</code> fields if the pattern does not match. The template must be a string literal with <code>&#123;&#123;field&#125;&#125;</code> placeholders.</p>
+            <div class="fn-example"><code class="language-elo">extract('Dear Bob, order #42', 'Dear &#123;&#123;name&#125;&#125;, order #&#123;&#123;id&#125;&#125;').name</code><span class="fn-result">→ 'Bob'</span></div>
+          </div>
         </div>
 
         <h3 id="string-summary" style="margin-top: 2rem;">Summary</h3>

@@ -118,8 +118,10 @@ function emitSQL(ir: IRExpr): string {
 
     case 'string_literal': {
       // SQL strings use single quotes, escape single quotes by doubling
-      const escaped = ir.value.replace(/'/g, "''");
-      return `'${escaped}'`;
+      const escaped = ir.value.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
+      // Use E'...' escape syntax if string contains escape sequences
+      const prefix = escaped !== ir.value.replace(/'/g, "''") ? 'E' : '';
+      return `${prefix}'${escaped}'`;
     }
 
     case 'date_literal': {
