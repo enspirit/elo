@@ -23,6 +23,9 @@
 
 import { parseCSV, toCSV } from './csv';
 import { toEloCode } from './serialize';
+import { parse } from './parser';
+import { compileToJavaScriptWithMeta } from './compilers/javascript';
+import { DateTime, Duration, Interval } from 'luxon';
 
 /**
  * Interface for a data format adapter.
@@ -77,12 +80,16 @@ export const csvAdapter: FormatAdapter = {
 
 /**
  * Built-in Elo code format adapter.
- * This format is output-only (serialize only).
- * Parsing Elo code requires the full parser.
+ * Parses Elo expressions by compiling to JavaScript and evaluating.
+ * Serializes values to Elo code syntax.
  */
 export const eloAdapter: FormatAdapter = {
-  parse: (_input: string): unknown => {
-    throw new Error('Elo format is output-only. Use the parser for Elo expressions.');
+  parse: (input: string): unknown => {
+    const ast = parse(input);
+    const { code } = compileToJavaScriptWithMeta(ast);
+    const execFn = new Function('DateTime', 'Duration', 'Interval', `return ${code}`);
+    const fn = execFn(DateTime, Duration, Interval);
+    return fn(null);
   },
   serialize: (value: unknown): string => toEloCode(value)
 };

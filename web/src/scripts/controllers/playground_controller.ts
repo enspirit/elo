@@ -285,12 +285,13 @@ export default class PlaygroundController extends Controller {
     const theme = isLight ? eloLightTheme : eloDarkTheme;
     const inputFormat = this.inputFormatTarget?.value || 'json';
 
-    // Build extensions - only include JSON mode for JSON format
+    // Build extensions - include language mode based on format
+    const languageMode = inputFormat === 'json' ? [json()] : inputFormat === 'elo' ? [elo()] : [];
     const extensions = [
       history(),
       bracketMatching(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      ...(inputFormat === 'json' ? [json()] : []),
+      ...languageMode,
       ...theme,
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {

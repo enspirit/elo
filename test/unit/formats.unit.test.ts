@@ -54,8 +54,12 @@ describe('eloAdapter', () => {
     assert.strictEqual(eloAdapter.serialize(null), 'null');
   });
 
-  it('throws on parse (output-only format)', () => {
-    assert.throws(() => eloAdapter.parse('1 + 2'), /output-only/);
+  it('parses Elo expressions to values', () => {
+    assert.strictEqual(eloAdapter.parse('1 + 2'), 3);
+    assert.deepStrictEqual(eloAdapter.parse('{a: 1, b: 2}'), { a: 1, b: 2 });
+    assert.deepStrictEqual(eloAdapter.parse('[1, 2, 3]'), [1, 2, 3]);
+    assert.strictEqual(eloAdapter.parse("'hello'"), 'hello');
+    assert.strictEqual(eloAdapter.parse('null'), null);
   });
 });
 

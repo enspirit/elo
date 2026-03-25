@@ -9,7 +9,7 @@ import { defaultFormats, getFormat, FormatRegistry } from './formats';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json');
 
-type InputFormat = 'json' | 'csv';
+type InputFormat = 'json' | 'csv' | 'elo';
 type OutputFormat = 'json' | 'elo' | 'csv';
 
 interface Options {
@@ -49,8 +49,8 @@ function parseArgs(args: string[]): Options {
       case '-f':
       case '--input-format':
         options.inputFormat = args[++i] as InputFormat;
-        if (options.inputFormat !== 'json' && options.inputFormat !== 'csv') {
-          console.error(`Invalid input format: ${options.inputFormat}. Use 'json' or 'csv'.`);
+        if (options.inputFormat !== 'json' && options.inputFormat !== 'csv' && options.inputFormat !== 'elo') {
+          console.error(`Invalid input format: ${options.inputFormat}. Use 'json', 'csv', or 'elo'.`);
           process.exit(1);
         }
         break;
@@ -107,7 +107,7 @@ Options:
   -e, --expression <expr>   Expression to evaluate (like ruby -e)
   -d, --data <data>         Input data for _ variable (or @file to read from file)
   --stdin                   Read input data from stdin
-  -f, --input-format <fmt>  Input data format: json (default) or csv
+  -f, --input-format <fmt>  Input data format: json (default), csv, or elo
   -o, --output-format <fmt> Output format: json (default), elo, or csv
   -v, --version             Show version number
   -h, --help                Show this help message
@@ -148,6 +148,9 @@ Examples:
 function detectInputFormat(filePath: string): InputFormat {
   if (filePath.endsWith('.csv')) {
     return 'csv';
+  }
+  if (filePath.endsWith('.elo')) {
+    return 'elo';
   }
   return 'json';
 }
