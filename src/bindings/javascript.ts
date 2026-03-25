@@ -424,6 +424,10 @@ export function createJavaScriptBinding(): StdLib<string> {
 
   // Null handling
   jsLib.register('isNull', [Types.any], helperCall('kIsNull'));
+jsLib.register('isNotNull', [Types.any], (args, ctx) => {
+  ctx.requireHelper?.('kIsNull');
+  return `!kIsNull(${ctx.emit(args[0])})`;
+});
 
   // Data path navigation
   jsLib.register('fetch', [Types.any, Types.fn], helperCall('kFetch'));

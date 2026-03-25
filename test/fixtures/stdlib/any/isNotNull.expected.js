@@ -1,0 +1,6 @@
+(function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(!kIsNull(null) == false)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(!kIsNull(42) == true)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(!kIsNull("hello") == true)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(!kIsNull(true) == true)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(!kIsNull((i => i === -1 ? null : i)("hello".indexOf("l"))) == true)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(!kIsNull((i => i === -1 ? null : i)("hello".indexOf("x"))) == false)) throw new Error("Assertion failed"); return true; })(); })(null);

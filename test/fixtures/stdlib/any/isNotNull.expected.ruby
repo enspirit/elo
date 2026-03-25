@@ -1,0 +1,6 @@
+->(_) { (raise "Assertion failed" unless !(nil).nil? == false; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(42).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !("hello").nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !(true).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !("hello".index("l")).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless !("hello".index("x")).nil? == false; true) }.call(nil);

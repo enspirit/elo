@@ -342,6 +342,7 @@ export function createRubyBinding(): StdLib<string> {
 
   // Null handling
   rubyLib.register('isNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])}).nil?`);
+rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])}).nil?`);
 
   // Data path navigation - core fetch helper (used by all fetch variants)
   // Note: converts string segments to symbols for hash access (Ruby hashes use symbol keys)

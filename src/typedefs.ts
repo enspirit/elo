@@ -302,6 +302,8 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   // isNull(x) - returns true if x is null/undefined/nil
   defs.register('isNull', [Types.any], Types.bool);
+  // isNotNull(x) - returns true if x is not null/undefined/nil
+  defs.register('isNotNull', [Types.any], Types.bool);
 
   // ============================================
   // Error handling

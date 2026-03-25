@@ -190,6 +190,7 @@ export function createPythonBinding(): StdLib<string> {
 
   // Null handling
   pyLib.register('isNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} is None)`);
+pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} is not None)`);
   pyLib.register('eq', [Types.null, Types.null], simpleBinaryOp('=='));
 
   // Type introspection

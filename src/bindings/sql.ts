@@ -341,6 +341,7 @@ export function createSQLBinding(): StdLib<string> {
 
   // Null handling
   sqlLib.register('isNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} IS NULL`);
+sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} IS NOT NULL`);
 
   // Data path navigation - uses PostgreSQL jsonb #> operator with text array path
   sqlLib.register('fetch', [Types.any, Types.fn], (args, ctx) => {

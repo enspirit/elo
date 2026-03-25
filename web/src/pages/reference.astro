@@ -64,7 +64,7 @@ import Footer from '../components/Footer.astro';
             <tr><td><code>Null</code></td><td>Null values</td><td><code>null</code></td></tr>
           </tbody>
         </table>
-        <p class="note"><strong>Note:</strong> Use <code>null</code> for absent values. Use <code>isNull()</code> to check for null, and the <code>|</code> operator to provide defaults: <code>x | 'default'</code>.</p>
+        <p class="note"><strong>Note:</strong> Use <code>null</code> for absent values. Use <code>isNull()</code> and <code>isNotNull()</code> to check for null, and the <code>|</code> operator to provide defaults: <code>x | 'default'</code>.</p>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Type Introspection</div>
           <pre class="language-elo">typeOf(42) == 'Int' and typeOf(P1D) == 'Duration'</pre>

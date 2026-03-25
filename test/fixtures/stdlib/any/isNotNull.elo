@@ -1,0 +1,6 @@
+assert(isNotNull(null) == false)
+assert(isNotNull(42) == true)
+assert(isNotNull('hello') == true)
+assert(isNotNull(true) == true)
+assert(isNotNull(indexOf('hello', 'l')) == true)
+assert(isNotNull(indexOf('hello', 'x')) == false)

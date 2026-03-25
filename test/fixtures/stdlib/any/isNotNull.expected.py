@@ -1,0 +1,6 @@
+(lambda _: kAssert((None is not None) == False))(None)
+(lambda _: kAssert((42 is not None) == True))(None)
+(lambda _: kAssert(("hello" is not None) == True))(None)
+(lambda _: kAssert((True is not None) == True))(None)
+(lambda _: kAssert((kIndexOf("hello", "l") is not None) == True))(None)
+(lambda _: kAssert((kIndexOf("hello", "x") is not None) == False))(None)
