@@ -4,8 +4,17 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-03-25
+
 ### Language
 - Add `Date` as a built-in type selector for data schemas (e.g., `let Event = { date: Date } in data |> Event`)
+- Add `extract()` for mustache-style text extraction (e.g., `extract('Hello Alice', 'Hello {{name}}')`)
+
+### Standard Library
+- Add `isNotNull(value)` function as inverse of `isNull()`
+
+### Fixes
+- Fix CodeMirror duplicate instance error in website build
 
 ## [0.9.14] - 2026-02-19
 
