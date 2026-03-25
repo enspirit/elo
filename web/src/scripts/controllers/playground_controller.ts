@@ -30,6 +30,8 @@ import { formatCode } from '../formatters';
 type TargetLanguage = 'ruby' | 'javascript' | 'sql' | 'python';
 
 const STORAGE_KEY = 'elo-playground-code';
+const STORAGE_KEY_INPUT = 'elo-playground-input';
+const STORAGE_KEY_INPUT_FORMAT = 'elo-playground-input-format';
 
 const EXAMPLES: Record<string, string> = {
   arithmetic: `2 + 3 * 4`,
@@ -211,6 +213,19 @@ export default class PlaygroundController extends Controller {
       if (savedCode) {
         this.setCode(savedCode);
       }
+      const savedInput = localStorage.getItem(STORAGE_KEY_INPUT);
+      const savedInputFormat = localStorage.getItem(STORAGE_KEY_INPUT_FORMAT);
+      if (savedInputFormat) {
+        this.inputFormatTarget.value = savedInputFormat;
+        this.reinitializeInputEditor();
+      }
+      if (savedInput) {
+        this.setInputData(savedInput);
+        // Auto-expand input accordion if input data was saved
+        if (savedInput.trim()) {
+          this.inputAccordionTarget.classList.add('open');
+        }
+      }
     }
 
     // Keyboard shortcut: Ctrl+Enter to run
@@ -279,6 +294,7 @@ export default class PlaygroundController extends Controller {
       ...theme,
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
+          this.saveInputToLocalStorage();
           this.scheduleAutoRun();
         }
       }),
@@ -374,6 +390,7 @@ export default class PlaygroundController extends Controller {
   inputFormatChanged() {
     // Reinitialize input editor with appropriate language mode
     this.reinitializeInputEditor();
+    this.saveInputToLocalStorage();
     this.scheduleAutoRun();
   }
 
@@ -391,6 +408,15 @@ export default class PlaygroundController extends Controller {
     const code = this.getCode();
     try {
       localStorage.setItem(STORAGE_KEY, code);
+    } catch {
+      // localStorage might be unavailable
+    }
+  }
+
+  private saveInputToLocalStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY_INPUT, this.getInputData());
+      localStorage.setItem(STORAGE_KEY_INPUT_FORMAT, this.inputFormatTarget.value);
     } catch {
       // localStorage might be unavailable
     }
