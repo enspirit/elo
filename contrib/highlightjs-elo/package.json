@@ -1,0 +1,32 @@
+{
+  "name": "@enspirit/highlightjs-elo",
+  "version": "1.0.0",
+  "description": "Elo language grammar for highlight.js",
+  "main": "elo.js",
+  "module": "elo.esm.js",
+  "exports": {
+    "import": "./elo.esm.js",
+    "require": "./elo.js"
+  },
+  "keywords": [
+    "highlight.js",
+    "highlightjs",
+    "language",
+    "grammar",
+    "elo",
+    "syntax-highlighting"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enspirit/elo.git",
+    "directory": "contrib/highlightjs-elo"
+  },
+  "homepage": "https://elo-lang.org",
+  "license": "MIT",
+  "peerDependencies": {
+    "highlight.js": ">=11.0.0"
+  },
+  "devDependencies": {
+    "highlight.js": "^11.0.0"
+  }
+}
