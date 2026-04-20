@@ -310,9 +310,7 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
           : `${ir.guardType} failed`;
-        // Escape single quotes in the error message for Ruby string
-        const escapedMsg = errorMsg.replace(/'/g, "\\'");
-        return `raise '${escapedMsg}' unless ${conditionCode}`;
+        return `raise "${escapeRubyDQ(errorMsg)}" unless ${conditionCode}`;
       }).join('; ');
       return `(${guardChecks}; ${body})`;
     }

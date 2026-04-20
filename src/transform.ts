@@ -224,6 +224,14 @@ function transformWithDepth(
     }
 
     case 'datapath':
+      for (const seg of expr.segments) {
+        if (typeof seg === 'string' && FORBIDDEN_MEMBERS.has(seg)) {
+          throw new Error(
+            `Datapath segment '.${seg}' is forbidden: this name would ` +
+            `expose the host runtime and is not a valid Elo property.`
+          );
+        }
+      }
       return irDataPath(expr.segments);
 
     case 'typedef': {
@@ -474,6 +482,20 @@ function transformFunctionCall(
   // Check for recursive call
   if (defining.has(name)) {
     throw new Error(`Recursive function calls are not allowed: '${name}' cannot call itself`);
+  }
+
+  // Validate fetch() key: reject literal segments that name a host meta-property.
+  // Runtime helpers do dynamic current[seg] access; a forbidden name would
+  // leak constructor/prototype/__proto__ references bypassing the transform-time
+  // member-access denylist.
+  if (name === 'fetch' && args.length >= 2) {
+    const key = args[1];
+    if (key.type === 'string' && FORBIDDEN_MEMBERS.has(key.value)) {
+      throw new Error(
+        `fetch() key '${key.value}' is forbidden: this name would ` +
+        `expose the host runtime and is not a valid Elo property.`
+      );
+    }
   }
 
   // Validate extract() template at compile time

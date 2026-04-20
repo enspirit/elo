@@ -191,4 +191,65 @@ describe('Security - Sandbox escape via meta-property member access', () => {
       `({}).constructor.constructor('return process')()`;
     assert.throws(() => defaultFormats.elo.parse(payload), /forbidden/);
   });
+
+  // Regression: fetch() does dynamic obj[segment] lookup at runtime and
+  // bypassed the transform-time denylist on meta-property names. A datapath
+  // segment or string argument reaching `.constructor` / `.__proto__` /
+  // `.prototype` leaks host-runtime internals.
+  it('fetch() rejects a forbidden datapath segment', () => {
+    assert.throws(() => transform(parse('fetch({}, .constructor)')), /forbidden/);
+    assert.throws(() => transform(parse('fetch({}, .__proto__)')), /forbidden/);
+    assert.throws(() => transform(parse('fetch({}, .prototype)')), /forbidden/);
+  });
+
+  it('fetch() rejects a forbidden string segment', () => {
+    assert.throws(() => transform(parse(`fetch({}, 'constructor')`)), /forbidden/);
+    assert.throws(() => transform(parse(`fetch({}, '__proto__')`)), /forbidden/);
+  });
+
+  it('fetch() rejects a forbidden segment inside a multi-hop datapath', () => {
+    assert.throws(() => transform(parse('fetch({}, .foo.constructor)')), /forbidden/);
+  });
+});
+
+describe('Security - Subtype constraint label injection (JS/Ruby)', () => {
+  // Constraint-label emission in JS (javascript.ts:313,410) and Ruby
+  // single-quoted branch (ruby.ts:314) escapes only the single quote, not the
+  // backslash. A label ending in `\` lets the closing `'` be treated as an
+  // escaped quote; the string never terminates, and subsequent source bytes
+  // are swallowed into the string literal — DoS at minimum, injectable at
+  // worst. Python uses JSON.stringify and is unaffected.
+
+  it('JS: backslash-terminated constraint label produces valid JS', () => {
+    const src = "let T = Int(i | 'bad\\\\': i > 0) in T(5)";
+    const code = compileToJavaScript(parse(src));
+    // Parse-check the emitted JS. If the label escape is broken, `new Function`
+    // throws SyntaxError.
+    assert.doesNotThrow(
+      () => new Function(code),
+      'emitted JS must parse — constraint label must not break out of string'
+    );
+  });
+
+  it('JS: backslash-terminated guard label produces valid JS', () => {
+    const src = "guard(x | 'bad\\\\': x > 0)";
+    const code = compileToJavaScript(parse(src));
+    assert.doesNotThrow(
+      () => new Function(code),
+      'emitted JS must parse — guard label must not break out of string'
+    );
+  });
+
+  it('Ruby: backslash-terminated guard label emits a double-quoted string with #-safe escaping', () => {
+    const src = "guard(x | 'bad\\\\': x > 0)";
+    const code = compileToRuby(parse(src));
+    // After the fix, the label is embedded in a double-quoted Ruby string via
+    // escapeRubyDQ. A single-quoted emission (the previous buggy form) would
+    // have this signature:  raise '...bad\...'  — where the trailing \ before
+    // the closing ' would silently swallow the quote.
+    assert.ok(
+      !/raise '[^']*bad[^']*'/.test(code),
+      `label still emitted as single-quoted Ruby string (buggy): ${code}`
+    );
+  });
 });

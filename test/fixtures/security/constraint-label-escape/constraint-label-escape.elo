@@ -1,0 +1,2 @@
+assert((let T = Int(i | 'bad\\': i > 0) in T(5)) == 5)
+assert((let T = Int(i | 'weird\'quote': i > 0) in T(5)) == 5)

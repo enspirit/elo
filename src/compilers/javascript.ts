@@ -309,9 +309,7 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
           : `${ir.guardType} failed`;
-        // Escape single quotes in the error message for JS string
-        const escapedMsg = errorMsg.replace(/'/g, "\\'");
-        return `if (!(${conditionCode})) throw new Error('${escapedMsg}');`;
+        return `if (!(${conditionCode})) throw new Error(${JSON.stringify(errorMsg)});`;
       }).join(' ');
       return `(() => { ${guardChecks} return ${body}; })()`;
     }
@@ -406,9 +404,7 @@ function emitTypeExprParser(
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `constraint '${c.label}' failed`)
           : 'constraint failed';
-        // Escape single quotes in the error message for JS string
-        const escapedMsg = errorMsg.replace(/'/g, "\\'");
-        return `if (!(${conditionCode})) return pFail(p, '${escapedMsg}');`;
+        return `if (!(${conditionCode})) return pFail(p, ${JSON.stringify(errorMsg)});`;
       }).join(' ');
 
       return `(v, p) => { const _r = ${baseParser}(v, p); if (!_r.success) return _r; const ${varName} = _r.value; ${constraintChecks} return _r; }`;

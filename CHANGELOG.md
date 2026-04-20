@@ -8,6 +8,8 @@ All notable changes to Elo are documented in this file.
 - Fix Ruby interpolation injection vulnerability in string literals and subtype-constraint labels — reported by Atsushi Sada
 - Validate identifier and numeric-literal IR nodes in all compilers to prevent AST-API injection attacks — reported by Atsushi Sada
 - Forbid member access on `constructor`, `__proto__`, `prototype`, and other meta-properties to prevent JavaScript sandbox escape via the `Function` constructor chain — reported by Atsushi Sada
+- Fix constraint/guard label escaping in JS and Ruby emitters: switch to JSON-style (JS) and double-quoted-with-`#`-escape (Ruby) so backslash-terminated labels no longer break out of the string literal
+- Extend the meta-property denylist to `fetch()` datapath segments and string keys, closing a runtime bypass of the member-access guard
 
 ## [1.0.0] - 2026-03-25
 
