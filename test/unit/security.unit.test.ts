@@ -2,6 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { compileToRuby, compileToJavaScript, compileToSQL } from '../../src/index';
 import { dateLiteral, dateTimeLiteral, durationLiteral } from '../../src/ast';
+import { parse } from '../../src/parser';
+import { transform } from '../../src/transform';
+import { defaultFormats } from '../../src/formats';
 
 /**
  * Security: Ensure that values in date/datetime/duration literals are properly
@@ -144,5 +147,48 @@ describe('Security - Literal injection prevention', () => {
     it('single-quote injection in duration_literal', () => {
       assertNoInjection(compileToJavaScript(durationLiteral(sqInjection)));
     });
+  });
+});
+
+describe('Security - Sandbox escape via meta-property member access', () => {
+  const forbidden = [
+    'constructor',
+    '__proto__',
+    'prototype',
+    '__defineGetter__',
+    '__defineSetter__',
+    '__lookupGetter__',
+    '__lookupSetter__',
+  ];
+
+  for (const name of forbidden) {
+    it(`rejects .${name} on an object literal`, () => {
+      assert.throws(() => transform(parse(`({}).${name}`)), /forbidden/);
+    });
+
+    it(`rejects .${name} on an array literal`, () => {
+      assert.throws(() => transform(parse(`[].${name}`)), /forbidden/);
+    });
+
+    it(`rejects .${name} on a lambda parameter (any type)`, () => {
+      assert.throws(() => transform(parse(`fn(x ~> x.${name})`)), /forbidden/);
+    });
+  }
+
+  it('rejects the .constructor.constructor escape chain (PoC)', () => {
+    const pocs = [
+      `({}).constructor.constructor('return 1')()`,
+      `[].constructor.constructor('return 1')()`,
+      `(fn(x ~> x.constructor.constructor('return 1')()))({})`,
+    ];
+    for (const poc of pocs) {
+      assert.throws(() => transform(parse(poc)), /forbidden/, `PoC must be rejected: ${poc}`);
+    }
+  });
+
+  it('eloAdapter.parse refuses to evaluate sandbox-escape payloads', () => {
+    const payload =
+      `({}).constructor.constructor('return process')()`;
+    assert.throws(() => defaultFormats.elo.parse(payload), /forbidden/);
   });
 });

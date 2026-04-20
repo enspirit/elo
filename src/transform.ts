@@ -46,6 +46,16 @@ import { EloType, Types, TypeKind } from './types';
 import { eloTypeDefs } from './typedefs';
 import { parseExtractTemplate } from './extract';
 
+const FORBIDDEN_MEMBERS: ReadonlySet<string> = new Set([
+  'constructor',
+  '__proto__',
+  'prototype',
+  '__defineGetter__',
+  '__defineSetter__',
+  '__lookupGetter__',
+  '__lookupSetter__',
+]);
+
 /**
  * Type environment: maps variable names to their inferred types
  */
@@ -144,6 +154,13 @@ function transformWithDepth(
     case 'member_access': {
       const objectIR = recurse(expr.object);
       const objectType = inferType(objectIR);
+
+      if (FORBIDDEN_MEMBERS.has(expr.property)) {
+        throw new Error(
+          `Member access '.${expr.property}' is forbidden: this name would ` +
+          `expose the host runtime and is not a valid Elo property.`
+        );
+      }
 
       // Only allow member access on data types (any, object, array)
       // This prevents exposing runtime internals like Luxon DateTime/Duration methods
