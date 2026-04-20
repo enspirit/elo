@@ -1,0 +1,10 @@
+->(_) { (raise "Assertion failed" unless "\#{1+1}".length == 6; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#{1+1}" == "\#" + "{1+1}"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#{`id`}" == "\#" + "{`id`}"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#@x".length == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#@x" == "\#" + "@x"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#@@x".length == 4; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#@@x" == "\#" + "@@x"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#$x".length == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "\#$x" == "\#" + "$x"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "a\#b" == "a" + "\#" + "b"; true) }.call(nil);

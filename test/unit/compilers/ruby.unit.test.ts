@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { compileToRuby } from '../../../src/compilers/ruby';
+import { parse } from '../../../src/parser';
 import { literal, stringLiteral, variable, binary, unary, letExpr, memberAccess } from '../../../src/ast';
 
 /**
@@ -42,6 +43,74 @@ describe('Ruby Compiler - String Literals', () => {
 
   it('should escape backslashes in output', () => {
     assert.strictEqual(compileToRuby(stringLiteral('a\\b')), wrapRuby('"a\\\\b"'));
+  });
+
+  // Regression tests: prevent Ruby interpolation injection via unescaped `#`.
+  // Ruby double-quoted strings interpolate `#{...}`, `#@ivar`, `#@@cvar`, `#$gvar`.
+  // A string literal in Elo is data and must never trigger host-language evaluation.
+  it('should escape `#{...}` so it is not interpolated by Ruby', () => {
+    assert.strictEqual(
+      compileToRuby(stringLiteral('#{1+1}')),
+      wrapRuby('"\\#{1+1}"')
+    );
+  });
+
+  it('should escape backtick interpolation combos (no shell execution)', () => {
+    assert.strictEqual(
+      compileToRuby(stringLiteral('#{`id`}')),
+      wrapRuby('"\\#{`id`}"')
+    );
+  });
+
+  it('should escape `#@ivar`, `#@@cvar`, `#$gvar` interpolation forms', () => {
+    assert.strictEqual(compileToRuby(stringLiteral('#@x')), wrapRuby('"\\#@x"'));
+    assert.strictEqual(compileToRuby(stringLiteral('#@@x')), wrapRuby('"\\#@@x"'));
+    assert.strictEqual(compileToRuby(stringLiteral('#$x')), wrapRuby('"\\#$x"'));
+  });
+
+  it('should leave a bare `#` literal intact after escape', () => {
+    // `\#` in a Ruby double-quoted string evaluates to a literal `#`.
+    assert.strictEqual(compileToRuby(stringLiteral('a#b')), wrapRuby('"a\\#b"'));
+  });
+});
+
+describe('Ruby Compiler - Subtype Constraint Label Escaping', () => {
+  // The subtype-constraint branch embeds the (user-controllable) label into a
+  // Ruby double-quoted string via `p_fail(p, "...")`. Without escaping, a label
+  // like '#{`id`}' would trigger interpolation and shell execution when the
+  // constraint fails at runtime. These regression tests pin the escape behavior.
+  //
+  // We inspect the p_fail(...) call emitted inside the constraint parser, not
+  // the whole program (which legitimately contains `#{...}` inside built-in
+  // runtime helpers).
+
+  function extractConstraintErrorArg(out: string): string {
+    // Find: ...return p_fail(p, "<ARG>") unless (...)
+    const m = out.match(/return p_fail\(p, "((?:[^"\\]|\\.)*)"\) unless/);
+    assert.ok(m, `could not find constraint p_fail(...) in: ${out}`);
+    return m![1];
+  }
+
+  it('should escape `#{...}` in a string-labeled constraint', () => {
+    const ast = parse("let T = Int(i | '#{1+1}': i > 0) in T(-1)");
+    const arg = extractConstraintErrorArg(compileToRuby(ast));
+    assert.ok(!/(^|[^\\])#\{/.test(arg), `un-escaped \`#{'{'}\` in label arg: ${arg}`);
+    assert.ok(arg.includes("\\#{1+1}"), `expected escaped form \\#{'{'}1+1} in: ${arg}`);
+  });
+
+  it('should escape backtick-shell-exec attempts in a labeled constraint', () => {
+    const ast = parse("let T = Int(i | '#{`id`}': i > 0) in T(-1)");
+    const arg = extractConstraintErrorArg(compileToRuby(ast));
+    assert.ok(!/(^|[^\\])#\{/.test(arg), `un-escaped \`#{'{'}\` in label arg: ${arg}`);
+  });
+
+  it('should escape `#@`, `#@@`, `#$` interpolation forms in labels', () => {
+    for (const label of ['#@x', '#@@x', '#$x']) {
+      const ast = parse(`let T = Int(i | '${label}': i > 0) in T(-1)`);
+      const arg = extractConstraintErrorArg(compileToRuby(ast));
+      const pattern = new RegExp(`(^|[^\\\\])${label.replace(/\$/g, '\\$')}`);
+      assert.ok(!pattern.test(arg), `un-escaped ${label} in label arg: ${arg}`);
+    }
   });
 });
 

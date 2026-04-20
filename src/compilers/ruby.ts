@@ -151,6 +151,22 @@ function emitRubyWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
 }
 
 /**
+ * Escape a raw string for embedding inside a Ruby double-quoted string literal.
+ * In particular, `#` must be escaped so that `#{...}`, `#@ivar`, `#@@cvar` and
+ * `#$gvar` cannot trigger Ruby string interpolation — otherwise attacker-controlled
+ * text (string literals, constraint labels, etc.) becomes executable code.
+ */
+function escapeRubyDQ(s: string): string {
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/#/g, '\\#')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t')
+    .replace(/\r/g, '\\r');
+}
+
+/**
  * Emit Ruby code from IR
  */
 function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
@@ -177,11 +193,8 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
     case 'null_literal':
       return 'nil';
 
-    case 'string_literal': {
-      // Ruby double-quoted strings: escape backslash, double quote, and control chars
-      const escaped = ir.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
-      return `"${escaped}"`;
-    }
+    case 'string_literal':
+      return `"${escapeRubyDQ(ir.value)}"`;
 
     case 'date_literal':
       return `Date.parse(${JSON.stringify(ir.value)})`;
@@ -408,7 +421,9 @@ function emitTypeExprParser(
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `constraint '${c.label}' failed`)
           : 'constraint failed';
-        return `return p_fail(p, "${errorMsg}") unless (${conditionCode});`;
+        // Escape for safe embedding in a Ruby double-quoted string: user-controlled
+        // labels (e.g. `Int(i | 'any text': ...)`) must not trigger `#{...}` interpolation.
+        return `return p_fail(p, "${escapeRubyDQ(errorMsg)}") unless (${conditionCode});`;
       }).join(' ');
 
       return `->(v, p) { _r = (${baseParser}).call(v, p); return _r unless _r[:success]; ${varName} = _r[:value]; ${constraintChecks} _r }`;

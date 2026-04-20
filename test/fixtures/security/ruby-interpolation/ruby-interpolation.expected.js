@@ -1,0 +1,10 @@
+(function(_) { return (function() { if (!("#{1+1}".length == 6)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#{1+1}" == "#" + "{1+1}")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#{`id`}" == "#" + "{`id`}")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#@x".length == 3)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#@x" == "#" + "@x")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#@@x".length == 4)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#@@x" == "#" + "@@x")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#$x".length == 3)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("#$x" == "#" + "$x")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("a#b" == "a" + "#" + "b")) throw new Error("Assertion failed"); return true; })(); })(null);

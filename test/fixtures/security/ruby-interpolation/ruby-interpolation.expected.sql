@@ -1,0 +1,10 @@
+CASE WHEN LENGTH('#{1+1}') = 6 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN '#{1+1}' = '#' || '{1+1}' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN '#{`id`}' = '#' || '{`id`}' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LENGTH('#@x') = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN '#@x' = '#' || '@x' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LENGTH('#@@x') = 4 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN '#@@x' = '#' || '@@x' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LENGTH('#$x') = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN '#$x' = '#' || '$x' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN 'a#b' = 'a' || '#' || 'b' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
