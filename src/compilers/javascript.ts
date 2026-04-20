@@ -4,6 +4,7 @@ import { transform } from '../transform';
 import { EmitContext } from '../stdlib';
 import { createJavaScriptBinding, isNativeBinaryOp } from '../bindings/javascript';
 import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
+import { assertNumericLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * JavaScript compilation options
@@ -169,7 +170,7 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
   switch (ir.type) {
     case 'int_literal':
     case 'float_literal':
-      return ir.value.toString();
+      return assertNumericLiteral(ir.value).toString();
 
     case 'bool_literal':
       return ir.value.toString();
@@ -190,7 +191,9 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
       return `Duration.fromISO(${JSON.stringify(ir.value)})`;
 
     case 'object_literal': {
-      const props = ir.properties.map(p => `${p.key}: ${ctx.emit(p.value)}`).join(', ');
+      const props = ir.properties
+        .map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${ctx.emit(p.value)}`)
+        .join(', ');
       // Wrap in parens to avoid parsing ambiguity with blocks
       return `({${props}})`;
     }
@@ -201,13 +204,13 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
     }
 
     case 'variable':
-      return ir.name;
+      return assertSafeIdentifier(ir.name, 'variable name');
 
     case 'member_access': {
       const object = ctx.emit(ir.object);
       const needsParensForMember = ir.object.type === 'call';
       const objectExpr = needsParensForMember ? `(${object})` : object;
-      return `${objectExpr}.${ir.property}`;
+      return `${objectExpr}.${assertSafeIdentifier(ir.property, 'member_access property')}`;
     }
 
     case 'let': {
@@ -235,7 +238,7 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
         current = current.body;
       }
 
-      const declarations = allBindings.map(b => `const ${b.name} = ${b.value};`).join(' ');
+      const declarations = allBindings.map(b => `const ${assertSafeIdentifier(b.name, 'let binding name')} = ${b.value};`).join(' ');
       const body = ctx.emit(current);
       return `(() => { ${declarations} return ${body}; })()`;
     }
@@ -251,7 +254,7 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
     }
 
     case 'lambda': {
-      const params = ir.params.map(p => p.name).join(', ');
+      const params = ir.params.map(p => assertSafeIdentifier(p.name, 'lambda parameter')).join(', ');
       const body = ctx.emit(ir.body);
       return `(${params}) => ${body}`;
     }
@@ -277,9 +280,10 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
 
     case 'datapath': {
       // Compile datapath as an array of segments
-      const segments = ir.segments.map(s =>
-        typeof s === 'string' ? JSON.stringify(s) : s.toString()
-      );
+      const segments = ir.segments.map(s => {
+        const safe = assertSafeDatapathSegment(s);
+        return typeof safe === 'string' ? JSON.stringify(safe) : safe.toString();
+      });
       return `[${segments.join(', ')}]`;
     }
 

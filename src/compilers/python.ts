@@ -4,6 +4,7 @@ import { transform } from '../transform';
 import { EmitContext } from '../stdlib';
 import { createPythonBinding, isNativeBinaryOp, PYTHON_OP_MAP } from '../bindings/python';
 import { PY_HELPER_DEPS } from '../runtime';
+import { assertNumericLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * Python compilation options
@@ -139,7 +140,7 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
   switch (ir.type) {
     case 'int_literal':
     case 'float_literal':
-      return ir.value.toString();
+      return assertNumericLiteral(ir.value).toString();
 
     case 'bool_literal':
       return ir.value ? 'True' : 'False';
@@ -182,12 +183,11 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
     }
 
     case 'variable':
-      return ir.name;
+      return assertSafeIdentifier(ir.name, 'variable name');
 
     case 'member_access': {
       const object = ctx.emit(ir.object);
-      // Use .get() for safe access (returns None for missing keys)
-      return `${object}.get(${JSON.stringify(ir.property)})`;
+      return `${object}.get(${JSON.stringify(assertSafeIdentifier(ir.property, 'member_access property'))})`;
     }
 
     case 'let': {
@@ -204,7 +204,7 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
       }
 
       const body = ctx.emit(current);
-      const assignments = allBindings.map(b => `${b.name} := ${b.value}`);
+      const assignments = allBindings.map(b => `${assertSafeIdentifier(b.name, 'let binding name')} := ${b.value}`);
       return `(${[...assignments, body].join(', ')})[-1]`;
     }
 
@@ -219,7 +219,7 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
     }
 
     case 'lambda': {
-      const params = ir.params.map(p => p.name).join(', ');
+      const params = ir.params.map(p => assertSafeIdentifier(p.name, 'lambda parameter')).join(', ');
       const body = ctx.emit(ir.body);
       return `lambda ${params}: ${body}`;
     }
@@ -250,9 +250,10 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
     }
 
     case 'datapath': {
-      const segments = ir.segments.map(s =>
-        typeof s === 'string' ? JSON.stringify(s) : s.toString()
-      );
+      const segments = ir.segments.map(s => {
+        const safe = assertSafeDatapathSegment(s);
+        return typeof safe === 'string' ? JSON.stringify(safe) : safe.toString();
+      });
       return `[${segments.join(', ')}]`;
     }
 

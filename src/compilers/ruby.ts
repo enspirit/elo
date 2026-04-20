@@ -4,6 +4,7 @@ import { transform } from '../transform';
 import { EmitContext } from '../stdlib';
 import { createRubyBinding, isNativeBinaryOp, RUBY_OP_MAP } from '../bindings/ruby';
 import { RUBY_HELPERS, RUBY_HELPER_DEPS } from '../runtime';
+import { assertNumericLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * Ruby compilation options
@@ -185,7 +186,7 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
   switch (ir.type) {
     case 'int_literal':
     case 'float_literal':
-      return ir.value.toString();
+      return assertNumericLiteral(ir.value).toString();
 
     case 'bool_literal':
       return ir.value.toString();
@@ -206,7 +207,9 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
       return `ActiveSupport::Duration.parse(${JSON.stringify(ir.value)})`;
 
     case 'object_literal': {
-      const props = ir.properties.map(p => `${p.key}: ${ctx.emit(p.value)}`).join(', ');
+      const props = ir.properties
+        .map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${ctx.emit(p.value)}`)
+        .join(', ');
       return `{${props}}`;
     }
 
@@ -216,13 +219,13 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
     }
 
     case 'variable':
-      return ir.name;
+      return assertSafeIdentifier(ir.name, 'variable name');
 
     case 'member_access': {
       const object = ctx.emit(ir.object);
       const needsParensForMember = ir.object.type === 'call' && isNativeBinaryOp(ir.object);
       const objectExpr = needsParensForMember ? `(${object})` : object;
-      return `${objectExpr}[:${ir.property}]`;
+      return `${objectExpr}[:${assertSafeIdentifier(ir.property, 'member_access property')}]`;
     }
 
     case 'let': {
@@ -237,7 +240,7 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
         current = current.body;
       }
 
-      const assignments = allBindings.map(b => `${b.name} = ${b.value}`).join('; ');
+      const assignments = allBindings.map(b => `${assertSafeIdentifier(b.name, 'let binding name')} = ${b.value}`).join('; ');
       const body = ctx.emit(current);
       return `(${assignments}; ${body})`;
     }
@@ -253,7 +256,7 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
     }
 
     case 'lambda': {
-      const params = ir.params.map(p => p.name).join(', ');
+      const params = ir.params.map(p => assertSafeIdentifier(p.name, 'lambda parameter')).join(', ');
       const body = ctx.emit(ir.body);
       return `->(${params}) { ${body} }`;
     }
@@ -279,9 +282,10 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
 
     case 'datapath': {
       // Compile datapath as an array of segments (symbols for strings, integers for numbers)
-      const segments = ir.segments.map(s =>
-        typeof s === 'string' ? `:${s}` : s.toString()
-      );
+      const segments = ir.segments.map(s => {
+        const safe = assertSafeDatapathSegment(s);
+        return typeof safe === 'string' ? `:${safe}` : safe.toString();
+      });
       return `[${segments.join(', ')}]`;
     }
 

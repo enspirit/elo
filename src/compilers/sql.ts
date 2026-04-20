@@ -4,6 +4,7 @@ import { transform } from '../transform';
 import { Types } from '../types';
 import { EmitContext } from '../stdlib';
 import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP } from '../bindings/sql';
+import { assertNumericLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * SQL compilation options
@@ -108,7 +109,7 @@ function emitSQL(ir: IRExpr): string {
   switch (ir.type) {
     case 'int_literal':
     case 'float_literal':
-      return ir.value.toString();
+      return assertNumericLiteral(ir.value).toString();
 
     case 'bool_literal':
       return ir.value ? 'TRUE' : 'FALSE';
@@ -146,7 +147,7 @@ function emitSQL(ir: IRExpr): string {
         return `'{}'::jsonb`;
       }
       const args = ir.properties
-        .map(p => `'${p.key}', ${emitSQL(p.value)}`)
+        .map(p => `'${assertSafeIdentifier(p.key, 'object_literal key')}', ${emitSQL(p.value)}`)
         .join(', ');
       return `jsonb_build_object(${args})`;
     }
@@ -158,25 +159,27 @@ function emitSQL(ir: IRExpr): string {
 
     case 'variable':
       // Map _ to $1 (PostgreSQL parameter placeholder for input)
-      return ir.name === '_' ? '$1' : ir.name;
+      if (ir.name === '_') return '$1';
+      return assertSafeIdentifier(ir.name, 'variable name');
 
     case 'member_access': {
       const object = emitSQL(ir.object);
       const objectType = inferType(ir.object);
       const needsParensForMember = ir.object.type === 'call' && isNativeBinaryOp(ir.object);
       const objectExpr = needsParensForMember ? `(${object})` : object;
+      const prop = assertSafeIdentifier(ir.property, 'member_access property');
 
       // Use JSON access for object types
       if (objectType.kind === 'object') {
-        return `${objectExpr}->>'${ir.property}'`;
+        return `${objectExpr}->>'${prop}'`;
       }
 
-      return `${objectExpr}.${ir.property}`;
+      return `${objectExpr}.${prop}`;
     }
 
     case 'let': {
       const bindingCols = ir.bindings
-        .map(b => `${emitSQL(b.value)} AS ${b.name}`)
+        .map(b => `${emitSQL(b.value)} AS ${assertSafeIdentifier(b.name, 'let binding name')}`)
         .join(', ');
       const body = emitSQL(ir.body);
       return `(SELECT ${body} FROM (SELECT ${bindingCols}) AS _let)`;
@@ -206,9 +209,10 @@ function emitSQL(ir: IRExpr): string {
 
     case 'datapath': {
       // Compile datapath as an array of path segments for use with fetch
-      const segments = ir.segments.map(s =>
-        typeof s === 'string' ? `'${s}'` : s.toString()
-      );
+      const segments = ir.segments.map(s => {
+        const safe = assertSafeDatapathSegment(s);
+        return typeof safe === 'string' ? `'${safe}'` : safe.toString();
+      });
       return `ARRAY[${segments.join(', ')}]`;
     }
 

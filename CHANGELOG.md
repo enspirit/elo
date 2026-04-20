@@ -6,6 +6,7 @@ All notable changes to Elo are documented in this file.
 
 ### Security
 - Fix Ruby interpolation injection vulnerability in string literals and subtype-constraint labels — reported by Atsushi Sada
+- Validate identifier and numeric-literal IR nodes in all compilers to prevent AST-API injection attacks — reported by Atsushi Sada
 
 ## [1.0.0] - 2026-03-25
 
