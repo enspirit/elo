@@ -180,11 +180,17 @@ function emitSQL(ir: IRExpr): string {
     }
 
     case 'let': {
-      const bindingCols = ir.bindings
-        .map(b => `${emitSQL(b.value)} AS ${assertSafeIdentifier(b.name, 'let binding name')}`)
-        .join(', ');
-      const body = emitSQL(ir.body);
-      return `(SELECT ${body} FROM (SELECT ${bindingCols}) AS _let)`;
+      // Bindings are sequential: a binding may use the previous ones. SQL
+      // cannot reference an alias within the same SELECT list, so each
+      // binding gets its own scope and they are nested here rather than in
+      // the AST — the other targets emit a flat sequence.
+      const nest = (index: number): string => {
+        const binding = ir.bindings[index];
+        const column = `${emitSQL(binding.value)} AS ${assertSafeIdentifier(binding.name, 'let binding name')}`;
+        const body = index === ir.bindings.length - 1 ? emitSQL(ir.body) : nest(index + 1);
+        return `(SELECT ${body} FROM (SELECT ${column}) AS _let)`;
+      };
+      return nest(0);
     }
 
     case 'call':
