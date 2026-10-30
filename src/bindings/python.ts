@@ -23,27 +23,12 @@ export const PYTHON_OP_MAP: Record<string, string> = {
  */
 export function isNativeBinaryOp(ir: IRExpr): boolean {
   if (ir.type !== 'call') return false;
-  const { fn, argTypes } = ir;
-
-  // Arithmetic with numeric types
-  if (['add', 'sub', 'mul', 'div', 'mod', 'pow'].includes(fn)) {
-    const [left, right] = argTypes;
-    if ((left.kind === 'int' || left.kind === 'float') &&
-        (right.kind === 'int' || right.kind === 'float')) {
-      return true;
-    }
-    // String concatenation
-    if (fn === 'add' && left.kind === 'string' && right.kind === 'string') {
-      return true;
-    }
-  }
-
-  // Comparison and logical operators
-  if (['lt', 'gt', 'lte', 'gte', 'eq', 'neq', 'and', 'or'].includes(fn)) {
-    return true;
-  }
-
-  return false;
+  // Every operator of PYTHON_OP_MAP is registered with simpleBinaryOp, and
+  // when an operand type is not statically known StdLib falls back to that
+  // same implementation. Deciding on operand types instead would miss the
+  // dynamic case and drop its parentheses: `12 * (x + y)` would compile to
+  // `12 * x + y`. Ruby and SQL already decide on the operator alone.
+  return PYTHON_OP_MAP[ir.fn] !== undefined && ir.argTypes.length === 2;
 }
 
 /**
@@ -109,11 +94,16 @@ export function createPythonBinding(): StdLib<string> {
   pyLib.register('and', [Types.bool, Types.bool], simpleBinaryOp('and'));
   pyLib.register('or', [Types.bool, Types.bool], simpleBinaryOp('or'));
 
-  // Unary operators
-  pyLib.register('neg', [Types.int], (args, ctx) => `-${ctx.emit(args[0])}`);
-  pyLib.register('neg', [Types.float], (args, ctx) => `-${ctx.emit(args[0])}`);
-  pyLib.register('pos', [Types.int], (args, ctx) => `+${ctx.emit(args[0])}`);
-  pyLib.register('pos', [Types.float], (args, ctx) => `+${ctx.emit(args[0])}`);
+  // Unary operators. The operand must be parenthesised when it is itself a
+  // binary operation, otherwise `-(a + b)` emits as `-a + b`.
+  const unaryOp = (sign: string): FunctionEmitter<string> => (args, ctx) => {
+    const operand = ctx.emit(args[0]);
+    return isNativeBinaryOp(args[0]) ? `${sign}(${operand})` : `${sign}${operand}`;
+  };
+  pyLib.register('neg', [Types.int], unaryOp('-'));
+  pyLib.register('neg', [Types.float], unaryOp('-'));
+  pyLib.register('pos', [Types.int], unaryOp('+'));
+  pyLib.register('pos', [Types.float], unaryOp('+'));
   pyLib.register('not', [Types.bool], (args, ctx) => {
     const emitted = ctx.emit(args[0]);
     // Always wrap in parens to ensure correct precedence (not has low precedence in Python)
