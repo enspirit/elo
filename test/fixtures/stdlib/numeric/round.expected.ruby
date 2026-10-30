@@ -15,3 +15,10 @@
 ->(_) { (raise "Assertion failed" unless -0.5.round == -1; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 1.5.round == 2; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless -1.5.round == -2; true) }.call(nil);
+
+
+
+
+->(_) { (raise "Assertion failed" unless ((5 ** 1).fdiv(2)).round == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((-5 ** 1).fdiv(2)).round == -3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ((7 ** 1).fdiv(2)).round == 4; true) }.call(nil);

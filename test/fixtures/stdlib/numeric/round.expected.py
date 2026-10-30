@@ -15,3 +15,10 @@
 (lambda _: kAssert(kRound(-0.5) == -1))(None)
 (lambda _: kAssert(kRound(1.5) == 2))(None)
 (lambda _: kAssert(kRound(-1.5) == -2))(None)
+
+
+
+
+(lambda _: kAssert(kRound(5 ** 1 / 2) == 3))(None)
+(lambda _: kAssert(kRound(-5 ** 1 / 2) == -3))(None)
+(lambda _: kAssert(kRound(7 ** 1 / 2) == 4))(None)

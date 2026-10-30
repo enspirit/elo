@@ -283,7 +283,19 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('abs', [Types.int], (args, ctx) => `ABS(${ctx.emit(args[0])})`);
   sqlLib.register('abs', [Types.float], (args, ctx) => `ABS(${ctx.emit(args[0])})`);
   sqlLib.register('round', [Types.int], (args, ctx) => ctx.emit(args[0]));
-  sqlLib.register('round', [Types.float], (args, ctx) => `ROUND(${ctx.emit(args[0])})`);
+  // ROUND(double precision) is banker's rounding in PostgreSQL, while
+  // ROUND(numeric) rounds away from zero like the other targets. POWER() and
+  // friends yield double precision, so the cast is not optional.
+  sqlLib.register('round', [Types.float], (args, ctx) => `ROUND((${ctx.emit(args[0])})::numeric)`);
+  sqlLib.register('round', [Types.any], (args, ctx) => `ROUND((${ctx.emit(args[0])})::numeric)`);
+  // Same definition as the other targets: round(x * 10^n) / 10^n.
+  for (const t of [Types.int, Types.float]) {
+    sqlLib.register('round', [t, Types.int], (args, ctx) => {
+      const x = ctx.emit(args[0]);
+      const n = ctx.emit(args[1]);
+      return `(ROUND((${x}) * POWER(10, ${n})) / POWER(10, ${n}))`;
+    });
+  }
   sqlLib.register('floor', [Types.int], (args, ctx) => ctx.emit(args[0]));
   sqlLib.register('floor', [Types.float], (args, ctx) => `FLOOR(${ctx.emit(args[0])})`);
   sqlLib.register('ceil', [Types.int], (args, ctx) => ctx.emit(args[0]));
