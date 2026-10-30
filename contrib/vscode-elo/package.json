@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "publisher": "enspirit",
   "license": "MIT",
-  "private": true,
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -38,7 +38,11 @@
         "extensions": [
           ".elo"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/elo-light.png",
+          "dark": "./icons/elo-dark.png"
+        }
       }
     ],
     "grammars": [
@@ -49,8 +53,19 @@
       }
     ]
   },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "icon.png",
+    "icon.svg",
+    "icons/",
+    "language-configuration.json",
+    "syntaxes/"
+  ],
   "scripts": {
-    "test": "node test/tokenize.test.mjs"
+    "test": "node test/tokenize.test.mjs",
+    "icons": "magick -background none -density 384 icon.svg -resize 128x128 PNG32:icon.png && magick -background none -density 384 icons/elo-dark.svg -resize 64x64 PNG32:icons/elo-dark.png && magick -background none -density 384 icons/elo-light.svg -resize 64x64 PNG32:icons/elo-light.png",
+    "package": "vsce package"
   },
   "devDependencies": {
     "vscode-oniguruma": "^2.0.1",

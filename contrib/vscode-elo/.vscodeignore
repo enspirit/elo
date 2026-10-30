@@ -1,5 +1,0 @@
-.vscodeignore
-node_modules/**
-test/**
-fixtures/**
-package-lock.json

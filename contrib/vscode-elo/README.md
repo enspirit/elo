@@ -27,16 +27,28 @@ ln -s "$PWD" ~/.vscode/extensions/enspirit.vscode-elo-0.1.0
 ### As a `.vsix`
 
 ```bash
-npx @vscode/vsce package
+npm run package                            # npx @vscode/vsce package
 code --install-extension vscode-elo-0.1.0.vsix
 ```
 
 ### Publishing
 
-`publisher` in `package.json` is set to `enspirit` — check it matches the real
-Marketplace publisher ID before running `vsce publish`. The manifest also has
-`"private": true` to avoid an accidental `npm publish`; drop it if you ever want
-the grammar on npm.
+**Marketplace.** `publisher` is set to `enspirit`. The publisher ID is an Azure
+DevOps identity, unrelated to npm or GitHub: sign in at
+<https://marketplace.visualstudio.com/manage> to check or create it, then
+`npx @vscode/vsce login enspirit` and `npm run package && npx @vscode/vsce publish`.
+At the time of writing neither `enspirit` nor `elo-lang` is taken.
+
+**npm.** `vsce` refuses to combine a `.vscodeignore` with a `files` property, so
+this package uses `files` — the `.vsix` and the npm tarball then ship exactly the
+same 11 files. `npm publish` works as is and puts the TextMate grammar within
+reach of anything else that consumes one (Shiki, for instance, which could
+render the website's code blocks).
+
+One wrinkle worth knowing: a VS Code extension name cannot be scoped, so this
+package is `vscode-elo` on npm, not `@enspirit/vscode-elo` like its two
+siblings. Keeping the `@enspirit` scope would mean splitting the grammar into a
+separate package that the extension then embeds.
 
 ## What gets highlighted
 
@@ -63,6 +75,22 @@ the grammar on npm.
 
 Plain variable *references* are deliberately left unscoped, so they take the
 theme's default foreground — same convention as the built-in grammars.
+
+## Icons
+
+Both the Marketplace icon and the `.elo` file icon are derived from
+`web/public/logo.svg` — the three bars standing for the three compilation
+targets, a stylised E, and the `|>` pipe. Colours come from the website's
+design tokens (`web/public/styles/tokens.css`):
+
+| File | Use | Colour |
+|---|---|---|
+| `icon.svg` / `icon.png` | Marketplace, 128×128 | `accent` `#6366f1` on `bg-primary` `#1a1a2e` |
+| `icons/elo-dark.*` | file icon, dark themes | `accent-hover` `#818cf8`, transparent |
+| `icons/elo-light.*` | file icon, light themes | `accent` `#4f46e5`, transparent |
+
+The SVGs are the source; the PNGs are what VS Code actually loads. Regenerate
+them with `npm run icons` (needs ImageMagick) after editing an SVG.
 
 ## Tests
 
