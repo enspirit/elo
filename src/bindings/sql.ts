@@ -293,7 +293,7 @@ export function createSQLBinding(): StdLib<string> {
     sqlLib.register('round', [t, Types.int], (args, ctx) => {
       const x = ctx.emit(args[0]);
       const n = ctx.emit(args[1]);
-      return `(ROUND((${x}) * POWER(10, ${n})) / POWER(10, ${n}))`;
+      return `(ROUND(((${x}) * POWER(10, ${n}))::numeric) / POWER(10, ${n}))`;
     });
   }
   sqlLib.register('floor', [Types.int], (args, ctx) => ctx.emit(args[0]));

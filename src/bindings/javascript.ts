@@ -361,6 +361,9 @@ export function createJavaScriptBinding(): StdLib<string> {
   // rounds halves away from zero, like Ruby and PostgreSQL do natively.
   jsLib.register('round', [Types.float], helperCall('kRound'));
   jsLib.register('round', [Types.any], helperCall('kRound'));
+  for (const t of [Types.int, Types.float, Types.any]) {
+    jsLib.register('round', [t, Types.int], helperCall('kRoundTo'));
+  }
   jsLib.register('floor', [Types.int], identity());
   jsLib.register('floor', [Types.float], fnCall('Math.floor'));
   jsLib.register('floor', [Types.any], fnCall('Math.floor')); // Safe for any numeric type

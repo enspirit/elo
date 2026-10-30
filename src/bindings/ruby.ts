@@ -309,6 +309,9 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('round', [Types.int], identity());
   rubyLib.register('round', [Types.float], rubyMethod('round'));
   rubyLib.register('round', [Types.any], rubyMethod('round')); // Safe for any numeric type
+  for (const t of [Types.int, Types.float, Types.any]) {
+    rubyLib.register('round', [t, Types.int], helperCall('k_round_to'));
+  }
   rubyLib.register('floor', [Types.int], identity());
   rubyLib.register('floor', [Types.float], rubyMethod('floor'));
   rubyLib.register('floor', [Types.any], rubyMethod('floor')); // Safe for any numeric type

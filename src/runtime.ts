@@ -15,6 +15,7 @@
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
   kRound: [],
+  kRoundTo: ['kRound'],
   kNeq: ['kEq'],
   kFetchObject: ['kFetch'],
   // Parser helpers depend on pOk/pFail
@@ -53,6 +54,7 @@ export const JS_HELPERS: Record<string, string> = {
   return l / r;
 }`,
   kRound: `function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); }`,
+  kRoundTo: `function kRoundTo(x, n) { const f = Math.pow(10, n); return kRound(x * f) / f; }`,
   kMod: `function kMod(l, r) { return l % r; }`,
   kPow: `function kPow(l, r) { return Math.pow(l, r); }`,
   kEq: `function kEq(l, r) {
@@ -267,6 +269,7 @@ export const JS_HELPERS: Record<string, string> = {
  * These are embedded in compiled Ruby output when type definitions are used.
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  k_round_to: [],
   k_div: [],
   p_any: ['p_ok'],
   p_null: ['p_ok', 'p_fail'],
@@ -281,6 +284,10 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  k_round_to: `def k_round_to(x, n)
+  f = 10 ** n
+  (x * f).round.fdiv(f)
+end`,
   k_div: `def k_div(l, r)
   return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer)
   l / r
@@ -393,6 +400,7 @@ end`,
  */
 export const PY_HELPER_DEPS: Record<string, string[]> = {
   kRound: ['_import_math'],
+  kRoundTo: ['kRound'],
   kEq: [],
   kNeq: ['kEq'],
   kIntersection: ['_EloInterval'],
@@ -668,6 +676,9 @@ def _elo_end_of_year(dt):
     return l * r`,
   kRound: `def kRound(x):
     return math.floor(x + 0.5) if x >= 0 else math.ceil(x - 0.5)`,
+  kRoundTo: `def kRoundTo(x, n):
+    f = 10 ** n
+    return kRound(x * f) / f`,
   kDiv: `def kDiv(l, r):
     if isinstance(l, EloDuration) and isinstance(r, (int, float)): return l.divide(r)
     return l / r`,

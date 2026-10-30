@@ -145,6 +145,9 @@ export function createPythonBinding(): StdLib<string> {
   // away from zero, like Ruby and PostgreSQL do natively.
   pyLib.register('round', [Types.float], helperCall('kRound'));
   pyLib.register('round', [Types.int], identity());
+  for (const t of [Types.int, Types.float, Types.any]) {
+    pyLib.register('round', [t, Types.int], helperCall('kRoundTo'));
+  }
   pyLib.register('floor', [Types.float], (args, ctx) => {
     ctx.requireHelper?.('_import_math');
     return `math.floor(${ctx.emit(args[0])})`;

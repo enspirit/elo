@@ -1,0 +1,25 @@
+# round(x, n) rounds to n decimal places.
+#
+# Defined as round(x * 10^n) / 10^n so that it inherits round()'s rule —
+# half-way values away from zero — and agrees across the four targets. Binary
+# floats still apply: 1.005 is not representable, so round(1.005, 2) is 1.0.
+
+assert(round(3.14159, 2) == 3.14)
+assert(round(3.14159, 4) == 3.1416)
+assert(round(2.5, 0) == 3)
+assert(round(0.797381, 4) == 0.7974)
+assert(round(271.6954, 2) == 271.7)
+assert(round(103.125, 2) == 103.13)
+assert(round(2.675, 2) == 2.68)
+assert(round(1.0 / 3, 3) == 0.333)
+assert(round(123.456, 1) == 123.5)
+assert(round(123.456, 0) == 123)
+
+# Negative values round away from zero, like round/1
+assert(round(-3.14159, 2) == -3.14)
+assert(round(-2.5, 0) == -3)
+assert(round(-0.125, 2) == -0.13)
+
+# Integers are unaffected
+assert(round(42, 2) == 42)
+assert(round(7, 0) == 7)
