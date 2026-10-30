@@ -7,7 +7,7 @@
 
 import { IRExpr } from '../ir';
 import { Types } from '../types';
-import { StdLib, simpleBinaryOp, nullary, fnCall, helperCall, FunctionEmitter } from '../stdlib';
+import { StdLib, identity, simpleBinaryOp, nullary, fnCall, helperCall, FunctionEmitter } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
@@ -356,13 +356,13 @@ export function createJavaScriptBinding(): StdLib<string> {
   // For float and any, use Math.x (which also works correctly for ints)
   jsLib.register('abs', [Types.int], fnCall('Math.abs'));
   jsLib.register('abs', [Types.float], fnCall('Math.abs'));
-  jsLib.register('round', [Types.int], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('round', [Types.int], identity());
   jsLib.register('round', [Types.float], fnCall('Math.round'));
   jsLib.register('round', [Types.any], fnCall('Math.round')); // Safe for any numeric type
-  jsLib.register('floor', [Types.int], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('floor', [Types.int], identity());
   jsLib.register('floor', [Types.float], fnCall('Math.floor'));
   jsLib.register('floor', [Types.any], fnCall('Math.floor')); // Safe for any numeric type
-  jsLib.register('ceil', [Types.int], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('ceil', [Types.int], identity());
   jsLib.register('ceil', [Types.float], fnCall('Math.ceil'));
   jsLib.register('ceil', [Types.any], fnCall('Math.ceil')); // Safe for any numeric type
 
@@ -453,39 +453,39 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
 
   // Type selectors (Finitio schemas - throw on failure)
   // Int - identity for int, truncate float, parse for string
-  jsLib.register('Int', [Types.int], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Int', [Types.int], identity());
   jsLib.register('Int', [Types.float], (args, ctx) => `Math.trunc(${ctx.emit(args[0])})`);
   jsLib.register('Int', [Types.string], parserUnwrap('pInt'));
   jsLib.register('Int', [Types.any], parserUnwrap('pInt'));
 
   // Float - identity for float/int, parse for string
-  jsLib.register('Float', [Types.float], (args, ctx) => ctx.emit(args[0]));
-  jsLib.register('Float', [Types.int], (args, ctx) => ctx.emit(args[0])); // JS numbers are already floats
+  jsLib.register('Float', [Types.float], identity());
+  jsLib.register('Float', [Types.int], identity()); // JS numbers are already floats
   jsLib.register('Float', [Types.string], parserUnwrap('pFloat'));
   jsLib.register('Float', [Types.any], parserUnwrap('pFloat'));
 
   // Bool - identity for bool, parse "true"/"false" for string
-  jsLib.register('Bool', [Types.bool], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Bool', [Types.bool], identity());
   jsLib.register('Bool', [Types.string], parserUnwrap('pBool'));
   jsLib.register('Bool', [Types.any], parserUnwrap('pBool'));
 
   // Date - identity for date, parse ISO for string
-  jsLib.register('Date', [Types.date], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Date', [Types.date], identity());
   jsLib.register('Date', [Types.string], parserUnwrap('pDate'));
   jsLib.register('Date', [Types.any], parserUnwrap('pDate'));
 
   // Datetime - identity for datetime, parse ISO for string
-  jsLib.register('Datetime', [Types.datetime], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Datetime', [Types.datetime], identity());
   jsLib.register('Datetime', [Types.string], parserUnwrap('pDatetime'));
   jsLib.register('Datetime', [Types.any], parserUnwrap('pDatetime'));
 
   // Duration - identity for duration, parse ISO for string
-  jsLib.register('Duration', [Types.duration], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Duration', [Types.duration], identity());
   jsLib.register('Duration', [Types.string], parserUnwrap('pDuration'));
   jsLib.register('Duration', [Types.any], parserUnwrap('pDuration'));
 
   // Interval - construct from object with start/end properties
-  jsLib.register('Interval', [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Interval', [Types.interval], identity());
   jsLib.register('Interval', [Types.object], (args, ctx) => {
     const obj = args[0];
     if (obj.type === 'object_literal') {
@@ -525,13 +525,13 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
   });
 
   // Data - identity for non-strings, parse JSON for strings
-  jsLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
-  jsLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('Data', [Types.array], identity());
+  jsLib.register('Data', [Types.object], identity());
   jsLib.register('Data', [Types.string], parserUnwrap('pData'));
   jsLib.register('Data', [Types.any], parserUnwrap('pData'));
 
   // String - convert any value to string (Elo literal format for complex types)
-  jsLib.register('String', [Types.string], (args, ctx) => ctx.emit(args[0]));
+  jsLib.register('String', [Types.string], identity());
   jsLib.register('String', [Types.int], (args, ctx) => `String(${ctx.emit(args[0])})`);
   jsLib.register('String', [Types.float], (args, ctx) => `String(${ctx.emit(args[0])})`);
   jsLib.register('String', [Types.bool], (args, ctx) => `String(${ctx.emit(args[0])})`);

@@ -6,7 +6,7 @@
 
 import { IRExpr } from '../ir';
 import { Types } from '../types';
-import { StdLib, simpleBinaryOp, helperCall, isBinaryOp, FunctionEmitter } from '../stdlib';
+import { StdLib, identity, simpleBinaryOp, helperCall, isBinaryOp, FunctionEmitter } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
@@ -391,7 +391,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   // Type selectors (casting)
   pyLib.register('Int', [Types.any], (args, ctx) => `int(${ctx.emit(args[0])})`);
   pyLib.register('Float', [Types.any], (args, ctx) => `float(${ctx.emit(args[0])})`);
-  pyLib.register('String', [Types.string], (args, ctx) => ctx.emit(args[0]));
+  pyLib.register('String', [Types.string], identity());
   pyLib.register('String', [Types.int], (args, ctx) => `str(${ctx.emit(args[0])})`);
   pyLib.register('String', [Types.float], (args, ctx) => `str(${ctx.emit(args[0])})`);
   pyLib.register('String', [Types.any], (args, ctx) => {
@@ -406,21 +406,21 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     ctx.requireHelper?.('kData');
     return `kData(${ctx.emit(args[0])})`;
   });
-  pyLib.register('Date', [Types.date], (args, ctx) => ctx.emit(args[0]));
+  pyLib.register('Date', [Types.date], identity());
   pyLib.register('Date', [Types.any], (args, ctx) => {
     ctx.requireHelper?.('kParseDate');
     return `kParseDate(${ctx.emit(args[0])})`;
   });
-  pyLib.register('Datetime', [Types.datetime], (args, ctx) => ctx.emit(args[0]));
+  pyLib.register('Datetime', [Types.datetime], identity());
   pyLib.register('Datetime', [Types.any], (args, ctx) => {
     ctx.requireHelper?.('kParseDatetime');
     return `kParseDatetime(${ctx.emit(args[0])})`;
   });
-  pyLib.register('Duration', [Types.duration], (args, ctx) => ctx.emit(args[0]));
+  pyLib.register('Duration', [Types.duration], identity());
   pyLib.register('Duration', [Types.any], (args, ctx) => `EloDuration.from_iso(${ctx.emit(args[0])})`);
 
   // Interval - construct from object with start/end properties
-  pyLib.register('Interval', [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  pyLib.register('Interval', [Types.interval], identity());
   pyLib.register('Interval', [Types.object], (args, ctx) => {
     ctx.requireHelper?.('_EloInterval');
     const obj = args[0];
