@@ -1,0 +1,48 @@
+# Elo syntax sample — exercises every construct the grammar must colour.
+# Used by test/tokenize.test.mjs and handy for eyeballing a theme.
+
+let
+  # Type definitions: capitalised identifiers are type names.
+  PosInt  = Int(i | positive: i > 0),
+  Person  = { name: String, age: PosInt, nickname :? String, ... },
+  People  = [Person],
+  Mixed   = Int|String|Null,
+
+  # Scalars, strings with escapes, temporal literals.
+  greeting = 'hello \'world\'\n',
+  ratio    = 3.14,
+  count_   = 42,
+  born     = D1984-02-29,
+  stamp    = D2024-01-15T10:30:00.123Z,
+  shift    = PT1H30M,
+  span     = P1Y2M3D,
+  deadline = TODAY + P3D,
+  soon     = (deadline in SOW ... EOW),
+  overdue  = (deadline in BOT .. YESTERDAY),
+
+  # Lambdas, both forms.
+  double   = fn(x ~> x * 2),
+  add      = fn(a, b ~> a + b),
+  sugar    = x ~> x % 3,
+
+  # Pipes, stdlib calls, member access and data paths.
+  people   = _ |> People,
+  names    = map(people, fn(p ~> upper(p.name))),
+  oldest   = max(map(people, fn(p ~> p.age))),
+  deep     = fetch(_, .items.0.name),
+  flags    = not (true and false) || !false,
+  both     = (ratio > 1) && (count_ <= 100),
+
+  # Arithmetic, comparison, alternative.
+  total    = (ratio ^ 2 - 1) / 4 + count_,
+  label    = if total >= 42 then 'big' else 'small',
+  fallback = _.missing | 'default'
+in
+  guard sane: oldest > 0, 'names present': count(names) > 0 in
+  check consistent: double(21) == 42 in
+  {
+    label:  label,
+    names:  names,
+    oldest: oldest,
+    when:   deadline
+  }
