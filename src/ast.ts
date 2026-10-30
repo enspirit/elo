@@ -232,15 +232,13 @@ export function letExpr(bindings: LetBinding[], body: Expr): LetExpr {
     throw new Error('Let expression must have at least one binding');
   }
 
-  if (bindings.length === 1) {
-    return { type: 'let', bindings, body };
-  }
-
-  // Desugar: let a = 1, b = 2, c = 3 in body
-  // becomes: let a = 1 in let b = 2 in let c = 3 in body
-  const [first, ...rest] = bindings;
-  const nestedBody = letExpr(rest, body);
-  return { type: 'let', bindings: [first], body: nestedBody };
+  // Kept flat on purpose. Desugaring `let a = 1, b = 2, c = 3 in body` into
+  // nested single-binding lets made every binding count as one level of
+  // nesting, so a program was capped at 100 bindings by the transform depth
+  // guard — a limit meant for deeply nested expressions, not for program
+  // size. transformLet already threads the environment binding by binding, so
+  // sequential scoping is unchanged.
+  return { type: 'let', bindings, body };
 }
 
 /**

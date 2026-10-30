@@ -551,18 +551,24 @@ describe('Parser - Let Expressions', () => {
     }
   });
 
-  it('should parse let with multiple bindings (desugared to nested)', () => {
+  it('should parse let with multiple bindings as a single flat let', () => {
     const ast = parse('let x = 1, y = 2 in x + y');
-    // Multiple bindings are desugared to nested let expressions
     assert.strictEqual(ast.type, 'let');
     if (ast.type === 'let') {
-      assert.strictEqual(ast.bindings.length, 1);
+      assert.strictEqual(ast.bindings.length, 2);
       assert.strictEqual(ast.bindings[0].name, 'x');
-      assert.strictEqual(ast.body.type, 'let');
-      if (ast.body.type === 'let') {
-        assert.strictEqual(ast.body.bindings[0].name, 'y');
-        assert.strictEqual(ast.body.body.type, 'binary');
-      }
+      assert.strictEqual(ast.bindings[1].name, 'y');
+      assert.strictEqual(ast.body.type, 'binary');
+    }
+  });
+
+  it('should not spend nesting depth on the number of bindings', () => {
+    const bindings = Array.from({ length: 500 }, (_, i) =>
+      `v${i} = ${i === 0 ? '1' : `v${i - 1} + 1`}`).join(', ');
+    const ast = parse(`let ${bindings} in v499`);
+    assert.strictEqual(ast.type, 'let');
+    if (ast.type === 'let') {
+      assert.strictEqual(ast.bindings.length, 500);
     }
   });
 
@@ -595,15 +601,14 @@ describe('Parser - Let Expressions', () => {
 
   it('should parse let with function call in body', () => {
     const ast = parse('let x = 5, y = 3 in assert(x + y == 8)');
-    // Multiple bindings are desugared to nested let expressions
     assert.strictEqual(ast.type, 'let');
     if (ast.type === 'let') {
-      assert.strictEqual(ast.bindings.length, 1);
+      assert.strictEqual(ast.bindings.length, 2);
       assert.strictEqual(ast.bindings[0].name, 'x');
-      assert.strictEqual(ast.body.type, 'let');
-      if (ast.body.type === 'let') {
-        assert.strictEqual(ast.body.bindings[0].name, 'y');
-        assert.strictEqual(ast.body.body.type, 'function_call');
+      assert.strictEqual(ast.bindings[1].name, 'y');
+      assert.strictEqual(ast.body.type, 'function_call');
+      if (ast.body.type === 'function_call') {
+        assert.strictEqual(ast.body.name, 'assert');
       }
     }
   });
@@ -688,10 +693,10 @@ describe('Parser - Let Expressions', () => {
       assert.strictEqual(ast.name, 'T');
       assert.strictEqual(ast.body.type, 'let');
       if (ast.body.type === 'let') {
-        // Value bindings are desugared to nested lets
-        assert.strictEqual(ast.body.bindings.length, 1);
+        assert.strictEqual(ast.body.bindings.length, 2);
         assert.strictEqual(ast.body.bindings[0].name, 'x');
-        assert.strictEqual(ast.body.body.type, 'let');
+        assert.strictEqual(ast.body.bindings[1].name, 'y');
+        assert.strictEqual(ast.body.body.type, 'binary');
       }
     }
   });
@@ -745,14 +750,11 @@ describe('Parser - Range Membership', () => {
 
   it('should parse complex range using let wrapper', () => {
     const ast = parse('(a + b) in (x - 1)..(x + 1)');
-    // Complex expressions should desugar to nested let expressions
-    // (the let helper desugars multiple bindings into nested lets)
+    // Complex operands are hoisted into a let wrapper, one binding each
     assert.strictEqual(ast.type, 'let');
     if (ast.type === 'let') {
-      assert.strictEqual(ast.bindings.length, 1);
-      assert.strictEqual(ast.bindings[0].name, '_v');
-      // The body should be another let with _lo binding
-      assert.strictEqual(ast.body.type, 'let');
+      assert.deepStrictEqual(ast.bindings.map(b => b.name), ['_v', '_lo', '_hi']);
+      assert.strictEqual(ast.body.type, 'binary');
     }
   });
 
@@ -1776,9 +1778,8 @@ describe('Parser - Trailing Commas', () => {
     const ast = parse('let x = 2, y = 3, in x * y');
     assert.strictEqual(ast.type, 'let');
     if (ast.type === 'let') {
-      assert.strictEqual(ast.bindings.length, 1);
-      assert.strictEqual(ast.bindings[0].name, 'x');
-      assert.strictEqual(ast.body.type, 'let');
+      assert.deepStrictEqual(ast.bindings.map(b => b.name), ['x', 'y']);
+      assert.strictEqual(ast.body.type, 'binary');
     }
   });
 

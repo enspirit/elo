@@ -353,8 +353,7 @@ describe('Ruby Compiler - Let Expressions', () => {
     assert.strictEqual(compileToRuby(ast), wrapRuby('(x = 1; x)'));
   });
 
-  it('should compile let with multiple bindings (desugared to nested)', () => {
-    // Multiple bindings are desugared to nested let expressions
+  it('should compile let with multiple bindings as one flat sequence', () => {
     const ast = letExpr(
       [{ name: 'x', value: literal(1) }, { name: 'y', value: literal(2) }],
       binary('+', variable('x'), variable('y'))
