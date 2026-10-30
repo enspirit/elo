@@ -15,3 +15,10 @@ assert(round(0.5) == 1)
 assert(round(-0.5) == -1)
 assert(round(1.5) == 2)
 assert(round(-1.5) == -2)
+
+# POWER() yields double precision in PostgreSQL, where ROUND() is banker's
+# rounding — unlike ROUND(numeric). A half-way value reached through an
+# expression must round like a literal one.
+assert(round(5 ^ 1 / 2) == 3)
+assert(round(-5 ^ 1 / 2) == -3)
+assert(round(7 ^ 1 / 2) == 4)
