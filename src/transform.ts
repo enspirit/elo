@@ -114,7 +114,7 @@ function transformWithDepth(
 
   switch (expr.type) {
     case 'literal':
-      return transformLiteral(expr.value);
+      return transformLiteral(expr.value, expr.isFloat);
 
     case 'string':
       return irString(expr.value);
@@ -341,12 +341,13 @@ function transformTypeExprWithContext(
 /**
  * Transform a literal value (number or boolean)
  */
-function transformLiteral(value: number | boolean): IRExpr {
+function transformLiteral(value: number | boolean, isFloat = false): IRExpr {
   if (typeof value === 'boolean') {
     return irBool(value);
   }
-  // Distinguish int from float
-  if (Number.isInteger(value)) {
+  // Distinguish int from float. `Number.isInteger(1.0)` is true, so a literal
+  // written `1.0` only stays a float thanks to the marker set by the parser.
+  if (Number.isInteger(value) && !isFloat) {
     return irInt(value);
   }
   return irFloat(value);

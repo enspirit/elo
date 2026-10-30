@@ -5,7 +5,7 @@ TRUE /* assertFails not supported in SQL */
 CASE WHEN 3.14 = 3.14 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN elo_float('3.14') = 3.14 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN elo_float('-2.5') = -2.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN elo_float('123') = 123 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_float('123') = 123.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 TRUE /* assertFails not supported in SQL */
 CASE WHEN TRUE = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN FALSE = FALSE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

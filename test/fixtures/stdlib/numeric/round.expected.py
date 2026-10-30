@@ -3,4 +3,4 @@
 (lambda _: kAssert(round(3.7) == 4))(None)
 (lambda _: kAssert(round(-3.2) == -3))(None)
 (lambda _: kAssert(round(-3.7) == -4))(None)
-(lambda _: kAssert(round(5) == 5))(None)
+(lambda _: kAssert(round(5.0) == 5))(None)

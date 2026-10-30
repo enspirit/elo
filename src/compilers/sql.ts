@@ -4,7 +4,7 @@ import { transform } from '../transform';
 import { Types } from '../types';
 import { EmitContext } from '../stdlib';
 import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP } from '../bindings/sql';
-import { assertNumericLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * SQL compilation options
@@ -108,8 +108,10 @@ function emitSQL(ir: IRExpr): string {
 
   switch (ir.type) {
     case 'int_literal':
-    case 'float_literal':
       return assertNumericLiteral(ir.value).toString();
+
+    case 'float_literal':
+      return formatFloatLiteral(ir.value);
 
     case 'bool_literal':
       return ir.value ? 'TRUE' : 'FALSE';

@@ -2,7 +2,7 @@
 (lambda _: kAssert(40 + 2 == 42))(None)
 (lambda _: kAssert(42 != 43))(None)
 (lambda _: kAssert(3.14 == 3.14))(None)
-(lambda _: kAssert(3 + 0.14 == 3.14))(None)
+(lambda _: kAssert(3.0 + 0.14 == 3.14))(None)
 (lambda _: kAssert(3.14 != 3.15))(None)
 (lambda _: kAssert(True == True))(None)
 (lambda _: kAssert(False == False))(None)

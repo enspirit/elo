@@ -1,0 +1,29 @@
+# A float literal written with a trailing .0 must stay a float.
+#
+# The parser turns the token into a JavaScript number, where 1.0 and 1 are the
+# same value, so the distinction has to be carried from the token text. It
+# matters at emission time: in Ruby, Integer / Integer truncates, so `1.0`
+# emitted as `1` silently turns a division into an integer division.
+#
+# Note that `typeOf` stays a runtime function: JavaScript has a single number
+# type, so typeOf(1.0) is 'Int' in every target, by design.
+
+assert(7.0 / 2 == 3.5)
+assert(1.0 / 4 == 0.25)
+assert(10.0 / 4 == 2.5)
+assert(3.0 / 2 * 2 == 3)
+assert(5.0 / 2 == 2.5)
+assert(1.0 / 3 > 0.33)
+assert((let n = 2 in 5.0 / n) == 2.5)
+assert((let f = fn( x ~> 9.0 / x ) in f(2)) == 4.5)
+
+# Values still compare equal across the two kinds
+assert(1.0 == 1)
+assert(2.0 + 1 == 3)
+assert(-0.0 == 0)
+assert(42.0 == 42)
+
+# And a float literal is still a valid operand everywhere
+assert(round(2.0) == 2)
+assert(abs(-3.0) == 3)
+assert(min([2.0, 1]) == 1)

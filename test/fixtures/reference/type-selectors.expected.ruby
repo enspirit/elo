@@ -5,7 +5,7 @@
 ->(_) { (raise "Assertion failed" unless 3.14 == 3.14; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("3.14") == 3.14; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("-2.5") == -2.5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("123") == 123; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("123") == 123.0; true) }.call(nil);
 ->(_) { (begin; (->() { (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("abc") }).call; raise "Expected error but none thrown"; rescue => e; raise e if e.message == "Expected error but none thrown"; true; end) }.call(nil);
 ->(_) { (raise "Assertion failed" unless true == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless false == false; true) }.call(nil);

@@ -1,17 +1,17 @@
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P1D') / 86400.0) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P1D') / 3600.0) = 24 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P1D') / 60.0) = 1440 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN EXTRACT(EPOCH FROM INTERVAL 'P1D') = 86400 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'PT1H') / 60.0) = 60 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN EXTRACT(EPOCH FROM INTERVAL 'PT1H') = 3600 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'PT1H') / 3600.0) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P7D') / 86400.0) = 7 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P1D') / 86400.0) = 1.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P1D') / 3600.0) = 24.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P1D') / 60.0) = 1440.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN EXTRACT(EPOCH FROM INTERVAL 'P1D') = 86400.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'PT1H') / 60.0) = 60.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN EXTRACT(EPOCH FROM INTERVAL 'PT1H') = 3600.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'PT1H') / 3600.0) = 1.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P7D') / 86400.0) = 7.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'PT30M') / 3600.0) = 0.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P7D') / 604800.0) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P14D') / 604800.0) = 2 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P7D') / 604800.0) = 1.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P14D') / 604800.0) = 2.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P365D') / 2629800.0) > 11.9 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P365D') / 2629800.0) < 12.1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P365D') / 31557600.0) > 0.99 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P365D') / 31557600.0) < 1.01 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P90D') / 7889400.0) > 0.98 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P90D') / 7889400.0) < 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM INTERVAL 'P90D') / 7889400.0) < 1.0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

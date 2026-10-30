@@ -572,7 +572,7 @@ export class Parser {
 
     if (token.type === 'NUMBER') {
       this.eat('NUMBER');
-      return literal(parseFloat(token.value));
+      return literal(parseFloat(token.value), token.value.includes('.'));
     }
 
     if (token.type === 'BOOLEAN') {

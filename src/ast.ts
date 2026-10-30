@@ -10,6 +10,12 @@ export type Expr = Literal | NullLiteral | StringLiteral | Variable | BinaryOp |
 export interface Literal {
   type: 'literal';
   value: number | boolean;
+  /**
+   * True when the source wrote the number with a decimal point. `1.0` and `1`
+   * are the same JavaScript number, so the distinction cannot be recovered
+   * from `value` alone.
+   */
+  isFloat?: boolean;
 }
 
 /**
@@ -164,8 +170,8 @@ export interface Lambda {
 /**
  * Helper functions to create AST nodes
  */
-export function literal(value: number | boolean): Literal {
-  return { type: 'literal', value };
+export function literal(value: number | boolean, isFloat = false): Literal {
+  return isFloat ? { type: 'literal', value, isFloat } : { type: 'literal', value };
 }
 
 export function nullLiteral(): NullLiteral {

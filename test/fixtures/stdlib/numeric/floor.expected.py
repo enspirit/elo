@@ -2,4 +2,4 @@
 (lambda _: kAssert(math.floor(3.9) == 3))(None)
 (lambda _: kAssert(math.floor(-3.2) == -4))(None)
 (lambda _: kAssert(math.floor(-3.9) == -4))(None)
-(lambda _: kAssert(math.floor(5) == 5))(None)
+(lambda _: kAssert(math.floor(5.0) == 5))(None)
