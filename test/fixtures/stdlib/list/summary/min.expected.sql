@@ -6,3 +6,12 @@ CASE WHEN (SELECT MIN(v) FROM UNNEST(ARRAY[]) AS v) IS NULL THEN TRUE ELSE (SELE
 
 CASE WHEN CASE WHEN (SELECT MIN(v) FROM UNNEST(ARRAY[date_trunc('day', CURRENT_TIMESTAMP), date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL 'P1D']) AS v) IS NULL THEN 'Null' WHEN pg_typeof((SELECT MIN(v) FROM UNNEST(ARRAY[date_trunc('day', CURRENT_TIMESTAMP), date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL 'P1D']) AS v))::text LIKE '%[]' THEN 'List' ELSE CASE pg_typeof((SELECT MIN(v) FROM UNNEST(ARRAY[date_trunc('day', CURRENT_TIMESTAMP), date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL 'P1D']) AS v))::text WHEN 'integer' THEN 'Int' WHEN 'bigint' THEN 'Int' WHEN 'double precision' THEN 'Float' WHEN 'numeric' THEN 'Float' WHEN 'boolean' THEN 'Bool' WHEN 'text' THEN 'String' WHEN 'character varying' THEN 'String' WHEN 'unknown' THEN 'String' WHEN 'interval' THEN 'Duration' WHEN 'date' THEN 'DateTime' WHEN 'timestamp without time zone' THEN 'DateTime' WHEN 'timestamp with time zone' THEN 'DateTime' ELSE 'Tuple' END END = 'DateTime' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (SELECT MIN(v) FROM UNNEST(ARRAY[date_trunc('day', CURRENT_TIMESTAMP), date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL 'P1D']) AS v) = date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL 'P1D' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+
+
+
+CASE WHEN LEAST(3, 7) = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LEAST(7, 3) = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LEAST(-5, 2) = -5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LEAST(4, 4) = 4 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LEAST(2.5, 1.5) = 1.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LEAST(1, 2.5) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

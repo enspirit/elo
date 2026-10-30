@@ -224,6 +224,12 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('sort', [Types.array], rubyMethod('sort'));
   rubyLib.register('min', [Types.array], rubyMethod('min'));
   rubyLib.register('max', [Types.array], rubyMethod('max'));
+  for (const l of [Types.int, Types.float, Types.any]) {
+    for (const r of [Types.int, Types.float, Types.any]) {
+      rubyLib.register('min', [l, r], (args, ctx) => `[${ctx.emit(args[0])}, ${ctx.emit(args[1])}].min`);
+      rubyLib.register('max', [l, r], (args, ctx) => `[${ctx.emit(args[0])}, ${ctx.emit(args[1])}].max`);
+    }
+  }
   rubyLib.register('sum', [Types.array], rubyMethod('sum'));
   rubyLib.register('avg', [Types.array], (args, ctx) =>
     `(lambda { |a| a.empty? ? nil : a.sum.to_f / a.length }).call(${ctx.emit(args[0])})`);

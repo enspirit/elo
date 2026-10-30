@@ -254,6 +254,12 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     `(lambda a: min(a) if a else None)(${ctx.emit(args[0])})`);
   pyLib.register('max', [Types.array], (args, ctx) =>
     `(lambda a: max(a) if a else None)(${ctx.emit(args[0])})`);
+  for (const l of [Types.int, Types.float, Types.any]) {
+    for (const r of [Types.int, Types.float, Types.any]) {
+      pyLib.register('min', [l, r], (args, ctx) => `min(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+      pyLib.register('max', [l, r], (args, ctx) => `max(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+    }
+  }
   pyLib.register('sum', [Types.array], (args, ctx) =>
     `sum(${ctx.emit(args[0])})`);
   pyLib.register('avg', [Types.array], (args, ctx) =>

@@ -6,3 +6,15 @@ assert(isNull(max([])))
 # max on datetime arrays preserves type (regression test)
 assert(typeOf(max([SOD, SOD - P1D])) == 'DateTime')
 assert(max([SOD, SOD - P1D]) == SOD)
+
+# Two-argument form, mirroring min
+assert(max(3, 7) == 7)
+assert(max(7, 3) == 7)
+assert(max(-5, 2) == 2)
+assert(max(4, 4) == 4)
+assert(max(2.5, 1.5) == 2.5)
+assert(max(1, 2.5) == 2.5)
+# Clamping reads as it is meant to
+assert(max(min(15, 10), 0) == 10)
+assert(max(min(-3, 10), 0) == 0)
+assert(max(min(5, 10), 0) == 5)

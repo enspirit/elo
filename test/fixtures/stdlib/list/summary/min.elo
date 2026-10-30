@@ -6,3 +6,12 @@ assert(isNull(min([])))
 # min on datetime arrays preserves type (regression test)
 assert(typeOf(min([SOD, SOD - P1D])) == 'DateTime')
 assert(min([SOD, SOD - P1D]) == SOD - P1D)
+
+# Two-argument form: clamping one value against one bound should not build a
+# list to look at two numbers.
+assert(min(3, 7) == 3)
+assert(min(7, 3) == 3)
+assert(min(-5, 2) == -5)
+assert(min(4, 4) == 4)
+assert(min(2.5, 1.5) == 1.5)
+assert(min(1, 2.5) == 1)
