@@ -238,6 +238,20 @@ export function isBinaryOp(ir: IRExpr): boolean {
  * Helper for Ruby-style postfix method call that wraps binary expressions in parens.
  * Use for: arg0.method() where Ruby's precedence requires parens around binary ops.
  */
+/**
+ * Helper for a conversion that is a no-op in the target language.
+ *
+ * Returning the operand untouched loses its grouping: the parent sees a call
+ * node, decides it needs no parentheses, and re-associates the bare operand.
+ * `Float(a - b) / c` would emit as `a - b / c`.
+ */
+export function identity(): FunctionEmitter<string> {
+  return (args, ctx) => {
+    const emitted = ctx.emit(args[0]);
+    return isBinaryOp(args[0]) ? `(${emitted})` : emitted;
+  };
+}
+
 export function rubyMethod(method: string): FunctionEmitter<string> {
   return (args, ctx) => {
     const emitted = ctx.emit(args[0]);

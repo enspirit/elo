@@ -1,0 +1,21 @@
+# A type selector applied to an arithmetic expression converts the whole
+# expression, not just its right operand.
+#
+# Ruby renders these conversions as a method call, so the operand has to be
+# parenthesised: `Float(a - b)` must not emit as `a - b.to_f`.
+
+assert(Float(10 - 8) == 2)
+assert(Float(10 - 8) / 4 == 0.5)
+assert(Float(2 + 3) == 5)
+assert(Float(2 * 3) == 6)
+assert(Int(7.5 - 0.5) == 7)
+assert(Int(3.2 + 3.3) == 6)
+assert(String(1 + 2) == '3')
+assert(String(10 - 8) == '2')
+
+# The simple operand case keeps working
+assert(Float(3) == 3)
+assert(Int(3.7) == 3)
+assert(String(42) == '42')
+assert(Float('2.5') == 2.5)
+assert(Int('42') == 42)

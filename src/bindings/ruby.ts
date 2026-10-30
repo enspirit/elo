@@ -6,7 +6,7 @@
 
 import { IRExpr } from '../ir';
 import { Types } from '../types';
-import { StdLib, EmitContext, simpleBinaryOp, nullary, rubyMethod, isBinaryOp, helperCall } from '../stdlib';
+import { StdLib, identity, EmitContext, simpleBinaryOp, nullary, rubyMethod, isBinaryOp, helperCall } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
@@ -306,13 +306,13 @@ export function createRubyBinding(): StdLib<string> {
   // For float and any, use the method (which also works correctly for ints)
   rubyLib.register('abs', [Types.int], rubyMethod('abs'));
   rubyLib.register('abs', [Types.float], rubyMethod('abs'));
-  rubyLib.register('round', [Types.int], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('round', [Types.int], identity());
   rubyLib.register('round', [Types.float], rubyMethod('round'));
   rubyLib.register('round', [Types.any], rubyMethod('round')); // Safe for any numeric type
-  rubyLib.register('floor', [Types.int], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('floor', [Types.int], identity());
   rubyLib.register('floor', [Types.float], rubyMethod('floor'));
   rubyLib.register('floor', [Types.any], rubyMethod('floor')); // Safe for any numeric type
-  rubyLib.register('ceil', [Types.int], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('ceil', [Types.int], identity());
   rubyLib.register('ceil', [Types.float], rubyMethod('ceil'));
   rubyLib.register('ceil', [Types.any], rubyMethod('ceil')); // Safe for any numeric type
 
@@ -408,8 +408,8 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
 
   // Type selectors (Finitio schemas - throw on failure)
   // Int - identity for int, truncate for float, parse for string
-  rubyLib.register('Int', [Types.int], (args, ctx) => ctx.emit(args[0]));
-  rubyLib.register('Int', [Types.float], (args, ctx) => `${ctx.emit(args[0])}.to_i`);
+  rubyLib.register('Int', [Types.int], identity());
+  rubyLib.register('Int', [Types.float], rubyMethod('to_i'));
   rubyLib.register('Int', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
     return `(->(s) { Integer(s) rescue raise ".: expected Int, got #{s.inspect}" }).call(${v})`;
@@ -420,8 +420,8 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // Float - identity for float, convert for int, parse for string
-  rubyLib.register('Float', [Types.float], (args, ctx) => ctx.emit(args[0]));
-  rubyLib.register('Float', [Types.int], (args, ctx) => `${ctx.emit(args[0])}.to_f`);
+  rubyLib.register('Float', [Types.float], identity());
+  rubyLib.register('Float', [Types.int], rubyMethod('to_f'));
   rubyLib.register('Float', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
     return `(->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call(${v})`;
@@ -432,7 +432,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // Bool - identity for bool, parse "true"/"false" for string
-  rubyLib.register('Bool', [Types.bool], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('Bool', [Types.bool], identity());
   rubyLib.register('Bool', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
     return `(->(s) { case s when 'true'; true when 'false'; false else raise ".: expected Bool, got #{s.inspect}" end }).call(${v})`;
@@ -443,7 +443,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // Date - identity for date, parse ISO for string
-  rubyLib.register('Date', [Types.date], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('Date', [Types.date], identity());
   rubyLib.register('Date', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
     return `(->(s) { raise ".: expected Date (YYYY-MM-DD), got #{s.inspect}" unless s =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(s) }).call(${v})`;
@@ -454,7 +454,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // Datetime - identity for datetime, parse ISO for string
-  rubyLib.register('Datetime', [Types.datetime], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('Datetime', [Types.datetime], identity());
   rubyLib.register('Datetime', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
     return `(->(s) { DateTime.parse(s) rescue raise ".: expected Datetime, got invalid datetime #{s.inspect}" }).call(${v})`;
@@ -465,7 +465,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // Duration - identity for duration, parse ISO for string
-  rubyLib.register('Duration', [Types.duration], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('Duration', [Types.duration], identity());
   rubyLib.register('Duration', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
     return `(->(s) { ActiveSupport::Duration.parse(s) rescue raise ".: expected Duration (ISO 8601), got #{s.inspect}" }).call(${v})`;
@@ -476,7 +476,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // Interval - construct from object with start/end properties
-  rubyLib.register('Interval', [Types.interval], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('Interval', [Types.interval], identity());
   rubyLib.register('Interval', [Types.object], (args, ctx) => {
     const obj = args[0];
     if (obj.type === 'object_literal') {
@@ -517,8 +517,8 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // Data - identity for non-strings, parse JSON for strings
-  rubyLib.register('Data', [Types.array], (args, ctx) => ctx.emit(args[0]));
-  rubyLib.register('Data', [Types.object], (args, ctx) => ctx.emit(args[0]));
+  rubyLib.register('Data', [Types.array], identity());
+  rubyLib.register('Data', [Types.object], identity());
   rubyLib.register('Data', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
     return `(->(s) { JSON.parse(s, symbolize_names: true) rescue raise ".: invalid JSON: #{s.inspect}" }).call(${v})`;
@@ -529,11 +529,11 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   });
 
   // String - convert any value to string (Elo literal format for complex types)
-  rubyLib.register('String', [Types.string], (args, ctx) => ctx.emit(args[0]));
-  rubyLib.register('String', [Types.int], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
-  rubyLib.register('String', [Types.float], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
-  rubyLib.register('String', [Types.bool], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
-  rubyLib.register('String', [Types.null], (args, ctx) => `${ctx.emit(args[0])}.to_s`);
+  rubyLib.register('String', [Types.string], identity());
+  rubyLib.register('String', [Types.int], rubyMethod('to_s'));
+  rubyLib.register('String', [Types.float], rubyMethod('to_s'));
+  rubyLib.register('String', [Types.bool], rubyMethod('to_s'));
+  rubyLib.register('String', [Types.null], rubyMethod('to_s'));
   rubyLib.register('String', [Types.array], (args, ctx) => {
     ctx.requireHelper?.('k_string');
     return `k_string(${ctx.emit(args[0])})`;
