@@ -28,4 +28,4 @@
 
 (lambda _: kAssert((1 + 1) / 4 == 0.5))(None)
 (lambda _: kAssert(24 / (6 / 2) == 8))(None)
-(lambda _: kAssert(round(7 / 2) == 4))(None)
+(lambda _: kAssert(kRound(7 / 2) == 4))(None)

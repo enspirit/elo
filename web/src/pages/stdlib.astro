@@ -555,8 +555,10 @@ import Footer from '../components/Footer.astro';
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">round</div>
             <div class="fn-sig">(n: Float) → Int</div>
-            <p class="fn-desc">Rounds a number to the nearest integer.</p>
+            <p class="fn-desc">Rounds a number to the nearest integer. Half-way values round away from zero, in every target.</p>
             <div class="fn-example"><code class="language-elo">round(3.7)</code><span class="fn-result">→ 4</span></div>
+            <div class="fn-example"><code class="language-elo">round(2.5)</code><span class="fn-result">→ 3</span></div>
+            <div class="fn-example"><code class="language-elo">round(-2.5)</code><span class="fn-result">→ -3</span></div>
           </div>
         </div>
       </section>

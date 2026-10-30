@@ -14,6 +14,7 @@
  * Dependencies between helpers. If helper A uses helper B, A depends on B.
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
+  kRound: [],
   kNeq: ['kEq'],
   kFetchObject: ['kFetch'],
   // Parser helpers depend on pOk/pFail
@@ -51,6 +52,7 @@ export const JS_HELPERS: Record<string, string> = {
   if (Duration.isDuration(l) && typeof r === 'number') return Duration.fromMillis(l.toMillis() / r);
   return l / r;
 }`,
+  kRound: `function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); }`,
   kMod: `function kMod(l, r) { return l % r; }`,
   kPow: `function kPow(l, r) { return Math.pow(l, r); }`,
   kEq: `function kEq(l, r) {
@@ -390,6 +392,7 @@ end`,
  * Special entries starting with _ are import statements, not functions.
  */
 export const PY_HELPER_DEPS: Record<string, string[]> = {
+  kRound: ['_import_math'],
   kEq: [],
   kNeq: ['kEq'],
   kIntersection: ['_EloInterval'],
@@ -663,6 +666,8 @@ def _elo_end_of_year(dt):
     if isinstance(l, EloDuration): return l.scale(r)
     if isinstance(r, EloDuration): return r.scale(l)
     return l * r`,
+  kRound: `def kRound(x):
+    return math.floor(x + 0.5) if x >= 0 else math.ceil(x - 0.5)`,
   kDiv: `def kDiv(l, r):
     if isinstance(l, EloDuration) and isinstance(r, (int, float)): return l.divide(r)
     return l / r`,

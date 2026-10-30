@@ -357,8 +357,10 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('abs', [Types.int], fnCall('Math.abs'));
   jsLib.register('abs', [Types.float], fnCall('Math.abs'));
   jsLib.register('round', [Types.int], identity());
-  jsLib.register('round', [Types.float], fnCall('Math.round'));
-  jsLib.register('round', [Types.any], fnCall('Math.round')); // Safe for any numeric type
+  // Math.round sends halves toward +Infinity: Math.round(-2.5) is -2. Elo
+  // rounds halves away from zero, like Ruby and PostgreSQL do natively.
+  jsLib.register('round', [Types.float], helperCall('kRound'));
+  jsLib.register('round', [Types.any], helperCall('kRound'));
   jsLib.register('floor', [Types.int], identity());
   jsLib.register('floor', [Types.float], fnCall('Math.floor'));
   jsLib.register('floor', [Types.any], fnCall('Math.floor')); // Safe for any numeric type

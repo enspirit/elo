@@ -4,3 +4,14 @@ assert(round(3.7) == 4)
 assert(round(-3.2) == -3)
 assert(round(-3.7) == -4)
 assert(round(5.0) == 5)
+
+# Half-way values round away from zero, as Ruby and PostgreSQL do natively.
+# JavaScript rounds halves toward +Infinity and Python rounds them to even, so
+# both need a helper to agree.
+assert(round(2.5) == 3)
+assert(round(-2.5) == -3)
+assert(round(-3.5) == -4)
+assert(round(0.5) == 1)
+assert(round(-0.5) == -1)
+assert(round(1.5) == 2)
+assert(round(-1.5) == -2)
