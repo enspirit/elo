@@ -283,6 +283,23 @@ describe('Elo Evaluator - Basic evaluation', () => {
     const result = elo('-e "[1, 2, 3]"');
     assert.strictEqual(result, '[1,2,3]');
   });
+
+  // A multi-line -e payload is one expression, not a sequence of lines: a
+  // leading comment must not make the whole thing vanish.
+  it('should evaluate a multi-line expression that opens with a comment', () => {
+    const result = elo('-e "# a title\nlet x = 1, y = 2 in x + y"');
+    assert.strictEqual(result, '3');
+  });
+
+  it('should evaluate a multi-line expression with an inner comment', () => {
+    const result = elo('-e "let\n  # the first one\n  x = 40,\n  y = 2\nin x + y"');
+    assert.strictEqual(result, '42');
+  });
+
+  it('should stay silent on a comment-only expression', () => {
+    const result = elo('-e "# nothing to see"');
+    assert.strictEqual(result, '');
+  });
 });
 
 describe('Elo Evaluator - Input data', () => {
