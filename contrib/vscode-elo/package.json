@@ -65,9 +65,11 @@
   "scripts": {
     "test": "node test/tokenize.test.mjs",
     "icons": "magick -background none -density 384 icon.svg -resize 128x128 PNG32:icon.png && magick -background none -density 384 icons/elo-dark.svg -resize 64x64 PNG32:icons/elo-dark.png && magick -background none -density 384 icons/elo-light.svg -resize 64x64 PNG32:icons/elo-light.png",
-    "package": "vsce package"
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
+    "@vscode/vsce": "^4.1.0",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.1.0"
   }
