@@ -205,6 +205,18 @@ function compile(source: string, target: Target, options: CompileOptions = {}): 
   return code;
 }
 
+/**
+ * True when a source carries no expression at all: every line is blank or a
+ * comment. Applied to the whole source, not to its first line — a multi-line
+ * expression passed with -e may perfectly well open with a comment.
+ */
+function isBlankSource(source: string): boolean {
+  return source.split('\n').every(line => {
+    const trimmed = line.trim();
+    return trimmed === '' || trimmed.startsWith('#');
+  });
+}
+
 function main() {
   const args = process.argv.slice(2);
 
@@ -254,8 +266,8 @@ function main() {
     results = sources.map((source, index) => {
       try {
         const trimmed = source.trim();
-        // Skip empty lines and comment lines - return empty result
-        if (trimmed === '' || trimmed.startsWith('#')) {
+        // Skip blank lines and comment-only sources
+        if (isBlankSource(source)) {
           return '';
         }
         return compile(trimmed, options.target, {
