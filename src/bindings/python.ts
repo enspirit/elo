@@ -141,8 +141,10 @@ export function createPythonBinding(): StdLib<string> {
   // Numeric functions
   pyLib.register('abs', [Types.int], (args, ctx) => `abs(${ctx.emit(args[0])})`);
   pyLib.register('abs', [Types.float], (args, ctx) => `abs(${ctx.emit(args[0])})`);
-  pyLib.register('round', [Types.float], (args, ctx) => `round(${ctx.emit(args[0])})`);
-  pyLib.register('round', [Types.int], (args, ctx) => `round(${ctx.emit(args[0])})`);
+  // Python's round() is banker's rounding: round(2.5) is 2. Elo rounds halves
+  // away from zero, like Ruby and PostgreSQL do natively.
+  pyLib.register('round', [Types.float], helperCall('kRound'));
+  pyLib.register('round', [Types.int], identity());
   pyLib.register('floor', [Types.float], (args, ctx) => {
     ctx.requireHelper?.('_import_math');
     return `math.floor(${ctx.emit(args[0])})`;

@@ -24,6 +24,6 @@
 (function(_) { return (function() { if (!(42.0 == 42)) throw new Error("Assertion failed"); return true; })(); })(null);
 
 
-(function(_) { return (function() { if (!(Math.round(2.0) == 2)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); } return (function() { if (!(kRound(2.0) == 2)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(Math.abs(-3.0) == 3)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { function kEq(l, r) { if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis(); if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis(); if (Array.isArray(l) && Array.isArray(r)) { if (l.length !== r.length) return false; for (let i = 0; i < l.length; i++) if (!kEq(l[i], r[i])) return false; return true; } if (typeof l === 'object' && typeof r === 'object' && l !== null && r !== null && !Array.isArray(l) && !Array.isArray(r)) { const keysL = Object.keys(l); const keysR = Object.keys(r); if (keysL.length !== keysR.length) return false; for (const key of keysL) if (!(key in r) || !kEq(l[key], r[key])) return false; return true; } return l == r; } return (function() { if (!(kEq((a => a.length === 0 ? null : a.reduce((x, y) => x < y ? x : y))([2.0, 1]), 1))) throw new Error("Assertion failed"); return true; })(); })(null);

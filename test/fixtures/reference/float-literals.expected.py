@@ -24,6 +24,6 @@
 (lambda _: kAssert(42.0 == 42))(None)
 
 
-(lambda _: kAssert(round(2.0) == 2))(None)
+(lambda _: kAssert(kRound(2.0) == 2))(None)
 (lambda _: kAssert(abs(-3.0) == 3))(None)
 (lambda _: kAssert((lambda a: min(a) if a else None)([2.0, 1]) == 1))(None)

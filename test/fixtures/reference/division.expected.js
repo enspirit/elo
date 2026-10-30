@@ -28,4 +28,4 @@
 
 (function(_) { return (function() { if (!((1 + 1) / 4 == 0.5)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(24 / (6 / 2) == 8)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!(Math.round(7 / 2) == 4)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); } return (function() { if (!(kRound(7 / 2) == 4)) throw new Error("Assertion failed"); return true; })(); })(null);
