@@ -265,6 +265,7 @@ export const JS_HELPERS: Record<string, string> = {
  * These are embedded in compiled Ruby output when type definitions are used.
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  k_div: [],
   p_any: ['p_ok'],
   p_null: ['p_ok', 'p_fail'],
   p_string: ['p_ok', 'p_fail'],
@@ -278,6 +279,10 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  k_div: `def k_div(l, r)
+  return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer)
+  l / r
+end`,
   k_deep_merge: `def k_deep_merge(a, b)
   return b unless a.is_a?(Hash) && b.is_a?(Hash)
   result = a.dup

@@ -11,6 +11,13 @@ function wrapRuby(code: string): string {
   return `->(_) { ${code} }`;
 }
 
+// Emitted ahead of the expression when the division has to decide at runtime.
+const K_DIV = 'def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; ';
+
+function wrapRubyWithKDiv(code: string): string {
+  return wrapRuby(`${K_DIV}${code}`);
+}
+
 describe('Ruby Compiler - Literals', () => {
   it('should compile numeric literals', () => {
     assert.strictEqual(compileToRuby(literal(42)), wrapRuby('42'));
@@ -141,9 +148,10 @@ describe('Ruby Compiler - Arithmetic Operators', () => {
     assert.strictEqual(compileToRuby(ast), wrapRuby('4 * 3'));
   });
 
-  it('should compile division', () => {
+  // Ruby truncates Integer / Integer, where Elo's `/` is real division.
+  it('should compile division through fdiv', () => {
     const ast = binary('/', literal(10), literal(2));
-    assert.strictEqual(compileToRuby(ast), wrapRuby('10 / 2'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby('10.fdiv(2)'));
   });
 
   it('should compile modulo', () => {
@@ -241,7 +249,7 @@ describe('Ruby Compiler - Operator Precedence', () => {
 
   it('should handle right-associative division', () => {
     const ast = binary('/', literal(20), binary('/', literal(10), literal(2)));
-    assert.strictEqual(compileToRuby(ast), wrapRuby('20 / (10 / 2)'));
+    assert.strictEqual(compileToRuby(ast), wrapRubyWithKDiv('k_div(20, 10.fdiv(2))'));
   });
 
   it('should handle power precedence', () => {
@@ -288,7 +296,7 @@ describe('Ruby Compiler - Complex Expressions', () => {
       ),
       literal(2)
     );
-    assert.strictEqual(compileToRuby(ast), wrapRuby('(_[:x] + 5) * (_[:y] - 3) / 2'));
+    assert.strictEqual(compileToRuby(ast), wrapRubyWithKDiv('k_div((_[:x] + 5) * (_[:y] - 3), 2)'));
   });
 
   it('should compile complex boolean with parentheses', () => {
