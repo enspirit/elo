@@ -2,7 +2,7 @@
 ->(_) { (raise "Assertion failed" unless 40 + 2 == 42; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 42 != 43; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 3.14 == 3.14; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 3 + 0.14 == 3.14; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.0 + 0.14 == 3.14; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 3.14 != 3.15; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless true == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless false == false; true) }.call(nil);

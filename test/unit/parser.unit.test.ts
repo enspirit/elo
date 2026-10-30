@@ -16,7 +16,20 @@ describe('Parser - Numeric Literals', () => {
     const ast = parse('3.14');
     assert.deepStrictEqual(ast, {
       type: 'literal',
-      value: 3.14
+      value: 3.14,
+      isFloat: true
+    });
+  });
+
+  it('should remember a trailing .0, which the value alone cannot carry', () => {
+    assert.deepStrictEqual(parse('1.0'), {
+      type: 'literal',
+      value: 1,
+      isFloat: true
+    });
+    assert.deepStrictEqual(parse('1'), {
+      type: 'literal',
+      value: 1
     });
   });
 

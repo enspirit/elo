@@ -3,4 +3,4 @@
 ->(_) { (raise "Assertion failed" unless 3.7.round == 4; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless -3.2.round == -3; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless -3.7.round == -4; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 5 == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 5.0.round == 5; true) }.call(nil);

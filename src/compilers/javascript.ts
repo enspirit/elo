@@ -4,7 +4,7 @@ import { transform } from '../transform';
 import { EmitContext } from '../stdlib';
 import { createJavaScriptBinding, isNativeBinaryOp } from '../bindings/javascript';
 import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
-import { assertNumericLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * JavaScript compilation options
@@ -169,8 +169,10 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
 
   switch (ir.type) {
     case 'int_literal':
-    case 'float_literal':
       return assertNumericLiteral(ir.value).toString();
+
+    case 'float_literal':
+      return formatFloatLiteral(ir.value);
 
     case 'bool_literal':
       return ir.value.toString();

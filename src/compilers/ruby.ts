@@ -4,7 +4,7 @@ import { transform } from '../transform';
 import { EmitContext } from '../stdlib';
 import { createRubyBinding, isNativeBinaryOp, RUBY_OP_MAP } from '../bindings/ruby';
 import { RUBY_HELPERS, RUBY_HELPER_DEPS } from '../runtime';
-import { assertNumericLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * Ruby compilation options
@@ -185,8 +185,10 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
 
   switch (ir.type) {
     case 'int_literal':
-    case 'float_literal':
       return assertNumericLiteral(ir.value).toString();
+
+    case 'float_literal':
+      return formatFloatLiteral(ir.value);
 
     case 'bool_literal':
       return ir.value.toString();

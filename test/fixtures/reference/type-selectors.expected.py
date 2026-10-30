@@ -5,7 +5,7 @@
 (lambda _: kAssert(float(3.14) == 3.14))(None)
 (lambda _: kAssert(float("3.14") == 3.14))(None)
 (lambda _: kAssert(float("-2.5") == -2.5))(None)
-(lambda _: kAssert(float("123") == 123))(None)
+(lambda _: kAssert(float("123") == 123.0))(None)
 (lambda _: kAssertFails(lambda : float("abc")))(None)
 (lambda _: kAssert(kBool(True) == True))(None)
 (lambda _: kAssert(kBool(False) == False))(None)

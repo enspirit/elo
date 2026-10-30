@@ -2,7 +2,7 @@
 (function(_) { return (function() { if (!(40 + 2 == 42)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(42 != 43)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(3.14 == 3.14)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!(3 + 0.14 == 3.14)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(3.0 + 0.14 == 3.14)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(3.14 != 3.15)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(true == true)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(false == false)) throw new Error("Assertion failed"); return true; })(); })(null);
