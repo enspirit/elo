@@ -3,4 +3,4 @@
 ->(_) { (raise "Assertion failed" unless 1000 * (1 + 0.05) ** 10 > 1500; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 30 >= 18 && (50000 > 30000 || true == true); true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 0.8 * 100 == 80; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 70 / 1.75 ** 2 < 25; true) }.call(nil);
+->(_) { def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; (raise "Assertion failed" unless k_div(70, 1.75 ** 2) < 25; true) }.call(nil);

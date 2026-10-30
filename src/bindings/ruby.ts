@@ -6,7 +6,7 @@
 
 import { IRExpr } from '../ir';
 import { Types } from '../types';
-import { StdLib, EmitContext, simpleBinaryOp, nullary, rubyMethod, isBinaryOp } from '../stdlib';
+import { StdLib, EmitContext, simpleBinaryOp, nullary, rubyMethod, isBinaryOp, helperCall } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
@@ -85,7 +85,18 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('add', [Types.any, Types.any], simpleBinaryOp('+'));
   rubyLib.register('sub', [Types.any, Types.any], simpleBinaryOp('-'));
   rubyLib.register('mul', [Types.any, Types.any], simpleBinaryOp('*'));
-  rubyLib.register('div', [Types.any, Types.any], simpleBinaryOp('/'));
+  // Ruby truncates Integer / Integer, where Elo's `/` is real division in
+  // every other target. When both operands are statically integers we can
+  // emit fdiv directly; otherwise the helper decides at runtime, so that
+  // Duration / Integer keeps using the overloaded operator.
+  rubyLib.register('div', [Types.int, Types.int], (args, ctx) => {
+    const left = ctx.emit(args[0]);
+    const receiver = isNativeBinaryOp(args[0]) ? `(${left})` : left;
+    return `${receiver}.fdiv(${ctx.emit(args[1])})`;
+  });
+  rubyLib.register('div', [Types.duration, Types.int], simpleBinaryOp('/'));
+  rubyLib.register('div', [Types.duration, Types.float], simpleBinaryOp('/'));
+  rubyLib.register('div', [Types.any, Types.any], helperCall('k_div'));
   rubyLib.register('mod', [Types.any, Types.any], simpleBinaryOp('%'));
   rubyLib.register('pow', [Types.any, Types.any], simpleBinaryOp('**'));
 
