@@ -1,0 +1,208 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Elo",
+  "scopeName": "source.elo",
+  "patterns": [{ "include": "#expression" }],
+  "repository": {
+    "expression": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#datetime-literal" },
+        { "include": "#date-literal" },
+        { "include": "#duration-literal" },
+        { "include": "#temporal-keyword" },
+        { "include": "#type-constraint" },
+        { "include": "#lambda" },
+        { "include": "#builtin-type" },
+        { "include": "#type-name" },
+        { "include": "#constant" },
+        { "include": "#keyword" },
+        { "include": "#lambda-sugar-param" },
+        { "include": "#stdlib-call" },
+        { "include": "#function-call" },
+        { "include": "#property-key" },
+        { "include": "#definition" },
+        { "include": "#input-variable" },
+        { "include": "#number" },
+        { "include": "#operator" },
+        { "include": "#member-access" },
+        { "include": "#punctuation" }
+      ]
+    },
+
+    "comment": {
+      "match": "(#).*$",
+      "name": "comment.line.number-sign.elo",
+      "captures": { "1": { "name": "punctuation.definition.comment.elo" } }
+    },
+
+    "string": {
+      "name": "string.quoted.single.elo",
+      "begin": "'",
+      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.elo" } },
+      "end": "'",
+      "endCaptures": { "0": { "name": "punctuation.definition.string.end.elo" } },
+      "patterns": [
+        { "match": "\\\\[\\\\ntr']", "name": "constant.character.escape.elo" },
+        { "match": "\\\\.", "name": "invalid.illegal.unknown-escape.elo" }
+      ]
+    },
+
+    "datetime-literal": {
+      "comment": "D2024-01-15T10:30:00.123Z, D2024-01-15T10:30:00+02:00",
+      "match": "\\bD\\d{4}-\\d{2}-\\d{2}T[\\d:]+(?:\\.\\d+)?(?:Z|[+-][\\d:]+)?",
+      "name": "constant.numeric.datetime.elo"
+    },
+
+    "date-literal": {
+      "comment": "D2024-01-15",
+      "match": "\\bD\\d{4}-\\d{2}-\\d{2}\\b",
+      "name": "constant.numeric.date.elo"
+    },
+
+    "duration-literal": {
+      "comment": "ISO8601 durations: P1D, P1Y2M3D, PT1H30M, PT0.5S",
+      "match": "\\bP(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?(?![\\w-])",
+      "name": "constant.numeric.duration.elo"
+    },
+
+    "temporal-keyword": {
+      "match": "\\b(?:NOW|TODAY|TOMORROW|YESTERDAY|BOT|EOT|SOD|EOD|SOW|EOW|SOM|EOM|SOQ|EOQ|SOY|EOY)\\b",
+      "name": "constant.language.temporal.elo"
+    },
+
+    "builtin-type": {
+      "comment": "Type selectors of the standard library",
+      "match": "\\b(?:Int|Float|Bool|String|Date|Datetime|Duration|Interval|Data|Null|Any)\\b",
+      "name": "support.type.builtin.elo"
+    },
+
+    "type-name": {
+      "comment": "Elo reserves capitalised identifiers for type names (see tokens.ts)",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
+      "name": "entity.name.type.elo"
+    },
+
+    "constant": {
+      "patterns": [
+        { "match": "\\b(?:true|false)\\b", "name": "constant.language.boolean.elo" },
+        { "match": "\\bnull\\b", "name": "constant.language.null.elo" }
+      ]
+    },
+
+    "keyword": {
+      "patterns": [
+        { "match": "\\b(?:let|in|if|then|else)\\b", "name": "keyword.control.elo" },
+        { "match": "\\b(?:guard|check)\\b", "name": "keyword.control.assertion.elo" },
+        { "match": "\\b(?:and|or|not)\\b", "name": "keyword.operator.logical.word.elo" },
+        { "match": "\\bfn\\b", "name": "keyword.declaration.function.elo" }
+      ]
+    },
+
+    "type-constraint": {
+      "comment": "Finitio-style subtype constraints: Int(i | positive: i > 0)",
+      "match": "\\b([A-Z][A-Za-z0-9_]*)\\s*(\\()\\s*([a-z_][A-Za-z0-9_]*)\\s*(?=\\|)",
+      "captures": {
+        "1": {
+          "patterns": [
+            { "include": "#builtin-type" },
+            { "include": "#type-name" }
+          ]
+        },
+        "2": { "name": "meta.brace.round.elo" },
+        "3": { "name": "variable.parameter.elo" }
+      }
+    },
+
+    "lambda": {
+      "comment": "fn(x, y ~> body) — parameters up to the arrow",
+      "name": "meta.function.elo",
+      "begin": "\\b(fn)\\s*(\\()",
+      "beginCaptures": {
+        "1": { "name": "keyword.declaration.function.elo" },
+        "2": { "name": "punctuation.definition.parameters.begin.elo" }
+      },
+      "end": "(~>)",
+      "endCaptures": { "1": { "name": "keyword.operator.arrow.elo" } },
+      "patterns": [
+        { "include": "#comment" },
+        { "match": "\\b[a-z_][A-Za-z0-9_]*\\b", "name": "variable.parameter.elo" },
+        { "match": ",", "name": "punctuation.separator.parameter.elo" }
+      ]
+    },
+
+    "lambda-sugar-param": {
+      "comment": "x ~> x * 2",
+      "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(?=~>)",
+      "captures": { "1": { "name": "variable.parameter.elo" } }
+    },
+
+    "stdlib-call": {
+      "comment": "Standard library functions, when invoked or piped into",
+      "match": "\\b(abs|round|floor|ceil|upper|lower|trim|trimStart|trimEnd|contains|indexOf|startsWith|endsWith|substring|replace|replaceAll|reverse|extract|padStart|padEnd|split|length|isEmpty|isBlank|concat|at|first|last|find|count|sum|avg|min|max|join|map|filter|sort|sortBy|unique|flat|reduce|any|all|typeOf|isNull|isNotNull|fetch|patch|merge|deepMerge|assert|assertFails|fail|startOfDay|endOfDay|startOfWeek|endOfWeek|startOfMonth|endOfMonth|startOfQuarter|endOfQuarter|startOfYear|endOfYear|inYears|inQuarters|inMonths|inWeeks|inDays|inHours|inMinutes|inSeconds|year|month|day|hour|minute|start|end|union|intersection)\\b",
+      "name": "support.function.elo"
+    },
+
+    "function-call": {
+      "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+      "captures": { "1": { "name": "entity.name.function.elo" } }
+    },
+
+    "property-key": {
+      "comment": "Object keys, schema attributes and guard/check constraint labels",
+      "match": "(?<![\\w.])([a-z_][A-Za-z0-9_]*)\\s*(?=:)",
+      "captures": { "1": { "name": "variable.other.property.elo" } }
+    },
+
+    "definition": {
+      "comment": "The name being bound in a let binding: name = expression",
+      "match": "(?<![\\w.])([a-z_][A-Za-z0-9_]*)\\s*(?==(?!=))",
+      "captures": { "1": { "name": "variable.other.definition.elo" } }
+    },
+
+    "input-variable": {
+      "comment": "_ is the implicit input of every Elo expression",
+      "match": "(?<![\\w])_(?![\\w])",
+      "name": "variable.language.input.elo"
+    },
+
+    "number": {
+      "match": "\\b\\d+(?:\\.\\d+)?\\b",
+      "name": "constant.numeric.decimal.elo"
+    },
+
+    "operator": {
+      "patterns": [
+        { "match": "\\|>", "name": "keyword.operator.pipe.elo" },
+        { "match": "~>", "name": "keyword.operator.arrow.elo" },
+        { "match": "\\.{2,3}", "name": "keyword.operator.range.elo" },
+        { "match": "==|!=|<=|>=|<|>", "name": "keyword.operator.comparison.elo" },
+        { "match": "&&|\\|\\||!", "name": "keyword.operator.logical.elo" },
+        { "match": "\\|", "name": "keyword.operator.alternative.elo" },
+        { "match": "[+\\-*/%^]", "name": "keyword.operator.arithmetic.elo" },
+        { "match": "=", "name": "keyword.operator.assignment.elo" },
+        { "match": "\\?", "name": "keyword.operator.optional.elo" }
+      ]
+    },
+
+    "member-access": {
+      "comment": "Member access and data paths: _.a.b, .items.0.name",
+      "match": "(\\.)([A-Za-z_][A-Za-z0-9_]*|\\d+)",
+      "captures": {
+        "1": { "name": "punctuation.accessor.elo" },
+        "2": { "name": "variable.other.property.elo" }
+      }
+    },
+
+    "punctuation": {
+      "patterns": [
+        { "match": "[()]", "name": "meta.brace.round.elo" },
+        { "match": "[\\[\\]]", "name": "meta.brace.square.elo" },
+        { "match": "[{}]", "name": "meta.brace.curly.elo" },
+        { "match": ",", "name": "punctuation.separator.comma.elo" },
+        { "match": ":", "name": "punctuation.separator.key-value.elo" }
+      ]
+    }
+  }
+}

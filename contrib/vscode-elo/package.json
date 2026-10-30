@@ -1,0 +1,59 @@
+{
+  "name": "vscode-elo",
+  "displayName": "Elo",
+  "description": "Syntax highlighting for the Elo expression language",
+  "version": "0.1.0",
+  "publisher": "enspirit",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "elo",
+    "expression language",
+    "syntax highlighting",
+    "textmate"
+  ],
+  "homepage": "https://elo-lang.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enspirit/elo.git",
+    "directory": "contrib/vscode-elo"
+  },
+  "bugs": {
+    "url": "https://github.com/enspirit/elo/issues"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "elo",
+        "aliases": [
+          "Elo",
+          "elo"
+        ],
+        "extensions": [
+          ".elo"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "elo",
+        "scopeName": "source.elo",
+        "path": "./syntaxes/elo.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node test/tokenize.test.mjs"
+  },
+  "devDependencies": {
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.1.0"
+  }
+}
