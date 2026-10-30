@@ -1,0 +1,31 @@
+# Operator precedence when operand types are not statically known.
+#
+# Lambda parameters are typed `any`, so the stdlib dispatch falls back to the
+# native operator. Parenthesisation must follow that fallback: a target that
+# emits `a + b` natively but reports the call as "not a native binary op"
+# drops the parentheses and silently changes the result.
+
+assert((let f = fn( x, y ~> 12 * (x + y) ) in f(1, 2)) == 36)
+assert((let f = fn( x, y ~> (x + y) * 12 ) in f(1, 2)) == 36)
+assert((let f = fn( x, y ~> 12 - (x + y) ) in f(1, 2)) == 9)
+assert((let f = fn( x, y ~> 12 / (x + y) ) in f(1, 2)) == 4)
+assert((let f = fn( x, y ~> 12 % (x + y) ) in f(5, 2)) == 5)
+assert((let f = fn( x, y ~> (x + y) ^ 2 ) in f(1, 2)) == 9)
+assert((let f = fn( x, y ~> -(x + y) ) in f(40, 15)) == -55)
+assert((let f = fn( x, y ~> 2 * (x - y) ) in f(5, 1)) == 8)
+assert((let f = fn( x, y ~> 100 / (x * y) ) in f(2, 5)) == 10)
+assert((let f = fn( x, y, z ~> x * (y + z) - 1 ) in f(2, 3, 4)) == 13)
+assert((let f = fn( x, y ~> (x + 1) * (y + 1) ) in f(2, 3)) == 12)
+assert((let f = fn( x, y ~> 1 - (x - y) ) in f(5, 2)) == -2)
+assert((let f = fn( x, y ~> 24 / (x / y) ) in f(6, 2)) == 8)
+
+# The same shapes must keep working when the types ARE known statically.
+assert(12 * (1 + 2) == 36)
+assert(12 - (1 + 2) == 9)
+assert(-(40 + 15) == -55)
+assert(24 / (6 / 2) == 8)
+
+# Comparison and logical operators with dynamic operands.
+assert((let f = fn( x, y ~> (x + y) > 10 ) in f(6, 5)) == true)
+assert((let f = fn( x, y ~> (x > y) == true ) in f(2, 1)) == true)
+assert((let f = fn( x, y ~> !(x > y) ) in f(1, 2)) == true)
