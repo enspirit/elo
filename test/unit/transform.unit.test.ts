@@ -919,6 +919,31 @@ describe('transform - depth limits', () => {
   });
 });
 
+describe('transform - array multiplication is rejected (security)', () => {
+  // `[1] * n` is not a supported operation: it means nothing on SQL, coerces to
+  // NaN on JS, and on Ruby/Python repeats the array — an unbounded allocation
+  // (`[1] * 1000000000` OOMs the host). Multiplication is numeric (plus the
+  // documented String*Number); an array operand is a type error.
+
+  it('rejects an array literal multiplied by an int', () => {
+    assert.throws(() => transform(parse('[1] * 3')), /multiplication|cannot be multiplied|array/i);
+  });
+
+  it('rejects a data-driven repetition count ([1] * Int(_))', () => {
+    assert.throws(() => transform(parse('[1] * Int(_)')), /multiplication|cannot be multiplied|array/i);
+  });
+
+  it('rejects array on either side', () => {
+    assert.throws(() => transform(parse('3 * [1]')), /multiplication|cannot be multiplied|array/i);
+  });
+
+  it('still allows numeric, string and duration multiplication', () => {
+    assert.doesNotThrow(() => transform(parse('2 * 3')));
+    assert.doesNotThrow(() => transform(parse("'ab' * 3")));
+    assert.doesNotThrow(() => transform(parse('P1D * 2')));
+  });
+});
+
 describe('transform - type definitions', () => {
   it('transforms typedef with built-in type selector Int', () => {
     // let T = Int in 42
