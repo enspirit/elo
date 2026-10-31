@@ -43,6 +43,23 @@ import Footer from '../components/Footer.astro';
           The environment running Elo is responsible for providing data (through the <code>_</code> input variable)
           and deciding what to do with the result.
         </p>
+
+        <h3>The data contract</h3>
+        <p>
+          Elo operates on <strong>plain data</strong>: strings, numbers, booleans, null, lists, and
+          maps whose keys are strings — the same shape you get from parsing JSON. The <code>_</code> input,
+          and every value reachable from it, must be data of this kind.
+        </p>
+        <p>
+          Do <em>not</em> pass arbitrary host-language objects as <code>_</code> — an ORM row, a class
+          instance, a <code>Decimal</code>, a model object, and so on. Elo compiles an expression such as
+          <code>_ + 1</code> or <code>Int(_)</code> to the target language's own operators and built-ins
+          (<code>+</code>, <code>int()</code>, …). In Ruby and Python those dispatch to the methods the
+          <em>object</em> defines (operator overloads, <code>__add__</code>, <code>__int__</code>, and the
+          like), so handing Elo a host object lets that object's code run. That is outside the sandbox:
+          Elo guarantees apply to data, not to the behaviour of objects you choose to pass in. Convert
+          host objects to plain data before evaluating an Elo expression against them.
+        </p>
       </section>
 
       <section class="about-section bounty-section">
