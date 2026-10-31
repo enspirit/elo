@@ -93,6 +93,7 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   kIsNull: `function kIsNull(v) { return v === null || v === undefined; }`,
   kFetch: `function kFetch(data, path) {
+  var FORBIDDEN = ['constructor', '__proto__', 'prototype', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'];
   let current = data;
   for (const segment of path) {
     if (current === null || current === undefined) return null;
@@ -101,6 +102,8 @@ export const JS_HELPERS: Record<string, string> = {
       current = current[segment];
     } else {
       if (typeof current !== 'object' || current === null) return null;
+      /* A property read walks the prototype chain, so a meta-property name (reachable via a variable, array or concatenated key the compile-time denylist cannot see) would hand back Object.prototype or the Object constructor. These are never valid data keys. */
+      if (FORBIDDEN.indexOf(segment) !== -1) return null;
       current = current[segment];
     }
   }
