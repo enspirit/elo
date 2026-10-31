@@ -271,10 +271,18 @@ export function createSQLBinding(): StdLib<string> {
   // POSITION returns 1-based (or 0 if not found), NULLIF converts 0 to NULL
   sqlLib.register('indexOf', [Types.string, Types.string], (args, ctx) =>
     `(NULLIF(POSITION(${ctx.emit(args[1])} IN ${ctx.emit(args[0])}), 0) - 1)`);
-  sqlLib.register('replace', [Types.string, Types.string, Types.string], (args, ctx) =>
-    `REGEXP_REPLACE(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+  // Literal replacement, not regex: the search string is matched verbatim
+  // (matching JS/Ruby/Python). replace() replaces the first occurrence;
+  // PostgreSQL has no literal first-replace builtin, so splice around the first
+  // match found with POSITION. replaceAll() uses REPLACE (literal, all).
+  sqlLib.register('replace', [Types.string, Types.string, Types.string], (args, ctx) => {
+    const s = ctx.emit(args[0]);
+    const search = ctx.emit(args[1]);
+    const repl = ctx.emit(args[2]);
+    return `(CASE WHEN POSITION(${search} IN ${s}) > 0 THEN LEFT(${s}, POSITION(${search} IN ${s}) - 1) || ${repl} || SUBSTRING(${s} FROM POSITION(${search} IN ${s}) + LENGTH(${search})) ELSE ${s} END)`;
+  });
   sqlLib.register('replaceAll', [Types.string, Types.string, Types.string], (args, ctx) =>
-    `REGEXP_REPLACE(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, 'g')`);
+    `REPLACE(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   sqlLib.register('isEmpty', [Types.string], (args, ctx) =>
     `(LENGTH(${ctx.emit(args[0])}) = 0)`);
   sqlLib.register('isBlank', [Types.string], (args, ctx) =>

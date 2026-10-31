@@ -1,3 +1,7 @@
 (lambda _: kAssert("hello world".replace("world", "there", 1) == "hello there"))(None)
 (lambda _: kAssert("abab".replace("ab", "x", 1) == "xab"))(None)
 (lambda _: kAssert("abab".replace("ab", "x") == "xx"))(None)
+(lambda _: kAssert("a.b.c".replace(".", "X", 1) == "aXb.c"))(None)
+(lambda _: kAssert("a.b.c".replace(".", "X") == "aXbXc"))(None)
+(lambda _: kAssert("1+1".replace("+", "-", 1) == "1-1"))(None)
+(lambda _: kAssert("a(b)c".replace("(", "[") == "a[b)c"))(None)

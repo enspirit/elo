@@ -45,3 +45,7 @@ Decide on literal semantics (option 1), switch the SQL binding to a literal
 replace (or regex-escape the needle), reconcile first-vs-all across backends,
 add cross-backend acceptance tests asserting identical results, and document the
 agreed semantics on the stdlib reference page.
+
+## Decision
+
+No Regexp for now, use REPLACE.

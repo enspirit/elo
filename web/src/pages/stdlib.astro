@@ -646,13 +646,13 @@ import Footer from '../components/Footer.astro';
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">replace</div>
             <div class="fn-sig">(s: String, search: String, repl: String) → String</div>
-            <p class="fn-desc">Replaces the first occurrence of <code>search</code> with <code>repl</code>.</p>
+            <p class="fn-desc">Replaces the first occurrence of <code>search</code> with <code>repl</code>. <code>search</code> is matched literally, not as a pattern.</p>
             <div class="fn-example"><code class="language-elo">replace('abab', 'ab', 'x')</code><span class="fn-result">→ 'xab'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">replaceAll</div>
             <div class="fn-sig">(s: String, search: String, repl: String) → String</div>
-            <p class="fn-desc">Replaces all occurrences of <code>search</code> with <code>repl</code>.</p>
+            <p class="fn-desc">Replaces all occurrences of <code>search</code> with <code>repl</code>. <code>search</code> is matched literally, not as a pattern.</p>
             <div class="fn-example"><code class="language-elo">replaceAll('abab', 'ab', 'x')</code><span class="fn-result">→ 'xx'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
