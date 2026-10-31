@@ -161,7 +161,32 @@ export class StdLib<T> {
     if (this.fallback) {
       return this.fallback(name, args, argTypes, ctx);
     }
+    // A name that exists under other signatures is a different mistake from a
+    // name that does not exist at all, and the author fixes it differently.
+    const known = this.signaturesOf(name);
+    if (known.length > 0) {
+      throw new Error(
+        `No signature of ${name} accepts ${formatSignature(name, argTypes)}. ` +
+        `Known: ${known.join(', ')}`
+      );
+    }
     throw new Error(`Unknown function ${formatSignature(name, argTypes)}`);
+  }
+
+  /**
+   * Every registered signature of a function name, formatted for an error
+   * message, most specific first and without duplicates.
+   */
+  signaturesOf(name: string): string[] {
+    const seen = new Set<string>();
+    for (const key of this.implementations.keys()) {
+      const colonIdx = key.indexOf(':');
+      if ((colonIdx === -1 ? key : key.substring(0, colonIdx)) !== name) continue;
+      const types = colonIdx === -1 ? '' : key.substring(colonIdx + 1).split(',')
+        .map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
+      seen.add(`${name}(${types})`);
+    }
+    return [...seen];
   }
 }
 
