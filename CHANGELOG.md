@@ -4,8 +4,6 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
-## [1.0.2] - 2026-10-31
-
 ### Fixes
 
 Eight defects that produced a wrong value rather than an error, all found by
