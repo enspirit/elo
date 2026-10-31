@@ -539,6 +539,22 @@ export class Parser {
     }
   }
 
+  /**
+   * Count one level of recursive descent against the depth guard. Wrap only the
+   * self-recursive call sites of a parse function with this, so that a single,
+   * non-recursive call costs nothing and the depth budget keeps its original
+   * meaning for ordinary expressions while deep recursion stays bounded.
+   */
+  private descend<T>(parse: () => T): T {
+    this.depth++;
+    this.checkDepth();
+    try {
+      return parse();
+    } finally {
+      this.depth--;
+    }
+  }
+
   private saveState(): ParserState {
     return {
       lexerState: this.lexer.saveState(),
@@ -771,17 +787,17 @@ export class Parser {
   private unary(): Expr {
     if (this.currentToken.type === 'NOT') {
       this.eat('NOT');
-      return unary('!', this.unary());
+      return unary('!', this.descend(() => this.unary()));
     }
 
     if (this.currentToken.type === 'PLUS') {
       this.eat('PLUS');
-      return unary('+', this.unary());
+      return unary('+', this.descend(() => this.unary()));
     }
 
     if (this.currentToken.type === 'MINUS') {
       this.eat('MINUS');
-      return unary('-', this.unary());
+      return unary('-', this.descend(() => this.unary()));
     }
 
     return this.postfix();
@@ -793,7 +809,7 @@ export class Parser {
     // Right-associative
     if (this.currentToken.type === 'CARET') {
       this.eat('CARET');
-      node = binary('^', node, this.power());
+      node = binary('^', node, this.descend(() => this.power()));
     }
 
     return node;
@@ -1165,7 +1181,7 @@ export class Parser {
         return typeDef(typeName, typeExpr, body);
       } else if (nextTokenType === 'UPPER_IDENTIFIER') {
         // Another type definition - recurse
-        const body = this.typeDefExpr();
+        const body = this.descend(() => this.typeDefExpr());
         return typeDef(typeName, typeExpr, body);
       } else {
         // Value binding - parse remaining as let bindings
@@ -1537,11 +1553,11 @@ export class Parser {
     const tok = this.currentToken as Token;
     if (tok.type === 'GUARD' && guardType === 'guard') {
       // guard...guard sugar (nested guards)
-      const inner = this.guardExprParse('guard');
+      const inner = this.descend(() => this.guardExprParse('guard'));
       return guardExpr(constraints, inner, guardType);
     } else if (tok.type === 'CHECK') {
       // guard...check sugar: guard cond check cond in body
-      const inner = this.guardExprParse('check');
+      const inner = this.descend(() => this.guardExprParse('check'));
       return guardExpr(constraints, inner, guardType);
     }
 
