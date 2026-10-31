@@ -368,3 +368,32 @@ describe('Security - array multiplication runtime guard', () => {
     assert.throws(() => fn([1, 2, 3]), /Array multiplication is not supported/);
   });
 });
+
+/**
+ * Security: patch() must honour the member denylist like fetch().
+ *
+ * patch() has no compile-time denylist check (the transform guard is
+ * fetch-only), and the JS kPatch helper did a bare obj[seg] = … for any key.
+ * This never achieved prototype pollution — kPatch always builds fresh copies,
+ * so Object.prototype stays clean — but it let an attacker-chosen meta-property
+ * name (__proto__, constructor, …) reach the write path, inconsistent with the
+ * fetch() guard and the documented sandbox. kPatch now rejects such segments.
+ */
+describe('Security - patch() member denylist (JS runtime)', () => {
+  const vectors: Array<[string, string]> = [
+    ['array literal segment', "patch(_, ['__proto__', 'x'], 1)"],
+    ['variable segment', "let k = 'constructor' in patch(_, [k, 'y'], 2)"],
+    ['concatenated segment', "patch(_, ['__pro' + 'to__'], 1)"],
+  ];
+  for (const [label, expr] of vectors) {
+    it(`rejects ${label}`, () => {
+      const fn = compile<any>(expr, {});
+      assert.throws(() => fn({ a: 1 }), /forbidden/);
+    });
+  }
+
+  it('still patches legitimate keys and indices', () => {
+    assert.deepStrictEqual(compile<any>("patch(_, ['b'], 2)", {})({ a: 1 }), { a: 1, b: 2 });
+    assert.deepStrictEqual(compile<any>("patch(_, ['user', 'age'], 30)", {})({ user: { age: 1 } }), { user: { age: 30 } });
+  });
+});

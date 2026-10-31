@@ -124,9 +124,12 @@ export const JS_HELPERS: Record<string, string> = {
   return result;
 }`,
   kPatch: `function kPatch(data, path, value) {
+  var FORBIDDEN = ['constructor', '__proto__', 'prototype', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'];
   if (path.length === 0) return value;
   const seg = path[0];
   const rest = path.slice(1);
+  /* A meta-property name is never a valid data key; writing (or reading) one would reach the host prototype chain, so reject it however the segment was supplied. */
+  if (typeof seg === 'string' && FORBIDDEN.indexOf(seg) !== -1) throw new Error("patch() segment '" + seg + "' is forbidden: this name would expose the host runtime and is not a valid Elo property.");
   const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {};
   if (typeof seg === 'number') {
     if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array');
