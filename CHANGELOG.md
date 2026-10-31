@@ -4,6 +4,36 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-31
+
+### Fixes
+
+Eight defects that produced a wrong value rather than an error, all found by
+running the same program in several targets and comparing.
+
+- Fix Python dropping parentheses when an operand's type is not statically known: `12 * (x + y)` compiled to `12 * x + y` whenever an operand was a lambda parameter, a member access, or anything else typed `any`
+- Fix Python unary operators losing their operand's grouping: `-(a + b)` compiled to `-a + b`, even for integer literals
+- Keep float literals afloat: `1.0` compiled to `1`, since `1.0` and `1` are the same JavaScript number and the decimal point was lost at parse time
+- Fix `/` truncating in the Ruby target: Ruby truncates `Integer / Integer`, where Elo's `/` is real division
+- Fix type selectors losing their operand's grouping: `Float(10 - 8) / 4` evaluated to 0.5 in no target — Ruby emitted `10 - 8.to_f / 4`, JavaScript `10 - 8 / 4`
+- Make `round` agree on half-way values across all four targets: halves now round away from zero everywhere
+- Fix `elo -e` and `eloc -e` dropping a multi-line expression whose first line is a comment — it printed nothing and exited 0
+
+**Warning**: the four fixes above that concern arithmetic change results that
+were previously wrong. `7 / 2` was 3 in Ruby and is now 3.5; `round(2.5)` was
+2 in Python and is now 3; `round(-2.5)` was -2 in JavaScript and is now -3;
+`1.0 / 4` was 0 in Ruby and is now 0.25. Code that compensated for any of
+these needs revisiting.
+
+### Language
+
+- Let bindings no longer consume nesting depth. `let a = …, b = …` was desugared into nested single-binding lets, so each binding cost one level and the transform depth guard — intended for deeply nested expressions — capped a program at 100 bindings. The guard is unchanged for genuine nesting.
+
+### Standard Library
+
+- Add `round(x, n)` to round to `n` decimal places, with the same half-away-from-zero rule
+- Add the two-argument `min(a, b)` and `max(a, b)` alongside the list forms, so that `max(min(x, hi), lo)` no longer builds lists to compare two numbers
+
 ## [1.0.1] - 2026-04-20
 
 ### Security
