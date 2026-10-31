@@ -1,0 +1,14 @@
+# A method call on an integer literal must still be valid JavaScript.
+#
+# `42 .toUpperCase()` parses the dot as a decimal point, so calling a string
+# function on an integer produced a program that would not parse at all. Elo
+# refusing the call would be fine; Elo emitting unparseable code is not. The
+# expected .js next to this file is what locks the parentheses in.
+
+assert(upper('ab') == 'AB')
+assert(lower('AB') == 'ab')
+assert(length('abc') == 3)
+assert(trim('  a  ') == 'a')
+assert(upper('a' + 'b') == 'AB')
+assert(length('ab' + 'c') == 3)
+assert(upper(first(['ab'])) == 'AB')

@@ -308,7 +308,10 @@ export function createJavaScriptBinding(): StdLib<string> {
   // Helper to wrap binary expressions in parentheses for method calls
   const methodCall = (method: string) => (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
     const operand = ctx.emit(args[0]);
-    if (isNativeBinaryOp(args[0])) return `(${operand})${method}`;
+    // An integer literal needs the parentheses too: in `42.toUpperCase()`,
+    // JavaScript reads the dot as a decimal point and fails to parse.
+    const ambiguous = isNativeBinaryOp(args[0]) || args[0].type === 'int_literal';
+    if (ambiguous) return `(${operand})${method}`;
     return `${operand}${method}`;
   };
 
