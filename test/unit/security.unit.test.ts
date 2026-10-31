@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { compileToRuby, compileToJavaScript, compileToSQL, compileToPython } from '../../src/index';
+import { compileToRuby, compileToJavaScript, compileToSQL, compileToPython, compile } from '../../src/index';
 import { dateLiteral, dateTimeLiteral, durationLiteral } from '../../src/ast';
 import { parse } from '../../src/parser';
 import { transform } from '../../src/transform';
@@ -311,5 +311,44 @@ describe('Security - AST-API identifier injection (type nodes)', () => {
     assert.doesNotThrow(() => compileToJavaScript(parse(src)));
     assert.doesNotThrow(() => compileToRuby(parse(src)));
     assert.doesNotThrow(() => compileToPython(parse(src)));
+  });
+});
+
+/**
+ * Security: fetch() must not expose JavaScript prototype-chain members at
+ * runtime, regardless of how the key is supplied.
+ *
+ * The compile-time denylist only inspects *literal* string keys, so a variable,
+ * array literal or concatenation key (e.g. fetch(_, ['__proto__'])) slipped
+ * through and the JS runtime helper kFetch did a bare current[segment], handing
+ * back Object.prototype or the Object constructor. Non-object hosts (Ruby Hash,
+ * Python dict) only read real keys, so this is a JavaScript-specific hole and
+ * the guard belongs in kFetch itself.
+ */
+describe('Security - fetch() prototype-chain bypass (JS runtime)', () => {
+  const vectors: Array<[string, string]> = [
+    ['variable key', "let k = '__proto__' in fetch(_, k)"],
+    ['array literal key', "fetch(_, ['__proto__'])"],
+    ['concatenated key', "fetch(_, '__pro' + 'to__')"],
+    ['constructor via array', "fetch(_, ['constructor'])"],
+    ['nested __proto__/constructor', "fetch(_, ['__proto__', 'constructor'])"],
+  ];
+
+  for (const [label, expr] of vectors) {
+    it(`returns null for ${label}`, () => {
+      const fn = compile<any>(expr, {});
+      const result = fn({ a: 1 });
+      assert.strictEqual(
+        result,
+        null,
+        `fetch must not expose a host member; got ${typeof result}: ${String(result)}`
+      );
+    });
+  }
+
+  it('still reads legitimate data keys', () => {
+    assert.strictEqual(compile<any>("fetch(_, 'a')", {})({ a: 42 }), 42);
+    assert.strictEqual(compile<any>("fetch(_, ['b', 'c'])", {})({ b: { c: 7 } }), 7);
+    assert.strictEqual(compile<any>("let k = 'a' in fetch(_, k)", {})({ a: 9 }), 9);
   });
 });
