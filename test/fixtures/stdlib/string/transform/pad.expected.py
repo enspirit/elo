@@ -1,2 +1,2 @@
-(lambda _: kAssert("42".rjust(5, "0") == "00042"))(None)
-(lambda _: kAssert("hi".ljust(5, ".") == "hi..."))(None)
+(lambda _: kAssert(kPad("42", 5, "0", True) == "00042"))(None)
+(lambda _: kAssert(kPad("hi", 5, ".", False) == "hi..."))(None)

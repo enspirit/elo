@@ -1,0 +1,4 @@
+assert(padStart('x', 5, '-') == '----x')
+assert(padEnd('x', 5, '-') == 'x----')
+assertFails(fn( ~> padStart('x', 10000001, '-') ))
+assertFails(fn( ~> padEnd('x', 10000001, '-') ))

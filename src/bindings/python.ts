@@ -235,10 +235,14 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('substring', [Types.string, Types.int, Types.int], (args, ctx) =>
     `${ctx.emit(args[0])}[${ctx.emit(args[1])}:${ctx.emit(args[1])} + ${ctx.emit(args[2])}]`);
   pyLib.register('concat', [Types.string, Types.string], simpleBinaryOp('+'));
-  pyLib.register('padStart', [Types.string, Types.int, Types.string], (args, ctx) =>
-    `${ctx.emit(args[0])}.rjust(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
-  pyLib.register('padEnd', [Types.string, Types.int, Types.string], (args, ctx) =>
-    `${ctx.emit(args[0])}.ljust(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+  pyLib.register('padStart', [Types.string, Types.int, Types.string], (args, ctx) => {
+    ctx.requireHelper?.('kPad');
+    return `kPad(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, True)`;
+  });
+  pyLib.register('padEnd', [Types.string, Types.int, Types.string], (args, ctx) => {
+    ctx.requireHelper?.('kPad');
+    return `kPad(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, False)`;
+  });
 
   // Array functions
   pyLib.register('first', [Types.array], (args, ctx) => {

@@ -352,10 +352,14 @@ export function createJavaScriptBinding(): StdLib<string> {
       `${wrapReceiver(args, ctx)}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     jsLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.replaceAll(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
-    jsLib.register('padStart', [t, Types.int, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.padStart(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
-    jsLib.register('padEnd', [t, Types.int, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.padEnd(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+    jsLib.register('padStart', [t, Types.int, Types.string], (args, ctx) => {
+      ctx.requireHelper?.('kPad');
+      return `kPad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, true)`;
+    });
+    jsLib.register('padEnd', [t, Types.int, Types.string], (args, ctx) => {
+      ctx.requireHelper?.('kPad');
+      return `kPad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, false)`;
+    });
   }
 
   // Numeric functions

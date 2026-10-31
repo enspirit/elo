@@ -1,2 +1,2 @@
-->(_) { (raise "Assertion failed" unless "42".rjust(5, "0") == "00042"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "hi".ljust(5, ".") == "hi..."; true) }.call(nil);
+->(_) { def k_pad(s, n, p, at_start); raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if n > 10000000; at_start ? s.rjust(n, p) : s.ljust(n, p) end; (raise "Assertion failed" unless k_pad("42", 5, "0", true) == "00042"; true) }.call(nil);
+->(_) { def k_pad(s, n, p, at_start); raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if n > 10000000; at_start ? s.rjust(n, p) : s.ljust(n, p) end; (raise "Assertion failed" unless k_pad("hi", 5, ".", false) == "hi..."; true) }.call(nil);
