@@ -18,3 +18,5 @@
 (lambda _: kAssert(max(min(15, 10), 0) == 10))(None)
 (lambda _: kAssert(max(min(-3, 10), 0) == 0))(None)
 (lambda _: kAssert(max(min(5, 10), 0) == 5))(None)
+(lambda _: kAssert(max("a", "b") == "b"))(None)
+(lambda _: kAssert(max("b", "a") == "b"))(None)

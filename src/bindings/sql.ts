@@ -223,12 +223,8 @@ export function createSQLBinding(): StdLib<string> {
     `(SELECT MIN(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
   sqlLib.register('max', [Types.array], (args, ctx) =>
     `(SELECT MAX(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
-  for (const l of [Types.int, Types.float]) {
-    for (const r of [Types.int, Types.float]) {
-      sqlLib.register('min', [l, r], fnCall('LEAST'));
-      sqlLib.register('max', [l, r], fnCall('GREATEST'));
-    }
-  }
+  sqlLib.register('min', [Types.any, Types.any], fnCall('LEAST'));
+  sqlLib.register('max', [Types.any, Types.any], fnCall('GREATEST'));
   sqlLib.register('sum', [Types.array], (args, ctx) =>
     `COALESCE((SELECT SUM(v) FROM UNNEST(${ctx.emit(args[0])}) AS v), 0)`);
   sqlLib.register('avg', [Types.array], (args, ctx) =>

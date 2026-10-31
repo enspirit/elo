@@ -15,3 +15,8 @@
 (lambda _: kAssert(min(4, 4) == 4))(None)
 (lambda _: kAssert(min(2.5, 1.5) == 1.5))(None)
 (lambda _: kAssert(min(1, 2.5) == 1))(None)
+
+
+
+(lambda _: kAssert(min("a", "b") == "a"))(None)
+(lambda _: kAssert(min("b", "a") == "a"))(None)
