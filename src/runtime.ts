@@ -47,6 +47,7 @@ export const JS_HELPERS: Record<string, string> = {
   return l - r;
 }`,
   kMul: `function kMul(l, r) {
+  if (Array.isArray(l) || Array.isArray(r)) throw new Error("Array multiplication is not supported");
   if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r);
   if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l);
   return l * r;
@@ -678,6 +679,7 @@ def _elo_end_of_year(dt):
     if isinstance(l, EloDuration) and isinstance(r, EloDuration): return l.minus(r)
     return l - r`,
   kMul: `def kMul(l, r):
+    if isinstance(l, list) or isinstance(r, list): raise ValueError("Array multiplication is not supported")
     if isinstance(l, EloDuration): return l.scale(r)
     if isinstance(r, EloDuration): return r.scale(l)
     return l * r`,

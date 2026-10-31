@@ -398,6 +398,19 @@ function transformBinaryOp(
   if (!fn) {
     throw new Error(`Unknown binary operator: ${operator}`);
   }
+
+  // Multiplication is numeric (plus the documented String * Number repeat). An
+  // array operand is a type error: it is meaningless on SQL, coerces to NaN on
+  // JavaScript, and on Ruby/Python repeats the array — an unbounded allocation
+  // (`[1] * 1000000000` exhausts host memory). Reject it statically so the DoS
+  // cannot be written in Elo source.
+  if (fn === 'mul' && (leftType.kind === 'array' || rightType.kind === 'array')) {
+    throw new Error(
+      `Array multiplication is not supported: '*' requires numeric operands ` +
+      `(or String * Number). Repeating an array is not a valid Elo operation.`
+    );
+  }
+
   const resultType = eloTypeDefs.lookup(fn, [leftType, rightType]);
 
   return irCall(fn, [leftIR, rightIR], [leftType, rightType], resultType);

@@ -352,3 +352,19 @@ describe('Security - fetch() prototype-chain bypass (JS runtime)', () => {
     assert.strictEqual(compile<any>("let k = 'a' in fetch(_, k)", {})({ a: 9 }), 9);
   });
 });
+
+/**
+ * Security: array multiplication must not allocate unboundedly at runtime.
+ *
+ * `[1] * n` is rejected statically (see transform tests), but an array can also
+ * arrive as untyped data (`_ * n` where _ is a list). The JS and Python kMul
+ * helpers therefore reject array operands at runtime too, so a repetition can
+ * never be allocated. (JS already coerces arrays to NaN; the guard turns that
+ * silent result into an explicit error.)
+ */
+describe('Security - array multiplication runtime guard', () => {
+  it('rejects multiplying an any-typed array (JS runtime)', () => {
+    const fn = compile<any>('_ * 1000000000', {});
+    assert.throws(() => fn([1, 2, 3]), /Array multiplication is not supported/);
+  });
+});
