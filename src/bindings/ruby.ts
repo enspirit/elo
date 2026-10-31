@@ -419,6 +419,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
 
   // Type selectors (Finitio schemas - throw on failure)
   // Int - identity for int, truncate for float, parse for string
+  rubyLib.register('chr', [Types.int], (args, ctx) => `(${ctx.emit(args[0])}).chr(Encoding::UTF_8)`);
   rubyLib.register('Int', [Types.int], identity());
   rubyLib.register('Int', [Types.float], rubyMethod('to_i'));
   rubyLib.register('Int', [Types.string], (args, ctx) => {

@@ -1,0 +1,5 @@
+->(_) { (raise "Assertion failed" unless (65).chr(Encoding::UTF_8) == "A"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (98).chr(Encoding::UTF_8) == "b"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (10).chr(Encoding::UTF_8) == "\n"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (160).chr(Encoding::UTF_8).length == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (160).chr(Encoding::UTF_8) != " "; true) }.call(nil);

@@ -42,7 +42,7 @@ See also the Related work section below.
 - **Interval functions**: `start(interval)`, `end(interval)`, `union(i1, i2)`, `intersection(i1, i2)`, `Duration(interval)` for working with time intervals
 - **Numeric functions**: `abs`, `round`, `round(x, n)` to n decimal places, `floor`, `ceil`
 - **List functions**: `contains`, `find`, `sort`, `sortBy`, `count`, `sum`, `sum(list, initial)`, `avg`, `min`, `max` (on a list or on two values), `reverse`, `unique`, `flat`, `join(list, separator)`, `split(string, separator)`
-- **String functions**: `length`, `upper`, `lower`, `trim`, `trimStart`, `trimEnd`, `replace`, `replaceAll`, `padStart`, `padEnd`, `substring`, `slice`, `split`, `reverse`, `contains`, `indexOf`, `isEmpty`, `isBlank`, `startsWith`, `endsWith`, `concat`, `extract`
+- **String functions**: `length`, `upper`, `lower`, `trim`, `trimStart`, `trimEnd`, `replace`, `replaceAll`, `padStart`, `padEnd`, `substring`, `slice`, `split`, `reverse`, `contains`, `indexOf`, `isEmpty`, `isBlank`, `startsWith`, `endsWith`, `concat`, `chr`, `extract`
 - **Literals**:
   - Numbers: `42`, `3.14`
   - Booleans: `true`, `false`

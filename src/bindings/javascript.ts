@@ -476,6 +476,7 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
 
   // Type selectors (Finitio schemas - throw on failure)
   // Int - identity for int, truncate float, parse for string
+  jsLib.register('chr', [Types.int], (args, ctx) => `String.fromCodePoint(${ctx.emit(args[0])})`);
   jsLib.register('Int', [Types.int], identity());
   jsLib.register('Int', [Types.float], (args, ctx) => `Math.trunc(${ctx.emit(args[0])})`);
   jsLib.register('Int', [Types.string], parserUnwrap('pInt'));

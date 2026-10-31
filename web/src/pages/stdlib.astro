@@ -679,6 +679,12 @@ import Footer from '../components/Footer.astro';
             <div class="fn-example"><code class="language-elo">slice('hello world', 6, 11)</code><span class="fn-result">→ 'world'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">chr</div>
+            <div class="fn-sig">(n: Int) → String</div>
+            <p class="fn-desc">Returns the single character for the Unicode code point <code>n</code> — the way to write a character, such as a non-breaking space, that is invisible in source.</p>
+            <div class="fn-example"><code class="language-elo">chr(97)</code><span class="fn-result">→ 'a'</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">split</div>
             <div class="fn-sig">(s: String, sep: String) → List</div>
             <p class="fn-desc">Splits the string into a list using the separator.</p>

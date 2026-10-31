@@ -1,0 +1,5 @@
+assert(chr(65) == 'A')
+assert(chr(98) == 'b')
+assert(chr(10) == '\n')
+assert(length(chr(160)) == 1)
+assert(chr(160) != ' ')

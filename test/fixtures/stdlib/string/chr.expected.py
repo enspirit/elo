@@ -1,0 +1,5 @@
+(lambda _: kAssert(chr(65) == "A"))(None)
+(lambda _: kAssert(chr(98) == "b"))(None)
+(lambda _: kAssert(chr(10) == "\n"))(None)
+(lambda _: kAssert(len(chr(160)) == 1))(None)
+(lambda _: kAssert(chr(160) != " "))(None)

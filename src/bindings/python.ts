@@ -402,6 +402,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('inSeconds', [Types.duration], (args, ctx) => `${ctx.emit(args[0])}.in_seconds()`);
 
   // Type selectors (casting)
+  pyLib.register('chr', [Types.int], (args, ctx) => `chr(${ctx.emit(args[0])})`);
   pyLib.register('Int', [Types.any], (args, ctx) => `int(${ctx.emit(args[0])})`);
   pyLib.register('Float', [Types.any], (args, ctx) => `float(${ctx.emit(args[0])})`);
   pyLib.register('String', [Types.string], identity());

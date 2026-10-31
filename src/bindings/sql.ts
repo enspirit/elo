@@ -420,6 +420,7 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
   // These use elo_* PL/pgSQL functions that return NULL on parse failure
 
   // Int - identity for int, truncate for float, parse for string
+  sqlLib.register('chr', [Types.int], (args, ctx) => `CHR(${ctx.emit(args[0])})`);
   sqlLib.register('Int', [Types.int], (args, ctx) => ctx.emit(args[0]));
   sqlLib.register('Int', [Types.float], (args, ctx) => `TRUNC(${ctx.emit(args[0])})::INTEGER`);
   sqlLib.register('Int', [Types.string], (args, ctx) => `elo_int(${ctx.emit(args[0])})`);

@@ -32,3 +32,7 @@ Two candidates, not exclusive:
 ## Work
 
 Four targets, fixtures, README and the stdlib page.
+
+## Decision
+
+Ok for `chr(n)` in stdlib.
