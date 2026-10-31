@@ -8,7 +8,7 @@ import Footer from '../components/Footer.astro';
     <article class="blog-content">
       <header class="page-header centered">
         <h1>Security</h1>
-        <p class="page-intro">Elo's security posture and bug bounty program</p>
+        <p class="page-intro">How we think about Elo security, what we guarantee, what you must provide, and our bug bounty program</p>
       </header>
 
       <section class="about-section">
@@ -18,61 +18,104 @@ import Footer from '../components/Footer.astro';
           Think of a spreadsheet formula, but more powerful. You write it, someone else's computer runs it.
         </p>
         <p>
-          This happens all the time in No-Code tools, automation platforms (like Zapier or Make), and data pipelines.
-          Users need to express logic—"if this date is past, send a reminder"—without having access to the
-          full power (and danger) of a real programming language.
-        </p>
-        <p>
-          That's why Elo is designed as a <strong>pure expression language</strong>. It's like a calculator:
-          you give it some numbers and formulas, it gives you a result. Nothing more.
+          That's why Elo is a <strong>pure expression language</strong>: no loops, no recursion, no <code>eval</code>,
+          no I/O, no access to host globals. It's a calculator — you give it data, it gives you a result.
         </p>
       </section>
 
       <section class="about-section">
-        <h2>What Elo Cannot Do</h2>
+        <h2>It depends who writes the code, and whose data it runs on</h2>
         <p>
-          We keep Elo safe by being very strict about what it <em>cannot</em> do:
+          Elo is not one tool with one security posture. The posture is set by <em>trust</em>: whether the Elo
+          expression comes from someone you trust, and whether the input data is something you trust. "Trustworthy
+          code over trustworthy data" is a portable calculator; "untrustworthy code over arbitrary data" is a
+          hostile-input compiler. Same language, very different stakes.
         </p>
+        <table class="trust-table">
+          <thead>
+            <tr><th>Elo code</th><th>Input data</th><th>What Elo is here</th><th>What you rely on</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>trusted</td><td>trusted</td>
+              <td>a portable expression evaluator</td>
+              <td>correctness; a sandbox is good hygiene</td>
+            </tr>
+            <tr class="highlight">
+              <td><strong>untrusted</strong></td><td>trusted</td>
+              <td>user formulas over your data — <strong>the common case</strong></td>
+              <td>Elo's sandbox <em>plus</em> your resource limits</td>
+            </tr>
+            <tr>
+              <td>trusted</td><td><strong>arbitrary</strong></td>
+              <td>your logic over foreign data</td>
+              <td>the data contract (data in, not host objects)</td>
+            </tr>
+            <tr>
+              <td><strong>untrusted</strong></td><td><strong>arbitrary</strong></td>
+              <td>fully hostile input</td>
+              <td>everything below, at once</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          We design, document, and triage for the hard end — <strong>untrusted code</strong> — so the easy end is
+          covered for free. Everything below assumes someone hostile may write the expression.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>What Elo guarantees</h2>
+        <p>
+          Elo touches your systems at two moments: <strong>compile time</strong>, when the compiler turns an
+          expression into target code (JavaScript, Ruby, Python, SQL), and <strong>runtime</strong>, when that code
+          runs over your data. We make hard promises at both, and a violation of any of them is a bug we always fix.
+        </p>
+
+        <h3>At compile time</h3>
         <ul>
-          <li><strong>No infinite loops.</strong> Every Elo expression finishes. No recursion, no while loops, no regular expressions that could hang.</li>
-          <li><strong>No eval.</strong> You can't construct code at runtime and execute it. What you see is what runs.</li>
-          <li><strong>No I/O.</strong> Elo can't read files, make web requests, or access databases. It only works with the data you give it.</li>
-          <li><strong>No host access.</strong> Elo can't touch <code>window</code> in JavaScript, environment variables, or any globals. It's sandboxed.</li>
+          <li><strong>It always finishes.</strong> No expression — however deeply nested or malformed — makes the compiler hang or overflow its stack.</li>
+          <li><strong>It can't be turned against the compiler.</strong> Compiling an expression never executes attacker code <em>inside the compiler process</em>: no <code>eval</code>, no input-driven module loading, no attacker-controlled method firing during compilation.</li>
+          <li><strong>It never crashes uncontrollably.</strong> Bad input yields a typed Elo error, not an uncaught native exception.</li>
+          <li><strong>It emits only what you wrote.</strong> No value threaded through the compiler — a name, a key, a literal — can break out of its slot and inject code into the output. This holds whether the expression came from source text or from an AST handed to the compiler API.</li>
         </ul>
+
+        <h3>At runtime, by construction</h3>
+        <p>The code Elo emits is a pure function of its input. By construction it <strong>cannot</strong>:</p>
+        <ul>
+          <li>call <code>eval</code> or build code at runtime — what you see is what runs;</li>
+          <li>read files, open sockets, read environment variables, or reach host globals (<code>window</code>, <code>process</code>, …);</li>
+          <li>reach host-runtime internals, such as the JavaScript prototype chain or the <code>Function</code> constructor.</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h2>What you must provide</h2>
         <p>
-          The environment running Elo is responsible for providing data (through the <code>_</code> input variable)
-          and deciding what to do with the result.
+          Elo gives you a <strong>capability sandbox</strong> — but not a <strong>resource sandbox</strong>. Two
+          things are yours to handle, and skipping them is how untrusted expressions hurt you.
         </p>
 
-        <h3>The data contract</h3>
+        <h3>Run compiled Elo under a memory limit and a timeout</h3>
         <p>
-          Elo operates on <strong>plain data</strong>: strings, numbers, booleans, null, lists, and
-          maps whose keys are strings — the same shape you get from parsing JSON. The <code>_</code> input,
-          and every value reachable from it, must be data of this kind.
-        </p>
-        <p>
-          Do <em>not</em> pass arbitrary host-language objects as <code>_</code> — an ORM row, a class
-          instance, a <code>Decimal</code>, a model object, and so on. Elo compiles an expression such as
-          <code>_ + 1</code> or <code>Int(_)</code> to the target language's own operators and built-ins
-          (<code>+</code>, <code>int()</code>, …). In Ruby and Python those dispatch to the methods the
-          <em>object</em> defines (operator overloads, <code>__add__</code>, <code>__int__</code>, and the
-          like), so handing Elo a host object lets that object's code run. That is outside the sandbox:
-          Elo guarantees apply to data, not to the behaviour of objects you choose to pass in. Convert
-          host objects to plain data before evaluating an Elo expression against them.
+          An Elo expression has no loops, but it can still be <em>expensive</em>: it can build a large value from the
+          data you give it, or chain enough work to take real CPU. We make a best effort to minimize this — the
+          primitives that let a <em>short</em> expression allocate out of proportion are bounded (array repeat is
+          rejected; string repeat and padding are capped by the <code>ELO_MAX_STRING_LENGTH</code> environment
+          variable, default 10,000,000 characters) — but bounding primitives does not bound total cost, and we will
+          never claim it does. <strong>Run compiled Elo the way you would run any untrusted computation: in an
+          isolated context, under a memory ceiling and a wall-clock timeout.</strong> See
+          <a href="/running-safely">Running Elo safely</a> for copy-paste reference sandboxes for every target.
         </p>
 
-        <h3>Bounded string allocation</h3>
+        <h3>Pass data, not host objects</h3>
         <p>
-          Repeating or padding a string (<code>'x' * n</code>, <code>padStart(s, n, '0')</code>) can
-          otherwise allocate gigabytes from a short expression and exhaust host memory. The compiled
-          code refuses to build a string longer than a fixed ceiling — <strong>10,000,000 characters</strong>
-          by default — and raises instead.
-        </p>
-        <p>
-          The ceiling is read once, at compile time, from the <code>ELO_MAX_STRING_LENGTH</code>
-          environment variable, so a deployment can lower it (stricter) or raise it. Raising it
-          re-opens the denial-of-service window in proportion to the new value — only increase it when
-          you control the expressions being compiled, and prefer lowering it for untrusted input.
+          Elo operates on <strong>plain data</strong>: strings, numbers, booleans, null, lists, and maps whose keys
+          are strings — the shape you get from parsing JSON. Do <em>not</em> hand it an arbitrary host object (an ORM
+          row, a <code>Decimal</code>, a class instance with operator overloads). Elo compiles <code>_ + 1</code> or
+          <code>Int(_)</code> to the target's own operators and built-ins; in Ruby and Python those dispatch to
+          whatever methods the <em>object</em> defines, so a host object's own code can run — outside the sandbox.
+          Convert host objects to plain data before evaluating.
         </p>
       </section>
 
@@ -97,15 +140,35 @@ import Footer from '../components/Footer.astro';
           </div>
         </div>
 
+        <h3>In scope</h3>
+        <p>Anything that lets an untrusted expression (or untrusted input) break one of the guarantees above:</p>
+        <ul>
+          <li><strong>Compiler code execution</strong> — an expression or AST that runs code inside the compiler process. <em>Critical.</em></li>
+          <li><strong>Output injection</strong> — a value that escapes its slot in the emitted code. <em>Critical / High.</em></li>
+          <li><strong>Runtime capability escape</strong> — emitted code that reaches <code>eval</code>, I/O, host globals, or host internals. <em>High / Critical.</em></li>
+          <li><strong>Compile-time denial of service</strong> — input that hangs or crashes the compiler. <em>High.</em></li>
+          <li><strong>Disproportionate allocation</strong> — a <em>short</em> expression that forces allocation grossly out of proportion to its input, via a stdlib primitive we failed to bound. <em>Medium / High.</em></li>
+        </ul>
+
+        <h3>Out of scope</h3>
+        <p>By design — documented, not a vulnerability (though we welcome feedback if our guidance is unclear):</p>
+        <ul>
+          <li>A <strong>legal expression that is simply expensive</strong> over the data provided (large sort, deep chaining, big output). This is what your resource sandbox is for; we bound disproportionate primitives as a best effort, but general cost is not a bounty-eligible bug.</li>
+          <li><strong>Resource exhaustion</strong> (out-of-memory, long run) that a memory-plus-timeout sandbox would contain.</li>
+          <li>Passing <strong>non-data host objects</strong> as input and observing their methods run — a data-contract violation.</li>
+          <li>Behaviour of your host wrapper or the runtime libraries Elo depends on, except where Elo emits a call that misuses them.</li>
+        </ul>
+
         <h3>Rules</h3>
         <ul>
-          <li>Demonstrate the issue with a valid <code>.elo</code> program</li>
+          <li>Demonstrate the issue with a valid <code>.elo</code> program — or, for compiler-API injection, with the AST you build</li>
           <li>Explain the target environment where the vulnerability occurs</li>
           <li>Provide identifying information for payment (no anonymous submissions)</li>
           <li>Keep issues private for 90 days while we work on a fix</li>
         </ul>
         <p>
-          We may reject submissions that don't meet our criteria. Final severity is assessed by our team.
+          Final severity is assessed by our team, against the categories above rather than a bare score. Valid
+          in-scope reports are credited and, where applicable, assigned a CVE.
         </p>
 
         <h3>Contact</h3>
@@ -137,6 +200,31 @@ import Footer from '../components/Footer.astro';
     margin-top: 2rem;
     margin-bottom: 0.75rem;
     color: var(--text-primary);
+  }
+
+  .trust-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+
+  .trust-table th,
+  .trust-table td {
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+    color: var(--text-secondary);
+  }
+
+  .trust-table th {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .trust-table tr.highlight td {
+    background: var(--bg-secondary);
   }
 
   .bounty-grid {
@@ -173,6 +261,10 @@ import Footer from '../components/Footer.astro';
   @media (max-width: 600px) {
     .bounty-grid {
       grid-template-columns: 1fr;
+    }
+
+    .trust-table {
+      font-size: 0.8rem;
     }
   }
 </style>
