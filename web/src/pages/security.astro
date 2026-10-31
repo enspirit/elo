@@ -8,7 +8,7 @@ import Footer from '../components/Footer.astro';
     <article class="blog-content">
       <header class="page-header centered">
         <h1>Security</h1>
-        <p class="page-intro">How we think about Elo security, what we guarantee, what you must provide, and our bug bounty program</p>
+        <p class="page-intro">How we think about Elo security, what we aim for, what you must provide, and our bug bounty program</p>
       </header>
 
       <section class="about-section">
@@ -41,9 +41,9 @@ import Footer from '../components/Footer.astro';
               <td>a portable expression evaluator</td>
               <td>correctness; a sandbox is good hygiene</td>
             </tr>
-            <tr class="highlight">
+            <tr>
               <td><strong>untrusted</strong></td><td>trusted</td>
-              <td>user formulas over your data — <strong>the common case</strong></td>
+              <td>user formulas over your data</td>
               <td>Elo's sandbox <em>plus</em> your resource limits</td>
             </tr>
             <tr>
@@ -65,11 +65,14 @@ import Footer from '../components/Footer.astro';
       </section>
 
       <section class="about-section">
-        <h2>What Elo guarantees</h2>
+        <h2>What Elo aims for</h2>
         <p>
           Elo touches your systems at two moments: <strong>compile time</strong>, when the compiler turns an
           expression into target code (JavaScript, Ruby, Python, SQL), and <strong>runtime</strong>, when that code
-          runs over your data. We make hard promises at both, and a violation of any of them is a bug we always fix.
+          runs over your data. The properties below are what we <em>design</em> Elo to hold at both, and what the
+          bug bounty pays for: we treat a violation as a bug and fix it. They are goals we work hard to meet — not a
+          warranty. Elo is open-source software provided <em>as is</em> (see the
+          <a href="https://github.com/enspirit/elo/blob/main/LICENSE">license</a>).
         </p>
 
         <h3>At compile time</h3>
@@ -94,6 +97,10 @@ import Footer from '../components/Footer.astro';
         <p>
           Elo gives you a <strong>capability sandbox</strong> — but not a <strong>resource sandbox</strong>. Two
           things are yours to handle, and skipping them is how untrusted expressions hurt you.
+        </p>
+        <p class="safe-callout">
+          → Read <a href="/running-safely"><strong>Running Elo safely</strong></a> — a practical guide with
+          copy-paste reference sandboxes for Node, the browser, Ruby, Python, and PostgreSQL.
         </p>
 
         <h3>Run compiled Elo under a memory limit and a timeout</h3>
@@ -141,7 +148,7 @@ import Footer from '../components/Footer.astro';
         </div>
 
         <h3>In scope</h3>
-        <p>Anything that lets an untrusted expression (or untrusted input) break one of the guarantees above:</p>
+        <p>Anything that lets an untrusted expression (or untrusted input) break one of the properties above:</p>
         <ul>
           <li><strong>Compiler code execution</strong> — an expression or AST that runs code inside the compiler process. <em>Critical.</em></li>
           <li><strong>Output injection</strong> — a value that escapes its slot in the emitted code. <em>Critical / High.</em></li>
@@ -225,6 +232,14 @@ import Footer from '../components/Footer.astro';
 
   .trust-table tr.highlight td {
     background: var(--bg-secondary);
+  }
+
+  .safe-callout {
+    border-left: 3px solid var(--accent);
+    background: var(--bg-secondary);
+    padding: 0.85rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 1rem 0 1.5rem;
   }
 
   .bounty-grid {
