@@ -63,9 +63,15 @@ export function createPythonBinding(): StdLib<string> {
   // String concatenation
   pyLib.register('add', [Types.string, Types.string], simpleBinaryOp('+'));
 
-  // String repetition
-  pyLib.register('mul', [Types.string, Types.int], simpleBinaryOp('*'));
-  pyLib.register('mul', [Types.int, Types.string], simpleBinaryOp('*'));
+  // String repetition, length-bounded to prevent OOM
+  pyLib.register('mul', [Types.string, Types.int], (args, ctx) => {
+    ctx.requireHelper?.('kStrMul');
+    return `kStrMul(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
+  pyLib.register('mul', [Types.int, Types.string], (args, ctx) => {
+    ctx.requireHelper?.('kStrMul');
+    return `kStrMul(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
+  });
 
   // List concatenation
   pyLib.register('add', [Types.array, Types.array], simpleBinaryOp('+'));

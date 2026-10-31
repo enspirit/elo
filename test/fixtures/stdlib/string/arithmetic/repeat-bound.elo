@@ -1,0 +1,3 @@
+assert('ab' * 3 == 'ababab')
+assert('x' * 0 == '')
+assertFails(fn( ~> 'a' * 10000001 ))

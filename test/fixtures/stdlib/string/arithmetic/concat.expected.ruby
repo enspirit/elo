@@ -1,8 +1,8 @@
 ->(_) { (raise "Assertion failed" unless "hello".concat(" world") == "hello world"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "".concat("test") == "test"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "hello" + " " + "world" == "hello world"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "hi" * 3 == "hihihi"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "hi" * 3 == "hihihi"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "ab" * 2 == "abab"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "" * 5 == ""; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "x" * 0 == ""; true) }.call(nil);
+->(_) { def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless k_str_mul("hi", 3) == "hihihi"; true) }.call(nil);
+->(_) { def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless k_str_mul("hi", 3) == "hihihi"; true) }.call(nil);
+->(_) { def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless k_str_mul("ab", 2) == "abab"; true) }.call(nil);
+->(_) { def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless k_str_mul("", 5) == ""; true) }.call(nil);
+->(_) { def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless k_str_mul("x", 0) == ""; true) }.call(nil);

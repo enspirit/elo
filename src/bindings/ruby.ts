@@ -100,11 +100,14 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('mod', [Types.any, Types.any], simpleBinaryOp('%'));
   rubyLib.register('pow', [Types.any, Types.any], simpleBinaryOp('**'));
 
-  // Int * String needs operand swap (Ruby only supports String * Int)
+  // String repetition, length-bounded to prevent OOM (handles both operand orders)
+  rubyLib.register('mul', [Types.string, Types.int], (args, ctx) => {
+    ctx.requireHelper?.('k_str_mul');
+    return `k_str_mul(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
   rubyLib.register('mul', [Types.int, Types.string], (args, ctx) => {
-    const left = ctx.emitWithParens(args[1], '*', 'left');
-    const right = ctx.emitWithParens(args[0], '*', 'right');
-    return `${left} * ${right}`;
+    ctx.requireHelper?.('k_str_mul');
+    return `k_str_mul(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
   });
 
   // Temporal arithmetic - Ruby's operator overloading handles this

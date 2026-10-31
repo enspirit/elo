@@ -11,9 +11,27 @@
  * Used for dynamically-typed operations where types aren't known at compile time.
  */
 /**
+ * Maximum length, in characters, of a string the compiled code is allowed to
+ * build with a single repeat (`'a' * n`) or pad operation. Repeating or padding
+ * without a bound lets a short expression allocate gigabytes and OOM the host,
+ * so the compiled runtime refuses to cross this ceiling.
+ *
+ * The default is safe; it is read once, at compile time, from the
+ * `ELO_MAX_STRING_LENGTH` environment variable so a deployment can raise or
+ * lower it. Raising it re-opens the denial-of-service window — see the security
+ * page.
+ */
+export const DEFAULT_MAX_STRING_LENGTH = 10_000_000;
+export const MAX_STRING_LENGTH: number = (() => {
+  const v = Number(process.env.ELO_MAX_STRING_LENGTH);
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : DEFAULT_MAX_STRING_LENGTH;
+})();
+
+/**
  * Dependencies between helpers. If helper A uses helper B, A depends on B.
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
+  kRepeat: [],
   kRound: [],
   kNeq: ['kEq'],
   kFetchObject: ['kFetch'],
@@ -31,6 +49,11 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const JS_HELPERS: Record<string, string> = {
+  kRepeat: `function kRepeat(s, n) {
+  if (n <= 0) return "";
+  if (s.length * n > ${MAX_STRING_LENGTH}) throw new Error("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings");
+  return s.repeat(n);
+}`,
   kAdd: `function kAdd(l, r) {
   if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
   if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l);
@@ -275,6 +298,7 @@ export const JS_HELPERS: Record<string, string> = {
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   k_div: [],
+  k_str_mul: [],
   p_any: ['p_ok'],
   p_null: ['p_ok', 'p_fail'],
   p_string: ['p_ok', 'p_fail'],
@@ -288,6 +312,11 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  k_str_mul: `def k_str_mul(s, n)
+  return '' if n <= 0
+  raise "String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > ${MAX_STRING_LENGTH}
+  s * n
+end`,
   k_div: `def k_div(l, r)
   return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer)
   l / r
@@ -399,6 +428,7 @@ end`,
  * Special entries starting with _ are import statements, not functions.
  */
 export const PY_HELPER_DEPS: Record<string, string[]> = {
+  kStrMul: [],
   kRound: ['_import_math'],
   kEq: [],
   kNeq: ['kEq'],
@@ -441,6 +471,10 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const PY_HELPERS: Record<string, string> = {
+  kStrMul: `def kStrMul(s, n):
+    if n <= 0: return ""
+    if len(s) * n > ${MAX_STRING_LENGTH}: raise ValueError("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings")
+    return s * n`,
   _import_math: `import math`,
   _import_functools: `import functools`,
   _import_datetime: `import datetime as _dt`,
