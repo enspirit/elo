@@ -243,6 +243,18 @@ describe('StdLib', () => {
       );
     });
 
+    it('should name the known signatures when only the signature is wrong', () => {
+      const lib = new StdLib<string>();
+      lib.register('concat', [Types.string, Types.string], () => 'two');
+      lib.register('concat', [Types.array, Types.array], () => 'arrays');
+
+      assert.throws(
+        () => lib.emit('concat', [irInt(1), irInt(2), irInt(3)],
+                       [Types.string, Types.string, Types.string], createTestContext()),
+        /No signature of concat accepts concat\(String, String, String\)\. Known: concat\(String, String\), concat\(Array, Array\)/
+      );
+    });
+
     it('should prefer specific implementation over fallback', () => {
       const lib = new StdLib<string>();
       lib.register('add', [Types.int, Types.int], () => 'specific');
