@@ -4,6 +4,33 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-31
+
+A conservative patch release: security and correctness fixes only, no new
+features, so projects pinned below 1.1.0 can still take the safety fixes.
+
+### Security
+- Bound parser recursion depth on every self-recursive descent (prefix operators, exponentiation, guard sugar, type definitions), closing a stack-overflow denial of service — reported by uaaw
+- Count type-expression nesting against the depth guard in both the parser and the transform, closing a stack-overflow denial of service — reported by Atsushi Sada
+- Reject applying a value not known to be a function, closing a Y-combinator non-termination denial of service — reported by Atsushi Sada
+- Validate identifier-shaped type-node fields (subtype-constraint variable, schema keys, type names) in every compiler, closing an AST-API injection gap left open after the 1.0.1 fix — reported by Atsushi Sada
+- Enforce the meta-property denylist inside the `fetch()` runtime helper, closing a prototype-chain bypass via variable, array, or concatenated keys — reported by uaaw
+- Reject array multiplication (`[1] * n`), closing an unbounded-allocation denial of service — reported by Atsushi Sada
+- Enforce the meta-property denylist inside `patch()` as well as `fetch()`
+- Bound string repetition (`'a' * n`) and padding (`padStart`/`padEnd`) to a configurable maximum length (`ELO_MAX_STRING_LENGTH`, default 10,000,000), closing an unbounded-allocation denial of service
+
+### Fixes
+- Make `/` real division in the Ruby target
+- Round half-way values away from zero consistently in every target, including SQL double precision
+- Fix Python parenthesisation that dropped operator precedence
+- Keep float literals from collapsing to integers
+- Keep a type selector's operand grouped
+- Stop spending expression depth on the number of `let` bindings
+- Stop dropping a `-e` expression that opens with a comment
+- Group the nullish fallback of `at()` and `first()`
+- Emit parseable JavaScript for a method call on an integer
+- Compile `replace()`/`replaceAll()` to literal replacement instead of a regular expression on PostgreSQL, matching the JavaScript, Ruby, and Python targets and removing a ReDoS surface
+
 ## [1.0.1] - 2026-04-20
 
 ### Security
