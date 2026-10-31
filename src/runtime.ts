@@ -14,6 +14,8 @@
  * Dependencies between helpers. If helper A uses helper B, A depends on B.
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
+  kMin2: [],
+  kMax2: [],
   kRound: [],
   kRoundTo: ['kRound'],
   kNeq: ['kEq'],
@@ -53,6 +55,8 @@ export const JS_HELPERS: Record<string, string> = {
   if (Duration.isDuration(l) && typeof r === 'number') return Duration.fromMillis(l.toMillis() / r);
   return l / r;
 }`,
+  kMin2: `function kMin2(a, b) { return a < b ? a : b; }`,
+  kMax2: `function kMax2(a, b) { return a > b ? a : b; }`,
   kRound: `function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); }`,
   kRoundTo: `function kRoundTo(x, n) { const f = Math.pow(10, n); return kRound(x * f) / f; }`,
   kMod: `function kMod(l, r) { return l % r; }`,

@@ -15,3 +15,8 @@
 ->(_) { (raise "Assertion failed" unless [4, 4].min == 4; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [2.5, 1.5].min == 1.5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [1, 2.5].min == 1; true) }.call(nil);
+
+
+
+->(_) { (raise "Assertion failed" unless ["a", "b"].min == "a"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["b", "a"].min == "a"; true) }.call(nil);

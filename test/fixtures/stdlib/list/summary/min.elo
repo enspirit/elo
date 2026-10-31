@@ -15,3 +15,8 @@ assert(min(-5, 2) == -5)
 assert(min(4, 4) == 4)
 assert(min(2.5, 1.5) == 1.5)
 assert(min(1, 2.5) == 1)
+# Two values that are not numbers compare rather than coerce: Math.min would
+# answer NaN, which serialises to null — a wrong value where a refusal or a
+# comparison was expected.
+assert(min('a', 'b') == 'a')
+assert(min('b', 'a') == 'a')

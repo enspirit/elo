@@ -261,12 +261,17 @@ export function createJavaScriptBinding(): StdLib<string> {
     `(a => a.length === 0 ? null : a.reduce((x, y) => x > y ? x : y))(${ctx.emit(args[0])})`);
   // Two-argument form: clamping one value against one bound should not build
   // a list to look at two numbers.
-  for (const l of [Types.int, Types.float, Types.any]) {
-    for (const r of [Types.int, Types.float, Types.any]) {
+  for (const l of [Types.int, Types.float]) {
+    for (const r of [Types.int, Types.float]) {
       jsLib.register('min', [l, r], fnCall('Math.min'));
       jsLib.register('max', [l, r], fnCall('Math.max'));
     }
   }
+  // Math.min coerces to number, so it answers NaN — serialised as null — on
+  // anything that is not numeric. When a type is not statically known, compare
+  // instead, exactly as the list form does.
+  jsLib.register('min', [Types.any, Types.any], helperCall('kMin2'));
+  jsLib.register('max', [Types.any, Types.any], helperCall('kMax2'));
   jsLib.register('sum', [Types.array], (args, ctx) =>
     `${ctx.emit(args[0])}.reduce((a, b) => a + b, 0)`);
   jsLib.register('avg', [Types.array], (args, ctx) =>

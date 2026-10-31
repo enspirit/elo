@@ -18,3 +18,5 @@ CASE WHEN GREATEST(1, 2.5) = 2.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_
 CASE WHEN GREATEST(LEAST(15, 10), 0) = 10 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN GREATEST(LEAST(-3, 10), 0) = 0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN GREATEST(LEAST(5, 10), 0) = 5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN GREATEST('a', 'b') = 'b' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN GREATEST('b', 'a') = 'b' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

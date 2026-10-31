@@ -15,3 +15,8 @@ CASE WHEN LEAST(-5, 2) = -5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backe
 CASE WHEN LEAST(4, 4) = 4 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN LEAST(2.5, 1.5) = 1.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN LEAST(1, 2.5) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+
+
+
+CASE WHEN LEAST('a', 'b') = 'a' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN LEAST('b', 'a') = 'a' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

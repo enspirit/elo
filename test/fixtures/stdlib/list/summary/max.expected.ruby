@@ -18,3 +18,5 @@
 ->(_) { (raise "Assertion failed" unless [[15, 10].min, 0].max == 10; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [[-3, 10].min, 0].max == 0; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [[5, 10].min, 0].max == 5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["a", "b"].max == "b"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless ["b", "a"].max == "b"; true) }.call(nil);
