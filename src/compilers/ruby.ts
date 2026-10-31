@@ -297,7 +297,8 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
       ctx.requireHelper?.('p_unwrap');
       const body = ctx.emit(ir.body);
       // The type name becomes a lambda that calls the parser and unwraps
-      return `(_p_${ir.name} = ${parserCode}; ${ir.name} = ->(v) { p_unwrap(_p_${ir.name}.call(v, '')) }; ${body})`;
+      const name = assertSafeIdentifier(ir.name, 'typedef name');
+      return `(_p_${name} = ${parserCode}; ${name} = ->(v) { p_unwrap(_p_${name}.call(v, '')) }; ${body})`;
     }
 
     case 'guard': {
@@ -361,7 +362,7 @@ function emitTypeExprParser(
       // User-defined types are referenced as _p_TypeName
       const firstChar = typeExpr.name.charAt(0);
       if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) {
-        return `_p_${typeExpr.name}`;
+        return `_p_${assertSafeIdentifier(typeExpr.name, 'type reference')}`;
       }
       throw new Error(`Unknown type in type definition: ${typeExpr.name}`);
     }
@@ -375,9 +376,9 @@ function emitTypeExprParser(
       const oVar = `_o${suffix}`;
       const propParsers = typeExpr.properties.map(prop => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
-        return { key: prop.key, parser: propParser, optional: prop.optional };
+        return { key: assertSafeIdentifier(prop.key, 'type_schema property key'), parser: propParser, optional: prop.optional };
       });
-      const knownKeys = typeExpr.properties.map(p => p.key);
+      const knownKeys = propParsers.map(p => p.key);
 
       // Generate object parser with unique variable names
       const propChecks = propParsers.map(({ key, parser, optional }) => {
@@ -417,7 +418,7 @@ function emitTypeExprParser(
       ctx.requireHelper?.('p_ok');
       ctx.requireHelper?.('p_fail');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
-      const varName = typeExpr.variable;
+      const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
       // Generate constraint checks
       const constraintChecks = typeExpr.constraints.map(c => {

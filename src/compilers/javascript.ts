@@ -296,7 +296,8 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
       ctx.requireHelper?.('pUnwrap');
       const body = ctx.emit(ir.body);
       // The type name becomes a function that calls the parser and unwraps
-      return `(() => { const _p_${ir.name} = ${parserCode}; const ${ir.name} = (v) => pUnwrap(_p_${ir.name}(v, '')); return ${body}; })()`;
+      const name = assertSafeIdentifier(ir.name, 'typedef name');
+      return `(() => { const _p_${name} = ${parserCode}; const ${name} = (v) => pUnwrap(_p_${name}(v, '')); return ${body}; })()`;
     }
 
     case 'guard': {
@@ -348,7 +349,7 @@ function emitTypeExprParser(
       // User-defined types are referenced as _p_TypeName
       const firstChar = typeExpr.name.charAt(0);
       if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) {
-        return `_p_${typeExpr.name}`;
+        return `_p_${assertSafeIdentifier(typeExpr.name, 'type reference')}`;
       }
       throw new Error(`Unknown type in type definition: ${typeExpr.name}`);
     }
@@ -359,9 +360,9 @@ function emitTypeExprParser(
       ctx.requireHelper?.('pFail');
       const propParsers = typeExpr.properties.map(prop => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
-        return { key: prop.key, parser: propParser, optional: prop.optional };
+        return { key: assertSafeIdentifier(prop.key, 'type_schema property key'), parser: propParser, optional: prop.optional };
       });
-      const knownKeys = typeExpr.properties.map(p => p.key);
+      const knownKeys = propParsers.map(p => p.key);
 
       // Generate object parser - wrap parser in parens to handle inline functions
       const propChecks = propParsers.map(({ key, parser, optional }) => {
@@ -398,7 +399,7 @@ function emitTypeExprParser(
       ctx.requireHelper?.('pOk');
       ctx.requireHelper?.('pFail');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
-      const varName = typeExpr.variable;
+      const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
       // Generate constraint checks
       const constraintChecks = typeExpr.constraints.map(c => {
