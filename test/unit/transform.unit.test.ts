@@ -18,6 +18,7 @@ import {
   apply,
   typeDef,
   typeRef,
+  arrayType,
   unionType,
 } from '../../src/ast';
 import { Types } from '../../src/types';
@@ -854,6 +855,30 @@ describe('transform - depth limits', () => {
     }
     const ir = transform(ast);
     assert.strictEqual(ir.type, 'call');
+  });
+
+  it('throws when depth limit exceeded in nested type expressions', () => {
+    // Type expressions ([[[...Int...]]]) recurse in parallel to value
+    // expressions. The guard historically did not count this descent, so deep
+    // type nesting overflowed the host call stack instead of raising a typed
+    // error.
+    let typeExpr: any = typeRef('Int');
+    for (let i = 0; i < 20; i++) {
+      typeExpr = arrayType(typeExpr);
+    }
+    assert.throws(
+      () => transform(typeDef('T', typeExpr, literal(1)), new Map(), new Set(), { maxDepth: 5 }),
+      /Maximum transform depth exceeded \(5\)/
+    );
+  });
+
+  it('transforms nested type expressions within the depth limit', () => {
+    let typeExpr: any = typeRef('Int');
+    for (let i = 0; i < 3; i++) {
+      typeExpr = arrayType(typeExpr);
+    }
+    const ir = transform(typeDef('T', typeExpr, literal(1)), new Map(), new Set(), { maxDepth: 10 });
+    assert.strictEqual(ir.type, 'typedef');
   });
 });
 

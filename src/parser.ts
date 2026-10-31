@@ -1233,19 +1233,25 @@ export class Parser {
    * Handles union types: Int|String|Bool
    */
   private typeExpr(): TypeExpr {
-    const first = this.typeExprPrimary();
+    // Type expressions recurse through nested arrays ([[Int]]), object schemas
+    // and unions. Count each level against the same guard the value grammar
+    // uses, so deeply nested types raise "Maximum expression depth exceeded"
+    // rather than overflowing the host call stack.
+    return this.descend(() => {
+      const first = this.typeExprPrimary();
 
-    // Check for union type: Type|Type|...
-    if (this.currentToken.type === 'PIPE') {
-      const types: TypeExpr[] = [first];
-      while (this.currentToken.type === 'PIPE') {
-        this.eat('PIPE');
-        types.push(this.typeExprPrimary());
+      // Check for union type: Type|Type|...
+      if (this.currentToken.type === 'PIPE') {
+        const types: TypeExpr[] = [first];
+        while (this.currentToken.type === 'PIPE') {
+          this.eat('PIPE');
+          types.push(this.typeExprPrimary());
+        }
+        return unionType(types);
       }
-      return unionType(types);
-    }
 
-    return first;
+      return first;
+    });
   }
 
   /**
