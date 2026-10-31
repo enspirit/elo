@@ -4,6 +4,24 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-31
+
+### Security
+
+Hardening of the parser, transform, and runtime against denial-of-service and
+sandbox-escape vectors, most reported under coordinated disclosure. All of
+these also ship in the conservative 1.0.2 patch release.
+
+- Bound parser recursion depth on every self-recursive descent (prefix operators, exponentiation, guard sugar, type definitions), closing a stack-overflow denial of service — reported by uaaw
+- Count type-expression nesting against the depth guard in both the parser and the transform, closing a stack-overflow denial of service — reported by Atsushi Sada
+- Reject applying a value not known to be a function, closing a Y-combinator non-termination denial of service — reported by Atsushi Sada
+- Validate identifier-shaped type-node fields (subtype-constraint variable, schema keys, type names) in every compiler, closing an AST-API injection gap left open after the 1.0.1 fix — reported by Atsushi Sada
+- Enforce the meta-property denylist inside the `fetch()` runtime helper, closing a prototype-chain bypass via variable, array, or concatenated keys — reported by uaaw
+- Reject array multiplication (`[1] * n`), closing an unbounded-allocation denial of service — reported by Atsushi Sada
+- Enforce the meta-property denylist inside `patch()` as well as `fetch()`
+- Bound string repetition (`'a' * n`) and padding (`padStart`/`padEnd`) to a configurable maximum length (`ELO_MAX_STRING_LENGTH`, default 10,000,000), closing an unbounded-allocation denial of service
+- Document the data contract for the `_` input: Elo operates on plain data, and passing host-language objects can run their own methods on the Ruby and Python targets
+
 ### Fixes
 
 Nine defects that produced a wrong value rather than an error. Seven were
@@ -20,6 +38,7 @@ a key containing a dash was the thing that introduced the defect.
 - Fix `elo -e` and `eloc -e` dropping a multi-line expression whose first line is a comment — it printed nothing and exited 0
 - Fix `at()` and `first()` leaking their nullish fallback into the caller in the JavaScript target: `count(first(list))` returned the element instead of its size, and `count(at(obj, 'a-key'))` returned the value — reported from production by Bricks
 - Fix string functions emitting unparseable JavaScript on an integer literal: `upper(42)` compiled to `42.toUpperCase()`, where the dot reads as a decimal point
+- Fix `replace()`/`replaceAll()` treating the search string as a regular expression on PostgreSQL while every other target matched it literally: `replace('a.b.c', '.', 'X')` now gives `aXb.c` on SQL too, and the ReDoS surface is gone
 
 **Warning**: the four fixes above that concern arithmetic change results that
 were previously wrong. `7 / 2` was 3 in Ruby and is now 3.5; `round(2.5)` was
@@ -39,6 +58,8 @@ these needs revisiting.
 
 - Add `round(x, n)` to round to `n` decimal places, with the same half-away-from-zero rule
 - Add the two-argument `min(a, b)` and `max(a, b)` alongside the list forms, so that `max(min(x, hi), lo)` no longer builds lists to compare two numbers. They compare rather than coerce, so they reach beyond numbers as the list forms do
+- Add `slice(s, start, end)` for extracting a substring by start and (exclusive) end index — the pair to `substring(s, position, length)`
+- Add `chr(n)` to write the character for a Unicode code point, so invisible characters such as a non-breaking space need not travel literally in source
 
 ## [1.0.1] - 2026-04-20
 
