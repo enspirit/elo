@@ -207,6 +207,22 @@ function transformWithDepth(
       const argsIR = expr.args.map((arg) => recurse(arg));
       const argTypes = argsIR.map(inferType);
 
+      // Reject applying a plain variable that is not known to hold a function.
+      // A lambda parameter is typed `any`, so applying one to itself — the
+      // Y-combinator shape (x)(x) — would otherwise compile to an unbounded
+      // self-call and break Elo's termination guarantee. Immediately-invoked
+      // lambdas (callee is a lambda), functions stored in data (member_access,
+      // handled below) and let-bound functions (variable inferred as `fn`)
+      // remain allowed.
+      if (fnIR.type === 'variable' && inferType(fnIR).kind !== 'fn') {
+        throw new Error(
+          `'${fnIR.name}' cannot be called as a function: only lambdas, ` +
+          `let-bound functions and functions stored in data may be applied. ` +
+          `Applying an arbitrary value (such as a lambda parameter) is not ` +
+          `allowed because it could build non-terminating recursion.`
+        );
+      }
+
       // Reject method-call syntax on member access unless it's a function stored in data
       // This prevents calling runtime methods like DateTime.diff() or String.toUpperCase()
       if (fnIR.type === 'member_access') {
