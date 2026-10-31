@@ -42,3 +42,9 @@ Route `String * Number` through a runtime helper on Ruby and Python (JS already
 self-limits) that raises when the count exceeds the chosen bound, mirroring the
 `kMul` array guard. Add red/green acceptance + unit tests. Document the limit on
 the security page under the "every expression finishes" guarantee.
+
+## Decision
+
+* Bound to a reasonable fixed limit that kills the OOM, under an environment
+  variable / compiler parameter whose default value is safe. Explain in the
+  doc how to change it with a caveat on security.

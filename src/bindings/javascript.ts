@@ -117,11 +117,15 @@ export function createJavaScriptBinding(): StdLib<string> {
   // String concatenation
   jsLib.register('add', [Types.string, Types.string], simpleBinaryOp('+'));
 
-  // String multiplication (repeat)
-  jsLib.register('mul', [Types.string, Types.int], (args, ctx) =>
-    `${ctx.emit(args[0])}.repeat(${ctx.emit(args[1])})`);
-  jsLib.register('mul', [Types.int, Types.string], (args, ctx) =>
-    `${ctx.emit(args[1])}.repeat(${ctx.emit(args[0])})`);
+  // String multiplication (repeat), length-bounded to prevent OOM
+  jsLib.register('mul', [Types.string, Types.int], (args, ctx) => {
+    ctx.requireHelper?.('kRepeat');
+    return `kRepeat(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
+  jsLib.register('mul', [Types.int, Types.string], (args, ctx) => {
+    ctx.requireHelper?.('kRepeat');
+    return `kRepeat(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
+  });
 
   // List concatenation
   jsLib.register('add', [Types.array, Types.array], (args, ctx) =>

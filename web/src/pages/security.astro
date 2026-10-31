@@ -60,6 +60,20 @@ import Footer from '../components/Footer.astro';
           Elo guarantees apply to data, not to the behaviour of objects you choose to pass in. Convert
           host objects to plain data before evaluating an Elo expression against them.
         </p>
+
+        <h3>Bounded string allocation</h3>
+        <p>
+          Repeating or padding a string (<code>'x' * n</code>, <code>padStart(s, n, '0')</code>) can
+          otherwise allocate gigabytes from a short expression and exhaust host memory. The compiled
+          code refuses to build a string longer than a fixed ceiling — <strong>10,000,000 characters</strong>
+          by default — and raises instead.
+        </p>
+        <p>
+          The ceiling is read once, at compile time, from the <code>ELO_MAX_STRING_LENGTH</code>
+          environment variable, so a deployment can lower it (stricter) or raise it. Raising it
+          re-opens the denial-of-service window in proportion to the new value — only increase it when
+          you control the expressions being compiled, and prefer lowering it for untrusted input.
+        </p>
       </section>
 
       <section class="about-section bounty-section">
