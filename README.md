@@ -62,6 +62,22 @@ See also the Related work section below.
   - Python (using `**` for power, `and`/`or`/`not` for boolean logic, `datetime` module)
   - PostgreSQL (using `POWER()` for power, `AND`/`OR`/`NOT` for boolean logic, `DATE`, `TIMESTAMP`, `INTERVAL` for temporals)
 
+## Security
+
+Elo is designed to run code written by people you don't fully trust. It gives
+you a **capability sandbox by construction** — compiled code can't do I/O, can't
+`eval`, can't reach host globals — and the compiler itself always terminates and
+never emits code you didn't write.
+
+It does **not** bound how much time or memory a legal expression may use. If the
+expressions are untrusted, run the compiled output under a memory limit and a
+timeout, and pass it plain data (not live host objects). See the
+[security page](https://elo-lang.org/security), the
+[Running Elo safely](https://elo-lang.org/running-safely) guide, and the
+copy-paste reference sandboxes in [`contrib/sandboxes/`](contrib/sandboxes).
+
+Found a security issue? See the bug bounty program on the security page.
+
 ## Installation
 
 ```bash

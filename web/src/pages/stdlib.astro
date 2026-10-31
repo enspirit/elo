@@ -599,7 +599,7 @@ import Footer from '../components/Footer.astro';
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">*</div>
             <div class="fn-sig">(String, Int) → String</div>
-            <p class="fn-desc">Repeats a string n times.</p>
+            <p class="fn-desc">Repeats a string n times. The result length is capped (<code>ELO_MAX_STRING_LENGTH</code>, default 10M) to prevent runaway allocation — see <a href="/running-safely">Running Elo safely</a>.</p>
             <div class="fn-example"><code class="language-elo">'hi' * 3</code><span class="fn-result">→ 'hihihi'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
@@ -658,13 +658,13 @@ import Footer from '../components/Footer.astro';
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">padStart</div>
             <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
-            <p class="fn-desc">Pads the start of the string to reach the target length.</p>
+            <p class="fn-desc">Pads the start of the string to reach the target length. The length is capped (<code>ELO_MAX_STRING_LENGTH</code>) — see <a href="/running-safely">Running Elo safely</a>.</p>
             <div class="fn-example"><code class="language-elo">padStart('42', 5, '0')</code><span class="fn-result">→ '00042'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">padEnd</div>
             <div class="fn-sig">(s: String, len: Int, pad: String) → String</div>
-            <p class="fn-desc">Pads the end of the string to reach the target length.</p>
+            <p class="fn-desc">Pads the end of the string to reach the target length. The length is capped (<code>ELO_MAX_STRING_LENGTH</code>) — see <a href="/running-safely">Running Elo safely</a>.</p>
             <div class="fn-example"><code class="language-elo">padEnd('hi', 5, '.')</code><span class="fn-result">→ 'hi...'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
