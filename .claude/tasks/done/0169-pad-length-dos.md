@@ -32,3 +32,7 @@ decided and implemented together.
 Clamp/validate the pad length against the shared string-length bound in a runtime
 helper on each backend, raising past the limit. Red/green acceptance + unit
 tests. One sentence on the security page.
+
+## Decision
+
+Similar to 0168, same env var/compiler parameter.

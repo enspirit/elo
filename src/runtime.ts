@@ -32,6 +32,7 @@ export const MAX_STRING_LENGTH: number = (() => {
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
   kRepeat: [],
+  kPad: [],
   kMin2: [],
   kMax2: [],
   kRound: [],
@@ -56,6 +57,10 @@ export const JS_HELPERS: Record<string, string> = {
   if (n <= 0) return "";
   if (s.length * n > ${MAX_STRING_LENGTH}) throw new Error("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings");
   return s.repeat(n);
+}`,
+  kPad: `function kPad(s, n, p, atStart) {
+  if (n > ${MAX_STRING_LENGTH}) throw new Error("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings");
+  return atStart ? s.padStart(n, p) : s.padEnd(n, p);
 }`,
   kAdd: `function kAdd(l, r) {
   if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
@@ -306,6 +311,7 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   k_round_to: [],
   k_div: [],
   k_str_mul: [],
+  k_pad: [],
   p_any: ['p_ok'],
   p_null: ['p_ok', 'p_fail'],
   p_string: ['p_ok', 'p_fail'],
@@ -323,6 +329,10 @@ export const RUBY_HELPERS: Record<string, string> = {
   return '' if n <= 0
   raise "String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > ${MAX_STRING_LENGTH}
   s * n
+end`,
+  k_pad: `def k_pad(s, n, p, at_start)
+  raise "String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if n > ${MAX_STRING_LENGTH}
+  at_start ? s.rjust(n, p) : s.ljust(n, p)
 end`,
   k_round_to: `def k_round_to(x, n)
   f = 10 ** n
@@ -440,6 +450,7 @@ end`,
  */
 export const PY_HELPER_DEPS: Record<string, string[]> = {
   kStrMul: [],
+  kPad: [],
   kRound: ['_import_math'],
   kRoundTo: ['kRound'],
   kEq: [],
@@ -487,6 +498,9 @@ export const PY_HELPERS: Record<string, string> = {
     if n <= 0: return ""
     if len(s) * n > ${MAX_STRING_LENGTH}: raise ValueError("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings")
     return s * n`,
+  kPad: `def kPad(s, n, p, at_start):
+    if n > ${MAX_STRING_LENGTH}: raise ValueError("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings")
+    return s.rjust(n, p) if at_start else s.ljust(n, p)`,
   _import_math: `import math`,
   _import_functools: `import functools`,
   _import_datetime: `import datetime as _dt`,

@@ -306,10 +306,14 @@ export function createRubyBinding(): StdLib<string> {
       `${wrapReceiver(args, ctx)}.sub(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     rubyLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.gsub(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
-    rubyLib.register('padStart', [t, Types.int, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.rjust(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
-    rubyLib.register('padEnd', [t, Types.int, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.ljust(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+    rubyLib.register('padStart', [t, Types.int, Types.string], (args, ctx) => {
+      ctx.requireHelper?.('k_pad');
+      return `k_pad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, true)`;
+    });
+    rubyLib.register('padEnd', [t, Types.int, Types.string], (args, ctx) => {
+      ctx.requireHelper?.('k_pad');
+      return `k_pad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, false)`;
+    });
   }
 
   // Numeric functions (use rubyMethod to handle binary op precedence)
