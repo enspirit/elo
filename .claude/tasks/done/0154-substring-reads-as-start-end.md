@@ -32,3 +32,7 @@ is the same defect pointed the other way.
 3. Deprecate and rename — too expensive against code already in production.
 
 1 and 2 are not exclusive and 1 should happen regardless.
+
+## Decision
+
+Do 1. and 2, certainly NOT 3.

@@ -1,0 +1,5 @@
+->(_) { (raise "Assertion failed" unless "hello"[0...2] == "he"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello"[1...3] == "el"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world"[6...11] == "world"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello"[2...100] == "llo"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello"[0...0] == ""; true) }.call(nil);

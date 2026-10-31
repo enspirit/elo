@@ -297,6 +297,8 @@ export function createRubyBinding(): StdLib<string> {
   for (const t of [Types.string, Types.any]) {
     rubyLib.register('substring', [t, Types.int, Types.int], (args, ctx) =>
       `${wrapReceiver(args, ctx)}[${ctx.emit(args[1])}, ${ctx.emit(args[2])}]`);
+    rubyLib.register('slice', [t, Types.int, Types.int], (args, ctx) =>
+      `${wrapReceiver(args, ctx)}[${ctx.emit(args[1])}...${ctx.emit(args[2])}]`);
     rubyLib.register('replace', [t, Types.string, Types.string], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.sub(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     rubyLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>

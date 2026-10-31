@@ -262,6 +262,9 @@ export function createSQLBinding(): StdLib<string> {
   // PostgreSQL SUBSTRING is 1-based, Elo is 0-based
   sqlLib.register('substring', [Types.string, Types.int, Types.int], (args, ctx) =>
     `SUBSTRING(${ctx.emit(args[0])} FROM ${ctx.emit(args[1])} + 1 FOR ${ctx.emit(args[2])})`);
+  // slice(s, start, end): end is exclusive, so the length is end - start
+  sqlLib.register('slice', [Types.string, Types.int, Types.int], (args, ctx) =>
+    `SUBSTRING(${ctx.emit(args[0])} FROM ${ctx.emit(args[1])} + 1 FOR (${ctx.emit(args[2])}) - (${ctx.emit(args[1])}))`);
   sqlLib.register('concat', [Types.string, Types.string], (args, ctx) =>
     `CONCAT(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
   // indexOf returns NULL when not found, 0-based index otherwise

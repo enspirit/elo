@@ -668,9 +668,15 @@ import Footer from '../components/Footer.astro';
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">substring</div>
-            <div class="fn-sig">(s: String, start: Int, len: Int) → String</div>
-            <p class="fn-desc">Extracts a substring starting at <code>start</code> (0-indexed) with length <code>len</code>.</p>
-            <div class="fn-example"><code class="language-elo">substring('hello', 1, 3)</code><span class="fn-result">→ 'ell'</span></div>
+            <div class="fn-sig">(s: String, position: Int, length: Int) → String</div>
+            <p class="fn-desc">Extracts <code>length</code> characters starting at <code>position</code> (0-indexed). The third argument is a <strong>length</strong>, not an end index — use <code>slice</code> if you want an end index.</p>
+            <div class="fn-example"><code class="language-elo">substring('hello world', 6, 5)</code><span class="fn-result">→ 'world'</span></div>
+          </div>
+          <div class="stdlib-fn" data-action="click->doc#tryExample">
+            <div class="fn-name">slice</div>
+            <div class="fn-sig">(s: String, start: Int, end: Int) → String</div>
+            <p class="fn-desc">Extracts the characters from <code>start</code> (0-indexed, inclusive) up to <code>end</code> (exclusive). The third argument is an <strong>end index</strong>, not a length — the pair to <code>substring</code>.</p>
+            <div class="fn-example"><code class="language-elo">slice('hello world', 6, 11)</code><span class="fn-result">→ 'world'</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">split</div>

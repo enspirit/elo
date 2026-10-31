@@ -231,6 +231,8 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   });
   pyLib.register('substring', [Types.string, Types.int, Types.int], (args, ctx) =>
     `${ctx.emit(args[0])}[${ctx.emit(args[1])}:${ctx.emit(args[1])} + ${ctx.emit(args[2])}]`);
+  pyLib.register('slice', [Types.string, Types.int, Types.int], (args, ctx) =>
+    `${ctx.emit(args[0])}[${ctx.emit(args[1])}:${ctx.emit(args[2])}]`);
   pyLib.register('concat', [Types.string, Types.string], simpleBinaryOp('+'));
   pyLib.register('padStart', [Types.string, Types.int, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.rjust(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);

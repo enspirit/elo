@@ -248,6 +248,7 @@ export function createTypeDefs(): TypeDefs {
   defs.register('contains', [Types.string, Types.string], Types.bool);
   defs.register('isEmpty', [Types.string], Types.bool);
   defs.register('substring', [Types.string, Types.int, Types.int], Types.string);
+  defs.register('slice', [Types.string, Types.int, Types.int], Types.string);
   defs.register('concat', [Types.string, Types.string], Types.string);
   defs.register('indexOf', [Types.string, Types.string], Types.any); // Int or null
   defs.register('replace', [Types.string, Types.string, Types.string], Types.string);

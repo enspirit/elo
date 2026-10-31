@@ -357,6 +357,8 @@ export function createJavaScriptBinding(): StdLib<string> {
       const len = ctx.emit(args[2]);
       return `${s}.substring(${start}, ${start} + ${len})`;
     });
+    jsLib.register('slice', [t, Types.int, Types.int], (args, ctx) =>
+      `${wrapReceiver(args, ctx)}.slice(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     jsLib.register('replace', [t, Types.string, Types.string], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     jsLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
