@@ -1298,6 +1298,11 @@ describe('Parser - Recursion depth guards (security)', () => {
     assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
   });
 
+  it('bounds nested type expressions (let T = [[[...Int...]]] in 1)', () => {
+    const expr = 'let T = ' + '['.repeat(200) + 'Int' + ']'.repeat(200) + ' in 1';
+    assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
+  });
+
   it('still accepts these constructs within the depth limit', () => {
     assert.strictEqual(parse('!'.repeat(10) + 'true').type, 'unary');
     assert.strictEqual(parse('1' + '^1'.repeat(10)).type, 'binary');
@@ -1307,6 +1312,8 @@ describe('Parser - Recursion depth guards (security)', () => {
       parse('let ' +
         Array.from({ length: 10 }, (_, i) => `T${i} = {p${i}: String}`).join(', ') +
         ' in 1'));
+    assert.doesNotThrow(() =>
+      parse('let T = ' + '['.repeat(10) + 'Int' + ']'.repeat(10) + ' in 1'));
   });
 });
 

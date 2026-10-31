@@ -283,6 +283,13 @@ function transformTypeExprWithContext(
   maxDepth: number,
   allowUndefinedVariables: boolean
 ): IRTypeExpr {
+  // Type expressions recurse in parallel to value expressions (nested arrays,
+  // schemas, unions). Count each level against the same guard so deeply nested
+  // types raise a typed error rather than overflowing the host call stack.
+  if (depth > maxDepth) {
+    throw new Error(`Maximum transform depth exceeded (${maxDepth})`);
+  }
+  const nextDepth = depth + 1;
   switch (typeExpr.kind) {
     case 'type_ref': {
       const name = typeExpr.name;
@@ -300,7 +307,7 @@ function transformTypeExprWithContext(
     case 'type_schema': {
       const props = typeExpr.properties.map(prop => ({
         key: prop.key,
-        typeExpr: transformTypeExprWithContext(prop.typeExpr, env, defining, depth, maxDepth, allowUndefinedVariables),
+        typeExpr: transformTypeExprWithContext(prop.typeExpr, env, defining, nextDepth, maxDepth, allowUndefinedVariables),
         optional: prop.optional,
       }));
       // Transform extras if it's a TypeExpr, otherwise pass through as-is
@@ -308,32 +315,32 @@ function transformTypeExprWithContext(
       if (typeExpr.extras === 'closed' || typeExpr.extras === 'ignored' || typeExpr.extras === undefined) {
         extras = typeExpr.extras;
       } else {
-        extras = transformTypeExprWithContext(typeExpr.extras, env, defining, depth, maxDepth, allowUndefinedVariables);
+        extras = transformTypeExprWithContext(typeExpr.extras, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
       }
       return irTypeSchema(props, extras);
     }
 
     case 'subtype_constraint': {
       // Transform the base type
-      const baseTypeIR = transformTypeExprWithContext(typeExpr.baseType, env, defining, depth, maxDepth, allowUndefinedVariables);
+      const baseTypeIR = transformTypeExprWithContext(typeExpr.baseType, env, defining, nextDepth, maxDepth, allowUndefinedVariables);
       // Transform each constraint with the variable in scope
       const constraintEnv = new Map(env);
       constraintEnv.set(typeExpr.variable, Types.any);
       const constraintsIR = typeExpr.constraints.map(c => ({
         label: c.label,
-        condition: transformWithDepth(c.condition, constraintEnv, defining, depth, maxDepth, allowUndefinedVariables)
+        condition: transformWithDepth(c.condition, constraintEnv, defining, nextDepth, maxDepth, allowUndefinedVariables)
       }));
       return irSubtypeConstraint(baseTypeIR, typeExpr.variable, constraintsIR);
     }
 
     case 'array_type':
       return irArrayType(
-        transformTypeExprWithContext(typeExpr.elementType, env, defining, depth, maxDepth, allowUndefinedVariables)
+        transformTypeExprWithContext(typeExpr.elementType, env, defining, nextDepth, maxDepth, allowUndefinedVariables)
       );
 
     case 'union_type':
       return irUnionType(
-        typeExpr.types.map(t => transformTypeExprWithContext(t, env, defining, depth, maxDepth, allowUndefinedVariables))
+        typeExpr.types.map(t => transformTypeExprWithContext(t, env, defining, nextDepth, maxDepth, allowUndefinedVariables))
       );
   }
 }
