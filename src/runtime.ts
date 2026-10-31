@@ -17,13 +17,19 @@
  * so the compiled runtime refuses to cross this ceiling.
  *
  * The default is safe; it is read once, at compile time, from the
- * `ELO_MAX_STRING_LENGTH` environment variable so a deployment can raise or
- * lower it. Raising it re-opens the denial-of-service window — see the security
- * page.
+ * `ELO_MAX_STRING_LENGTH` environment variable (when running under Node) so a
+ * deployment can raise or lower it. Raising it re-opens the denial-of-service
+ * window — see the security page.
  */
 export const DEFAULT_MAX_STRING_LENGTH = 10_000_000;
 export const MAX_STRING_LENGTH: number = (() => {
-  const v = Number(process.env.ELO_MAX_STRING_LENGTH);
+  // Guard `process`: this module is bundled into the browser (the playground
+  // compiles Elo in-page), where `process` is undefined. A bare reference would
+  // throw ReferenceError at import time.
+  const raw = (typeof process !== 'undefined' && process.env)
+    ? process.env.ELO_MAX_STRING_LENGTH
+    : undefined;
+  const v = Number(raw);
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : DEFAULT_MAX_STRING_LENGTH;
 })();
 
