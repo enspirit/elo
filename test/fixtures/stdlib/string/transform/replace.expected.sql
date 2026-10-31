@@ -1,3 +1,7 @@
-CASE WHEN REGEXP_REPLACE('hello world', 'world', 'there') = 'hello there' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN REGEXP_REPLACE('abab', 'ab', 'x') = 'xab' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN REGEXP_REPLACE('abab', 'ab', 'x', 'g') = 'xx' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (CASE WHEN POSITION('world' IN 'hello world') > 0 THEN LEFT('hello world', POSITION('world' IN 'hello world') - 1) || 'there' || SUBSTRING('hello world' FROM POSITION('world' IN 'hello world') + LENGTH('world')) ELSE 'hello world' END) = 'hello there' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (CASE WHEN POSITION('ab' IN 'abab') > 0 THEN LEFT('abab', POSITION('ab' IN 'abab') - 1) || 'x' || SUBSTRING('abab' FROM POSITION('ab' IN 'abab') + LENGTH('ab')) ELSE 'abab' END) = 'xab' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN REPLACE('abab', 'ab', 'x') = 'xx' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (CASE WHEN POSITION('.' IN 'a.b.c') > 0 THEN LEFT('a.b.c', POSITION('.' IN 'a.b.c') - 1) || 'X' || SUBSTRING('a.b.c' FROM POSITION('.' IN 'a.b.c') + LENGTH('.')) ELSE 'a.b.c' END) = 'aXb.c' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN REPLACE('a.b.c', '.', 'X') = 'aXbXc' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (CASE WHEN POSITION('+' IN '1+1') > 0 THEN LEFT('1+1', POSITION('+' IN '1+1') - 1) || '-' || SUBSTRING('1+1' FROM POSITION('+' IN '1+1') + LENGTH('+')) ELSE '1+1' END) = '1-1' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN REPLACE('a(b)c', '(', '[') = 'a[b)c' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
