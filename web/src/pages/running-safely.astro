@@ -1,0 +1,132 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Running Elo safely - Elo" activeNav="security">
+  <main class="blog-panel">
+    <article class="blog-content">
+      <header class="page-header centered">
+        <h1>Running Elo safely</h1>
+        <p class="page-intro">How to run compiled Elo over untrusted expressions, in every target</p>
+      </header>
+
+      <section class="about-section">
+        <h2>Why this page exists</h2>
+        <p>
+          Elo gives you a <strong>capability sandbox</strong> by construction — compiled code can't do I/O, can't
+          call <code>eval</code>, can't touch host globals (see <a href="/security">Security</a>). It does
+          <em>not</em> give you a <strong>resource sandbox</strong>: a legal expression can still spend a lot of
+          time or memory over the data you give it. If the people writing the expressions aren't fully trusted
+          (the common case), you must add that resource sandbox yourself.
+        </p>
+        <p>
+          The patterns below are minimal, correct <em>starting points</em> — not hardened products. Copy the one
+          for your target from <code>contrib/sandboxes/</code> in the repository and tune the limits to your
+          workload.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>The baseline — four levers, every target</h2>
+        <ul>
+          <li><strong>Isolate.</strong> Run the emitted code in its own thread, process, or context — never inline on the thread that must stay responsive.</li>
+          <li><strong>Cap memory.</strong> Give it a hard memory ceiling so a large allocation fails instead of taking the host down.</li>
+          <li><strong>Cap time.</strong> Give it a wall-clock (or CPU) timeout and <em>hard-kill</em> on expiry — this is what stops a runaway synchronous computation.</li>
+          <li><strong>Pass data only.</strong> The input must be plain data (JSON-shaped), never a live host object whose methods could run.</li>
+        </ul>
+        <p>
+          A capability bug in Elo would be our fault and we'd fix it; isolating the run anyway gives you
+          defense-in-depth for free.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>Node.js (server)</h2>
+        <p>
+          Compile in your trusted process; run only the <em>output</em> in a <code>worker_threads</code> worker.
+          The worker gives you both missing levers at once: it caps the V8 heap via
+          <code>resourceLimits.maxOldGenerationSizeMb</code>, it runs off your main event loop, and you hard-kill
+          it with <code>worker.terminate()</code> on a timeout.
+        </p>
+        <p>
+          A common in-house shortcut is to evaluate with the <code>vm</code> module and its <code>timeout</code>
+          option. That interrupts synchronous CPU-bound work (useful!), but it does <strong>not</strong> cap
+          memory, it runs on the main event loop (one bad expression stalls the whole process), and <code>vm</code>
+          is explicitly not an isolation boundary. Prefer a worker for untrusted expressions.
+        </p>
+        <p>Reference: <code>contrib/sandboxes/node/</code>.</p>
+      </section>
+
+      <section class="about-section">
+        <h2>Browser</h2>
+        <p>
+          Run the emitted code in a <strong>Web Worker</strong> and hard-kill it with <code>worker.terminate()</code>
+          on a timeout. Pass the input by <code>postMessage</code>, which structured-clones it — enforcing the
+          data-only contract for free. Browsers can't cap a worker's memory directly, so keep inputs small and
+          prefer server-side evaluation for untrusted expressions.
+        </p>
+        <p>Reference: <code>contrib/sandboxes/browser/</code>.</p>
+      </section>
+
+      <section class="about-section">
+        <h2>Ruby</h2>
+        <p>
+          Ruby has no in-process sandbox, so isolate with a child process. Set a memory ceiling with
+          <code>Process.setrlimit(:AS, …)</code> and a CPU ceiling with <code>Process.setrlimit(:CPU, …)</code>
+          in the child, and enforce a wall-clock reaper that sends <code>KILL</code> on expiry. Run the child as a
+          low-privilege user.
+        </p>
+        <p>Reference: <code>contrib/sandboxes/ruby/</code>.</p>
+      </section>
+
+      <section class="about-section">
+        <h2>Python</h2>
+        <p>
+          Same shape: a child process with <code>resource.setrlimit(RLIMIT_AS, …)</code> for memory and
+          <code>RLIMIT_CPU</code> for CPU, launched with a <code>subprocess</code> timeout for the wall-clock
+          kill. Feed the input as JSON on stdin, which keeps it plain data by construction, and keep the child's
+          namespace to the Elo prelude only.
+        </p>
+        <p>Reference: <code>contrib/sandboxes/python/</code>.</p>
+      </section>
+
+      <section class="about-section">
+        <h2>PostgreSQL</h2>
+        <p>
+          The emitted SQL is a pure expression over supplied values and columns. Run it as a dedicated
+          <strong>low-privilege, read-only role</strong> (no writes, no superuser, restricted
+          <code>search_path</code>), inside a transaction with <code>SET LOCAL statement_timeout</code> for time
+          and a capped <code>work_mem</code> for memory, and pass inputs as <strong>bound parameters</strong>
+          (<code>$1</code>, …) — never spliced into the SQL text.
+        </p>
+        <p>Reference: <code>contrib/sandboxes/postgres/</code>.</p>
+      </section>
+
+      <section class="about-section">
+        <h2>What the sandbox is, and isn't, for</h2>
+        <p>
+          The resource sandbox bounds <em>cost</em> — time and memory. It is not where Elo's <em>capability</em>
+          guarantees live: those are by construction in the emitted code. If you ever find emitted code reaching a
+          host capability, or the compiler misbehaving on hostile input, that's a bug — please report it through
+          the <a href="/security">bug bounty program</a>.
+        </p>
+      </section>
+
+      <Footer className="blog-footer" />
+    </article>
+  </main>
+</Layout>
+
+<style>
+  .about-section ul {
+    margin: 1rem 0 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .about-section li {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 0.75rem;
+  }
+</style>
