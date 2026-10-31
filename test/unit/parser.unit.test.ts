@@ -1270,6 +1270,46 @@ describe('Parser - Depth Limits', () => {
   });
 });
 
+describe('Parser - Recursion depth guards (security)', () => {
+  // These parser functions are directly self-recursive and historically
+  // bypassed the depth guard, overflowing the host call stack (RangeError)
+  // instead of raising the documented "Maximum expression depth exceeded".
+  // Each case must raise the typed error, never a RangeError.
+
+  it('bounds unary operator chains (!!!...true)', () => {
+    const expr = '!'.repeat(200) + 'true';
+    assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
+  });
+
+  it('bounds exponentiation chains (1^1^1...)', () => {
+    const expr = '1' + '^1'.repeat(200);
+    assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
+  });
+
+  it('bounds nested guard sugar (guard ... guard ... in 1)', () => {
+    const expr = 'guard ' + Array(200).fill('true').join(' guard ') + ' in 1';
+    assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
+  });
+
+  it('bounds nested type definitions (let T0=.., T1=.., .. in 1)', () => {
+    const expr = 'let ' +
+      Array.from({ length: 200 }, (_, i) => `T${i} = {p${i}: String}`).join(', ') +
+      ' in 1';
+    assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
+  });
+
+  it('still accepts these constructs within the depth limit', () => {
+    assert.strictEqual(parse('!'.repeat(10) + 'true').type, 'unary');
+    assert.strictEqual(parse('1' + '^1'.repeat(10)).type, 'binary');
+    assert.doesNotThrow(() =>
+      parse('guard ' + Array(10).fill('true').join(' guard ') + ' in 1'));
+    assert.doesNotThrow(() =>
+      parse('let ' +
+        Array.from({ length: 10 }, (_, i) => `T${i} = {p${i}: String}`).join(', ') +
+        ' in 1'));
+  });
+});
+
 describe('Parser - Array Literals', () => {
   it('should parse empty array', () => {
     const ast = parse('[]');
