@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { transform, TypeEnv } from '../../src/transform';
+import { parse } from '../../src/parser';
 import {
   literal,
   stringLiteral,
@@ -675,6 +676,42 @@ describe('transform - method calls (apply on member access)', () => {
         []
       )),
       /Member access '\.toMillis' is not allowed on duration type/
+    );
+  });
+});
+
+describe('transform - apply recursion guard (security)', () => {
+  // Elo guarantees every expression terminates. Applying a lambda parameter to
+  // itself ((x)(x)) builds a Y-combinator whose compiled form never finishes.
+  // Because params are typed `any`, this slipped past the function_call
+  // recursion check, which only inspects named calls.
+
+  it('rejects self-application of a lambda parameter', () => {
+    assert.throws(
+      () => transform(parse('fn(x ~> (x)(x))')),
+      /cannot be called as a function|not a function|recursion/i
+    );
+  });
+
+  it('rejects the Y-combinator term', () => {
+    assert.throws(
+      () => transform(parse('(fn(x ~> (x)(x)))(fn(x ~> (x)(x)))')),
+      /cannot be called as a function|not a function|recursion/i
+    );
+  });
+
+  it('still allows immediately-invoked lambdas', () => {
+    assert.strictEqual(transform(parse('(fn(x ~> x))(5)')).type, 'apply');
+  });
+
+  it('still allows applying a let-bound function through parentheses', () => {
+    assert.strictEqual(transform(parse('let f = fn(x ~> x) in (f)(5)')).type, 'let');
+  });
+
+  it('still allows calling a function stored in data', () => {
+    assert.strictEqual(
+      transform(apply(memberAccess(variable('_'), 'callback'), [])).type,
+      'apply'
     );
   });
 });
