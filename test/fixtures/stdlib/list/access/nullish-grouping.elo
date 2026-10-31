@@ -1,0 +1,24 @@
+# at() and first() fall back to null when there is nothing to return, and that
+# fallback must not leak into whatever is applied next.
+#
+# Emitted unparenthesised, `x[0] ?? null` swallows the caller: `.length` binds
+# to the `null` branch, which `??` never evaluates, so count(first(l)) quietly
+# returned the element instead of its size. Nothing failed — the reported
+# symptom was a correct-looking program producing the wrong number.
+
+assert(count(first([[1, 2], [3]])) == 2)
+assert(count(at([[1, 2], [3]], 0)) == 2)
+assert(count(at([[1, 2], [3]], 1)) == 1)
+assert(length(first(['ab', 'c'])) == 2)
+assert(length(at(['ab', 'c'], 1)) == 1)
+assert(count(last([[1], [2, 3]])) == 2)
+assert(sum(first([[1, 2], [3]])) == 3)
+assert(first(first([[7, 8]])) == 7)
+assert(upper(first(['ab'])) == 'AB')
+
+# The fallback itself still works
+assert(isNull(first([])))
+assert(isNull(at([], 0)))
+assert(isNull(at([1, 2], 9)))
+assert(first([5]) == 5)
+assert(at([5, 6], 1) == 6)
