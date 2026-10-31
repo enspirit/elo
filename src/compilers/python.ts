@@ -265,7 +265,8 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
       ctx.requireHelper?.('pUnwrap');
       const body = ctx.emit(ir.body);
       // Use walrus pattern: (_p_Name := parser, Name := lambda v: pUnwrap(_p_Name(v, '')), body)[-1]
-      return `(_p_${ir.name} := ${parserCode}, ${ir.name} := lambda v: pUnwrap(_p_${ir.name}(v, '')), ${body})[-1]`;
+      const name = assertSafeIdentifier(ir.name, 'typedef name');
+      return `(_p_${name} := ${parserCode}, ${name} := lambda v: pUnwrap(_p_${name}(v, '')), ${body})[-1]`;
     }
 
     case 'guard': {
@@ -318,7 +319,7 @@ function emitTypeExprParser(
       // User-defined type reference
       const firstChar = typeExpr.name.charAt(0);
       if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase()) {
-        return `_p_${typeExpr.name}`;
+        return `_p_${assertSafeIdentifier(typeExpr.name, 'type reference')}`;
       }
       throw new Error(`Unknown type in type definition: ${typeExpr.name}`);
     }
@@ -327,7 +328,8 @@ function emitTypeExprParser(
       ctx.requireHelper?.('pSchema');
       const propEntries = typeExpr.properties.map(prop => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
-        return `(${JSON.stringify(prop.key)}, ${propParser}, ${prop.optional ? 'True' : 'False'})`;
+        const key = assertSafeIdentifier(prop.key, 'type_schema property key');
+        return `(${JSON.stringify(key)}, ${propParser}, ${prop.optional ? 'True' : 'False'})`;
       });
 
       let extrasMode: string;
@@ -347,7 +349,7 @@ function emitTypeExprParser(
     case 'subtype_constraint': {
       ctx.requireHelper?.('pSubtype');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
-      const varName = typeExpr.variable;
+      const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
       const checks = typeExpr.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);

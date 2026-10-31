@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { compileToRuby, compileToJavaScript, compileToSQL } from '../../src/index';
+import { compileToRuby, compileToJavaScript, compileToSQL, compileToPython } from '../../src/index';
 import { dateLiteral, dateTimeLiteral, durationLiteral } from '../../src/ast';
 import { parse } from '../../src/parser';
 import { transform } from '../../src/transform';
@@ -251,5 +251,65 @@ describe('Security - Subtype constraint label injection (JS/Ruby)', () => {
       !/raise '[^']*bad[^']*'/.test(code),
       `label still emitted as single-quoted Ruby string (buggy): ${code}`
     );
+  });
+});
+
+/**
+ * Security: identifier-shaped IR fields must be validated at every emit site.
+ *
+ * GHSA #3 added assertSafeIdentifier() to the identifier emit sites known at
+ * the time. The type-expression IR nodes added afterwards — the
+ * subtype_constraint `variable`, the type-schema property `key`, and the
+ * typedef `name` — were not covered, so an AST-API consumer (a macro or plugin
+ * system that builds/edits AST JSON) could inject arbitrary code into the
+ * JavaScript and Ruby output. These names always come from IDENTIFIER tokens
+ * when produced by the parser, so validating them rejects no valid program.
+ */
+describe('Security - AST-API identifier injection (type nodes)', () => {
+  const PAYLOAD = "x = 1; DANGER";
+
+  // subtype_constraint variable — constraint deliberately does not reference the
+  // binder, so the only emit of the variable is its declaration site.
+  function subtypeConstraintAst() {
+    const ast: any = parse('let T = Int(i | 1 > 0) in T(5)');
+    ast.typeExpr.variable = PAYLOAD;
+    return ast;
+  }
+
+  // type-schema property key
+  function schemaKeyAst() {
+    const ast: any = parse('let T = {a: Int} in 1');
+    ast.typeExpr.properties[0].key = PAYLOAD;
+    return ast;
+  }
+
+  // typedef name — body does not reference T, so only the binding site emits it
+  function typedefNameAst() {
+    const ast: any = parse('let T = {a: Int} in 1');
+    ast.name = PAYLOAD;
+    return ast;
+  }
+
+  for (const [label, make] of [
+    ['subtype_constraint variable', subtypeConstraintAst],
+    ['type_schema property key', schemaKeyAst],
+    ['typedef name', typedefNameAst],
+  ] as const) {
+    it(`rejects ${label} in JavaScript`, () => {
+      assert.throws(() => compileToJavaScript(make()), /Invalid/);
+    });
+    it(`rejects ${label} in Ruby`, () => {
+      assert.throws(() => compileToRuby(make()), /Invalid/);
+    });
+    it(`rejects ${label} in Python`, () => {
+      assert.throws(() => compileToPython(make()), /Invalid/);
+    });
+  }
+
+  it('still compiles a legitimate typed program on every backend', () => {
+    const src = 'let Age = Int(n | n >= 0) in let Person = {name: String, age: Age} in 1';
+    assert.doesNotThrow(() => compileToJavaScript(parse(src)));
+    assert.doesNotThrow(() => compileToRuby(parse(src)));
+    assert.doesNotThrow(() => compileToPython(parse(src)));
   });
 });
