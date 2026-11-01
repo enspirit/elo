@@ -521,6 +521,20 @@ export interface ParserOptions {
 
 const DEFAULT_MAX_DEPTH = 100;
 
+/**
+ * Tokens that can never begin the start of a range.
+ *
+ * Each of these opens a construct whose body runs to the end of the
+ * expression, so a following `..` is always consumed by that body rather than
+ * left for the range. Seeing one straight after `in` means the `in` belongs to
+ * a `let`/`guard`/`check`, not to a range membership.
+ */
+const CANNOT_START_A_RANGE: ReadonlySet<TokenType> = new Set<TokenType>([
+  'LET',
+  'GUARD',
+  'CHECK',
+]);
+
 export class Parser {
   private lexer: Lexer;
   private currentToken: Token;
@@ -1041,6 +1055,26 @@ export class Parser {
     }
 
     this.eat('IN');
+
+    // `in` is overloaded: it ends a `let`/`guard` binding and it is the range
+    // membership operator. The two are told apart by speculatively parsing a
+    // range and backtracking, and that speculation is what used to make the
+    // parser exponential — on `let a = 1 in let a = 1 in …` each level parsed
+    // the whole remaining body once to fail, then again for real, so a 390
+    // character expression never finished.
+    //
+    // A range start can never be an unparenthesised `let`, `guard` or `check`:
+    // their body swallows everything up to the end, so the `..` the range
+    // needs is consumed before it can be seen. Bailing out here therefore
+    // rejects nothing that used to parse — it only skips a speculation that
+    // was always going to fail, which is exactly the expensive one. Both
+    // `(let a = 1 in a) .. 10` and `if c then 1 else 2 .. 10` still parse,
+    // since neither starts with one of these tokens.
+    if (CANNOT_START_A_RANGE.has(this.currentToken.type)) {
+      this.restoreState(savedState);
+      return null;
+    }
+
     const rangeStart = this.addition();
 
     let inclusive: boolean;
