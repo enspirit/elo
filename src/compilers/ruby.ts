@@ -352,6 +352,8 @@ function emitTypeExprParser(
         'Boolean': 'p_bool',
         'Date': 'p_date',
         'Datetime': 'p_datetime',
+        'Duration': 'p_duration',
+        'Data': 'p_data',
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {

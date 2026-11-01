@@ -105,3 +105,20 @@
 
 (lambda _: kAssert((_p_Person := pSchema([("age", pSubtype(pInt, [("constraint 'adult' failed", lambda a: a >= 18)]), False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), Person({"age": 18}))[-1] == {"age": 18}))(None)
 (lambda _: kAssertFails(lambda : (_p_Person := pSchema([("age", pSubtype(pInt, [("constraint 'adult' failed", lambda a: a >= 18)]), False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), Person({"age": 17}))[-1]))(None)
+
+(lambda _: kAssert((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P1D"}))[-1].get("d") == EloDuration.from_iso("P1D")))(None)
+(lambda _: kAssert((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "PT2H30M"}))[-1].get("d") == EloDuration.from_iso("PT2H30M")))(None)
+
+(lambda _: kAssert((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": EloDuration.from_iso("P1D")}))[-1].get("d") == EloDuration.from_iso("P1D")))(None)
+
+(lambda _: kAssert((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P2D"}))[-1].get("d").in_days() == 2.0))(None)
+(lambda _: kAssert((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "PT90M"}))[-1].get("d").in_hours() == 1.5))(None)
+
+(lambda _: kAssertFails(lambda : (_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "nope"}))[-1]))(None)
+
+(lambda _: kAssert((_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "[1, 2]"}))[-1].get("d") == [1, 2]))(None)
+(lambda _: kAssert((_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": [1, 2]}))[-1].get("d") == [1, 2]))(None)
+(lambda _: kAssert((_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "{\"a\": 1}"}))[-1].get("d") == {"a": 1}))(None)
+(lambda _: kAssert((_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": 42}))[-1].get("d") == 42))(None)
+
+(lambda _: kAssertFails(lambda : (_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "{oops"}))[-1]))(None)

@@ -32,7 +32,7 @@ See also the Related work section below.
 - **Pipe operator**: `|>` for function chaining (Elixir-style), parentheses optional
 - **Alternative operator**: `|` for fallback chains (returns first defined value)
 - **Type selectors**: `Int()`, `Float()`, `Bool()`, `String()`, `Null()`, `Date()`, `Datetime()`, `Duration()`, `Interval()`, `Data()` for parsing and converting values
-- **Type definitions**: Finitio-like schema validation with `let Person = { name: String, age: Int } in data |> Person`
+- **Type definitions**: Finitio-like schema validation with `let Person = { name: String, age: Int } in data |> Person`. Schema field types are `Int`, `Float`, `Bool`, `String`, `Null`, `Date`, `Datetime`, `Duration`, `Data`, and `.` for any value
 - **Lambdas**: `fn(x ~> x * 2)` or `x ~> x * 2` (sugar) for anonymous functions
 - **Guards**: `guard condition in body` for runtime validation with `check` for postconditions
 - **Input variable**: `_` for accessing external data passed to expressions

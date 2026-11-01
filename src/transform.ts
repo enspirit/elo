@@ -285,7 +285,8 @@ export const BUILTIN_TYPE_SELECTORS = new Set([
   'Boolean',
   'Date',
   'Datetime',
-  'Interval',
+  'Duration',
+  'Data',
 ]);
 
 /**

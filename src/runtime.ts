@@ -423,7 +423,13 @@ end`,
   p_fail(p, "expected Duration (ISO 8601), got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
 end`,
   p_data: `def p_data(v, p)
-  return p_ok(JSON.parse(v), p) if v.is_a?(String) rescue p_fail(p, "invalid JSON: #{v.inspect}")
+  if v.is_a?(String)
+    begin
+      return p_ok(JSON.parse(v, symbolize_names: true), p)
+    rescue
+      return p_fail(p, "invalid JSON: #{v.inspect}")
+    end
+  end
   p_ok(v, p)
 end`,
   p_unwrap: `def p_unwrap(r)
@@ -493,6 +499,8 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   pBool: ['pOk', 'pFail'],
   pDate: ['pOk', 'pFail', 'kParseDate'],
   pDatetime: ['pOk', 'pFail', 'kParseDatetime'],
+  pDuration: ['pOk', 'pFail', '_elo_duration'],
+  pData: ['pOk', 'pFail'],
   pSchema: ['pOk', 'pFail'],
   pArray: ['pOk', 'pFail'],
   pUnion: ['pFail'],
@@ -820,6 +828,18 @@ def _elo_end_of_year(dt):
     if v == "true": return pOk(True, p)
     if v == "false": return pOk(False, p)
     return pFail(p, "expected Bool, got " + ("Null" if v is None else repr(v) if isinstance(v, str) else type(v).__name__))`,
+  pDuration: `def pDuration(v, p):
+    if isinstance(v, EloDuration): return pOk(v, p)
+    if isinstance(v, str):
+        try: return pOk(EloDuration.from_iso(v), p)
+        except: pass
+    return pFail(p, "expected Duration (ISO 8601), got " + ("Null" if v is None else repr(v) if isinstance(v, str) else type(v).__name__))`,
+  pData: `def pData(v, p):
+    import json
+    if isinstance(v, str):
+        try: return pOk(json.loads(v), p)
+        except: return pFail(p, "invalid JSON: " + repr(v))
+    return pOk(v, p)`,
   pDate: `def pDate(v, p):
     if isinstance(v, _dt.datetime): return pOk(kParseDate(v), p)
     if isinstance(v, str):

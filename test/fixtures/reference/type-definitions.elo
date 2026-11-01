@@ -105,3 +105,20 @@ assert((let T = Int(i | i > 0, even: i % 2 == 0) in '42' |> T) == 42)
 # Labeled constraint in schema
 assert((let Person = { age: Int(a | adult: a >= 18) } in { age: 18 } |> Person) == { age: 18 })
 assertFails(fn( ~> let Person = { age: Int(a | adult: a >= 18) } in { age: 17 } |> Person ))
+# Duration as a schema type: parses an ISO 8601 string
+assert((let T = { d: Duration } in { d: 'P1D' } |> T).d == P1D)
+assert((let T = { d: Duration } in { d: 'PT2H30M' } |> T).d == PT2H30M)
+# A Duration value passes through unchanged
+assert((let T = { d: Duration } in { d: P1D } |> T).d == P1D)
+# The parsed value is a real Duration, usable in arithmetic
+assert(inDays((let T = { d: Duration } in { d: 'P2D' } |> T).d) == 2.0)
+assert(inHours((let T = { d: Duration } in { d: 'PT90M' } |> T).d) == 1.5)
+# A string that is not a duration is rejected
+assertFails(fn( ~> let T = { d: Duration } in { d: 'nope' } |> T ))
+# Data as a schema type: accepts any plain data, parsing a JSON string
+assert((let T = { d: Data } in { d: '[1, 2]' } |> T).d == [1, 2])
+assert((let T = { d: Data } in { d: [1, 2] } |> T).d == [1, 2])
+assert((let T = { d: Data } in { d: '{"a": 1}' } |> T).d == { a: 1 })
+assert((let T = { d: Data } in { d: 42 } |> T).d == 42)
+# Invalid JSON in a Data field is rejected
+assertFails(fn( ~> let T = { d: Data } in { d: '{oops' } |> T ))

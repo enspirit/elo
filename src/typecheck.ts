@@ -1035,7 +1035,10 @@ const BUILTIN_TYPE_REFS: Record<string, CheckType> = {
   Boolean: prim(Types.bool),
   Date: prim(Types.date),
   Datetime: prim(Types.datetime),
-  Interval: prim(Types.interval),
+  Duration: prim(Types.duration),
+  // `Data` is the plain-data contract: it validates that a value is data and
+  // parses a JSON string, but says nothing about the shape that comes out.
+  Data: ANY,
 };
 
 /** The names above, for the test that pins them to the transform's list. */

@@ -426,7 +426,12 @@ import Footer from '../components/Footer.astro';
         <p class="note"><strong>Note:</strong> Data schemas compile to JavaScript, Ruby, and Python only. SQL is not supported.</p>
 
         <h3>Basic Types</h3>
-        <p>All <a href="#type-selectors">type selectors</a> can be used as schema types: <code>Int</code>, <code>Float</code>, <code>Bool</code>, <code>String</code>, <code>Null</code>, <code>Date</code>, <code>Datetime</code>, <code>Duration</code>, <code>Data</code>. Use <code>.</code> (dot) for any value.</p>
+        <p>These <a href="#type-selectors">type selectors</a> can be used as schema types: <code>Int</code>, <code>Float</code>, <code>Bool</code>, <code>String</code>, <code>Null</code>, <code>Date</code>, <code>Datetime</code>, <code>Duration</code>, <code>Data</code>. Use <code>.</code> (dot) for any value. <code>Interval</code> is a selector but not a schema type — build one with <code>Interval(&#123;start: …, end: …&#125;)</code> instead.</p>
+        <div class="example" data-action="click->doc#tryExample" data-input='{"span": "P1D", "payload": "[1, 2]"}' data-expected='1.0'>
+          <div class="example-header">Duration and Data in a schema</div>
+          <pre class="language-elo">let Job = &#123; span: Duration, payload: Data &#125;, job = _ |&gt; Job in inDays(job.span)</pre>
+          <p class="example-desc"><code>Duration</code> parses an ISO 8601 string into a real duration; <code>Data</code> accepts any plain data and parses a JSON string.</p>
+        </div>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Type Coercion</div>
           <pre class="language-elo">let T = Int in '42' |> T</pre>
