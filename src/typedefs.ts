@@ -69,6 +69,55 @@ export class TypeDefs {
     }
     return false;
   }
+
+  /**
+   * Check if a function signature is registered *exactly*, without trying the
+   * more general forms `has()` accepts.
+   *
+   * The type checker needs this distinction: `has('upper', [any])` is true
+   * because `upper(String)` generalizes, but only an exact entry tells us the
+   * argument types were really declared.
+   */
+  hasExactly(name: string, argTypes: EloType[]): boolean {
+    return this.signatures.has(signatureKey(name, argTypes));
+  }
+
+  /**
+   * Every registered signature key, e.g. 'add:int,int'. Used by the registry
+   * consistency test to compare this table against each target's bindings.
+   */
+  signatureKeys(): string[] {
+    return [...this.signatures.keys()];
+  }
+
+  /**
+   * Every registered signature of a function name, as argument type lists.
+   * Drives the checker's "Known: …" error messages from the one
+   * language-agnostic table rather than from a target's bindings.
+   */
+  signaturesOf(name: string): EloType[][] {
+    const found: EloType[][] = [];
+    for (const key of this.signatures.keys()) {
+      const parsed = parseSignatureKey(key);
+      if (parsed.name === name) found.push(parsed.argTypes);
+    }
+    return found;
+  }
+}
+
+/**
+ * Parse a signature key back into a name and argument types.
+ * Inverse of `signatureKey()`: 'add:int,int' -> { name: 'add', argTypes: [int, int] }
+ */
+export function parseSignatureKey(key: string): { name: string; argTypes: EloType[] } {
+  const colonIdx = key.indexOf(':');
+  if (colonIdx === -1) return { name: key, argTypes: [] };
+  const name = key.substring(0, colonIdx);
+  const argTypes = key
+    .substring(colonIdx + 1)
+    .split(',')
+    .map((kind) => ({ kind } as EloType));
+  return { name, argTypes };
 }
 
 /**
@@ -82,19 +131,28 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   defs.register('today', [], Types.date);
   defs.register('now', [], Types.datetime);
+  // Beginning/end of time, behind the BOT/EOT keywords
+  defs.register('bot', [], Types.datetime);
+  defs.register('eot', [], Types.datetime);
 
   // ============================================
-  // Period boundary functions (datetime -> datetime)
+  // Period boundary functions (date|datetime -> datetime)
   // ============================================
+  // Both spellings are callable. The snake_case names are what the temporal
+  // keywords (SOD, EOW, …) expand to and only ever receive a Datetime; the
+  // camelCase names are what the stdlib documents for direct calls and accept
+  // a Date too. Both always yield a Datetime (the boundary instant).
   const periodBoundaryFns = [
-    'start_of_day', 'end_of_day',
-    'start_of_week', 'end_of_week',
-    'start_of_month', 'end_of_month',
-    'start_of_quarter', 'end_of_quarter',
-    'start_of_year', 'end_of_year',
+    ['start_of_day', 'startOfDay'], ['end_of_day', 'endOfDay'],
+    ['start_of_week', 'startOfWeek'], ['end_of_week', 'endOfWeek'],
+    ['start_of_month', 'startOfMonth'], ['end_of_month', 'endOfMonth'],
+    ['start_of_quarter', 'startOfQuarter'], ['end_of_quarter', 'endOfQuarter'],
+    ['start_of_year', 'startOfYear'], ['end_of_year', 'endOfYear'],
   ];
-  for (const fn of periodBoundaryFns) {
-    defs.register(fn, [Types.datetime], Types.datetime);
+  for (const [snakeName, camelName] of periodBoundaryFns) {
+    defs.register(snakeName, [Types.datetime], Types.datetime);
+    defs.register(camelName, [Types.date], Types.datetime);
+    defs.register(camelName, [Types.datetime], Types.datetime);
   }
 
   // ============================================
@@ -156,6 +214,8 @@ export function createTypeDefs(): TypeDefs {
   defs.register('add', [Types.datetime, Types.duration], Types.datetime);
   // datetime - duration -> datetime
   defs.register('sub', [Types.datetime, Types.duration], Types.datetime);
+  // datetime - datetime -> duration
+  defs.register('sub', [Types.datetime, Types.datetime], Types.duration);
 
   // duration + duration -> duration
   defs.register('add', [Types.duration, Types.duration], Types.duration);
@@ -207,6 +267,9 @@ export function createTypeDefs(): TypeDefs {
   defs.register('abs', [Types.float], Types.float);
   defs.register('round', [Types.int], Types.int);
   defs.register('round', [Types.float], Types.int);
+  // round(x, digits) keeps a fractional part, so it is a Float
+  defs.register('round', [Types.int, Types.int], Types.float);
+  defs.register('round', [Types.float, Types.int], Types.float);
   defs.register('floor', [Types.int], Types.int);
   defs.register('floor', [Types.float], Types.int);
   defs.register('ceil', [Types.int], Types.int);
@@ -243,6 +306,11 @@ export function createTypeDefs(): TypeDefs {
   defs.register('upper', [Types.string], Types.string);
   defs.register('lower', [Types.string], Types.string);
   defs.register('trim', [Types.string], Types.string);
+  defs.register('trimStart', [Types.string], Types.string);
+  defs.register('trimEnd', [Types.string], Types.string);
+  defs.register('reverse', [Types.string], Types.string);
+  defs.register('isBlank', [Types.string], Types.bool);
+  defs.register('split', [Types.string, Types.string], Types.array);
   defs.register('startsWith', [Types.string, Types.string], Types.bool);
   defs.register('endsWith', [Types.string, Types.string], Types.bool);
   defs.register('contains', [Types.string, Types.string], Types.bool);
@@ -278,6 +346,49 @@ export function createTypeDefs(): TypeDefs {
   defs.register('reduce', [Types.array, Types.any, Types.fn], Types.any);
   defs.register('any', [Types.array, Types.fn], Types.bool);
   defs.register('all', [Types.array, Types.fn], Types.bool);
+  defs.register('find', [Types.array, Types.fn], Types.any); // element, or null
+  defs.register('sortBy', [Types.array, Types.fn], Types.array);
+  defs.register('sort', [Types.array], Types.array);
+  defs.register('reverse', [Types.array], Types.array);
+  defs.register('unique', [Types.array], Types.array);
+  defs.register('flat', [Types.array], Types.array);
+  defs.register('join', [Types.array, Types.string], Types.string);
+  defs.register('contains', [Types.array, Types.any], Types.bool);
+  // Mean of a numeric list: Float even for a list of Ints (avg([1,2]) is 1.5)
+  defs.register('avg', [Types.array], Types.float);
+  // Element types are unknown, so the extremum of a list is too
+  defs.register('min', [Types.array], Types.any);
+  defs.register('max', [Types.array], Types.any);
+
+  // ============================================
+  // Numeric extrema (two-argument form)
+  // ============================================
+  for (const fn of ['min', 'max']) {
+    defs.register(fn, [Types.int, Types.int], Types.int);
+    defs.register(fn, [Types.int, Types.float], Types.float);
+    defs.register(fn, [Types.float, Types.int], Types.float);
+    defs.register(fn, [Types.float, Types.float], Types.float);
+  }
+
+  // ============================================
+  // Object functions
+  // ============================================
+  defs.register('merge', [Types.object, Types.object], Types.object);
+  defs.register('merge', [Types.any, Types.any], Types.object);
+  defs.register('deepMerge', [Types.object, Types.object], Types.object);
+  defs.register('deepMerge', [Types.any, Types.any], Types.object);
+
+  // ============================================
+  // Data navigation
+  // ============================================
+  // fetch(data, key|path|[path]) reaches into data, so the result is unknown;
+  // fetch(data, {shape}) rebuilds a tuple and is therefore an object.
+  defs.register('fetch', [Types.any, Types.string], Types.any);
+  defs.register('fetch', [Types.any, Types.fn], Types.any);
+  defs.register('fetch', [Types.any, Types.array], Types.any);
+  defs.register('fetch', [Types.any, Types.object], Types.object);
+  // patch(data, path, value) returns data of the same shape as its input
+  defs.register('patch', [Types.any, Types.fn, Types.any], Types.any);
 
   // ============================================
   // Assert function -> bool
@@ -287,12 +398,6 @@ export function createTypeDefs(): TypeDefs {
   defs.register('assert', [Types.any], Types.bool);
   defs.register('assert', [Types.any, Types.string], Types.bool);
   defs.register('assertFails', [Types.fn], Types.bool);
-
-  // ============================================
-  // Range membership functions -> bool
-  // ============================================
-  defs.register('in_range_inclusive', [Types.any, Types.any, Types.any], Types.bool);
-  defs.register('in_range_exclusive', [Types.any, Types.any, Types.any], Types.bool);
 
   // ============================================
   // Type introspection -> string
@@ -316,37 +421,29 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   // Type selectors (information contracts)
   // ============================================
-  // Int(x) - coerce to Int, returns null on failure
-  defs.register('Int', [Types.int], Types.int);
-  defs.register('Int', [Types.float], Types.int);
-  defs.register('Int', [Types.string], Types.any); // may return null
-  defs.register('Int', [Types.any], Types.any);
+  // A selector is total-or-raise: it either yields a value of the selected
+  // type or it fails. So `Int(x)` is an Int whatever x was — there is no
+  // null-on-failure case to be conservative about. Typing these as `any` was
+  // the single biggest source of lost type information.
+  // Registering the `any` signature alone is enough: lookup generalizes a
+  // concrete argument to `any`, so Int(String), Int(Float), … all resolve here.
+  const selectors: Array<[string, EloType]> = [
+    ['Int', Types.int],
+    ['Float', Types.float],
+    ['Bool', Types.bool],
+    ['Date', Types.date],
+    ['Datetime', Types.datetime],
+    ['Duration', Types.duration],
+    ['String', Types.string],
+  ];
+  for (const [name, resultType] of selectors) {
+    defs.register(name, [Types.any], resultType);
+  }
 
-  // Float(x) - coerce to Float, returns null on failure
-  defs.register('Float', [Types.float], Types.float);
-  defs.register('Float', [Types.int], Types.float);
-  defs.register('Float', [Types.string], Types.any); // may return null
-  defs.register('Float', [Types.any], Types.any);
-
-  // Bool(x) - coerce to Bool, returns null on failure
-  defs.register('Bool', [Types.bool], Types.bool);
-  defs.register('Bool', [Types.string], Types.any); // may return null
-  defs.register('Bool', [Types.any], Types.any);
-
-  // Date(x) - coerce to Date, returns null on failure
-  defs.register('Date', [Types.date], Types.date);
-  defs.register('Date', [Types.string], Types.any); // may return null
-  defs.register('Date', [Types.any], Types.any);
-
-  // Datetime(x) - coerce to Datetime, returns null on failure
-  defs.register('Datetime', [Types.datetime], Types.datetime);
-  defs.register('Datetime', [Types.string], Types.any); // may return null
-  defs.register('Datetime', [Types.any], Types.any);
-
-  // Duration(x) - coerce to Duration, returns null on failure
-  defs.register('Duration', [Types.duration], Types.duration);
-  defs.register('Duration', [Types.string], Types.any); // may return null
-  defs.register('Duration', [Types.any], Types.any);
+  // Data(x) - plain-data contract; the shape it yields is not known statically
+  defs.register('Data', [Types.array], Types.array);
+  defs.register('Data', [Types.object], Types.object);
+  defs.register('Data', [Types.any], Types.any);
 
   // Interval({start: Datetime, end: Datetime}) - construct an Interval
   defs.register('Interval', [Types.interval], Types.interval);

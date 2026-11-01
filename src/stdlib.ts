@@ -174,6 +174,14 @@ export class StdLib<T> {
   }
 
   /**
+   * Every registered signature key, e.g. 'add:int,int'. Used by the registry
+   * consistency test to compare a target's bindings against `typedefs.ts`.
+   */
+  signatureKeys(): string[] {
+    return [...this.implementations.keys()];
+  }
+
+  /**
    * Every registered signature of a function name, formatted for an error
    * message, most specific first and without duplicates.
    */
