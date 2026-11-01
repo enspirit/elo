@@ -380,10 +380,13 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   // Object functions
   // ============================================
+  // Only declared on objects. Declaring (Any, Any) would claim that any two
+  // values merge: the checker would accept `merge(1, 2)`, JavaScript and Ruby
+  // would emit it, and Python would refuse to compile it. An `Any` argument is
+  // still accepted — the checker suppresses what it cannot know — but a
+  // concrete non-object is now reported.
   defs.register('merge', [Types.object, Types.object], Types.object);
-  defs.register('merge', [Types.any, Types.any], Types.object);
   defs.register('deepMerge', [Types.object, Types.object], Types.object);
-  defs.register('deepMerge', [Types.any, Types.any], Types.object);
 
   // ============================================
   // Data navigation
@@ -400,10 +403,11 @@ export function createTypeDefs(): TypeDefs {
   // ============================================
   // Assert function -> bool
   // ============================================
+  // Declared on Bool only, for the same reason as merge: `assert(Any)` made
+  // `assert(1)` type-check while Python refuses to compile it — and asserting a
+  // non-condition is a mistake in any case. An `Any` argument still passes.
   defs.register('assert', [Types.bool], Types.bool);
   defs.register('assert', [Types.bool, Types.string], Types.bool);
-  defs.register('assert', [Types.any], Types.bool);
-  defs.register('assert', [Types.any, Types.string], Types.bool);
   defs.register('assertFails', [Types.fn], Types.bool);
 
   // ============================================

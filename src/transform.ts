@@ -275,7 +275,7 @@ function transformWithDepth(
 /**
  * Built-in type selectors that can be used in type expressions
  */
-const BUILTIN_TYPE_SELECTORS = new Set([
+export const BUILTIN_TYPE_SELECTORS = new Set([
   'Any',
   'Null',
   'String',

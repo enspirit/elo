@@ -29,5 +29,10 @@ everywhere else, but it needs checking that each target can emit a schema
 parser for them — `pDuration` / `pData` or equivalent — and acceptance tests
 per target. Do not add to the set without that check.
 
-The type checker already handles them: once admitted, `{ d: Duration }` will
-type `k.d` as a Duration with no further work.
+Both lists move together. `BUILTIN_TYPE_SELECTORS` in `src/transform.ts` and
+`BUILTIN_TYPE_REFS` in `src/typecheck.ts` are pinned to each other by a test
+(`test/integration/typecheck-differential.integration.test.ts`), because a name
+the checker accepts and the transform rejects means `--typecheck` passes and
+compilation then fails. Admitting Duration and Data means adding them in both
+places and mapping them to `Types.duration` and `Any` respectively — the
+checker needs no other change.

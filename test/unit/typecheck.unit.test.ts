@@ -832,12 +832,26 @@ describe('Typecheck - strict mode', () => {
   });
 
   it('stays quiet for functions that genuinely accept anything', () => {
-    // No special-casing: isNull, typeOf, assert and fetch declare `any`
-    // signatures in the type table, so they resolve before the strict check
-    // is ever reached.
-    for (const source of ['isNull(_)', 'isNotNull(_)', 'typeOf(_)', 'assert(_)', "fetch(_, 'a')"]) {
+    // No special-casing: isNull, isNotNull, typeOf and fetch declare `any`
+    // signatures in the type table, so they resolve before the strict check is
+    // ever reached.
+    for (const source of ['isNull(_)', 'isNotNull(_)', 'typeOf(_)', "fetch(_, 'a')"]) {
       assert.deepStrictEqual(strict(source), [], source);
     }
+  });
+
+  it('reports assert on an unknown value', () => {
+    // `assert` is declared on Bool, not on Any — asserting a non-condition is
+    // a mistake, and Python refuses to compile `assert(1)`. So under strict
+    // mode an argument of unknown type is reported, consistently with the rest
+    // of the mode: declare your input.
+    assert.deepStrictEqual(strict('assert(_)'), ['unresolved-any']);
+    assert.deepStrictEqual(check('assert(_)'), []);
+    assert.deepStrictEqual(strict('assert(1 > 0)'), []);
+  });
+
+  it('reports asserting something that is not a condition', () => {
+    assert.deepStrictEqual(codes('assert(1)'), ['no-matching-signature']);
   });
 
   it('says nothing about a fully typed program', () => {

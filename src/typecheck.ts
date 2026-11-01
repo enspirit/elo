@@ -40,6 +40,7 @@ import { Constraint, Expr, Lambda, SourceLocation, TypeExpr } from './ast';
 import { EloType, Types } from './types';
 import { eloTypeDefs } from './typedefs';
 import { formatSignature } from './stdlib';
+import { parseExtractTemplate } from './extract';
 import {
   ANY,
   BOOL,
@@ -81,6 +82,8 @@ export type DiagnosticCode =
   | 'unresolved-any'
   /** A value that may be null used where null is not accepted. */
   | 'nullable-misuse'
+  /** A construct the transform rejects outright, whatever the types say. */
+  | 'not-allowed'
   /** The checker gave up to protect itself; see `maxDepth`. */
   | 'nesting-too-deep';
 
@@ -275,6 +278,18 @@ class Checker {
         const right = this.check(expr.right, env, types, next);
         const fn = BINARY_OPS[expr.operator];
         if (!fn) return ANY;
+        // The transform rejects `*` on a list outright, whatever the other
+        // operand is (repeating a list is an unbounded allocation). Mirror it,
+        // or the checker would pass a program no compiler accepts.
+        if (fn === 'mul' && [left, right].some((t) => project(t).kind === 'array')) {
+          this.report(
+            'not-allowed',
+            `Array multiplication is not supported: '*' requires numeric ` +
+            `operands (or String * Number).`,
+            expr.loc
+          );
+          return ANY;
+        }
         return this.resolve(fn, [left, right], 'operator-type-mismatch', expr.loc, expr.operator);
       }
 
@@ -422,6 +437,26 @@ class Checker {
     if (bound && bound.kind === 'fn') {
       for (const arg of args) this.check(arg, env, types, depth);
       return bound.result;
+    }
+
+    // `extract` is validated structurally by the transform, not by its
+    // signature: the template must be a string literal and must parse. Mirror
+    // both, or the checker would pass what every compiler refuses.
+    if (name === 'extract' && args.length === 2) {
+      const template = args[1];
+      if (template.type !== 'string') {
+        this.report(
+          'not-allowed',
+          `extract() template (2nd argument) must be a string literal`,
+          loc
+        );
+      } else {
+        try {
+          parseExtractTemplate(template.value);
+        } catch (error) {
+          this.report('not-allowed', String((error as Error).message), loc);
+        }
+      }
     }
 
     // A stdlib call. Lambda arguments get their parameters typed from the
@@ -595,10 +630,12 @@ class Checker {
           }
           const where = operator ? `operator '${operator}'` : name;
 
-          // When the member that fails is the Null of a value that may be
+          // When the member that fails is the Null of a value that *may* be
           // absent, the author's mistake is not the types — it is the missing
-          // null handling, and that is what to say.
-          if (combination.some(isNullable) && argTypes.some(isNullable)) {
+          // null handling, and that is what to say. A definitely-null argument
+          // (a `null` literal) is an ordinary type mismatch, so it is reported
+          // as one.
+          if (combination.some(isNullable) && argTypes.some((t) => t.kind === 'union' && isNullable(t))) {
             this.report(
               'nullable-misuse',
               `${where} does not accept a value that may be null ` +
@@ -978,16 +1015,18 @@ const TEMPORAL_KEYWORD_TYPES: Record<string, CheckType> = {
 };
 
 /**
- * The type names usable in a type expression, as the transform admits them
- * (`BUILTIN_TYPE_SELECTORS` in transform.ts). `.` parses as `Any`.
+ * The type names usable in a type expression. This list must match
+ * `BUILTIN_TYPE_SELECTORS` in transform.ts exactly: a name the checker accepts
+ * and the transform rejects is the worst kind of divergence, since
+ * `--typecheck` would pass and compilation would then fail. `.` parses as `Any`.
  *
- * Duration and Data are documented as schema types but rejected by the
- * transform; see .claude/tasks/todo/0093. They are mapped here so that the
- * checker needs no change once that is settled.
+ * Duration and Data are documented as schema types but *rejected* by the
+ * transform, so they are absent here too and the checker reports them. See
+ * .claude/tasks/todo/0093 — when that is settled, both lists change together,
+ * and the registry test below pins them to each other.
  */
 const BUILTIN_TYPE_REFS: Record<string, CheckType> = {
   Any: ANY,
-  Data: ANY,
   Null: prim(Types.null),
   String: prim(Types.string),
   Int: prim(Types.int),
@@ -996,9 +1035,11 @@ const BUILTIN_TYPE_REFS: Record<string, CheckType> = {
   Boolean: prim(Types.bool),
   Date: prim(Types.date),
   Datetime: prim(Types.datetime),
-  Duration: prim(Types.duration),
   Interval: prim(Types.interval),
 };
+
+/** The names above, for the test that pins them to the transform's list. */
+export const BUILTIN_TYPE_NAMES: readonly string[] = Object.keys(BUILTIN_TYPE_REFS);
 
 // Re-exported so a host can work with the checker's richer types without
 // reaching into an internal module.
