@@ -325,6 +325,52 @@ describe('CLI - --typecheck', () => {
     assert.match(result.stderr, /^1:13: error: No signature of year/m);
   });
 
+  it('--strict reports what the checker cannot type', () => {
+    const result = elocWithError('--strict -e "upper(_)"');
+    assert.strictEqual(result.exitCode, 1);
+    assert.match(result.stderr, /\[unresolved-any\]/);
+  });
+
+  it('--strict is satisfied by a declared schema', () => {
+    const result = elocWithError(
+      `--strict -e "let X = { a: String }, k = _ |> X in upper(k.a)"`
+    );
+    assert.strictEqual(result.exitCode, 0);
+    assert.strictEqual(result.stderr, '');
+  });
+
+  it('--strict implies --typecheck', () => {
+    // Being strict about nothing would be meaningless.
+    const result = elocWithError('--strict -e "upper(42)"');
+    assert.match(result.stderr, /No signature of upper/);
+  });
+
+  it('--input-type declares the shape of _', () => {
+    const bad = elocWithError(`--input-type '{ total: Int }' -e "upper(_.total)"`);
+    assert.strictEqual(bad.exitCode, 1);
+    assert.match(bad.stderr, /No signature of upper accepts upper\(Int\)/);
+
+    const good = elocWithError(`--input-type '{ total: Int }' -e "_.total * 2"`);
+    assert.strictEqual(good.exitCode, 0);
+  });
+
+  it('--input-type reports a field the declaration does not have', () => {
+    const result = elocWithError(`--input-type '{ total: Int }' -e "_.totl"`);
+    assert.match(result.stderr, /\[unknown-field\]/);
+  });
+
+  it('rejects an unparseable --input-type', () => {
+    const result = elocWithError(`--input-type '{ oops' -e "1"`);
+    assert.strictEqual(result.exitCode, 1);
+    assert.match(result.stderr, /Invalid --input-type/);
+  });
+
+  it('lists the new flags in the help output', () => {
+    const help = eloc('--help');
+    assert.ok(help.includes('--strict'));
+    assert.ok(help.includes('--input-type'));
+  });
+
   it('numbers lines from the file, not from the expression', () => {
     const dir = mkdtempSync(join(tmpdir(), 'elo-typecheck-loc-'));
     const file = join(dir, 'input.elo');

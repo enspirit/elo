@@ -148,6 +148,8 @@ Options:
 - `-p, --prelude` - Include necessary library imports/requires
 - `--prelude-only` - Output only the prelude (no expression needed)
 - `--typecheck` - Report static type errors to stderr, exit non-zero if any
+- `--strict` - Also report anything the checker cannot type (implies `--typecheck`)
+- `--input-type <type>` - Declare the type of `_` (implies `--typecheck`)
 - `-f, --file <path>` - Output to file instead of stdout
 - `-h, --help` - Show help message
 
@@ -187,6 +189,21 @@ Inside the `in` body it then reports:
 Unions (`{ x: Int|String }`) are accepted for an operation every member
 supports and reported for one that only some do. Predicates inside a subtype
 constraint are checked too, so `Int(i | upper(i))` is reported.
+
+`--input-type` is the same thing supplied from outside, for a host that already
+knows the shape of its data and would rather not make the author restate it. It
+takes an Elo type expression, so there is one spelling of a schema:
+
+```bash
+./bin/eloc --input-type '{ total: Int }' -e "upper(_.total)"
+# 1:1: error: No signature of upper accepts upper(Int). ...
+```
+
+`--strict` turns the silence about unknown types into a diagnostic, which in
+practice means *declare your input*. It is how a host can require the idiomatic
+form and then promise that a saved formula will not fail at evaluation for type
+reasons. Functions that genuinely accept anything — `isNull`, `typeOf`,
+`assert`, `fetch` — stay quiet under it.
 
 It is a correctness and portability tool, not a security feature: the sandbox
 guarantees in [the security model](https://elo-lang.org/security) hold whether

@@ -1918,6 +1918,17 @@ export class Parser {
     this.eat('EOF');
     return result;
   }
+
+  /**
+   * Parse a standalone type expression, as in the body of a `let X = … in`
+   * binding. Lets a host declare the shape of `_` without wrapping it in a
+   * throwaway expression.
+   */
+  parseTypeExpr(): TypeExpr {
+    const result = this.typeExpr();
+    this.eat('EOF');
+    return result;
+  }
 }
 
 /**
@@ -1926,4 +1937,16 @@ export class Parser {
 export function parse(input: string, options: ParserOptions = {}): Expr {
   const parser = new Parser(input, options);
   return parser.parse();
+}
+
+/**
+ * Parse a type expression string, such as `{ total: Int, lines: [Int] }`.
+ *
+ * This is the type half of the grammar on its own, so a host that already
+ * knows the shape of its data can hand it to the type checker without the
+ * author restating it. There is one spelling of a schema, not two.
+ */
+export function parseTypeExpr(input: string, options: ParserOptions = {}): TypeExpr {
+  const parser = new Parser(input, options);
+  return parser.parseTypeExpr();
 }

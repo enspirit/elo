@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { parse } from '../../src/parser';
+import { parse, parseTypeExpr } from '../../src/parser';
 import { typecheck, typecheckWithType, formatDiagnostic, Diagnostic } from '../../src/typecheck';
 import { transform } from '../../src/transform';
 import { inferType } from '../../src/ir';
@@ -795,4 +795,97 @@ describe('Typecheck - refinements may only sharpen', () => {
       }
     });
   }
+});
+
+describe('Typecheck - strict mode', () => {
+  /**
+   * Without strict, an unknown argument type buys silence, which is what keeps
+   * the checker quiet about an uncoerced `_`. Strict mode turns that silence
+   * into a diagnostic, so it reads as a contract: *declare your input*.
+   */
+  function strict(source: string): string[] {
+    return typecheck(parse(source), { strict: true }).map((d) => d.code);
+  }
+
+  it('reports a call that needs a type it cannot see', () => {
+    assert.deepStrictEqual(strict('upper(_)'), ['unresolved-any']);
+    assert.deepStrictEqual(check('upper(_)'), []);
+  });
+
+  it('reports reading a field of something unknown', () => {
+    assert.deepStrictEqual(strict('_.foo'), ['unresolved-any']);
+  });
+
+  it('says how to satisfy it', () => {
+    const [diagnostic] = typecheck(parse('upper(_)'), { strict: true });
+    assert.match(diagnostic.message, /Coerce the input through a declared type/);
+  });
+
+  it('is satisfied by a declared schema', () => {
+    assert.deepStrictEqual(
+      strict('let X = { foo: String }, k = _ |> X in upper(k.foo)'),
+      []
+    );
+  });
+
+  it('stays quiet for functions that genuinely accept anything', () => {
+    // No special-casing: isNull, typeOf, assert and fetch declare `any`
+    // signatures in the type table, so they resolve before the strict check
+    // is ever reached.
+    for (const source of ['isNull(_)', 'isNotNull(_)', 'typeOf(_)', 'assert(_)', "fetch(_, 'a')"]) {
+      assert.deepStrictEqual(strict(source), [], source);
+    }
+  });
+
+  it('says nothing about a fully typed program', () => {
+    assert.deepStrictEqual(strict("upper('a') + String(1)"), []);
+  });
+
+  it('still reports ordinary mistakes', () => {
+    assert.deepStrictEqual(strict('upper(42)'), ['no-matching-signature']);
+  });
+});
+
+describe('Typecheck - declaring the input type', () => {
+  function withInput(source: string, type: string, strict = false): string[] {
+    return typecheck(parse(source), { inputType: parseTypeExpr(type), strict }).map((d) => d.code);
+  }
+
+  it('types _ as declared', () => {
+    assert.deepStrictEqual(withInput('upper(_)', 'String'), []);
+    assert.deepStrictEqual(withInput('upper(_)', 'Int'), ['no-matching-signature']);
+  });
+
+  it('types the fields of a declared input schema', () => {
+    assert.deepStrictEqual(withInput('_.total * 2', '{ total: Int }'), []);
+    assert.deepStrictEqual(withInput('upper(_.total)', '{ total: Int }'), ['no-matching-signature']);
+  });
+
+  it('reports a field the declared input does not have', () => {
+    assert.deepStrictEqual(withInput('_.totl', '{ total: Int }'), ['unknown-field']);
+  });
+
+  it('satisfies strict mode', () => {
+    assert.deepStrictEqual(withInput('upper(_)', 'String', true), []);
+  });
+
+  it('accepts a list input', () => {
+    assert.deepStrictEqual(withInput('map(_, fn(x ~> upper(x)))', '[String]'), []);
+    assert.deepStrictEqual(
+      withInput('map(_, fn(x ~> upper(x)))', '[Int]'),
+      ['no-matching-signature']
+    );
+  });
+
+  it('is one spelling of a schema, shared with _ |> X', () => {
+    // The in-language form and the host-supplied form must agree.
+    const viaLanguage = typecheck(parse('let X = { a: Int }, k = _ |> X in upper(k.a)'));
+    const viaOption = typecheck(parse('upper(_.a)'), {
+      inputType: parseTypeExpr('{ a: Int }'),
+    });
+    assert.deepStrictEqual(
+      viaLanguage.map((d) => d.code),
+      viaOption.map((d) => d.code)
+    );
+  });
 });
