@@ -14,7 +14,7 @@ export { compileToSQL } from './compilers/sql';
 export type { SQLCompileOptions } from './compilers/sql';
 export { compileToPython } from './compilers/python';
 export type { PythonCompileOptions } from './compilers/python';
-export { typecheck, typecheckWithType } from './typecheck';
+export { typecheck, typecheckWithType, formatDiagnostic } from './typecheck';
 export type { Diagnostic, DiagnosticCode, TypecheckOptions } from './typecheck';
 export { JS_HELPERS } from './runtime';
 export { getPrelude } from './preludes';

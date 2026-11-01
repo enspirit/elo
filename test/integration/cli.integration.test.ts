@@ -295,8 +295,8 @@ describe('CLI - --typecheck', () => {
     try {
       const result = elocWithError(`--typecheck ${file}`);
       assert.strictEqual(result.exitCode, 1);
-      assert.match(result.stderr, /^2: error: No signature of upper/m);
-      assert.match(result.stderr, /^4: error: No signature of year/m);
+      assert.match(result.stderr, /^2:1: error: No signature of upper/m);
+      assert.match(result.stderr, /^4:1: error: No signature of year/m);
     } finally {
       unlinkSync(file);
     }
@@ -317,6 +317,24 @@ describe('CLI - --typecheck', () => {
 
   it('is listed in the help output', () => {
     assert.ok(eloc('--help').includes('--typecheck'));
+  });
+
+  it('points at the line and column of each problem', () => {
+    const result = elocWithError(`--typecheck -e "upper(42) + year('x')"`);
+    assert.match(result.stderr, /^1:1: error: No signature of upper/m);
+    assert.match(result.stderr, /^1:13: error: No signature of year/m);
+  });
+
+  it('numbers lines from the file, not from the expression', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'elo-typecheck-loc-'));
+    const file = join(dir, 'input.elo');
+    writeFileSync(file, "1 + 2\n  upper(42)\n");
+    try {
+      const result = elocWithError(`--typecheck ${file}`);
+      assert.match(result.stderr, /^2:3: error: No signature of upper/m);
+    } finally {
+      unlinkSync(file);
+    }
   });
 });
 

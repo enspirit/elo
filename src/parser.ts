@@ -517,6 +517,15 @@ interface ParserState {
 
 export interface ParserOptions {
   maxDepth?: number;
+  /**
+   * Record where each node came from in the source.
+   *
+   * Off by default, so an AST is a plain value: comparing one with
+   * deepStrictEqual, serializing it with toEloCode or building one by hand all
+   * behave exactly as before. Ask for locations when you need to report *where*
+   * a problem is — the type checker does.
+   */
+  locations?: boolean;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -526,11 +535,33 @@ export class Parser {
   private currentToken: Token;
   private depth: number = 0;
   private maxDepth: number;
+  private locations: boolean;
 
   constructor(input: string, options: ParserOptions = {}) {
     this.lexer = new Lexer(input);
     this.currentToken = this.lexer.nextToken();
     this.maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
+    this.locations = options.locations ?? false;
+  }
+
+  /**
+   * Tag a node with the position of the token it came from, when locations
+   * were asked for. Returns the node either way, so call sites read as
+   * `this.at(binary(...), opToken)` whether or not the feature is on.
+   */
+  private at<T extends Expr>(node: T, token: Token): T {
+    if (this.locations) {
+      node.loc = { line: token.line, column: token.column };
+    }
+    return node;
+  }
+
+  /**
+   * The token the parser is about to consume, for tagging a node that is
+   * built after its first token has been eaten.
+   */
+  private here(): Token {
+    return this.currentToken;
   }
 
   private checkDepth(): void {
@@ -649,7 +680,7 @@ export class Parser {
         }
 
         this.eat('RPAREN');
-        return functionCall(name, args);
+        return this.at(functionCall(name, args), token);
       }
 
       throw new Error(
@@ -696,7 +727,7 @@ export class Parser {
         }
 
         this.eat('RPAREN');
-        return functionCall(name, args);
+        return this.at(functionCall(name, args), token);
       }
 
       // Otherwise, it's a variable
@@ -785,19 +816,23 @@ export class Parser {
   }
 
   private unary(): Expr {
+    // The operator token locates the node: that is where a reader looks when
+    // told the operand types are wrong.
+    const op = this.here();
+
     if (this.currentToken.type === 'NOT') {
       this.eat('NOT');
-      return unary('!', this.descend(() => this.unary()));
+      return this.at(unary('!', this.descend(() => this.unary())), op);
     }
 
     if (this.currentToken.type === 'PLUS') {
       this.eat('PLUS');
-      return unary('+', this.descend(() => this.unary()));
+      return this.at(unary('+', this.descend(() => this.unary())), op);
     }
 
     if (this.currentToken.type === 'MINUS') {
       this.eat('MINUS');
-      return unary('-', this.descend(() => this.unary()));
+      return this.at(unary('-', this.descend(() => this.unary())), op);
     }
 
     return this.postfix();
@@ -808,8 +843,9 @@ export class Parser {
 
     // Right-associative
     if (this.currentToken.type === 'CARET') {
+      const op = this.here();
       this.eat('CARET');
-      node = binary('^', node, this.descend(() => this.power()));
+      node = this.at(binary('^', node, this.descend(() => this.power())), op);
     }
 
     return node;
@@ -823,13 +859,13 @@ export class Parser {
 
       if (token.type === 'STAR') {
         this.eat('STAR');
-        node = binary('*', node, this.power());
+        node = this.at(binary('*', node, this.power()), token);
       } else if (token.type === 'SLASH') {
         this.eat('SLASH');
-        node = binary('/', node, this.power());
+        node = this.at(binary('/', node, this.power()), token);
       } else if (token.type === 'PERCENT') {
         this.eat('PERCENT');
-        node = binary('%', node, this.power());
+        node = this.at(binary('%', node, this.power()), token);
       }
     }
 
@@ -848,10 +884,10 @@ export class Parser {
 
       if (token.type === 'PLUS') {
         this.eat('PLUS');
-        node = binary('+', node, this.term());
+        node = this.at(binary('+', node, this.term()), token);
       } else if (token.type === 'MINUS') {
         this.eat('MINUS');
-        node = binary('-', node, this.term());
+        node = this.at(binary('-', node, this.term()), token);
       }
     }
 
@@ -886,16 +922,16 @@ export class Parser {
 
       if (token.type === 'LT') {
         this.eat('LT');
-        node = binary('<', node, this.addition());
+        node = this.at(binary('<', node, this.addition()), token);
       } else if (token.type === 'GT') {
         this.eat('GT');
-        node = binary('>', node, this.addition());
+        node = this.at(binary('>', node, this.addition()), token);
       } else if (token.type === 'LTE') {
         this.eat('LTE');
-        node = binary('<=', node, this.addition());
+        node = this.at(binary('<=', node, this.addition()), token);
       } else if (token.type === 'GTE') {
         this.eat('GTE');
-        node = binary('>=', node, this.addition());
+        node = this.at(binary('>=', node, this.addition()), token);
       }
     }
 
@@ -910,10 +946,10 @@ export class Parser {
 
       if (token.type === 'EQ') {
         this.eat('EQ');
-        node = binary('==', node, this.comparison());
+        node = this.at(binary('==', node, this.comparison()), token);
       } else if (token.type === 'NEQ') {
         this.eat('NEQ');
-        node = binary('!=', node, this.comparison());
+        node = this.at(binary('!=', node, this.comparison()), token);
       }
     }
 
@@ -924,8 +960,9 @@ export class Parser {
     let node = this.alternative();
 
     while (this.currentToken.type === 'AND') {
+      const token = this.here();
       this.eat('AND');
-      node = binary('&&', node, this.alternative());
+      node = this.at(binary('&&', node, this.alternative()), token);
     }
 
     return node;
@@ -955,8 +992,9 @@ export class Parser {
     let node = this.logical_and();
 
     while (this.currentToken.type === 'OR') {
+      const token = this.here();
       this.eat('OR');
-      node = binary('||', node, this.logical_and());
+      node = this.at(binary('||', node, this.logical_and()), token);
     }
 
     return node;
@@ -1017,7 +1055,7 @@ export class Parser {
         this.eat('RPAREN');
       }
 
-      node = functionCall(funcName, args);
+      node = this.at(functionCall(funcName, args), tok);
     }
 
     return node;
@@ -1461,13 +1499,14 @@ export class Parser {
   }
 
   private ifExprParse(): Expr {
+    const keyword = this.here();
     this.eat('IF');
     const condition = this.expr();
     this.eat('THEN');
     const thenBranch = this.expr();
     this.eat('ELSE');
     const elseBranch = this.expr();
-    return ifExpr(condition, thenBranch, elseBranch);
+    return this.at(ifExpr(condition, thenBranch, elseBranch), keyword);
   }
 
   /**
@@ -1540,6 +1579,7 @@ export class Parser {
    * Trailing commas are allowed: guard age > 0, length(name) > 0, in age
    */
   private guardExprParse(guardType: 'guard' | 'check'): Expr {
+    const keyword = this.here();
     this.eat(guardType === 'guard' ? 'GUARD' : 'CHECK');
 
     // Parse constraints (one or more, comma-separated)
@@ -1560,16 +1600,16 @@ export class Parser {
     if (tok.type === 'GUARD' && guardType === 'guard') {
       // guard...guard sugar (nested guards)
       const inner = this.descend(() => this.guardExprParse('guard'));
-      return guardExpr(constraints, inner, guardType);
+      return this.at(guardExpr(constraints, inner, guardType), keyword);
     } else if (tok.type === 'CHECK') {
       // guard...check sugar: guard cond check cond in body
       const inner = this.descend(() => this.guardExprParse('check'));
-      return guardExpr(constraints, inner, guardType);
+      return this.at(guardExpr(constraints, inner, guardType), keyword);
     }
 
     this.eat('IN');
     const body = this.expr();
-    return guardExpr(constraints, body, guardType);
+    return this.at(guardExpr(constraints, body, guardType), keyword);
   }
 
   /**
