@@ -102,7 +102,19 @@ describe('Typecheck - the fixture corpus is clean', () => {
   }
 });
 
-describe('Typecheck - agrees with the transform on every fixture line', () => {
+describe('Typecheck - never less precise than the transform', () => {
+  /**
+   * The checker and the transform are two separate walks, and they must not
+   * disagree — otherwise the checker would start blessing programs the
+   * compilers reject.
+   *
+   * One asymmetry is deliberate and is the whole point of the schema work: the
+   * checker may be *more* precise, because it follows declared types the
+   * transform throws away. `_ |> Order` is `any` to the transform and a known
+   * shape to the checker. So the invariant is one-directional: where the
+   * transform knows a type, the checker must agree; where it says `any`, the
+   * checker is free to know better.
+   */
   for (const entry of fixtureLines) {
     it(`${entry.fixture}:${entry.line}`, () => {
       const ast = parse(entry.source);
@@ -110,6 +122,7 @@ describe('Typecheck - agrees with the transform on every fixture line', () => {
       const fromTransform = inferType(
         transform(ast, new Map(), new Set(), { allowUndefinedVariables: true })
       );
+      if (fromTransform.kind === 'any') return; // the checker may know more
       assert.strictEqual(
         fromChecker.kind,
         fromTransform.kind,

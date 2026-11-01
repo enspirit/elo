@@ -14,8 +14,15 @@ export { compileToSQL } from './compilers/sql';
 export type { SQLCompileOptions } from './compilers/sql';
 export { compileToPython } from './compilers/python';
 export type { PythonCompileOptions } from './compilers/python';
-export { typecheck, typecheckWithType, formatDiagnostic } from './typecheck';
-export type { Diagnostic, DiagnosticCode, TypecheckOptions } from './typecheck';
+export {
+  typecheck,
+  typecheckWithType,
+  typecheckStructural,
+  formatDiagnostic,
+  describeType,
+  projectType,
+} from './typecheck';
+export type { CheckType, Diagnostic, DiagnosticCode, TypecheckOptions } from './typecheck';
 export { JS_HELPERS } from './runtime';
 export { getPrelude } from './preludes';
 export type { Target as PreludeTarget } from './preludes';

@@ -677,25 +677,57 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
         <h3>What it stays silent about</h3>
         <p>
           The checker only reports what it can justify. The input <code>_</code>
-          is <code>Any</code> until it is coerced, and so are lambda parameters,
-          so a call whose argument type is unknown is accepted without
-          complaint: <code>upper(_)</code> is never reported, because
-          <code>_</code> may well be a String.
+          is <code>Any</code> until it is coerced, so a call whose argument type
+          is unknown is accepted without complaint: <code>upper(_)</code> is
+          never reported, because <code>_</code> may well be a String.
         </p>
         <div class="example" data-action="click->doc#tryExample" data-input='"hello"' data-expected='&#39;HELLO&#39;'>
           <div class="example-header">Accepted, because <code>_</code> may be a String</div>
           <pre class="language-elo">upper(_)</pre>
         </div>
+
+        <h3>Declare your input</h3>
         <p>
-          That makes declared types the way to get real checking. Coerce
-          <code>_</code> through a <a href="#data-schemas">data schema</a> and
-          the checker has something to work with:
+          Declared types are what give the checker something to work with — and
+          Elo already has them. A <a href="#data-schemas">data schema</a> is
+          validated and coerced at runtime, so past the coercion the value
+          provably has the declared shape, and the checker reads it. This is the
+          idiomatic way to write Elo, and the way to get the most out of
+          <code>--typecheck</code>:
         </p>
-        <div class="example" data-action="click->doc#tryExample" data-input='{"total": 21, "label": "ab"}' data-expected='42'>
+        <div class="example" data-action="click->doc#tryExample" data-input='{"total": 21, "customer": {"name": "ab"}}' data-expected='42'>
           <div class="example-header">Checking against a declared schema</div>
-          <pre class="language-elo">let Order = &#123; total: Int, label: String &#125;, order = _ |&gt; Order in order.total * 2</pre>
-          <p class="example-desc">Inside the <code>in</code> body, <code>order.total</code> is known to be an <code>Int</code>, so <code>upper(order.total)</code> would be reported.</p>
+          <pre class="language-elo">let Order = &#123; total: Int, customer: &#123; name: String &#125; &#125;, order = _ |&gt; Order in order.total * 2</pre>
         </div>
+        <p>Inside the <code>in</code> body, the checker then reports:</p>
+        <table class="type-table">
+          <thead><tr><th>Reports</th><th>Because</th></tr></thead>
+          <tbody>
+            <tr><td><code class="language-elo" data-invalid>order.totl</code></td><td>the schema declares no such field — and this is the mistake that fails <em>silently</em> at runtime, giving <code>null</code> rather than an error</td></tr>
+            <tr><td><code class="language-elo" data-invalid>upper(order.total)</code></td><td><code>total</code> is declared <code>Int</code></td></tr>
+            <tr><td><code class="language-elo" data-invalid>order.customer.nam</code></td><td>a wrong path through a nested schema</td></tr>
+            <tr><td><code class="language-elo" data-invalid>order.total.toFixed</code></td><td>an <code>Int</code> has no fields; use a stdlib function</td></tr>
+          </tbody>
+        </table>
+        <p>
+          Lists carry their element type, so a lambda parameter is typed from
+          the list it iterates — in <code>let Order = &#123; lines: [&#123; price: Int &#125;] &#125;</code>,
+          writing <code>map(order.lines, fn(l ~&gt; upper(l.price)))</code> is
+          reported. Unions are accepted for an operation every member supports
+          and reported for one only some support, so <code>&#123; x: Int|Float &#125;</code>
+          allows <code>k.x + 1</code> while <code>&#123; x: Int|String &#125;</code>
+          does not. Predicates inside a
+          <a href="#type-selectors">subtype constraint</a> are checked too.
+        </p>
+        <p class="note">
+          <strong>Note:</strong> an unknown field is reported for a
+          <em>declared schema</em>, not for an object literal. A schema is a
+          contract the runtime enforces — extras are rejected outright, or
+          with <code>...</code> allowed in but stripped from the coerced value,
+          so the field cannot be read either way. An object literal is just a
+          value, and reading a key it does not have is how Elo expresses
+          absence (<code>isNull(&#123;&#125;.budget)</code>).
+        </p>
         <p>
           Type checking is a correctness and portability tool, not a security
           feature: the guarantees on the <a href="/security">security page</a>
