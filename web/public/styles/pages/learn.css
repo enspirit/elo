@@ -3,24 +3,10 @@
    =========================================== */
 
 /* Learn Panel */
-.learn-panel {
-  display: flex;
-  overflow-y: auto;
-  background: var(--bg-primary);
-}
+/* Panel layout is shared — see .doc-panel in documentation.css */
 
 /* Learn Table of Contents Sidebar */
-.learn-toc {
-  width: 240px;
-  flex-shrink: 0;
-  padding: var(--space-xl) var(--space-md);
-  border-right: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  height: fit-content;
-  max-height: 100vh;
-  overflow-y: auto;
-}
+/* Sidebar layout is shared — see .doc-toc in documentation.css */
 
 .learn-toc nav {
   display: flex;

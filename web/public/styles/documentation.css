@@ -42,15 +42,30 @@
   margin: 0 auto;
 }
 
-/* Documentation Panel */
-.doc-panel {
+/* Documentation Panel
+   Shared by the reference, learn and stdlib pages. The panel is a flex item of
+   a full-height body, so it is exactly as tall as the viewport minus the
+   header, and it is the scroll container for the page. */
+.doc-panel,
+.learn-panel,
+.stdlib-panel {
   display: flex;
   overflow-y: auto;
   background: var(--bg-primary);
 }
 
-/* Table of Contents Sidebar */
-.doc-toc {
+/* Table of Contents Sidebar
+   One rule for all three pages: they had three identical copies, which is how
+   the same bug ended up in all of them.
+
+   The max-height must be 100% — of the panel — and not 100vh. The panel sits
+   below the site header, so it is shorter than the viewport; a sidebar capped
+   at 100vh is therefore taller than the space it has, and because it is
+   sticky, its overflowing bottom entries can never be scrolled into view. A
+   long table of contents simply lost its last items. */
+.doc-toc,
+.learn-toc,
+.stdlib-toc {
   width: 240px;
   flex-shrink: 0;
   padding: var(--space-xl) var(--space-md);
@@ -58,8 +73,10 @@
   position: sticky;
   top: 0;
   height: fit-content;
-  max-height: 100vh;
+  max-height: 100%;
   overflow-y: auto;
+  /* Reaching the end of the sidebar should not start scrolling the page. */
+  overscroll-behavior: contain;
 }
 
 .doc-toc nav {

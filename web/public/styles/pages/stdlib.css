@@ -131,24 +131,10 @@
 }
 
 /* Stdlib Panel */
-.stdlib-panel {
-  display: flex;
-  overflow-y: auto;
-  background: var(--bg-primary);
-}
+/* Panel layout is shared — see .doc-panel in documentation.css */
 
 /* Stdlib Table of Contents Sidebar */
-.stdlib-toc {
-  width: 240px;
-  flex-shrink: 0;
-  padding: var(--space-xl) var(--space-md);
-  border-right: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  height: fit-content;
-  max-height: 100vh;
-  overflow-y: auto;
-}
+/* Sidebar layout is shared — see .doc-toc in documentation.css */
 
 .stdlib-toc nav {
   display: flex;
