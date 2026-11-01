@@ -806,9 +806,12 @@ export class Parser {
     while (this.currentToken.type === 'DOT' || this.currentToken.type === 'LPAREN') {
       if (this.currentToken.type === 'DOT') {
         this.eat('DOT');
+        // The property name locates the node: a reader told the field does not
+        // exist wants to be pointed at the field, not at the object.
+        const nameToken = this.here();
         const property = this.currentToken.value;
         this.eat('IDENTIFIER');
-        expr = memberAccess(expr, property);
+        expr = this.at(memberAccess(expr, property), nameToken);
       } else {
         // Function application: expr(args)
         this.eat('LPAREN');
@@ -1235,6 +1238,7 @@ export class Parser {
    * Trailing commas are allowed: let Person = {...}, in body
    */
   private typeDefExpr(): Expr {
+    const nameToken = this.here();
     const typeName = this.currentToken.value;
     this.eat('UPPER_IDENTIFIER');
     this.eat('ASSIGN');
@@ -1250,21 +1254,21 @@ export class Parser {
       if (nextTokenType === 'IN') {
         this.eat('IN');
         const body = this.expr();
-        return typeDef(typeName, typeExpr, body);
+        return this.at(typeDef(typeName, typeExpr, body), nameToken);
       } else if (nextTokenType === 'UPPER_IDENTIFIER') {
         // Another type definition - recurse
         const body = this.descend(() => this.typeDefExpr());
-        return typeDef(typeName, typeExpr, body);
+        return this.at(typeDef(typeName, typeExpr, body), nameToken);
       } else {
         // Value binding - parse remaining as let bindings
         const body = this.parseLetBindingsAfterComma();
-        return typeDef(typeName, typeExpr, body);
+        return this.at(typeDef(typeName, typeExpr, body), nameToken);
       }
     }
 
     this.eat('IN');
     const body = this.expr();
-    return typeDef(typeName, typeExpr, body);
+    return this.at(typeDef(typeName, typeExpr, body), nameToken);
   }
 
   /**

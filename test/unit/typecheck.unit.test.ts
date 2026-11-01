@@ -180,9 +180,9 @@ describe('Typecheck - any suppresses what cannot be known', () => {
     '_ + 1',
     "_ - 'a'",
     '!_',
-    'map([1, 2], fn(x ~> upper(x)))',
-    'length(first([1, 2]))',
-    'upper(at([1], 0))',
+    'map(_, fn(x ~> upper(x)))',
+    'length(first(_))',
+    'upper(at(_, 0))',
   ];
 
   for (const source of opaque) {
@@ -193,6 +193,14 @@ describe('Typecheck - any suppresses what cannot be known', () => {
 
   it('still reports a mistake made next to an opaque argument', () => {
     assert.deepStrictEqual(codes('upper(_) + upper(42)'), ['no-matching-signature']);
+  });
+
+  it('stops suppressing once the element type is known', () => {
+    // The same expressions over a list literal are reportable, because the
+    // element type is no longer a guess.
+    assert.deepStrictEqual(codes('map([1, 2], fn(x ~> upper(x)))'), ['no-matching-signature']);
+    assert.deepStrictEqual(codes('length(first([1, 2]))'), ['no-matching-signature']);
+    assert.deepStrictEqual(codes('upper(at([1], 0))'), ['no-matching-signature']);
   });
 });
 
@@ -339,6 +347,10 @@ describe('Typecheck - agrees with the transform', () => {
       const ast = parse(source);
       const fromChecker = typecheckWithType(ast).type;
       const fromTransform = inferType(transform(ast));
+      // One-directional on purpose: following a declared type, the checker may
+      // know more than the transform, which types `_ |> X` as `any`. It must
+      // never know *less*.
+      if (fromTransform.kind === 'any') return;
       assert.strictEqual(
         fromChecker.kind,
         fromTransform.kind,
@@ -482,6 +494,49 @@ describe('Typecheck - source locations', () => {
     const [diagnostic] = typecheck(parse('upper(42)'));
     assert.match(formatDiagnostic(diagnostic), /^error: No signature of upper/);
   });
+
+  it('locates an unknown field at the field name', () => {
+    //                                1234567890123456789012345678901234567890
+    const source = 'let X = { a: Int }, k = _ |> X in k.bb';
+    const [diagnostic] = located(source);
+    assert.strictEqual(diagnostic.code, 'unknown-field');
+    assert.strictEqual(diagnostic.loc?.column, source.indexOf('bb') + 1);
+  });
+
+  it('locates an invalid member access at the field name', () => {
+    const source = 'let X = { d: Datetime }, k = _ |> X in k.toMillis';
+    const [diagnostic] = located(source);
+    assert.strictEqual(diagnostic.loc?.column, source.indexOf('toMillis') + 1);
+  });
+
+  it('locates an unknown type at the type name', () => {
+    const [diagnostic] = located('let X = { a: Nope } in 1');
+    assert.strictEqual(diagnostic.code, 'unknown-type');
+    assert.deepStrictEqual(diagnostic.loc, { line: 1, column: 5 });
+  });
+
+  it('gives every diagnostic kind a position', () => {
+    // A diagnostic without a position is only usable for a one-line -e, so
+    // every kind the checker can emit must carry one.
+    const sources = [
+      'foo(1)',
+      "upper('a', 'b')",
+      'upper(42)',
+      "'a' - 1",
+      'if 42 then 1 else 2',
+      'let X = { a: Int }, k = _ |> X in k.bb',
+      'let X = { d: Date }, k = _ |> X in k.nope',
+      'let X = { a: Nope } in 1',
+    ];
+    const seen = new Set<string>();
+    for (const source of sources) {
+      for (const diagnostic of located(source)) {
+        seen.add(diagnostic.code);
+        assert.ok(diagnostic.loc, `${diagnostic.code} has no location: ${source}`);
+      }
+    }
+    assert.ok(seen.size >= 7, `only exercised ${seen.size} diagnostic kinds`);
+  });
 });
 
 describe('Parser - opt-in locations', () => {
@@ -520,4 +575,224 @@ describe('Parser - opt-in locations', () => {
     const withLocs = transform(parse("upper('a') + 'b'", { locations: true }));
     assert.strictEqual(inferType(plain).kind, inferType(withLocs).kind);
   });
+});
+
+describe('Typecheck - declared schemas', () => {
+  /**
+   * The idiomatic Elo program declares a schema and coerces `_` through it.
+   * The runtime validates and coerces against that declaration — it raises on
+   * a wrong type and on an extra attribute — so past the coercion the value
+   * provably has the declared shape. These are the diagnostics that become
+   * possible once the checker reads the declaration the compiler throws away.
+   */
+  const schema = 'let X = { foo: Int, label: String }, k = _ |> X in ';
+
+  it('types a declared field', () => {
+    assert.deepStrictEqual(check(`${schema}k.foo + 1`), []);
+    assert.deepStrictEqual(check(`${schema}upper(k.label)`), []);
+  });
+
+  it('reports a field the schema does not declare', () => {
+    const [diagnostic] = check(`${schema}k.fooo`);
+    assert.strictEqual(diagnostic.code, 'unknown-field');
+    assert.match(diagnostic.message, /'fooo' is not a field of/);
+    assert.match(diagnostic.message, /Declared: foo, label/);
+  });
+
+  it('reports a declared field used at the wrong type', () => {
+    const [diagnostic] = check(`${schema}upper(k.foo)`);
+    assert.strictEqual(diagnostic.code, 'no-matching-signature');
+    assert.match(diagnostic.message, /upper\(Int\)/);
+  });
+
+  it('reports an operator applied to a declared field', () => {
+    assert.deepStrictEqual(codes(`${schema}k.label * k.label`), ['operator-type-mismatch']);
+  });
+
+  it('follows a path through nested schemas', () => {
+    const nested = 'let A = { x: Int }, B = { a: A }, k = _ |> B in ';
+    assert.deepStrictEqual(check(`${nested}k.a.x + 1`), []);
+    assert.deepStrictEqual(codes(`${nested}upper(k.a.x)`), ['no-matching-signature']);
+    assert.deepStrictEqual(codes(`${nested}k.a.y`), ['unknown-field']);
+  });
+
+  it('reports an unknown field on an ignored-extras schema too', () => {
+    // `...` lets extra attributes in but strips them from the coerced value,
+    // so the field cannot be read downstream either.
+    const [diagnostic] = check('let X = { foo: Int, ... }, k = _ |> X in k.bar');
+    assert.strictEqual(diagnostic.code, 'unknown-field');
+    assert.match(diagnostic.message, /stripped from the coerced value/);
+  });
+
+  it('accepts an undeclared field when extras are typed', () => {
+    // `...: Int` allows extras and says what they are.
+    assert.deepStrictEqual(check('let X = { foo: Int, ...: Int }, k = _ |> X in k.bar + 1'), []);
+  });
+
+  it('types extras at the declared extras type', () => {
+    assert.deepStrictEqual(
+      codes('let X = { foo: Int, ...: Int }, k = _ |> X in upper(k.bar)'),
+      ['no-matching-signature']
+    );
+  });
+
+  it('leaves an optional field opaque rather than guessing', () => {
+    // Strict null handling sharpens this; until then, an absent field could be
+    // null and nothing certain can be said.
+    assert.deepStrictEqual(check('let X = { a :? Int }, k = _ |> X in k.a + 1'), []);
+  });
+
+  it('reports reading a field off something that has none', () => {
+    const [diagnostic] = check('let X = { d: Datetime }, k = _ |> X in k.d.toMillis');
+    assert.strictEqual(diagnostic.code, 'invalid-member-access');
+    assert.match(diagnostic.message, /not available on Datetime/);
+  });
+
+  it('reports an unknown type name without giving up on the rest', () => {
+    const diagnostics = check('let X = { a: Nope } in upper(42)');
+    assert.deepStrictEqual(diagnostics.map((d) => d.code), [
+      'unknown-type',
+      'no-matching-signature',
+    ]);
+  });
+});
+
+describe('Typecheck - object literals are open', () => {
+  it('types the keys it was written with', () => {
+    assert.deepStrictEqual(codes('upper({ a: 1 }.a)'), ['no-matching-signature']);
+    assert.deepStrictEqual(check("upper({ a: 'x' }.a)"), []);
+  });
+
+  it('says nothing about a key it does not have', () => {
+    // Reading an absent key yields null, which is how Elo expresses absence
+    // (`isNull({}.budget)`). Only a declared schema makes it reportable.
+    assert.deepStrictEqual(check('isNull({}.budget)'), []);
+    assert.deepStrictEqual(check('{ a: 1 }.b'), []);
+  });
+});
+
+describe('Typecheck - element types', () => {
+  it('types a list literal by its elements', () => {
+    assert.deepStrictEqual(codes('map([1, 2], fn(x ~> upper(x)))'), ['no-matching-signature']);
+    assert.deepStrictEqual(check("map(['a'], fn(x ~> upper(x)))"), []);
+  });
+
+  it('types a lambda parameter from a declared list', () => {
+    assert.deepStrictEqual(
+      codes('let X = [Int], k = _ |> X in map(k, fn(x ~> upper(x)))'),
+      ['no-matching-signature']
+    );
+  });
+
+  it('types a lambda parameter from a declared field', () => {
+    const schema = 'let X = { xs: [String] }, k = _ |> X in ';
+    assert.deepStrictEqual(check(`${schema}map(k.xs, fn(s ~> upper(s)))`), []);
+    assert.deepStrictEqual(codes(`${schema}map(k.xs, fn(s ~> s + 1))`), ['operator-type-mismatch']);
+  });
+
+  it('types the result of map from the lambda body', () => {
+    assert.deepStrictEqual(
+      codes("map([1, 2], fn(x ~> String(x))) |> join(', ') |> upper |> year"),
+      ['no-matching-signature']
+    );
+  });
+
+  it('types reduce from the seed and the element', () => {
+    assert.deepStrictEqual(check('reduce([1, 2], 0, fn(acc, x ~> acc + x))'), []);
+    assert.deepStrictEqual(
+      codes("reduce([1, 2], 'seed', fn(acc, x ~> acc + x))"),
+      ['operator-type-mismatch']
+    );
+  });
+
+  it('keeps the element type through list transforms', () => {
+    assert.deepStrictEqual(codes("upper(first(sort(['a', 'b'])))"), []);
+    assert.deepStrictEqual(codes('upper(first(sort([1, 2])))'), ['no-matching-signature']);
+  });
+
+  it('takes a level of nesting off flat', () => {
+    assert.deepStrictEqual(codes('upper(first(flat([[1], [2]])))'), ['no-matching-signature']);
+  });
+
+  it('gives a mixed list a union element type', () => {
+    // [1, 'a'] really is a list of Int|String, so upper() is wrong for one of
+    // the two members and worth reporting.
+    assert.deepStrictEqual(codes("map([1, 'a'], fn(x ~> upper(x)))"), ['no-matching-signature']);
+    assert.deepStrictEqual(check("map([1, 'a'], fn(x ~> String(x)))"), []);
+  });
+});
+
+describe('Typecheck - unions', () => {
+  it('accepts an operation every member supports', () => {
+    assert.deepStrictEqual(check('let X = { x: Int|Float }, k = _ |> X in k.x + 1'), []);
+  });
+
+  it('reports an operation some member does not support', () => {
+    const [diagnostic] = check('let X = { x: Int|String }, k = _ |> X in k.x + 1');
+    assert.strictEqual(diagnostic.code, 'operator-type-mismatch');
+    assert.match(diagnostic.message, /from Int\|String/);
+  });
+
+  it('collapses a union of one', () => {
+    assert.deepStrictEqual(codes('let X = { x: Int|Int }, k = _ |> X in upper(k.x)'), [
+      'no-matching-signature',
+    ]);
+  });
+});
+
+describe('Typecheck - subtype constraints', () => {
+  it('checks the predicate against the base type', () => {
+    assert.deepStrictEqual(check('let X = Int(i | i > 0) in 1'), []);
+    assert.deepStrictEqual(codes('let X = Int(i | upper(i)) in 1'), ['no-matching-signature']);
+  });
+
+  it('requires the predicate to be a Bool', () => {
+    assert.deepStrictEqual(codes('let X = Int(i | i + 1) in 1'), ['non-bool-condition']);
+  });
+
+  it('types a value coerced through a constrained type as its base', () => {
+    assert.deepStrictEqual(check('let X = Int(i | i > 0), k = _ |> X in k + 1'), []);
+    assert.deepStrictEqual(codes('let X = Int(i | i > 0), k = _ |> X in upper(k)'), [
+      'no-matching-signature',
+    ]);
+  });
+});
+
+describe('Typecheck - refinements may only sharpen', () => {
+  /**
+   * The element-aware refinements in the checker are a second source of type
+   * information alongside typedefs.ts, which is exactly the kind of thing that
+   * drifts. The invariant that keeps it honest: a refined type must project
+   * back to the same flat type the signature table returned, so a refinement
+   * can add precision but never contradict.
+   */
+  const cases: Array<[string, string]> = [
+    ["sort(['a'])", 'array'],
+    ["reverse([1])", 'array'],
+    ['unique([1])', 'array'],
+    ["filter([1], fn(x ~> x > 0))", 'array'],
+    ["sortBy([1], fn(x ~> x))", 'array'],
+    ["map([1], fn(x ~> String(x)))", 'array'],
+    ['flat([[1]])', 'array'],
+    ['first([1])', 'int'],
+    ['last([1])', 'int'],
+    ['at([1], 0)', 'int'],
+    ['min([1])', 'int'],
+    ['max([1])', 'int'],
+    ['sum([1])', 'int'],
+    ["find([1], fn(x ~> x > 0))", 'int'],
+  ];
+
+  for (const [source, kind] of cases) {
+    it(`${source} refines to ${kind} and still projects there`, () => {
+      const ast = parse(source);
+      assert.strictEqual(typeOf(source), kind);
+      // Whatever the refinement knows, the transform must not disagree where
+      // it has an opinion of its own.
+      const fromTransform = inferType(transform(ast));
+      if (fromTransform.kind !== 'any') {
+        assert.strictEqual(typecheckWithType(ast).type.kind, fromTransform.kind);
+      }
+    });
+  }
 });

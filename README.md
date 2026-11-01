@@ -161,15 +161,32 @@ problem it finds in one pass, and it does not change the generated code — the
 same code is emitted with or without the flag.
 
 The checker is deliberately silent about what it cannot know. The input `_` has
-type `Any` until it is coerced, and so do lambda parameters, so a call with an
-unknown argument type is accepted without complaint. Coerce `_` through a
-declared type to get the most out of it:
+type `Any` until it is coerced, so a call with an unknown argument type is
+accepted without complaint.
+
+Declared types are what give it something to work with — and Elo already has
+them. A schema is validated and coerced at runtime, so past the coercion the
+value provably has the declared shape, and the checker reads it:
 
 ```elo
-let Order = { total: Int, label: String },
+let Order = { total: Int, customer: { name: String }, lines: [{ price: Int }] },
     order = _ |> Order
 in order.total * 2
 ```
+
+Inside the `in` body it then reports:
+
+- `order.totl` — a field the schema does not declare (the worst class in
+  practice, since it fails *silently* at runtime: `undefined`, `nil`, `NULL`)
+- `upper(order.total)` — a declared field used at the wrong type
+- `order.customer.nam` — a wrong path through nested schemas
+- `map(order.lines, fn(l ~> upper(l.price)))` — lambda parameters are typed
+  from the list's element type
+- `year(order.total)` — a stdlib call on a declared field
+
+Unions (`{ x: Int|String }`) are accepted for an operation every member
+supports and reported for one that only some do. Predicates inside a subtype
+constraint are checked too, so `Int(i | upper(i))` is reported.
 
 It is a correctness and portability tool, not a security feature: the sandbox
 guarantees in [the security model](https://elo-lang.org/security) hold whether
