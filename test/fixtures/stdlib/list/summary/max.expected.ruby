@@ -4,8 +4,8 @@
 ->(_) { (raise "Assertion failed" unless ([].max).nil?; true) }.call(nil);
 
 
-->(_) { (raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call([Date.today.beginning_of_day, Date.today.beginning_of_day - ActiveSupport::Duration.parse("P1D")].max) == "DateTime"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless [Date.today.beginning_of_day, Date.today.beginning_of_day - ActiveSupport::Duration.parse("P1D")].max == Date.today.beginning_of_day; true) }.call(nil);
+->(_) { def k_sub(l, r); if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time)); return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds end; l - r; end; (raise "Assertion failed" unless (->(v) { case v when NilClass; 'Null' when ActiveSupport::Duration; 'Duration' when Date, DateTime, Time; 'DateTime' when Integer; 'Int' when Float; 'Float' when TrueClass, FalseClass; 'Bool' when String; 'String' when Proc; 'Function' when Array; 'List' else 'Tuple' end }).call([Date.today.beginning_of_day, k_sub(Date.today.beginning_of_day, ActiveSupport::Duration.parse("P1D"))].max) == "DateTime"; true) }.call(nil);
+->(_) { def k_sub(l, r); if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time)); return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds end; l - r; end; (raise "Assertion failed" unless [Date.today.beginning_of_day, k_sub(Date.today.beginning_of_day, ActiveSupport::Duration.parse("P1D"))].max == Date.today.beginning_of_day; true) }.call(nil);
 
 
 ->(_) { (raise "Assertion failed" unless [3, 7].max == 7; true) }.call(nil);

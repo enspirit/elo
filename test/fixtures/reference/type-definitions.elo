@@ -113,6 +113,7 @@ assert((let T = { d: Duration } in { d: P1D } |> T).d == P1D)
 # The parsed value is a real Duration, usable in arithmetic
 assert(inDays((let T = { d: Duration } in { d: 'P2D' } |> T).d) == 2.0)
 assert(inHours((let T = { d: Duration } in { d: 'PT90M' } |> T).d) == 1.5)
+assert((let T = { d: Duration } in { d: 'P1D' } |> T).d + P1D == P2D)
 # A string that is not a duration is rejected
 assertFails(fn( ~> let T = { d: Duration } in { d: 'nope' } |> T ))
 # Data as a schema type: accepts any plain data, parsing a JSON string

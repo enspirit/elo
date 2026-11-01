@@ -83,7 +83,17 @@ export function createRubyBinding(): StdLib<string> {
   // Ruby uses native operators for all types due to operator overloading
   // Using any,any registration - type generalization handles all concrete type combinations
   rubyLib.register('add', [Types.any, Types.any], simpleBinaryOp('+'));
-  rubyLib.register('sub', [Types.any, Types.any], simpleBinaryOp('-'));
+  // Subtraction is the one operator Ruby cannot do natively for every type:
+  // Date/DateTime difference yields a Rational number of days, not a duration.
+  // So the unknown-type case goes through a dispatcher, and the numeric cases
+  // are registered explicitly to keep emitting a bare `-`. JavaScript has the
+  // same split.
+  rubyLib.register('sub', [Types.any, Types.any], helperCall('k_sub'));
+  for (const leftType of [Types.int, Types.float]) {
+    for (const rightType of [Types.int, Types.float]) {
+      rubyLib.register('sub', [leftType, rightType], simpleBinaryOp('-'));
+    }
+  }
   rubyLib.register('mul', [Types.any, Types.any], simpleBinaryOp('*'));
   // Ruby truncates Integer / Integer, where Elo's `/` is real division in
   // every other target. When both operands are statically integers we can

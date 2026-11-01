@@ -14,8 +14,20 @@ function wrapRuby(code: string): string {
 // Emitted ahead of the expression when the division has to decide at runtime.
 const K_DIV = 'def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; ';
 
+// Likewise for subtraction: Ruby's Date/DateTime difference is a Rational
+// number of days, not a duration, so an unknown operand type has to dispatch.
+const K_SUB = 'def k_sub(l, r); if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time)); return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds end; l - r; end; ';
+
 function wrapRubyWithKDiv(code: string): string {
   return wrapRuby(`${K_DIV}${code}`);
+}
+
+function wrapRubyWithKSub(code: string): string {
+  return wrapRuby(`${K_SUB}${code}`);
+}
+
+function wrapRubyWithKDivAndKSub(code: string): string {
+  return wrapRuby(`${K_DIV}${K_SUB}${code}`);
 }
 
 describe('Ruby Compiler - Literals', () => {
@@ -274,7 +286,12 @@ describe('Ruby Compiler - Complex Expressions', () => {
       binary('*', memberAccess(variable('_'), 'price'), memberAccess(variable('_'), 'quantity')),
       memberAccess(variable('_'), 'discount')
     );
-    assert.strictEqual(compileToRuby(ast), wrapRuby('_[:price] * _[:quantity] - _[:discount]'));
+    // Subtraction on operands of unknown type dispatches: if both were dates
+    // Ruby's `-` would give a Rational number of days rather than a duration.
+    assert.strictEqual(
+      compileToRuby(ast),
+      wrapRubyWithKSub('k_sub(_[:price] * _[:quantity], _[:discount])')
+    );
   });
 
   it('should compile _.x > 0 && _.x < 100', () => {
@@ -296,7 +313,10 @@ describe('Ruby Compiler - Complex Expressions', () => {
       ),
       literal(2)
     );
-    assert.strictEqual(compileToRuby(ast), wrapRubyWithKDiv('k_div((_[:x] + 5) * (_[:y] - 3), 2)'));
+    assert.strictEqual(
+      compileToRuby(ast),
+      wrapRubyWithKDivAndKSub('k_div((_[:x] + 5) * (k_sub(_[:y], 3)), 2)')
+    );
   });
 
   it('should compile complex boolean with parentheses', () => {

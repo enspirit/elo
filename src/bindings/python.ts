@@ -520,25 +520,39 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   });
 
   // Fallback for dynamic-typed operations
-  pyLib.registerFallback((name, args, argTypes, ctx) => {
-    // Dynamic arithmetic
-    if (name === 'add') { ctx.requireHelper?.('kAdd'); return `kAdd(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'sub') { ctx.requireHelper?.('kSub'); return `kSub(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'mul') { ctx.requireHelper?.('kMul'); return `kMul(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'div') { ctx.requireHelper?.('kDiv'); return `kDiv(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'mod') { ctx.requireHelper?.('kMod'); return `kMod(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'pow') { ctx.requireHelper?.('kPow'); return `kPow(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'neg') { ctx.requireHelper?.('kNeg'); return `kNeg(${ctx.emit(args[0])})`; }
-    if (name === 'eq') { ctx.requireHelper?.('kEq'); return `kEq(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'neq') { ctx.requireHelper?.('kEq'); return `not kEq(${args.map(a => ctx.emit(a)).join(', ')})`; }
-    if (name === 'lt') return `(${ctx.emit(args[0])} < ${ctx.emit(args[1])})`;
-    if (name === 'gt') return `(${ctx.emit(args[0])} > ${ctx.emit(args[1])})`;
-    if (name === 'lte') return `(${ctx.emit(args[0])} <= ${ctx.emit(args[1])})`;
-    if (name === 'gte') return `(${ctx.emit(args[0])} >= ${ctx.emit(args[1])})`;
-    if (name === 'and') return `(${ctx.emit(args[0])} and ${ctx.emit(args[1])})`;
-    if (name === 'or') return `(${ctx.emit(args[0])} or ${ctx.emit(args[1])})`;
-    if (name === 'not') { const e = ctx.emit(args[0]); return args[0].type === 'call' ? `not (${e})` : `not ${e}`; }
-    throw new Error(`Unknown Python function: ${name}(${argTypes.map(t => t.kind).join(', ')})`);
+  // Dynamic operators: the signature to use when an operand type is not known
+  // statically.
+  //
+  // These were a registerFallback, which looked equivalent and was not. The
+  // fallback runs only after StdLib.lookup has exhausted generalization *and*
+  // its arity fallback — and that arity fallback, when an argument is `any`,
+  // returns the first registered implementation of the right name and arity.
+  // So `add(Any, Duration)` found `add(Int, Int)` and emitted a bare `+`,
+  // which raises at runtime because EloDuration defines `plus`, not `__add__`.
+  // Registering them makes generalization find them first, which is what every
+  // other target already does.
+  pyLib.register('add', [Types.any, Types.any], helperCall('kAdd'));
+  pyLib.register('sub', [Types.any, Types.any], helperCall('kSub'));
+  pyLib.register('mul', [Types.any, Types.any], helperCall('kMul'));
+  pyLib.register('div', [Types.any, Types.any], helperCall('kDiv'));
+  pyLib.register('mod', [Types.any, Types.any], helperCall('kMod'));
+  pyLib.register('pow', [Types.any, Types.any], helperCall('kPow'));
+  pyLib.register('neg', [Types.any], helperCall('kNeg'));
+  pyLib.register('pos', [Types.any], identity());
+  pyLib.register('eq', [Types.any, Types.any], helperCall('kEq'));
+  pyLib.register('neq', [Types.any, Types.any], (args, ctx) => {
+    ctx.requireHelper?.('kEq');
+    return `not kEq(${args.map(a => ctx.emit(a)).join(', ')})`;
+  });
+  pyLib.register('lt', [Types.any, Types.any], (args, ctx) => `(${ctx.emit(args[0])} < ${ctx.emit(args[1])})`);
+  pyLib.register('gt', [Types.any, Types.any], (args, ctx) => `(${ctx.emit(args[0])} > ${ctx.emit(args[1])})`);
+  pyLib.register('lte', [Types.any, Types.any], (args, ctx) => `(${ctx.emit(args[0])} <= ${ctx.emit(args[1])})`);
+  pyLib.register('gte', [Types.any, Types.any], (args, ctx) => `(${ctx.emit(args[0])} >= ${ctx.emit(args[1])})`);
+  pyLib.register('and', [Types.any, Types.any], (args, ctx) => `(${ctx.emit(args[0])} and ${ctx.emit(args[1])})`);
+  pyLib.register('or', [Types.any, Types.any], (args, ctx) => `(${ctx.emit(args[0])} or ${ctx.emit(args[1])})`);
+  pyLib.register('not', [Types.any], (args, ctx) => {
+    const emitted = ctx.emit(args[0]);
+    return args[0].type === 'call' ? `not (${emitted})` : `not ${emitted}`;
   });
 
   return pyLib;

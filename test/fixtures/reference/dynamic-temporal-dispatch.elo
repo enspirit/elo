@@ -1,0 +1,42 @@
+# Temporal operations where the operand types are not statically known.
+#
+# Lambda parameters are typed `any`, so these take the stdlib's dynamic
+# dispatch path rather than a typed implementation. That path is a separate
+# body of emitted code from the one the typed tests exercise, and it was wrong
+# on Python: `+` emitted a bare operator, where EloDuration defines `plus`
+# rather than `__add__`, and `==` emitted a bare comparison, where EloDuration
+# defines no `__eq__` at all and two equal durations compared false.
+#
+# Every line here must also pass with the operands written as literals, where
+# the types are known. If one of these fails and its typed twin passes, the
+# dynamic dispatch has diverged from the typed emission.
+
+# Duration arithmetic
+assert((let f = fn( x ~> x + P1D ) in f(P1D)) == P2D)
+assert((let f = fn( x ~> x - P1D ) in f(P2D)) == P1D)
+assert((let f = fn( x, y ~> x + y ) in f(P1D, P1D)) == P2D)
+assert((let f = fn( x ~> x * 2 ) in f(P1D)) == P2D)
+assert((let f = fn( x ~> x / 2 ) in f(P2D)) == P1D)
+
+# Duration equality: the comparison itself must dispatch, not just the operands
+assert((let f = fn( x ~> x == P1D ) in f(P1D)) == true)
+assert((let f = fn( x ~> x == P1D ) in f(P2D)) == false)
+assert((let f = fn( x ~> x != P1D ) in f(P2D)) == true)
+assert((let f = fn( x, y ~> x == y ) in f(P1D, P1D)) == true)
+assert((let f = fn( x, y ~> x == y ) in f(PT24H, P1D)) == true)
+
+# Duration ordering
+assert((let f = fn( x ~> x < P2D ) in f(P1D)) == true)
+assert((let f = fn( x ~> x >= P1D ) in f(P2D)) == true)
+
+# Datetime arithmetic and equality through the same path
+assert((let f = fn( x ~> x + P1D ) in f(D2024-01-15T00:00:00Z)) == D2024-01-16T00:00:00Z)
+assert((let f = fn( x ~> x - P1D ) in f(D2024-01-16T00:00:00Z)) == D2024-01-15T00:00:00Z)
+assert((let f = fn( x ~> x == D2024-01-15T00:00:00Z ) in f(D2024-01-15T00:00:00Z)) == true)
+assert((let f = fn( x, y ~> x - y ) in f(D2024-01-16T00:00:00Z, D2024-01-15T00:00:00Z)) == P1D)
+
+# The typed twins, which were already correct and must stay so
+assert(P1D + P1D == P2D)
+assert(P1D == P1D)
+assert(PT24H == P1D)
+assert(D2024-01-15T00:00:00Z + P1D == D2024-01-16T00:00:00Z)

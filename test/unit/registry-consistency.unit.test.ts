@@ -54,28 +54,6 @@ const NOT_EMITTABLE: Record<string, Record<string, string>> = {
     'find:array,fn': 'SQL has no lambda support',
     'sortBy:array,fn': 'SQL has no lambda support',
   },
-  python: {
-    // Python emits temporal arithmetic through the dynamic kAdd/kSub/kMul/kDiv
-    // helpers rather than registering a typed implementation per combination.
-    // The helpers dispatch correctly at runtime; this is a code-quality gap,
-    // not a correctness one.
-    'add:date,duration': 'emitted by the dynamic kAdd helper',
-    'sub:date,duration': 'emitted by the dynamic kSub helper',
-    'sub:date,date': 'emitted by the dynamic kSub helper',
-    'add:datetime,duration': 'emitted by the dynamic kAdd helper',
-    'sub:datetime,duration': 'emitted by the dynamic kSub helper',
-    'sub:datetime,datetime': 'emitted by the dynamic kSub helper',
-    'add:duration,duration': 'emitted by the dynamic kAdd helper',
-    'sub:duration,duration': 'emitted by the dynamic kSub helper',
-    'add:duration,date': 'emitted by the dynamic kAdd helper',
-    'add:duration,datetime': 'emitted by the dynamic kAdd helper',
-    'mul:duration,int': 'emitted by the dynamic kMul helper',
-    'mul:duration,float': 'emitted by the dynamic kMul helper',
-    'mul:int,duration': 'emitted by the dynamic kMul helper',
-    'mul:float,duration': 'emitted by the dynamic kMul helper',
-    'div:duration,int': 'emitted by the dynamic kDiv helper',
-    'div:duration,float': 'emitted by the dynamic kDiv helper',
-  },
 };
 
 /**

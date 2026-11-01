@@ -314,6 +314,7 @@ export const JS_HELPERS: Record<string, string> = {
  * These are embedded in compiled Ruby output when type definitions are used.
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  k_sub: [],
   k_round_to: [],
   k_div: [],
   k_str_mul: [],
@@ -343,6 +344,16 @@ end`,
   k_round_to: `def k_round_to(x, n)
   f = 10 ** n
   (x * f).round.fdiv(f)
+end`,
+  // Subtracting two dates/datetimes yields a Rational number of days in Ruby,
+  // not a duration. The typed implementations convert it, so the dynamic path
+  // must too or the two disagree. Kept comment-free: helper bodies are inlined
+  // onto one line, where a `#` would swallow the rest of the program.
+  k_sub: `def k_sub(l, r)
+  if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time))
+    return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds
+  end
+  l - r
 end`,
   k_div: `def k_div(l, r)
   return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer)
