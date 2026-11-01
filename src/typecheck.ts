@@ -28,7 +28,7 @@
  * wrong tool, not a more powerful one.
  */
 
-import { Constraint, Expr, TypeExpr } from './ast';
+import { Constraint, Expr, SourceLocation, TypeExpr } from './ast';
 import { EloType, Types } from './types';
 import { eloTypeDefs } from './typedefs';
 import { formatSignature } from './stdlib';
@@ -52,11 +52,23 @@ export type DiagnosticCode =
 
 /**
  * A single problem found in an expression.
+ *
+ * `loc` is present only when the AST was parsed with `{ locations: true }`.
  */
 export interface Diagnostic {
   severity: 'error' | 'warning';
   code: DiagnosticCode;
   message: string;
+  loc?: SourceLocation;
+}
+
+/**
+ * Render a diagnostic for a human: `3:11: error: … [code]`, with the position
+ * dropped when the AST carried none.
+ */
+export function formatDiagnostic(diagnostic: Diagnostic): string {
+  const where = diagnostic.loc ? `${diagnostic.loc.line}:${diagnostic.loc.column}: ` : '';
+  return `${where}${diagnostic.severity}: ${diagnostic.message} [${diagnostic.code}]`;
 }
 
 /**
@@ -127,7 +139,7 @@ class Checker {
    */
   check(expr: Expr, env: TypeEnv, depth: number): EloType {
     if (depth > this.maxDepth) {
-      this.report('nesting-too-deep', `Maximum expression depth exceeded (${this.maxDepth})`);
+      this.report('nesting-too-deep', `Maximum expression depth exceeded (${this.maxDepth})`, expr.loc);
       return Types.any;
     }
     const next = depth + 1;
@@ -164,14 +176,14 @@ class Checker {
         const right = this.check(expr.right, env, next);
         const fn = BINARY_OPS[expr.operator];
         if (!fn) return Types.any;
-        return this.resolve(fn, [left, right], 'operator-type-mismatch', expr.operator);
+        return this.resolve(fn, [left, right], 'operator-type-mismatch', expr.loc, expr.operator);
       }
 
       case 'unary': {
         const operand = this.check(expr.operand, env, next);
         const fn = UNARY_OPS[expr.operator];
         if (!fn) return Types.any;
-        return this.resolve(fn, [operand], 'operator-type-mismatch', expr.operator);
+        return this.resolve(fn, [operand], 'operator-type-mismatch', expr.loc, expr.operator);
       }
 
       case 'temporal_keyword':
@@ -183,7 +195,7 @@ class Checker {
         // call: its result is opaque, exactly as the transform treats it.
         const bound = env.get(expr.name);
         if (bound && bound.kind === 'fn') return Types.any;
-        return this.resolve(expr.name, argTypes, 'no-matching-signature');
+        return this.resolve(expr.name, argTypes, 'no-matching-signature', expr.loc);
       }
 
       case 'apply':
@@ -207,7 +219,7 @@ class Checker {
       }
 
       case 'if': {
-        this.checkCondition(expr.condition, env, next, 'if');
+        this.checkCondition(expr.condition, env, next, 'if', expr.loc);
         const thenType = this.check(expr.then, env, next);
         this.check(expr.else, env, next);
         // The transform takes the `then` branch's type; mirror it rather than
@@ -252,7 +264,7 @@ class Checker {
 
       case 'guard': {
         for (const constraint of expr.constraints) {
-          this.checkCondition(constraint.condition, env, next, expr.guardType);
+          this.checkCondition(constraint.condition, env, next, expr.guardType, expr.loc);
         }
         return this.check(expr.body, env, next);
       }
@@ -271,6 +283,7 @@ class Checker {
     name: string,
     argTypes: EloType[],
     code: DiagnosticCode,
+    loc?: SourceLocation,
     operator?: string
   ): EloType {
     if (eloTypeDefs.has(name, argTypes)) {
@@ -279,7 +292,7 @@ class Checker {
 
     const known = eloTypeDefs.signaturesOf(name);
     if (known.length === 0) {
-      this.report('unknown-function', `Unknown function ${formatSignature(name, argTypes)}`);
+      this.report('unknown-function', `Unknown function ${formatSignature(name, argTypes)}`, loc);
       return Types.any;
     }
 
@@ -288,7 +301,8 @@ class Checker {
       const arities = [...new Set(known.map((sig) => sig.length))].sort().join(' or ');
       this.report(
         'wrong-arity',
-        `${name} takes ${arities} argument(s), got ${argTypes.length}`
+        `${name} takes ${arities} argument(s), got ${argTypes.length}`,
+        loc
       );
       return Types.any;
     }
@@ -301,7 +315,8 @@ class Checker {
     this.report(
       code,
       `No signature of ${where} accepts ${formatSignature(name, argTypes)}. ` +
-      `Known: ${sameArity.map((sig) => formatSignature(name, sig)).join(', ')}`
+      `Known: ${sameArity.map((sig) => formatSignature(name, sig)).join(', ')}`,
+      loc
     );
     return Types.any;
   }
@@ -311,12 +326,21 @@ class Checker {
    * about what a non-boolean condition means (SQL rejects `NOT 42` outright),
    * so requiring Bool is what keeps a program portable.
    */
-  private checkCondition(expr: Expr, env: TypeEnv, depth: number, context: string): void {
+  private checkCondition(
+    expr: Expr,
+    env: TypeEnv,
+    depth: number,
+    context: string,
+    enclosing?: SourceLocation
+  ): void {
     const type = this.check(expr, env, depth);
     if (type.kind === 'any' || type.kind === 'bool') return;
     this.report(
       'non-bool-condition',
-      `${context} condition must be Bool, got ${capitalize(type.kind)}`
+      `${context} condition must be Bool, got ${capitalize(type.kind)}`,
+      // Point at the condition when it carries a position, otherwise at the
+      // `if`/`guard` keyword that introduced it.
+      expr.loc ?? enclosing
     );
   }
 
@@ -371,8 +395,9 @@ class Checker {
     }
   }
 
-  private report(code: DiagnosticCode, message: string): void {
-    this.diagnostics.push({ severity: 'error', code, message });
+  private report(code: DiagnosticCode, message: string, loc?: SourceLocation): void {
+    this.diagnostics.push(loc ? { severity: 'error', code, message, loc }
+                              : { severity: 'error', code, message });
   }
 }
 

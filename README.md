@@ -139,7 +139,7 @@ cat input.elo | ./bin/eloc - -t ruby
 
 # Report type errors before compiling
 ./bin/eloc --typecheck -e "'hello' - 5"
-# error: No signature of operator '-' accepts sub(String, Int). ...
+# 1:9: error: No signature of operator '-' accepts sub(String, Int). ...
 ```
 
 Options:
@@ -156,8 +156,9 @@ Options:
 `--typecheck` runs an optional static check before compiling. It reports
 unknown functions, wrong argument counts, arguments of the wrong type,
 operators applied to types they do not accept, and conditions that are not
-`Bool`. It reports every problem it finds in one pass, and it does not change
-the generated code — the same code is emitted with or without the flag.
+`Bool`. Each problem is reported with its line and column, it reports every
+problem it finds in one pass, and it does not change the generated code — the
+same code is emitted with or without the flag.
 
 The checker is deliberately silent about what it cannot know. The input `_` has
 type `Any` until it is coerced, and so do lambda parameters, so a call with an

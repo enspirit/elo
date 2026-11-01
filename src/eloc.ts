@@ -7,7 +7,7 @@ import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
 import { compileToPythonWithMeta } from './compilers/python';
 import { getPrelude, Target as PreludeTarget } from './preludes';
-import { typecheck } from './typecheck';
+import { typecheck, formatDiagnostic } from './typecheck';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json');
@@ -344,7 +344,12 @@ function reportTypeDiagnostics(sources: string[], target: Target): boolean {
     if (isBlankSource(source)) return;
     let diagnostics;
     try {
-      diagnostics = typecheck(parse(source.trim()), { allowUndefinedVariables });
+      // Locations are opt-in at parse time, and this is exactly what they are
+      // for: a diagnostic the author can act on points at a column.
+      // Not trimmed: the lexer skips leading whitespace itself, and keeping it
+      // means the reported column matches the column in the file.
+      const ast = parse(source, { locations: true });
+      diagnostics = typecheck(ast, { allowUndefinedVariables });
     } catch {
       // A parse error is not the checker's business; compilation below will
       // report it with its own message.
@@ -352,8 +357,14 @@ function reportTypeDiagnostics(sources: string[], target: Target): boolean {
     }
     for (const diagnostic of diagnostics) {
       found = true;
-      const where = multiLine ? `${index + 1}: ` : '';
-      console.error(`${where}${diagnostic.severity}: ${diagnostic.message} [${diagnostic.code}]`);
+      // A single -e expression is always line 1, so its own line number adds
+      // nothing; a file's lines are numbered from the source.
+      const formatted = formatDiagnostic(
+        multiLine && diagnostic.loc
+          ? { ...diagnostic, loc: { ...diagnostic.loc, line: index + 1 } }
+          : diagnostic
+      );
+      console.error(multiLine && !diagnostic.loc ? `${index + 1}: ${formatted}` : formatted);
     }
   });
 

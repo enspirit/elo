@@ -5,9 +5,30 @@
 export type Expr = Literal | NullLiteral | StringLiteral | Variable | BinaryOp | UnaryOp | DateLiteral | DateTimeLiteral | DurationLiteral | TemporalKeyword | FunctionCall | MemberAccess | LetExpr | IfExpr | Lambda | ObjectLiteral | ArrayLiteral | Alternative | Apply | DataPath | TypeDef | GuardExpr;
 
 /**
+ * Where a node came from in the source, 1-based.
+ *
+ * Opt-in: `parse(source)` produces no locations and the factory functions
+ * never add any, so an AST built by hand or compared with deepStrictEqual is
+ * unaffected. `parse(source, { locations: true })` fills them in, which is what
+ * the type checker needs to say *where* a problem is.
+ */
+export interface SourceLocation {
+  line: number;
+  column: number;
+}
+
+/**
+ * Every AST node may carry a source location. Consumers must treat it as
+ * absent unless they asked for it.
+ */
+export interface Located {
+  loc?: SourceLocation;
+}
+
+/**
  * Literal value (number or boolean)
  */
-export interface Literal {
+export interface Literal extends Located {
   type: 'literal';
   value: number | boolean;
   /**
@@ -21,14 +42,14 @@ export interface Literal {
 /**
  * Null literal
  */
-export interface NullLiteral {
+export interface NullLiteral extends Located {
   type: 'null';
 }
 
 /**
  * String literal (single-quoted)
  */
-export interface StringLiteral {
+export interface StringLiteral extends Located {
   type: 'string';
   value: string;
 }
@@ -36,7 +57,7 @@ export interface StringLiteral {
 /**
  * Date literal (ISO8601 date string)
  */
-export interface DateLiteral {
+export interface DateLiteral extends Located {
   type: 'date';
   value: string; // YYYY-MM-DD
 }
@@ -44,7 +65,7 @@ export interface DateLiteral {
 /**
  * DateTime literal (ISO8601 datetime string)
  */
-export interface DateTimeLiteral {
+export interface DateTimeLiteral extends Located {
   type: 'datetime';
   value: string; // ISO8601 format
 }
@@ -52,7 +73,7 @@ export interface DateTimeLiteral {
 /**
  * Duration literal (ISO8601 duration)
  */
-export interface DurationLiteral {
+export interface DurationLiteral extends Located {
   type: 'duration';
   value: string; // ISO8601 duration like P1D, PT1H30M
 }
@@ -60,7 +81,7 @@ export interface DurationLiteral {
 /**
  * Temporal keyword (NOW, TODAY, TOMORROW, YESTERDAY, and period boundaries)
  */
-export interface TemporalKeyword {
+export interface TemporalKeyword extends Located {
   type: 'temporal_keyword';
   keyword: 'NOW' | 'TODAY' | 'TOMORROW' | 'YESTERDAY'
     | 'SOD' | 'EOD'   // Start/End of Day
@@ -74,7 +95,7 @@ export interface TemporalKeyword {
 /**
  * Variable reference
  */
-export interface Variable {
+export interface Variable extends Located {
   type: 'variable';
   name: string;
 }
@@ -82,7 +103,7 @@ export interface Variable {
 /**
  * Binary operation
  */
-export interface BinaryOp {
+export interface BinaryOp extends Located {
   type: 'binary';
   operator:
     // Arithmetic
@@ -98,7 +119,7 @@ export interface BinaryOp {
 /**
  * Unary operation
  */
-export interface UnaryOp {
+export interface UnaryOp extends Located {
   type: 'unary';
   operator: '-' | '+' | '!';
   operand: Expr;
@@ -107,7 +128,7 @@ export interface UnaryOp {
 /**
  * Function call
  */
-export interface FunctionCall {
+export interface FunctionCall extends Located {
   type: 'function_call';
   name: string;
   args: Expr[];
@@ -116,7 +137,7 @@ export interface FunctionCall {
 /**
  * Function application (calling an expression that evaluates to a function)
  */
-export interface Apply {
+export interface Apply extends Located {
   type: 'apply';
   fn: Expr;
   args: Expr[];
@@ -125,7 +146,7 @@ export interface Apply {
 /**
  * Member access (dot notation)
  */
-export interface MemberAccess {
+export interface MemberAccess extends Located {
   type: 'member_access';
   object: Expr;
   property: string;
@@ -142,7 +163,7 @@ export interface LetBinding {
 /**
  * Let expression: let x = 1, y = 2 in body
  */
-export interface LetExpr {
+export interface LetExpr extends Located {
   type: 'let';
   bindings: LetBinding[];
   body: Expr;
@@ -151,7 +172,7 @@ export interface LetExpr {
 /**
  * If expression: if condition then consequent else alternative
  */
-export interface IfExpr {
+export interface IfExpr extends Located {
   type: 'if';
   condition: Expr;
   then: Expr;
@@ -161,7 +182,7 @@ export interface IfExpr {
 /**
  * Lambda expression: fn( params ~> body )
  */
-export interface Lambda {
+export interface Lambda extends Located {
   type: 'lambda';
   params: string[];
   body: Expr;
@@ -266,7 +287,7 @@ export interface ObjectProperty {
 /**
  * Object literal: {key: value, ...}
  */
-export interface ObjectLiteral {
+export interface ObjectLiteral extends Located {
   type: 'object';
   properties: ObjectProperty[];
 }
@@ -281,7 +302,7 @@ export function objectLiteral(properties: ObjectProperty[]): ObjectLiteral {
 /**
  * Array literal: [expr, expr, ...]
  */
-export interface ArrayLiteral {
+export interface ArrayLiteral extends Located {
   type: 'array';
   elements: Expr[];
 }
@@ -297,7 +318,7 @@ export function arrayLiteral(elements: Expr[]): ArrayLiteral {
  * Alternative expression: a | b | c
  * Evaluates alternatives left-to-right, returns first non-null value.
  */
-export interface Alternative {
+export interface Alternative extends Located {
   type: 'alternative';
   alternatives: Expr[];
 }
@@ -317,7 +338,7 @@ export function alternative(alternatives: Expr[]): Alternative {
  * A path for navigating data structures, inspired by JSONPath.
  * Segments can be property names (strings) or array indices (numbers).
  */
-export interface DataPath {
+export interface DataPath extends Located {
   type: 'datapath';
   segments: (string | number)[];
 }
@@ -409,7 +430,7 @@ export interface TypeSchemaProperty {
  * Binds a type name (uppercase) to a type expression.
  * The body can use the type via pipe: data |> Person
  */
-export interface TypeDef {
+export interface TypeDef extends Located {
   type: 'typedef';
   name: string;           // Uppercase identifier like 'Person'
   typeExpr: TypeExpr;     // The type expression
@@ -466,7 +487,7 @@ export function unionType(types: TypeExpr[]): UnionType {
  * Used for preconditions (guard) and postconditions (check).
  * Throws at runtime if condition is false, unless guards are stripped.
  */
-export interface GuardExpr {
+export interface GuardExpr extends Located {
   type: 'guard';
   constraints: Constraint[];  // One or more labeled constraints
   body: Expr;

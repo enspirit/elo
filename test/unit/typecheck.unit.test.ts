@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { parse } from '../../src/parser';
-import { typecheck, typecheckWithType, Diagnostic } from '../../src/typecheck';
+import { typecheck, typecheckWithType, formatDiagnostic, Diagnostic } from '../../src/typecheck';
 import { transform } from '../../src/transform';
 import { inferType } from '../../src/ir';
 import { Types } from '../../src/types';
@@ -425,5 +425,99 @@ describe('Typecheck - does not touch the compile path', () => {
 
   it('types Types.any for the input variable, as the transform does', () => {
     assert.strictEqual(typecheckWithType(parse('_')).type, Types.any);
+  });
+});
+
+describe('Typecheck - source locations', () => {
+  function located(source: string) {
+    return typecheck(parse(source, { locations: true }));
+  }
+
+  it('carries no location when the AST was parsed without them', () => {
+    // Locations are opt-in; a checker fed a plain AST must still work, just
+    // without being able to say where.
+    const [diagnostic] = typecheck(parse('upper(42)'));
+    assert.strictEqual(diagnostic.loc, undefined);
+  });
+
+  it('locates a bad call at its name', () => {
+    const [diagnostic] = located('upper(42)');
+    assert.deepStrictEqual(diagnostic.loc, { line: 1, column: 1 });
+  });
+
+  it('locates a bad operator at the operator', () => {
+    //         1234567890
+    // source: 'ab' - 5
+    const [diagnostic] = located("'ab' - 5");
+    assert.deepStrictEqual(diagnostic.loc, { line: 1, column: 6 });
+  });
+
+  it('locates each problem separately', () => {
+    const diagnostics = located("upper(42) + year('x')");
+    assert.deepStrictEqual(diagnostics.map((d) => d.loc?.column), [1, 13]);
+  });
+
+  it('locates a problem on the right line of a multi-line expression', () => {
+    const diagnostics = located("1 +\n  upper(42)");
+    assert.deepStrictEqual(diagnostics[0].loc, { line: 2, column: 3 });
+  });
+
+  it('locates a non-bool condition at the condition', () => {
+    const [diagnostic] = located('if 42 then 1 else 2');
+    assert.deepStrictEqual(diagnostic.loc, { line: 1, column: 1 });
+  });
+
+  it('locates a unary operator mistake', () => {
+    const [diagnostic] = located("-'hello'");
+    assert.deepStrictEqual(diagnostic.loc, { line: 1, column: 1 });
+  });
+
+  it('formats a diagnostic with its position', () => {
+    const [diagnostic] = located('upper(42)');
+    assert.match(formatDiagnostic(diagnostic), /^1:1: error: No signature of upper/);
+    assert.match(formatDiagnostic(diagnostic), /\[no-matching-signature\]$/);
+  });
+
+  it('formats a diagnostic without a position when there is none', () => {
+    const [diagnostic] = typecheck(parse('upper(42)'));
+    assert.match(formatDiagnostic(diagnostic), /^error: No signature of upper/);
+  });
+});
+
+describe('Parser - opt-in locations', () => {
+  it('produces a plain AST by default', () => {
+    // The ~80 deepStrictEqual assertions in parser.unit.test.ts depend on this,
+    // and so does toEloCode and any AST built by hand.
+    assert.deepStrictEqual(parse('1 + 2'), {
+      type: 'binary',
+      operator: '+',
+      left: { type: 'literal', value: 1 },
+      right: { type: 'literal', value: 2 },
+    });
+  });
+
+  it('attaches locations when asked', () => {
+    const ast = parse('1 + 2', { locations: true }) as any;
+    assert.deepStrictEqual(ast.loc, { line: 1, column: 3 });
+  });
+
+  it('tracks columns across a line', () => {
+    const ast = parse('upper(1) + lower(2)', { locations: true }) as any;
+    assert.deepStrictEqual(ast.left.loc, { line: 1, column: 1 });
+    assert.deepStrictEqual(ast.right.loc, { line: 1, column: 12 });
+  });
+
+  it('tracks lines', () => {
+    const ast = parse('upper(1)\n  + lower(2)', { locations: true }) as any;
+    assert.strictEqual(ast.left.loc.line, 1);
+    assert.strictEqual(ast.right.loc.line, 2);
+  });
+
+  it('leaves the compile path indifferent to locations', () => {
+    // An AST with locations must compile to exactly the same code as one
+    // without, or the feature would not be free.
+    const plain = transform(parse("upper('a') + 'b'"));
+    const withLocs = transform(parse("upper('a') + 'b'", { locations: true }));
+    assert.strictEqual(inferType(plain).kind, inferType(withLocs).kind);
   });
 });
