@@ -190,6 +190,21 @@ Unions (`{ x: Int|String }`) are accepted for an operation every member
 supports and reported for one that only some do. Predicates inside a subtype
 constraint are checked too, so `Int(i | upper(i))` is reported.
 
+Optional fields are strict about null. `:?` is a statement that the field may
+be absent, so `{ a :? Int }` makes `k.a` an `Int|Null` and `k.a + 1` is
+reported. Any of the usual ways of handling it clears the report:
+
+```elo
+k.a | 0                                 # fallback
+if isNull(k.a) then 0 else k.a + 1      # tested
+if isNotNull(k.a) then k.a + 1 else 0
+guard isNotNull(k.a) in k.a + 1         # guarded
+```
+
+Narrowing is deliberately narrow: `isNull`/`isNotNull` on a path, `&&`-chained,
+plus the `|` operator. The checker does no boolean algebra, so
+`isNotNull(a) || isNotNull(b)` establishes nothing — use `|`.
+
 `--input-type` is the same thing supplied from outside, for a host that already
 knows the shape of its data and would rather not make the author restate it. It
 takes an Elo type expression, so there is one spelling of a schema:

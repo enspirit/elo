@@ -48,10 +48,13 @@ import {
   SchemaProp,
   describe,
   equals,
+  isNullable,
   isUnknown,
   join,
+  nullable,
   prim,
   project,
+  stripNull,
 } from './checktypes';
 
 /**
@@ -76,6 +79,8 @@ export type DiagnosticCode =
   | 'unknown-type'
   /** Strict mode only: the program relies on a value of unknown type. */
   | 'unresolved-any'
+  /** A value that may be null used where null is not accepted. */
+  | 'nullable-misuse'
   /** The checker gave up to protect itself; see `maxDepth`. */
   | 'nesting-too-deep';
 
@@ -156,6 +161,17 @@ type TypeEnv = Map<string, CheckType>;
 type TypeNameEnv = Map<string, CheckType>;
 
 /**
+ * Access paths a null check has established something about, keyed by their
+ * source text (`order.customer.name`).
+ *
+ * This is the checker's only flow sensitivity, and it is deliberately narrow:
+ * `isNull`/`isNotNull` applied to a syntactic path, `&&`-chained, plus the `|`
+ * operator. No negation algebra, no general path sensitivity — that is where
+ * this kind of thing stops being simple, and `|` covers the rest.
+ */
+type Narrowing = ReadonlySet<string>;
+
+/**
  * Check an expression and return everything that could not be justified.
  * An empty array means the checker found nothing to object to — which is not
  * the same as "fully typed", since `any` is accepted in silence.
@@ -194,6 +210,8 @@ class Checker {
   private readonly maxDepth: number;
   private readonly strict: boolean;
   private readonly inputType?: TypeExpr;
+  /** Paths a surrounding null check has established are not null. */
+  private narrowed: Narrowing = new Set();
 
   constructor(options: TypecheckOptions) {
     this.allowUndefinedVariables = options.allowUndefinedVariables ?? false;
@@ -245,10 +263,12 @@ class Checker {
       case 'duration':
         return prim(Types.duration);
 
-      case 'variable':
+      case 'variable': {
         // An undefined variable is the transform's error to raise (it refuses
         // them to keep host globals out of reach); the checker only types it.
-        return env.get(expr.name) ?? ANY;
+        const type = env.get(expr.name) ?? ANY;
+        return this.narrowed.has(expr.name) ? stripNull(type) : type;
+      }
 
       case 'binary': {
         const left = this.check(expr.left, env, types, next);
@@ -278,7 +298,9 @@ class Checker {
 
       case 'member_access': {
         const object = this.check(expr.object, env, types, next);
-        return this.fieldOf(object, expr.property, expr.loc);
+        const type = this.fieldOf(object, expr.property, expr.loc);
+        const path = pathOf(expr);
+        return path && this.narrowed.has(path) ? stripNull(type) : type;
       }
 
       case 'let': {
@@ -292,8 +314,15 @@ class Checker {
 
       case 'if': {
         this.checkCondition(expr.condition, env, types, next, 'if', expr.loc);
-        const thenType = this.check(expr.then, env, types, next);
-        this.check(expr.else, env, types, next);
+        // `if isNotNull(k.a) then k.a + 1 else …` knows k.a is not null in the
+        // `then` branch; `if isNull(k.a) then … else k.a + 1` knows it in the
+        // `else` branch.
+        const thenType = this.withNarrowing(nonNullPaths(expr.condition, true), () =>
+          this.check(expr.then, env, types, next)
+        );
+        this.withNarrowing(nonNullPaths(expr.condition, false), () =>
+          this.check(expr.else, env, types, next)
+        );
         // The transform takes the `then` branch's type; mirror it rather than
         // computing a join, so the two never disagree.
         return thenType;
@@ -325,9 +354,14 @@ class Checker {
       }
 
       case 'alternative': {
-        const alternatives = expr.alternatives.map((alt) => this.check(alt, env, types, next));
-        // `a | b` yields the first non-null value. If the first alternative is
-        // opaque the result is opaque; otherwise the first known type wins.
+        // `a | b` yields the first non-null value, so whatever it returns is
+        // not null: `k.a | 0` is an Int even when `a` is optional. This is the
+        // compact way to handle an optional field.
+        const alternatives = expr.alternatives
+          .map((alt) => this.check(alt, env, types, next))
+          .map(stripNull);
+        // If the first alternative is opaque the result is opaque; otherwise
+        // the first known type wins, as the transform has it.
         if (isUnknown(alternatives[0])) return ANY;
         return alternatives.find((t) => !isUnknown(t)) ?? ANY;
       }
@@ -347,10 +381,15 @@ class Checker {
       }
 
       case 'guard': {
+        // A guard holds for everything it guards, so `guard isNotNull(k.a) in
+        // k.a + 1` is fine — which is the idiomatic way to handle an optional
+        // field in Elo.
+        const established = new Set<string>();
         for (const constraint of expr.constraints) {
           this.checkCondition(constraint.condition, env, types, next, expr.guardType, expr.loc);
+          for (const path of nonNullPaths(constraint.condition, true)) established.add(path);
         }
-        return this.check(expr.body, env, types, next);
+        return this.withNarrowing(established, () => this.check(expr.body, env, types, next));
       }
     }
   }
@@ -445,9 +484,10 @@ class Checker {
       case 'schema': {
         const prop = object.props.find((p) => p.key === property);
         if (prop) {
-          // An optional field may be absent, so nothing certain can be said
-          // about its value yet. Strict null handling makes this sharper.
-          return prop.optional ? ANY : prop.type;
+          // `:?` is the author's own statement that the field may be absent,
+          // so an optional field is `T|Null` and using it as a T is reported.
+          // A null check or an `|` fallback rules the null out.
+          return prop.optional ? nullable(prop.type) : prop.type;
         }
         if (object.extras === 'closed' || object.extras === 'ignored') {
           const declared = object.props.map((p) => p.key);
@@ -554,6 +594,21 @@ class Checker {
             continue;
           }
           const where = operator ? `operator '${operator}'` : name;
+
+          // When the member that fails is the Null of a value that may be
+          // absent, the author's mistake is not the types — it is the missing
+          // null handling, and that is what to say.
+          if (combination.some(isNullable) && argTypes.some(isNullable)) {
+            this.report(
+              'nullable-misuse',
+              `${where} does not accept a value that may be null ` +
+              `(${argTypes.map(describe).join(', ')}). ` +
+              `Handle the null first: 'x | fallback', or guard with isNotNull(x).`,
+              loc
+            );
+            return ANY;
+          }
+
           this.report(
             code,
             `No signature of ${where} accepts ${formatSignature(name, flat)}` +
@@ -684,6 +739,22 @@ class Checker {
   }
 
   /**
+   * Run a check with extra paths known to be non-null, then put the previous
+   * narrowing back. The walk is depth-first, so a save/restore around the
+   * narrowed region is all the bookkeeping needed.
+   */
+  private withNarrowing<T>(paths: ReadonlySet<string>, run: () => T): T {
+    if (paths.size === 0) return run();
+    const previous = this.narrowed;
+    this.narrowed = new Set([...previous, ...paths]);
+    try {
+      return run();
+    } finally {
+      this.narrowed = previous;
+    }
+  }
+
+  /**
    * Report a reliance on something unknown — but only in strict mode, where
    * the author has asked to be told.
    */
@@ -700,6 +771,59 @@ class Checker {
   private report(code: DiagnosticCode, message: string, loc?: SourceLocation): void {
     this.diagnostics.push(loc ? { severity: 'error', code, message, loc }
                               : { severity: 'error', code, message });
+  }
+}
+
+/**
+ * The source text of a syntactic access path — `order.customer.name` — or null
+ * when the expression is not one.
+ *
+ * Narrowing is keyed on this, which is why it is syntactic: two spellings of
+ * the same value are two paths, and only the one the author null-checked is
+ * narrowed. That is the limit of the flow sensitivity, and it is a deliberate
+ * one.
+ */
+function pathOf(expr: Expr): string | null {
+  if (expr.type === 'variable') return expr.name;
+  if (expr.type === 'member_access') {
+    const base = pathOf(expr.object);
+    return base === null ? null : `${base}.${expr.property}`;
+  }
+  return null;
+}
+
+/**
+ * The paths a condition establishes are not null, when it holds (`positive`)
+ * or when it does not.
+ *
+ *     isNotNull(k.a)                     holds      -> k.a is not null
+ *     isNull(k.a)                        fails      -> k.a is not null
+ *     isNotNull(k.a) && isNotNull(k.b)   holds      -> both
+ *
+ * Anything else yields nothing. In particular `||` establishes nothing on
+ * either side, and negation is not followed: a reader should not have to do
+ * boolean algebra to predict what the checker knows.
+ */
+function nonNullPaths(condition: Expr, positive: boolean): ReadonlySet<string> {
+  const paths = new Set<string>();
+  collectNonNullPaths(condition, positive, paths);
+  return paths;
+}
+
+function collectNonNullPaths(condition: Expr, positive: boolean, into: Set<string>): void {
+  if (condition.type === 'function_call' && condition.args.length === 1) {
+    const wanted = positive ? 'isNotNull' : 'isNull';
+    if (condition.name === wanted) {
+      const path = pathOf(condition.args[0]);
+      if (path) into.add(path);
+    }
+    return;
+  }
+  // `a && b` holds only if both do, so both sides' knowledge applies. `||`
+  // tells us nothing about either side.
+  if (condition.type === 'binary' && condition.operator === '&&' && positive) {
+    collectNonNullPaths(condition.left, true, into);
+    collectNonNullPaths(condition.right, true, into);
   }
 }
 
