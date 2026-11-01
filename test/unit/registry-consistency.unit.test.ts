@@ -66,6 +66,7 @@ const NOT_EMITTABLE: Record<string, Record<string, string>> = {
     'sub:datetime,duration': 'emitted by the dynamic kSub helper',
     'sub:datetime,datetime': 'emitted by the dynamic kSub helper',
     'add:duration,duration': 'emitted by the dynamic kAdd helper',
+    'sub:duration,duration': 'emitted by the dynamic kSub helper',
     'add:duration,date': 'emitted by the dynamic kAdd helper',
     'add:duration,datetime': 'emitted by the dynamic kAdd helper',
     'mul:duration,int': 'emitted by the dynamic kMul helper',

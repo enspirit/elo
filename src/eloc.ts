@@ -7,6 +7,7 @@ import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
 import { compileToPythonWithMeta } from './compilers/python';
 import { getPrelude, Target as PreludeTarget } from './preludes';
+import { typecheck } from './typecheck';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json');
@@ -30,6 +31,8 @@ interface Options {
   execute?: boolean;
   /** If true, strip guard/check assertions from output */
   stripGuards?: boolean;
+  /** If true, report static type diagnostics to stderr */
+  typecheck?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
@@ -79,6 +82,10 @@ function parseArgs(args: string[]): Options {
         options.stripGuards = true;
         break;
 
+      case '--typecheck':
+        options.typecheck = true;
+        break;
+
       case '-h':
       case '--help':
         printHelp();
@@ -125,6 +132,8 @@ Options:
   -p, --prelude             Include necessary library imports/requires
   --prelude-only            Output only the prelude (no expression needed)
   --strip-guards            Strip guard/check assertions from output
+  --typecheck               Report static type errors to stderr, and exit
+                            non-zero if any were found
   -f, --file <path>         Output to file instead of stdout
   -v, --version             Show version number
   -h, --help                Show this help message
@@ -154,6 +163,9 @@ Examples:
   # Compile from stdin
   echo "2 + 3 * 4" | eloc -
   cat input.elo | eloc - -t ruby
+
+  # Report type errors (compiles anyway, exits non-zero)
+  eloc --typecheck -e "'hello' - 5"
 
 For evaluating expressions, use the 'elo' command instead.
 `);
@@ -260,6 +272,13 @@ function main() {
     process.exit(1);
   }
 
+  // Type-check before compiling, so a type error is reported even when
+  // compilation then fails for the same reason on some targets.
+  let typeErrorsFound = false;
+  if (options.typecheck) {
+    typeErrorsFound = reportTypeDiagnostics(sources, options.target);
+  }
+
   // Compile each expression
   let results: string[];
   try {
@@ -301,6 +320,44 @@ function main() {
   } else {
     console.log(output);
   }
+
+  // Type errors do not withhold the output — the emitted code is the same
+  // whether or not the checker ran — but they do make the run fail, so a build
+  // step or a host saving a formula can act on them.
+  if (typeErrorsFound) {
+    process.exit(1);
+  }
+}
+
+/**
+ * Report type diagnostics for every source line to stderr.
+ * Returns true if anything was reported.
+ */
+function reportTypeDiagnostics(sources: string[], target: Target): boolean {
+  // A bare name is a column reference in SQL, so undefined variables are
+  // legitimate there and the checker must not be stricter than the compiler.
+  const allowUndefinedVariables = target === 'sql';
+  const multiLine = sources.length > 1;
+  let found = false;
+
+  sources.forEach((source, index) => {
+    if (isBlankSource(source)) return;
+    let diagnostics;
+    try {
+      diagnostics = typecheck(parse(source.trim()), { allowUndefinedVariables });
+    } catch {
+      // A parse error is not the checker's business; compilation below will
+      // report it with its own message.
+      return;
+    }
+    for (const diagnostic of diagnostics) {
+      found = true;
+      const where = multiLine ? `${index + 1}: ` : '';
+      console.error(`${where}${diagnostic.severity}: ${diagnostic.message} [${diagnostic.code}]`);
+    }
+  });
+
+  return found;
 }
 
 main();

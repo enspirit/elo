@@ -217,8 +217,9 @@ export function createTypeDefs(): TypeDefs {
   // datetime - datetime -> duration
   defs.register('sub', [Types.datetime, Types.datetime], Types.duration);
 
-  // duration + duration -> duration
+  // duration +/- duration -> duration
   defs.register('add', [Types.duration, Types.duration], Types.duration);
+  defs.register('sub', [Types.duration, Types.duration], Types.duration);
   // duration + date -> date (commutative)
   defs.register('add', [Types.duration, Types.date], Types.date);
   // duration + datetime -> datetime (commutative)
@@ -361,13 +362,19 @@ export function createTypeDefs(): TypeDefs {
   defs.register('max', [Types.array], Types.any);
 
   // ============================================
-  // Numeric extrema (two-argument form)
+  // Extrema (two-argument form)
   // ============================================
+  // min/max pick one of their two operands, so a pair of the same orderable
+  // type yields that type. Strings, dates, datetimes and durations compare
+  // just as well as numbers do.
   for (const fn of ['min', 'max']) {
     defs.register(fn, [Types.int, Types.int], Types.int);
     defs.register(fn, [Types.int, Types.float], Types.float);
     defs.register(fn, [Types.float, Types.int], Types.float);
     defs.register(fn, [Types.float, Types.float], Types.float);
+    for (const t of [Types.string, Types.date, Types.datetime, Types.duration]) {
+      defs.register(fn, [t, t], t);
+    }
   }
 
   // ============================================

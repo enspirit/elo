@@ -136,6 +136,10 @@ The compiler translates Elo expressions to Ruby, JavaScript, or SQL:
 # Compile from stdin
 echo "2 + 3 * 4" | ./bin/eloc -
 cat input.elo | ./bin/eloc - -t ruby
+
+# Report type errors before compiling
+./bin/eloc --typecheck -e "'hello' - 5"
+# error: No signature of operator '-' accepts sub(String, Int). ...
 ```
 
 Options:
@@ -143,8 +147,32 @@ Options:
 - `-t, --target <lang>` - Target language: `ruby`, `js` (default), `python`, `sql`
 - `-p, --prelude` - Include necessary library imports/requires
 - `--prelude-only` - Output only the prelude (no expression needed)
+- `--typecheck` - Report static type errors to stderr, exit non-zero if any
 - `-f, --file <path>` - Output to file instead of stdout
 - `-h, --help` - Show help message
+
+### Type checking
+
+`--typecheck` runs an optional static check before compiling. It reports
+unknown functions, wrong argument counts, arguments of the wrong type,
+operators applied to types they do not accept, and conditions that are not
+`Bool`. It reports every problem it finds in one pass, and it does not change
+the generated code — the same code is emitted with or without the flag.
+
+The checker is deliberately silent about what it cannot know. The input `_` has
+type `Any` until it is coerced, and so do lambda parameters, so a call with an
+unknown argument type is accepted without complaint. Coerce `_` through a
+declared type to get the most out of it:
+
+```elo
+let Order = { total: Int, label: String },
+    order = _ |> Order
+in order.total * 2
+```
+
+It is a correctness and portability tool, not a security feature: the sandbox
+guarantees in [the security model](https://elo-lang.org/security) hold whether
+or not you run it.
 
 ### Evaluator (elo)
 

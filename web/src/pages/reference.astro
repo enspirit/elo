@@ -28,6 +28,7 @@ import Footer from '../components/Footer.astro';
         <span class="toc-section">Robustness</span>
         <a href="#assertions">Assertions</a>
         <a href="#guards">Guards</a>
+        <a href="#typecheck">Type Checking</a>
         <span class="toc-section">Get Started</span>
         <a href="#get-started">Installation</a>
         <a href="#javascript-api">JavaScript API</a>
@@ -653,6 +654,55 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
         <p class="note"><strong>Note:</strong> Guards compile to JavaScript, Ruby, and Python only. Use <code>--strip-guards</code> to remove guards in production builds.</p>
       </section>
 
+      <section class="doc-section" id="typecheck">
+        <h2>Type Checking</h2>
+        <p>
+          Elo is dynamically typed: a type mismatch normally surfaces when the
+          compiled code runs. <code>eloc --typecheck</code> is an optional pass
+          that looks for those mistakes first. It reports every problem it finds
+          in one run and does not change the generated code — the same code is
+          emitted with or without the flag.
+        </p>
+        <table class="type-table">
+          <thead><tr><th>Reports</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td>Unknown function</td><td><code class="language-elo" data-invalid>foo(1)</code></td></tr>
+            <tr><td>Wrong number of arguments</td><td><code class="language-elo" data-invalid>upper('a', 'b')</code></td></tr>
+            <tr><td>Argument of the wrong type</td><td><code class="language-elo" data-invalid>year('hello')</code></td></tr>
+            <tr><td>Operator applied to the wrong types</td><td><code class="language-elo" data-invalid>'hello' - 5</code></td></tr>
+            <tr><td>Condition that is not a Bool</td><td><code class="language-elo" data-invalid>if 42 then 1 else 2</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>What it stays silent about</h3>
+        <p>
+          The checker only reports what it can justify. The input <code>_</code>
+          is <code>Any</code> until it is coerced, and so are lambda parameters,
+          so a call whose argument type is unknown is accepted without
+          complaint: <code>upper(_)</code> is never reported, because
+          <code>_</code> may well be a String.
+        </p>
+        <div class="example" data-action="click->doc#tryExample" data-input='"hello"' data-expected='&#39;HELLO&#39;'>
+          <div class="example-header">Accepted, because <code>_</code> may be a String</div>
+          <pre class="language-elo">upper(_)</pre>
+        </div>
+        <p>
+          That makes declared types the way to get real checking. Coerce
+          <code>_</code> through a <a href="#data-schemas">data schema</a> and
+          the checker has something to work with:
+        </p>
+        <div class="example" data-action="click->doc#tryExample" data-input='{"total": 21, "label": "ab"}' data-expected='42'>
+          <div class="example-header">Checking against a declared schema</div>
+          <pre class="language-elo">let Order = &#123; total: Int, label: String &#125;, order = _ |&gt; Order in order.total * 2</pre>
+          <p class="example-desc">Inside the <code>in</code> body, <code>order.total</code> is known to be an <code>Int</code>, so <code>upper(order.total)</code> would be reported.</p>
+        </div>
+        <p>
+          Type checking is a correctness and portability tool, not a security
+          feature: the guarantees on the <a href="/security">security page</a>
+          hold whether or not you run it.
+        </p>
+      </section>
+
       <section class="doc-section" id="get-started">
         <h2>Get Started</h2>
         <p>Ready to use Elo on your computer? Here's how to get started.</p>
@@ -747,7 +797,10 @@ eloc -e "2 + 3 * 4" -t sql
 eloc -e "2 + 3 * 4" -t python
 
 # Include runtime prelude
-eloc -e "NOW + PT2H" -t ruby -p</pre>
+eloc -e "NOW + PT2H" -t ruby -p
+
+# Report type errors before compiling
+eloc --typecheck -e "'hello' - 5"</pre>
         <table class="type-table">
           <thead><tr><th>Option</th><th>Description</th></tr></thead>
           <tbody>
@@ -755,10 +808,12 @@ eloc -e "NOW + PT2H" -t ruby -p</pre>
             <tr><td><code>-t, --target</code></td><td>Target: <code>js</code>, <code>ruby</code>, <code>python</code>, <code>sql</code></td></tr>
             <tr><td><code>-p, --prelude</code></td><td>Include runtime imports</td></tr>
             <tr><td><code>--strip-guards</code></td><td>Remove guard/check assertions</td></tr>
+            <tr><td><code>--typecheck</code></td><td>Report type errors, exit non-zero if any</td></tr>
             <tr><td><code>-f, --file</code></td><td>Output to file</td></tr>
           </tbody>
         </table>
       </section>
+
 
       <Footer className="doc-footer" />
     </article>

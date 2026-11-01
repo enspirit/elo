@@ -195,13 +195,20 @@ function extractAstroExamples(content: string, source: string): Example[] {
   const examples: Example[] = [];
 
   // Match pre or code with class="language-elo"
-  // We need to also capture the parent context for data-input
-  const regex = /<(?:pre|code)\s+class="language-elo"[^>]*>([^<]+)<\/(?:pre|code)>/g;
+  // We need to also capture the parent context for data-input, and the
+  // element's own attributes so a deliberately-invalid example can opt out.
+  const regex = /<(?:pre|code)\s+class="language-elo"([^>]*)>([^<]+)<\/(?:pre|code)>/g;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
-    let code = match[1];
+    const attributes = match[1];
+    let code = match[2];
     const matchIndex = match.index;
+
+    // Pages that document what Elo *rejects* have to show programs that do
+    // not work — the type-checking section is made of them. `data-invalid`
+    // marks those: they are still highlighted, but not run.
+    if (attributes.includes('data-invalid')) continue;
 
     // Calculate line number
     const beforeMatch = content.slice(0, matchIndex);
