@@ -1,5 +1,8 @@
 # Parser blows up exponentially on nested `let … in`
 
+**FIXED** — commit `e71723b`, as the first commit of the `type-checker` branch so
+it sits directly on `main` and can ship on its own.
+
 **Found while building the type checker (branch `type-checker`). Pre-existing on
 `main` — reproduced on `main` with the type-checker work stashed.**
 
@@ -52,7 +55,36 @@ unbounded speculative parsing.
 So every nesting level parses its suffix twice: once speculatively, once for
 real. 2^n.
 
-## Fix options (not yet chosen)
+## Fix chosen
+
+Option 2, in spirit: do not start a speculation that cannot succeed. A range
+start can never be an unparenthesised `let`, `guard` or `check` — the body of
+each runs to the end and swallows the `..` — so seeing one of those tokens
+straight after `in` means the `in` belongs to the binding. Skipping there is
+exactly the expensive case, and nesting becomes linear: 40 levels parse in 3 ms
+and 80 levels, which never finished, are instant.
+
+Option 1 was rejected: `let x = 5 in 1..10 in x` parses today, so an `in` in a
+binding value really can be range membership, and a context flag would have
+changed what parses. For a fix meant to ship on its own that is not acceptable.
+
+Semantics were verified unchanged by running the old and new parsers over 1372
+expressions — every fixture line, every website example, and generated programs
+stressing the ambiguity. 1368 byte-identical; the other 4 are rejected by both,
+differing only in the error message, and the new one points at the `in` rather
+than at the end of input.
+
+`guard`/`check` nesting had the same blowup (1128 ms at 20 levels) and is fixed
+by the same change, as suspected below.
+
+## Release
+
+The fix touches `src/parser.ts` only and is independent of everything else on
+the branch. The same bug is present on `release-1.0.2` (1020 ms at 20 levels)
+and the commit cherry-picks onto it cleanly, so 1.1.1 and a 1.0.3 backport are
+both available. Releasing is not done here.
+
+## Fix options (considered)
 
 1. **Remove the ambiguity with context, no backtracking.** Track "we are
    parsing a let-binding value" (a counter, like `descend`'s depth) and have
@@ -84,5 +116,4 @@ skill whether the `let … in` / `x in range` overload should survive at all.
 ## Note
 
 The type checker's own robustness test had to avoid 40 nested `let`s because of
-this, which is how it surfaced. Once fixed, restore that case in
-`test/unit/typecheck.unit.test.ts` ("never throws, whatever the expression").
+this, which is how it surfaced. That case is restored.

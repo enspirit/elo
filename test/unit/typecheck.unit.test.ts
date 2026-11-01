@@ -368,10 +368,8 @@ describe('Typecheck - robustness', () => {
     const hostile = [
       '1 + '.repeat(50) + '1',
       '[['.repeat(40) + ']]'.repeat(40),
-      // Kept at 8 levels on purpose: the parser is exponential in nested
-      // `let … in` (see .claude/tasks/todo/0092), so a deeper case would time
-      // out in the parser before the checker ever ran. Raise it once fixed.
-      'let a = 1 in '.repeat(8) + 'a',
+      'let a = 1 in '.repeat(40) + 'a',
+      'guard true in '.repeat(40) + '1',
       'fn(x ~> '.repeat(30) + 'x' + ')'.repeat(30),
       '{ a: { a: { a: 1 } } }',
       '.a.b.c.d.e',
