@@ -42,3 +42,29 @@ The acceptance assertion is a list literal indexed in place —
 `assert(last([1, 2, 3]) == 3)` — which is red on SQL only. **It stays green by
 accident until 0178 lands**, because psql exits 0 on a syntax error. Do 0178
 first, or assert the emitted string in an integration test as well.
+
+## Addendum: what was done
+
+Red first by lifting the three 0179 entries out of `KNOWN_INVALID` in
+`test-sql.sh`, which the task predicted would be necessary: **8 assertions over
+3 fixtures**, every one of them `syntax error at or near "["`. SQL only — the
+other three targets never had the problem.
+
+A new non-quarantined fixture carries the assertion going forward,
+`reference/list-literal-subscript.elo`, 16 assertions on all four targets:
+`at`, `first` and `last` over Int, Float and String literals, over a receiver
+that is itself a call, and the two out-of-range cases that must keep answering
+null. Generated against the reverted compiler it was **12 red of 16 on SQL**
+and green on JavaScript, Ruby and Python. The 4 that passed are the
+call-receiver ones — a subquery is already parenthesised, which is exactly why
+the existing corpus looked healthy.
+
+The fix is a `subscript(receiver, index)` helper that always parenthesises. A
+column reference and a `$1` parse either way, so always-parens costs nothing
+and is the shortest rule to keep; `first(_)` now emits `($1)[1]`. Regenerating
+the whole corpus touched only the three accessor fixtures.
+
+`at` is out of quarantine and green. `first` and `last` are **not** — their
+second line is `assert(isNull(first([])) == true)`, which is 0181's untyped
+`ARRAY[]`, so they moved to that group with a note. The subscript behaviour
+they assert is covered by the new fixture in the meantime.

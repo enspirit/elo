@@ -51,13 +51,12 @@ should_skip() {
 # that starts passing is reported as a failure, so the list cannot go stale,
 # and it must shrink to empty.
 KNOWN_INVALID=(
-    # 0179 - `first([3.7])` emits ARRAY[3.7][1]; a subscripted expression needs
-    # parentheses: syntax error at or near "["
-    "stdlib/list/access/at"
-    "stdlib/list/access/first"
-    "stdlib/list/access/last"
     # 0181 - `[]` emits a bare ARRAY[]: cannot determine type of empty array
     "reference/arrays"
+    # first/last assert `isNull(first([]))`, which is the only line left failing
+    # in them; the subscript itself is covered by reference/list-literal-subscript
+    "stdlib/list/access/first"
+    "stdlib/list/access/last"
     "stdlib/list/arithmetic/concat"
     "stdlib/list/predicates/contains"
     "stdlib/list/predicates/isEmpty"

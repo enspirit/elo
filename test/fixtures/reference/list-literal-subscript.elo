@@ -1,0 +1,32 @@
+# Indexing a list that is written in place, rather than reached through a
+# variable or a column.
+#
+# `at`, `first` and `last` compile to a SQL subscript, and PostgreSQL only
+# subscripts a *parenthesised* expression: `ARRAY[1, 2, 3][1]` is a syntax
+# error where `(ARRAY[1, 2, 3])[1]` is 1. A column reference parses either way,
+# so for as long as the fixtures only indexed `_` the emission looked fine.
+#
+# The receiver is a literal here, and a call there, because both reach the same
+# emitter and only one of them was ever exercised.
+
+assert(first([1, 2, 3]) == 1)
+assert(last([1, 2, 3]) == 3)
+assert(at([1, 2, 3], 0) == 1)
+assert(at([1, 2, 3], 1) == 2)
+assert(at([1, 2, 3], 2) == 3)
+
+assert(first([1.5, 2.5]) == 1.5)
+assert(last([1.5, 2.5]) == 2.5)
+assert(first(['a', 'b']) == 'a')
+assert(at(['a', 'b'], 1) == 'b')
+assert(last(['a', 'b']) == 'b')
+
+# A receiver that is itself a call subscripts the same way
+assert(first(reverse([1, 2, 3])) == 3)
+assert(last(reverse([1, 2, 3])) == 1)
+assert(at(sort([3, 1, 2]), 0) == 1)
+assert(at(sort([3, 1, 2]), 2) == 3)
+
+# Out of range stays null, which is what the parens must not change
+assert(isNull(at([1, 2, 3], 100)) == true)
+assert(isNull(at([1, 2, 3], -1)) == true)

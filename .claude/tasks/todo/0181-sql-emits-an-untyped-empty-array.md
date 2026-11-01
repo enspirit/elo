@@ -57,3 +57,9 @@ much cheaper — worth checking before starting.
 
 The other three targets are unaffected: `[]` is `[]` in JavaScript and Python
 and Ruby, and needs no element type.
+
+## Inherited from 0179
+
+`stdlib/list/access/first` and `stdlib/list/access/last` moved into this
+group when 0179 fixed the subscript parentheses. Their first line passes now;
+the only line still failing in each is `assert(isNull(first([])) == true)`.

@@ -213,12 +213,18 @@ export function createSQLBinding(): StdLib<string> {
     `COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0)`);
   sqlLib.register('count', [Types.array], (args, ctx) =>
     `COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0)`);
+  // PostgreSQL only subscripts a parenthesised expression: `ARRAY[1, 2][1]` is
+  // a syntax error where `(ARRAY[1, 2])[1]` is 1. A column reference parses
+  // either way, which is why every list literal indexed in place used to emit
+  // SQL that psql rejected. Always parenthesising is both correct and the
+  // shortest rule to keep.
+  const subscript = (receiver: string, index: string) => `(${receiver})[${index}]`;
   sqlLib.register('at', [Types.array, Types.int], (args, ctx) =>
-    `${ctx.emit(args[0])}[${ctx.emit(args[1])} + 1]`);
+    subscript(ctx.emit(args[0]), `${ctx.emit(args[1])} + 1`));
   sqlLib.register('first', [Types.array], (args, ctx) =>
-    `${ctx.emit(args[0])}[1]`);
+    subscript(ctx.emit(args[0]), '1'));
   sqlLib.register('last', [Types.array], (args, ctx) =>
-    `${ctx.emit(args[0])}[CARDINALITY(${ctx.emit(args[0])})]`);
+    subscript(ctx.emit(args[0]), `CARDINALITY(${ctx.emit(args[0])})`));
   sqlLib.register('min', [Types.array], (args, ctx) =>
     `(SELECT MIN(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
   sqlLib.register('max', [Types.array], (args, ctx) =>
