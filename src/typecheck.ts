@@ -74,6 +74,8 @@ export type DiagnosticCode =
   | 'invalid-member-access'
   /** An unknown name in a type expression. */
   | 'unknown-type'
+  /** Strict mode only: the program relies on a value of unknown type. */
+  | 'unresolved-any'
   /** The checker gave up to protect itself; see `maxDepth`. */
   | 'nesting-too-deep';
 
@@ -115,6 +117,27 @@ export interface TypecheckOptions {
    * to terminate on hostile input rather than overflow the host stack.
    */
   maxDepth?: number;
+  /**
+   * Declare the type of the input `_`.
+   *
+   * `_ |> Order` already says this in the language, and that stays the form to
+   * teach. This is for a host that already knows the shape of its data — a
+   * formula editor that knows its columns — and would rather supply it than
+   * make the author restate it. Takes a parsed type expression, so there is
+   * one spelling of a schema: `parseTypeExpr('{ total: Int }')`.
+   */
+  inputType?: TypeExpr;
+  /**
+   * Require every call to be fully typed.
+   *
+   * Without this, an argument of unknown type is accepted in silence, which is
+   * what keeps the checker quiet about an uncoerced `_`. With it, relying on
+   * something unknown is itself reported — which in practice means *the
+   * program must declare its input*. That is the idiomatic form, so strict
+   * mode is how a host requires idiomatic Elo and can then promise that a
+   * saved formula will not fail at evaluation for type reasons.
+   */
+  strict?: boolean;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -169,14 +192,22 @@ class Checker {
   private readonly diagnostics: Diagnostic[] = [];
   private readonly allowUndefinedVariables: boolean;
   private readonly maxDepth: number;
+  private readonly strict: boolean;
+  private readonly inputType?: TypeExpr;
 
   constructor(options: TypecheckOptions) {
     this.allowUndefinedVariables = options.allowUndefinedVariables ?? false;
     this.maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
+    this.strict = options.strict ?? false;
+    this.inputType = options.inputType;
   }
 
   run(expr: Expr): { type: CheckType; diagnostics: Diagnostic[] } {
-    const type = this.check(expr, new Map(), new Map(), 0);
+    const env: TypeEnv = new Map();
+    if (this.inputType) {
+      env.set('_', this.typeExprToCheckType(this.inputType, env, new Map(), 0));
+    }
+    const type = this.check(expr, env, new Map(), 0);
     return { type, diagnostics: this.diagnostics };
   }
 
@@ -405,6 +436,10 @@ class Checker {
   private fieldOf(object: CheckType, property: string, loc?: SourceLocation): CheckType {
     switch (object.kind) {
       case 'any':
+        this.reportUnresolved(
+          `'.${property}' reads a field of a value of unknown type`,
+          loc
+        );
         return ANY;
 
       case 'schema': {
@@ -506,6 +541,15 @@ class Checker {
         const flat = combination.map(project);
         if (!eloTypeDefs.has(name, flat)) {
           if (flat.some((t) => t.kind === 'any')) {
+            // The table has no signature for this name on an unknown argument,
+            // so the call needs a concrete type and we cannot tell whether it
+            // has one. Note this never fires for a function that genuinely
+            // accepts anything — isNull, typeOf, assert all declare `any`
+            // signatures and resolve above.
+            this.reportUnresolved(
+              `${name} needs a known argument type, got ${argTypes.map(describe).join(', ')}`,
+              loc
+            );
             results.push(ANY);
             continue;
           }
@@ -637,6 +681,20 @@ class Checker {
     for (const constraint of constraints) {
       this.checkCondition(constraint.condition, env, types, depth, 'constraint');
     }
+  }
+
+  /**
+   * Report a reliance on something unknown — but only in strict mode, where
+   * the author has asked to be told.
+   */
+  private reportUnresolved(message: string, loc?: SourceLocation): void {
+    if (!this.strict) return;
+    this.report(
+      'unresolved-any',
+      `${message}. Coerce the input through a declared type (for example ` +
+      `'let X = { … } in _ |> X') so the checker can see it.`,
+      loc
+    );
   }
 
   private report(code: DiagnosticCode, message: string, loc?: SourceLocation): void {

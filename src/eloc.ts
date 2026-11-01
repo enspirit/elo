@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync } from 'fs';
-import { parse } from './parser';
+import { parse, parseTypeExpr } from './parser';
+import type { TypeExpr } from './ast';
 import { compileToRubyWithMeta } from './compilers/ruby';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
@@ -33,6 +34,10 @@ interface Options {
   stripGuards?: boolean;
   /** If true, report static type diagnostics to stderr */
   typecheck?: boolean;
+  /** If true, also require every call to be fully typed (implies typecheck) */
+  strict?: boolean;
+  /** Elo type expression declaring the shape of the input `_` */
+  inputType?: string;
 }
 
 function parseArgs(args: string[]): Options {
@@ -86,6 +91,17 @@ function parseArgs(args: string[]): Options {
         options.typecheck = true;
         break;
 
+      case '--strict':
+        // Strict without checking would have nothing to be strict about.
+        options.strict = true;
+        options.typecheck = true;
+        break;
+
+      case '--input-type':
+        options.inputType = args[++i];
+        options.typecheck = true;
+        break;
+
       case '-h':
       case '--help':
         printHelp();
@@ -134,6 +150,10 @@ Options:
   --strip-guards            Strip guard/check assertions from output
   --typecheck               Report static type errors to stderr, and exit
                             non-zero if any were found
+  --strict                  With --typecheck, also report anything the checker
+                            cannot type (implies --typecheck)
+  --input-type <type>       Declare the type of the input _, as an Elo type
+                            expression (implies --typecheck)
   -f, --file <path>         Output to file instead of stdout
   -v, --version             Show version number
   -h, --help                Show this help message
@@ -166,6 +186,9 @@ Examples:
 
   # Report type errors (compiles anyway, exits non-zero)
   eloc --typecheck -e "'hello' - 5"
+
+  # Check against a declared input shape
+  eloc --input-type '{ total: Int }' -e "upper(_.total)"
 
 For evaluating expressions, use the 'elo' command instead.
 `);
@@ -276,7 +299,7 @@ function main() {
   // compilation then fails for the same reason on some targets.
   let typeErrorsFound = false;
   if (options.typecheck) {
-    typeErrorsFound = reportTypeDiagnostics(sources, options.target);
+    typeErrorsFound = reportTypeDiagnostics(sources, options);
   }
 
   // Compile each expression
@@ -333,12 +356,22 @@ function main() {
  * Report type diagnostics for every source line to stderr.
  * Returns true if anything was reported.
  */
-function reportTypeDiagnostics(sources: string[], target: Target): boolean {
+function reportTypeDiagnostics(sources: string[], options: Options): boolean {
   // A bare name is a column reference in SQL, so undefined variables are
   // legitimate there and the checker must not be stricter than the compiler.
-  const allowUndefinedVariables = target === 'sql';
+  const allowUndefinedVariables = options.target === 'sql';
   const multiLine = sources.length > 1;
   let found = false;
+
+  let inputType: TypeExpr | undefined;
+  if (options.inputType !== undefined) {
+    try {
+      inputType = parseTypeExpr(options.inputType);
+    } catch (error) {
+      console.error(`Invalid --input-type: ${error}`);
+      process.exit(1);
+    }
+  }
 
   sources.forEach((source, index) => {
     if (isBlankSource(source)) return;
@@ -349,7 +382,11 @@ function reportTypeDiagnostics(sources: string[], target: Target): boolean {
       // Not trimmed: the lexer skips leading whitespace itself, and keeping it
       // means the reported column matches the column in the file.
       const ast = parse(source, { locations: true });
-      diagnostics = typecheck(ast, { allowUndefinedVariables });
+      diagnostics = typecheck(ast, {
+        allowUndefinedVariables,
+        strict: options.strict,
+        inputType,
+      });
     } catch {
       // A parse error is not the checker's business; compilation below will
       // report it with its own message.

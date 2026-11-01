@@ -719,6 +719,24 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
           does not. Predicates inside a
           <a href="#type-selectors">subtype constraint</a> are checked too.
         </p>
+        <h3>Requiring a declaration</h3>
+        <p>
+          <code>--strict</code> turns the silence about unknown types into a
+          diagnostic, so <code>upper(_)</code> is reported until the input is
+          declared. That makes it a contract rather than a lint: a host can
+          require the idiomatic form and then promise that a saved formula will
+          not fail at evaluation for type reasons. Functions that genuinely
+          accept anything — <code>isNull</code>, <code>typeOf</code>,
+          <code>assert</code>, <code>fetch</code> — stay quiet under it.
+        </p>
+        <p>
+          <code>--input-type</code> supplies the declaration from outside, for
+          a host that already knows the shape of its data. It takes an Elo type
+          expression, so there is one spelling of a schema:
+        </p>
+        <pre class="language-shell">eloc --input-type '&#123; total: Int &#125;' -e "upper(_.total)"
+# 1:1: error: No signature of upper accepts upper(Int). ...</pre>
+
         <p class="note">
           <strong>Note:</strong> an unknown field is reported for a
           <em>declared schema</em>, not for an object literal. A schema is a
@@ -841,6 +859,8 @@ eloc --typecheck -e "'hello' - 5"</pre>
             <tr><td><code>-p, --prelude</code></td><td>Include runtime imports</td></tr>
             <tr><td><code>--strip-guards</code></td><td>Remove guard/check assertions</td></tr>
             <tr><td><code>--typecheck</code></td><td>Report type errors, exit non-zero if any</td></tr>
+            <tr><td><code>--strict</code></td><td>Also report what the checker cannot type</td></tr>
+            <tr><td><code>--input-type</code></td><td>Declare the type of <code>_</code></td></tr>
             <tr><td><code>-f, --file</code></td><td>Output to file</td></tr>
           </tbody>
         </table>
