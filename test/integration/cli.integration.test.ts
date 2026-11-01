@@ -254,6 +254,72 @@ describe('CLI - Long options', () => {
   });
 });
 
+describe('CLI - --typecheck', () => {
+  it('says nothing and succeeds on a clean expression', () => {
+    const result = elocWithError('--typecheck -e "1 + 2"');
+    assert.strictEqual(result.stderr, '');
+    assert.strictEqual(result.exitCode, 0);
+    assert.strictEqual(result.stdout, '(function(_) { return 1 + 2; })');
+  });
+
+  it('reports a type error and exits non-zero', () => {
+    const result = elocWithError(`--typecheck -e "'hello' - 5"`);
+    assert.strictEqual(result.exitCode, 1);
+    assert.match(result.stderr, /No signature of operator '-' accepts sub\(String, Int\)/);
+  });
+
+  it('still emits the code it was asked for', () => {
+    // Checking is advisory: the emitted code is identical with and without
+    // the flag, so there is no reason to withhold it.
+    const checked = elocWithError(`--typecheck -e "'hello' - 5"`);
+    const unchecked = eloc(`-e "'hello' - 5"`);
+    assert.strictEqual(checked.stdout, unchecked);
+  });
+
+  it('changes nothing when the flag is absent', () => {
+    const result = elocWithError(`-e "'hello' - 5"`);
+    assert.strictEqual(result.exitCode, 0);
+    assert.strictEqual(result.stderr, '');
+  });
+
+  it('reports every problem in one run', () => {
+    const result = elocWithError(`--typecheck -e "year('a') + length(2)"`);
+    assert.match(result.stderr, /No signature of year/);
+    assert.match(result.stderr, /No signature of length/);
+  });
+
+  it('prefixes line numbers for multi-line input', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'elo-typecheck-'));
+    const file = join(dir, 'input.elo');
+    writeFileSync(file, "1 + 2\nupper(42)\n# a comment\nyear('x')\n");
+    try {
+      const result = elocWithError(`--typecheck ${file}`);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /^2: error: No signature of upper/m);
+      assert.match(result.stderr, /^4: error: No signature of year/m);
+    } finally {
+      unlinkSync(file);
+    }
+  });
+
+  it('names the diagnostic code', () => {
+    const result = elocWithError('--typecheck -e "if 42 then 1 else 2"');
+    assert.match(result.stderr, /\[non-bool-condition\]/);
+  });
+
+  it('accepts bare column references for the SQL target', () => {
+    // A bare name is a column in SQL, so the checker must not be stricter
+    // than the compiler there.
+    const result = elocWithError('--typecheck -t sql -e "upper(name)"');
+    assert.strictEqual(result.exitCode, 0);
+    assert.strictEqual(result.stdout, 'UPPER(name)');
+  });
+
+  it('is listed in the help output', () => {
+    assert.ok(eloc('--help').includes('--typecheck'));
+  });
+});
+
 /**
  * Tests for the elo evaluator command
  */
