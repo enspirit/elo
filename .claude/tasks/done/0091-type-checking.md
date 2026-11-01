@@ -44,7 +44,8 @@ Deviations from the plan, all recorded in the commits:
 - **Element-aware list refinements** live in the checker as a second source of
   type information, held in check by a test that they may only sharpen what
   `typedefs.ts` returned.
-- **Input-type inference (§9) was dropped** at Bernard's request.
+- **Input-type inference was dropped** at Bernard's request, and is now
+  `analyzed/0171-infer-the-input-type.md`.
 
 Found along the way, recorded as separate tasks rather than fixed here:
 
@@ -631,8 +632,8 @@ Worth being explicit about in the README/website if this ships, so nobody reads
 | 3 — **schema propagation** (§5): structural lattice in the checker, `project()` to `EloType`, `--strict`, `--input-type` (API + CLI) | ~200 lines, **all inside `src/typecheck.ts`**; no change to types/transform/compilers; no new user syntax | **highest** — unknown-field typos, wrong-typed field use, typed lambda params, union rules, constraint predicates |
 | 3b — **strict null + narrowing** (Q6): `\|`, `isNull`/`isNotNull` in `if`/`guard`, `&&`-chained guards | ~80 lines; the checker's only flow sensitivity | high; without narrowing, strict null is unusable |
 | (separate) `any` arity-fallback decision (§1.4) | small-medium | correctness |
-| (separate, later) `unsatisfiable-input` diagnostic (§9.3) | small-medium, after Stage 3 | sound, needs no declarations, works on bare `_` |
-| (separate, later) `--infer-input-type` scaffolding (§9.5) | 400–600 lines, new concept | authoring UX; the on-ramp to `--strict` by default |
+| (separate, later) `unsatisfiable-input` diagnostic — now `analyzed/0171` | small-medium, after Stage 3 | sound, needs no declarations, works on bare `_` |
+| (separate, later) `--infer-input-type` scaffolding — now `analyzed/0171` | 400–600 lines, new concept | authoring UX; the on-ramp to `--strict` by default |
 | (separate, later) node→type map for codegen specialisation (§5.5) | medium; touches `transform` | smaller output, fewer kXXX helpers |
 | (separate, small) duplicate schema keys; Elo-level runtime type-error wording (§5.3) | small | correctness / UX |
 
@@ -713,100 +714,8 @@ needs no change (no new functions).
 
 ## 9. Could we *infer* the input type that makes a program safe?
 
-Asked as a nice-to-have. My opinion: **yes, and Elo is unusually well suited to
-it — but the inferred schema is the less valuable half of the output.** The
-valuable half is the verdict "no input type can make this program safe", which
-is sound, needs no declarations at all, and is not circular.
-
-### 9.1 Why it is tractable here
-
-Running the checker backwards means collecting constraints on `_`-rooted access
-paths from each use site and solving. The usual blockers are absent:
-
-* **No recursion and no loops** (`transform.ts:521`), so every path from `_` is
-  a finite, statically known chain — `_.a.b`, `_.xs` + an element constraint
-  from the lambda. The constraint graph is a tree, not a cycle.
-* **The type domain is 13 kinds**, so leaf solving is finite-domain propagation,
-  not unification over an open universe.
-* **Shapes are closed by construction** — the set of fields the program touches
-  *is* the inferred shape; only the leaf types are ambiguous.
-* **Unions are expressible** (`T|U`), so a non-singleton solution can often be
-  written down in Elo rather than discarded.
-* **`:?` falls out of the program's own null handling** — this is the prettiest
-  part: a field is optional exactly where the program narrows it (`k.a | 0`,
-  `isNull(k.a)`). The program tells you which fields it tolerates missing.
-
-So the algorithm is constraint collection + small CSP, not Hindley–Milner (no
-type variables to unify, overloading is the whole difficulty). The natural
-output shape is `{ touched fields…, ... }` — ignored extras — which is both safe
-for the program (it uses only what it declared) and tolerant of the real input
-having more columns.
-
-### 9.2 Why the inferred schema must not become the contract
-
-The trap, and the reason I would not sell this as a safety feature:
-
-> An input type derived *from* the program, then used to check *that* program,
-> proves nothing. It passes by construction.
-
-So inference cannot replace `--input-type`/`_ |> X`. Its honest uses are:
-
-1. **Authoring scaffold.** `eloc --infer-input-type` prints a schema skeleton
-   the author reviews, corrects and pastes in. This is how you get people to
-   Stage 3's idiomatic form without hand-writing schemas — plausibly the thing
-   that makes `--strict`-by-default (Q8) palatable.
-2. **Host-side cross-check.** A host that *knows* its columns can compare the
-   inferred requirement against its real schema: "this formula needs
-   `price: Int|Float`, you have `price: String`" — a far better error than
-   either side alone, and not circular, because the real schema is independent
-   evidence.
-
-### 9.3 The genuinely sound half: unsatisfiability
-
-Constraint collection fails in a useful way. If two use sites demand disjoint
-types for the same path, **no input makes the program well-typed**, and that is
-a real defect provable with zero declarations. Verified to compile silently
-today:
-
-```
-year(_.x) + length(_.x)              # x must be Date|Datetime and String|Array
-upper(_.x) == lower(_.x) && _.x * 2 > 1
-```
-
-This partly rescues the bare-`_` case I wrote off in §1.3a: you still cannot
-type `_.price * 2`, but you *can* prove `year(_.x) + length(_.x)` is impossible.
-I would pull this forward ahead of schema printing — it is cheaper (detect the
-contradiction, no need to render a pretty schema), it needs no new CLI surface
-(just another diagnostic code, `unsatisfiable-input`), and it is the only part
-with a soundness story.
-
-### 9.4 Where it degrades
-
-Honest limits, so nobody expects more than it can give:
-
-* **Overloading makes solutions non-unique.** `k.x + 1` admits `Int` and
-  `Float`; `k.x + k.y` admits several pairs. The output is a set, which must be
-  rendered as a union, widened, or reported as a choice. There is no principal
-  type to fall back on — this is the main reason the output needs human review.
-* **Branches are disjunctions.** `if c then upper(k.x) else k.x + 1` has no
-  single-type solution, and under §5's union rule (`type-checks iff it
-  type-checks for every member`) `String|Int` does not rescue it. Correct answer
-  is "unsatisfiable", which is right but may read as a false positive to an
-  author who expected branch-local typing. Worth deciding deliberately if this
-  is ever built.
-* **Dynamic access is opaque.** `fetch()` and datapath segments computed at
-  runtime yield `Any` leaves and silently weaken the inferred schema — so the
-  printed schema must mark where it gave up, or it will be trusted too much.
-* **Unconstrained fields** (touched but never used in a typed position) can only
-  be `Any`.
-
-### 9.5 Verdict on this one
-
-Worth doing, in this order and not before Stages 0–3: **(a) the
-`unsatisfiable-input` diagnostic** — small, sound, useful immediately, no new
-CLI surface; **(b) `--infer-input-type` as a scaffolding command** — a real step
-up in machinery (constraint collection + finite-domain solving + union
-rendering, call it 400–600 lines and a genuinely new concept in the codebase),
-justified mainly as authoring UX and as the on-ramp to `--strict` by default.
-Both strictly after schema propagation exists, since both are that machinery run
-backwards.
+Split out into `analyzed/0171-infer-the-input-type.md`. The short version:
+feasible, and Elo is unusually well suited to it, but an input type derived
+*from* a program and then used to check *that* program proves nothing. The
+valuable half is the opposite verdict — "no input type can make this program
+safe" — which is sound, needs no declaration, and is still undetected today.
