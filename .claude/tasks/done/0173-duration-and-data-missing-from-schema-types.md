@@ -1,5 +1,7 @@
 # `Duration` and `Data` are documented as schema types but rejected
 
+> Renumbered from 0093, which collided with an existing task in `done/`. Commit messages written before the renumbering refer to it as 0093.
+
 **DONE** — the implementation was fixed, as decided below.
 
 Found while building the type checker. Pre-existing.

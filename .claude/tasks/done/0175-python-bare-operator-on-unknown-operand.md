@@ -1,8 +1,10 @@
 # Python emits a bare operator when one operand type is unknown
 
+> Renumbered from 0095, which collided with an existing task in `done/`. Commit messages written before the renumbering refer to it as 0095.
+
 **DONE** — fixed by registering the dynamic operator signatures explicitly.
 
-Found while wiring `Duration` in as a schema type (0093). Pre-existing on
+Found while wiring `Duration` in as a schema type (0173). Pre-existing on
 `main`, independent of that work:
 
 ```
@@ -106,7 +108,7 @@ is unchanged — `1 + 2` is still `1 + 2`.
 
 ## The wider question
 
-Assessed and answered in `todo/0096`: the arity fallback should **not** be
+Assessed and answered in `todo/0176`: the arity fallback should **not** be
 removed. It resolves 13–22 calls per target over the fixture corpus and the
 large majority have exactly one candidate, where picking it is correct and
 necessary. Only 22 sites across all four targets emit different code depending

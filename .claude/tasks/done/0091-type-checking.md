@@ -49,13 +49,13 @@ Deviations from the plan, all recorded in the commits:
 
 Found along the way, recorded as separate tasks rather than fixed here:
 
-- `todo/0092` — **the parser is exponential in nested `let … in`** (~390 chars
+- `todo/0172` — **the parser is exponential in nested `let … in`** (~390 chars
   hangs the compile host). Pre-existing on `main`; High severity by the
   project's own security policy. Root cause: `in` is overloaded between
   `let … in` and range membership, resolved by unbounded speculative parsing.
-- `todo/0093` — `Duration` and `Data` are documented as schema types but
+- `todo/0173` — `Duration` and `Data` are documented as schema types but
   rejected by `BUILTIN_TYPE_SELECTORS`.
-- `todo/0094` — whether `first`/`last`/`at`/`find`/`indexOf` should be nullable
+- `todo/0174` — whether `first`/`last`/`at`/`find`/`indexOf` should be nullable
   too, which would change how all list code reads.
 
 ---

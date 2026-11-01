@@ -1,6 +1,8 @@
 # `StdLib.lookup`'s arity fallback silently picks by registration order
 
-Split out of 0095, where fixing Python's operators answered the narrow bug but
+> Renumbered from 0096, which collided with an existing task in `done/`. Commit messages written before the renumbering refer to it as 0096.
+
+Split out of 0175, where fixing Python's operators answered the narrow bug but
 left the mechanism that caused it. **Measured, not estimated** — the numbers
 below come from instrumenting `StdLib.lookup` and emitting every candidate.
 

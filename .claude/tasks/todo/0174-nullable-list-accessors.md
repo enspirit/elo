@@ -1,5 +1,7 @@
 # Should `first`, `last`, `at`, `indexOf` and `find` be nullable?
 
+> Renumbered from 0094, which collided with an existing task in `done/`. Commit messages written before the renumbering refer to it as 0094.
+
 The type checker now treats an optional schema field (`:?`) as `T|Null` and
 reports using it as a `T`, with narrowing on `isNull`/`isNotNull`, `&&`-chained
 guards and the `|` operator. That was Bernard's call: strict on null, because

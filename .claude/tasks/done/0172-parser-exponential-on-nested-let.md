@@ -1,5 +1,7 @@
 # Parser blows up exponentially on nested `let … in`
 
+> Renumbered from 0092, which collided with an existing task in `done/`. Commit messages written before the renumbering refer to it as 0092.
+
 **FIXED** — commit `e71723b`, as the first commit of the `type-checker` branch so
 it sits directly on `main` and can ship on its own.
 

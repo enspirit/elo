@@ -182,8 +182,9 @@ describe('Typecheck - type names match the transform', () => {
   it('accepts exactly the type names the transform accepts', () => {
     // A name the checker accepts and the transform rejects means --typecheck
     // passes and compilation fails, which is the failure mode this whole suite
-    // exists to prevent. Duration and Data belong to both lists or to neither
-    // (see .claude/tasks/todo/0093).
+    // exists to prevent. A name belongs to both lists or to neither — see
+    // test/unit/schema-types.unit.test.ts, which additionally requires every
+    // admitted name to have a real parser in every target.
     assert.deepStrictEqual(
       [...BUILTIN_TYPE_NAMES].sort(),
       [...BUILTIN_TYPE_SELECTORS].sort()

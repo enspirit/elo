@@ -1020,10 +1020,9 @@ const TEMPORAL_KEYWORD_TYPES: Record<string, CheckType> = {
  * and the transform rejects is the worst kind of divergence, since
  * `--typecheck` would pass and compilation would then fail. `.` parses as `Any`.
  *
- * Duration and Data are documented as schema types but *rejected* by the
- * transform, so they are absent here too and the checker reports them. See
- * .claude/tasks/todo/0093 — when that is settled, both lists change together,
- * and the registry test below pins them to each other.
+ * Interval is deliberately absent: it is a selector *function*, not a schema
+ * type, because no target has a parser for it (done/0173). A name admitted
+ * here without one compiles to a reference that does not exist.
  */
 const BUILTIN_TYPE_REFS: Record<string, CheckType> = {
   Any: ANY,

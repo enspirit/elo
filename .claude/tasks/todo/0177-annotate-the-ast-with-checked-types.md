@@ -1,5 +1,7 @@
 # Feed the checker's types back into codegen
 
+> Renumbered from 0097, which collided with an existing task in `done/`. Commit messages written before the renumbering refer to it as 0097.
+
 Hand the type checker's inferred types to `transform`, so the compilers pick a
 typed implementation where the checker knows the type and the transform does
 not. §5.5 of `done/0091-type-checking.md`, deferred then and worth doing now
@@ -122,12 +124,12 @@ In rough order of value:
   general speed-up.
 - `fetch()` and data paths, which stay `Any` for both.
 
-### Interaction with 0096
+### Interaction with 0176
 
-`0096` records that `StdLib.lookup`'s arity fallback picks by registration order
+`0176` records that `StdLib.lookup`'s arity fallback picks by registration order
 whenever a type is unknown, with 22 sites where the choice changes the emitted
 code and two that are wrong. Annotation **reduces how often that path is
-reached** but does not remove it, and the two are independent: 0096 should be
+reached** but does not remove it, and the two are independent: 0176 should be
 fixed on its own merits.
 
 ## Steps
