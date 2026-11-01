@@ -99,3 +99,85 @@ a new one is deliberate. Same technique as the registry-consistency and
 schema-types tests. The measurement script is reproducible: for each
 (name, arity) with more than one candidate and no explicit all-`Any` signature,
 emit every candidate with a stand-in argument and compare the strings.
+
+## Addendum: what was done
+
+The measurement is now a test — `test/unit/ambiguous-dispatch.unit.test.ts` —
+which reproduces the enumeration above and pins the result. It groups a
+target's registrations by (name, arity), skips pairs with an explicit all-`Any`
+signature, emits every remaining candidate with stand-in arguments, and reports
+a pair whose candidates disagree on the emitted string. Red first, and it
+reproduced the table in this file exactly: ruby 11, sql 7, python 3,
+javascript 1.
+
+Four of the eight resolved, each by registering the emission that is correct
+for every runtime type:
+
+| target | name | now emits |
+|---|---|---|
+| sql | `floor(Any)`, `ceil(Any)` | `FLOOR(x)` / `CEIL(x)` — was the Int identity, so `floor(x)` compiled to `x` |
+| ruby | the ten period boundaries | `x.to_datetime.<boundary>` — `to_datetime` is the identity on a DateTime |
+| python | `round(Any)` | `kRound` |
+| python | `reverse(Any)` | `x[::-1]`, right for a string and a list alike |
+
+Python's two were already picking the correct candidate; registering them
+changes no emission and only removes the dependence on registration order.
+
+`test/fixtures/reference/dynamic-ambiguous-dispatch.elo` is the acceptance
+coverage, 37 assertions over all four targets. `min([x])` is the dynamic source
+rather than a lambda parameter, because it is typed `any`, emits on SQL too,
+and needs no input. Red before the fix: **4 assertions on SQL** (`floor` and
+`ceil` of a Float, where the identity left the value untouched) and **4 on
+Ruby** (`endOfWeek`, `endOfMonth`, `endOfQuarter`, `endOfYear` of a Date, where
+`Date#end_of_week` yields a Date at midnight rather than the last instant of
+the day). JavaScript and Python were already green and stayed so.
+
+## A second bug, found by the same measurement
+
+JavaScript's `reverse(Any)` *was* registered — inside the
+`for (const t of [Types.string, Types.any])` loop over the String functions —
+so the test skipped it as a deliberate choice. It was the String emission:
+
+    reverse([1, 2, 3])  ->  [1,2,3].split('').reverse().join('')
+                        ->  TypeError: split is not a function
+
+The other names in that loop happen to coincide on a string and a list
+(`.length`, `.length === 0`, `.includes`), which is why only `reverse` broke.
+It now goes through a `kReverse` helper that looks at the value;
+`reference/dynamic-reverse-dispatch.elo` asserts both runtime types and was
+2 red of 6 on JavaScript, green on Ruby (`.reverse` covers both) and Python
+(`[::-1]` covers both).
+
+That is the limit of the pinning test, and it is now written in its header: it
+sees *that* a choice was made, never whether the choice is right. Only an
+acceptance assertion per runtime type does that.
+
+## What is left, and why
+
+Listed in `AMBIGUOUS` with a reason, unchanged:
+
+- SQL `length/1`, `isEmpty/1`, `contains/2`, `reverse/1` — string versus array.
+  Dispatching on `pg_typeof` inside an expression does not work: PostgreSQL
+  type-checks **both** arms of a `CASE` even when only one can run, so
+  `CARDINALITY(x)` fails to plan when `x` is text. The remaining option is to
+  require a known type and say so, which is a language decision rather than a
+  patch.
+- `fetch/2` on all four targets — a String key is wrapped into a one-element
+  path, an Array key *is* the path, an Object key builds a record. A key of
+  unknown type is taken as a path and iterated, so on JavaScript
+  `fetch({ab: 1}, <dynamic 'ab'>)` walks `data['a']['b']` and answers null,
+  and on Ruby a String has no `reduce` at all. Needs a dispatching helper on
+  three targets and has no pure-expression form on SQL.
+
+Both want their own task once the direction is chosen.
+
+## Also found, out of scope, filed
+
+- `0178` — `test-sql.sh` reports a pass when psql reports an error, because
+  psql exits 0 without `ON_ERROR_STOP`. Only failed *assertions* are caught,
+  via `pg_terminate_backend`. This hid 0179 for as long as it existed.
+- `0179` — SQL emits `ARRAY[3.7][1]` for `first([3.7])`, which PostgreSQL
+  cannot parse; the subscripted expression needs parentheses. This is why the
+  fixture here uses `min([x])` and not `first([x])`.
+- `0180` — the acceptance suite is green only under `TZ=UTC`;
+  `temporal-startof-endof` fails in CET on a clean checkout.

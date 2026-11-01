@@ -151,6 +151,9 @@ export function createPythonBinding(): StdLib<string> {
   // away from zero, like Ruby and PostgreSQL do natively.
   pyLib.register('round', [Types.float], helperCall('kRound'));
   pyLib.register('round', [Types.int], identity());
+  // kRound is correct for an integer too, so it is the all-types emission
+  // rather than something the arity fallback happens to reach first.
+  pyLib.register('round', [Types.any], helperCall('kRound'));
   for (const t of [Types.int, Types.float, Types.any]) {
     pyLib.register('round', [t, Types.int], helperCall('kRoundTo'));
   }
@@ -283,6 +286,10 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   });
   pyLib.register('reverse', [Types.array], (args, ctx) =>
     `list(reversed(${ctx.emit(args[0])}))`);
+  // Slicing reverses a string and a list alike, so it is the one emission that
+  // works when the type is unknown. Declared here rather than next to the
+  // String implementation so the three sit together.
+  pyLib.register('reverse', [Types.any], (args, ctx) => `${ctx.emit(args[0])}[::-1]`);
   pyLib.register('unique', [Types.array], (args, ctx) => {
     ctx.requireHelper?.('kEq');
     const arr = ctx.emit(args[0]);

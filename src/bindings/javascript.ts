@@ -349,9 +349,14 @@ export function createJavaScriptBinding(): StdLib<string> {
       `(${wrapReceiver(args, ctx)}.length === 0)`);
     jsLib.register('isBlank', [t], (args, ctx) =>
       `(${wrapReceiver(args, ctx)}.trim().length === 0)`);
-    jsLib.register('reverse', [t], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.split('').reverse().join('')`);
   }
+  // `reverse` is the one name in this group whose String emission is wrong for
+  // a list: `[1, 2].split` is not a function. So it is registered for String
+  // only, and the unknown type goes through a helper that looks at the value.
+  // The other names here happen to coincide on both (`.length`, `.includes`).
+  jsLib.register('reverse', [Types.string], (args, ctx) =>
+    `${wrapReceiver(args, ctx)}.split('').reverse().join('')`);
+  jsLib.register('reverse', [Types.any], helperCall('kReverse'));
 
   // String functions with three args
   for (const t of [Types.string, Types.any]) {

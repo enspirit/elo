@@ -1,0 +1,20 @@
+# `reverse` on a value whose type is not statically known.
+#
+# Unlike `length`, `isEmpty` and `contains` — where the String and List
+# implementations happen to coincide in JavaScript, Ruby and Python — reversing
+# a string and reversing a list are different operations in those targets, so
+# the dynamic implementation has to work for both. JavaScript picked the String
+# one and `reverse` of a list raised `split is not a function`.
+#
+# SQL is absent on purpose: REVERSE(text) and an ordinality subquery over an
+# array cannot be the same expression, and PostgreSQL type-checks both arms of
+# a CASE even when only one can run. On SQL `reverse` needs a known type.
+
+assert(reverse(first(['abc'])) == 'cba')
+assert(reverse(first([[1, 2, 3]])) == [3, 2, 1])
+assert(reverse(first([''])) == '')
+assert(reverse(first([[]])) == [])
+
+# The typed twins
+assert(reverse('abc') == 'cba')
+assert(reverse([1, 2, 3]) == [3, 2, 1])

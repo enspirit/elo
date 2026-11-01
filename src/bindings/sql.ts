@@ -311,8 +311,13 @@ export function createSQLBinding(): StdLib<string> {
   }
   sqlLib.register('floor', [Types.int], (args, ctx) => ctx.emit(args[0]));
   sqlLib.register('floor', [Types.float], (args, ctx) => `FLOOR(${ctx.emit(args[0])})`);
+  // Without an explicit Any, the arity fallback took the Int identity and
+  // `floor(x)` on an unknown type compiled to `x`. FLOOR() is correct for an
+  // integer too, so the all-types emission is the Float one.
+  sqlLib.register('floor', [Types.any], (args, ctx) => `FLOOR(${ctx.emit(args[0])})`);
   sqlLib.register('ceil', [Types.int], (args, ctx) => ctx.emit(args[0]));
   sqlLib.register('ceil', [Types.float], (args, ctx) => `CEIL(${ctx.emit(args[0])})`);
+  sqlLib.register('ceil', [Types.any], (args, ctx) => `CEIL(${ctx.emit(args[0])})`);
 
   // Duration unit conversion functions
   // Approximate units use standard conversions: 1y=365.25d, 1m=30.4375d, 1q=91.3125d

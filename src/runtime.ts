@@ -94,6 +94,10 @@ export const JS_HELPERS: Record<string, string> = {
   kMax2: `function kMax2(a, b) { return a > b ? a : b; }`,
   kRound: `function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); }`,
   kRoundTo: `function kRoundTo(x, n) { const f = Math.pow(10, n); return kRound(x * f) / f; }`,
+  /* Reversing a string and reversing a list are different operations in
+     JavaScript, so an unknown type has to be looked at. Ruby's `.reverse` and
+     Python's `[::-1]` cover both and need no helper. */
+  kReverse: `function kReverse(x) { return Array.isArray(x) ? [...x].reverse() : x.split('').reverse().join(''); }`,
   kMod: `function kMod(l, r) { return l % r; }`,
   kPow: `function kPow(l, r) { return Math.pow(l, r); }`,
   kEq: `function kEq(l, r) {

@@ -1,0 +1,56 @@
+# Functions whose implementation is chosen by the stdlib's arity fallback.
+#
+# When an argument type is not statically known, `StdLib.lookup` returns the
+# first registered implementation of that name and arity. For a name whose
+# implementations emit different code, the pick is decided by the order the
+# registrations appear in the binding file, which is not a semantic. SQL's
+# `floor(x)` compiled to `x` that way: `floor(Int)` is an identity and happened
+# to come first.
+#
+# `min([x])` is typed `any`, so each call below takes that path while still
+# being a literal the fixture runner can evaluate without an input.
+#
+# Every line has a typed twin. A divergence between the two is the bug.
+
+# Rounding, where the Int implementations are identities
+assert(floor(min([3.7])) == 3)
+assert(floor(min([-3.2])) == -4)
+assert(floor(min([5])) == 5)
+assert(ceil(min([3.2])) == 4)
+assert(ceil(min([-3.9])) == -3)
+assert(ceil(min([5])) == 5)
+assert(round(min([3.5])) == 4)
+assert(round(min([-2.5])) == -3)
+assert(round(min([5])) == 5)
+
+# Period boundaries, where Date and DateTime need different receivers
+assert(startOfDay(min([D2024-06-15T10:30:00Z])) == D2024-06-15T00:00:00Z)
+assert(startOfDay(min([D2024-06-15])) == D2024-06-15T00:00:00Z)
+assert(endOfDay(min([D2024-06-15])) >= D2024-06-15T23:59:59Z)
+assert(endOfDay(min([D2024-06-15])) < D2024-06-16T00:00:00Z)
+assert(startOfWeek(min([D2024-06-12])) == D2024-06-10T00:00:00Z)
+assert(endOfWeek(min([D2024-06-12])) >= D2024-06-16T23:59:59Z)
+assert(endOfWeek(min([D2024-06-12])) < D2024-06-17T00:00:00Z)
+assert(startOfMonth(min([D2024-06-15])) == D2024-06-01T00:00:00Z)
+assert(endOfMonth(min([D2024-06-15])) >= D2024-06-30T23:59:59Z)
+assert(endOfMonth(min([D2024-06-15])) < D2024-07-01T00:00:00Z)
+assert(startOfQuarter(min([D2024-08-15])) == D2024-07-01T00:00:00Z)
+assert(endOfQuarter(min([D2024-08-15])) >= D2024-09-30T23:59:59Z)
+assert(endOfQuarter(min([D2024-08-15])) < D2024-10-01T00:00:00Z)
+assert(startOfYear(min([D2024-06-15])) == D2024-01-01T00:00:00Z)
+assert(endOfYear(min([D2024-06-15])) >= D2024-12-31T23:59:59Z)
+assert(endOfYear(min([D2024-06-15])) < D2025-01-01T00:00:00Z)
+
+# The typed twins, which must keep agreeing
+assert(floor(3.7) == 3)
+assert(floor(-3.2) == -4)
+assert(ceil(3.2) == 4)
+assert(ceil(-3.9) == -3)
+assert(round(3.5) == 4)
+assert(round(-2.5) == -3)
+assert(startOfDay(D2024-06-15T10:30:00Z) == D2024-06-15T00:00:00Z)
+assert(startOfDay(D2024-06-15) == D2024-06-15T00:00:00Z)
+assert(startOfWeek(D2024-06-12) == D2024-06-10T00:00:00Z)
+assert(startOfMonth(D2024-06-15) == D2024-06-01T00:00:00Z)
+assert(startOfQuarter(D2024-08-15) == D2024-07-01T00:00:00Z)
+assert(startOfYear(D2024-06-15) == D2024-01-01T00:00:00Z)

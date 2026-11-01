@@ -78,6 +78,11 @@ export function createRubyBinding(): StdLib<string> {
   for (const [fn, method] of Object.entries(camelCaseMap)) {
     rubyLib.register(fn, [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
     rubyLib.register(fn, [Types.date], (args, ctx) => `${ctx.emit(args[0])}.to_datetime.${method}`);
+    // An unknown type must not fall back to the Datetime emission: `Date#end_of_week`
+    // yields a Date at midnight, where the boundary is the last instant of the day.
+    // `to_datetime` is the identity on a DateTime, so the Date emission is the one
+    // that is correct for both.
+    rubyLib.register(fn, [Types.any], (args, ctx) => `${ctx.emit(args[0])}.to_datetime.${method}`);
   }
 
   // Ruby uses native operators for all types due to operator overloading
