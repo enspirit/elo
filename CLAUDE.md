@@ -59,6 +59,40 @@ The tests are organized as follows :
 **CRITICAL** when adding acceptance tests, every line of .elo files MUST have be an assert for
 testing to be effective.
 
+### Red first
+
+**CRITICAL** : for bug fixes AND for features, the failing test comes FIRST. Write it,
+run it, see it fail, and only then write the code that turns it green.
+
+* The test that matters is the **acceptance** one : a `.elo` assertion that executes on
+  every target. Unit and integration tests pin the *shape* of the output ; only
+  acceptance tests prove the output is *right*.
+* **Regenerating fixtures is not a test.** `./scripts/regenerate-fixtures.sh` records
+  whatever the compiler currently emits, so a `.expected.*` file can never fail because
+  the emission is wrong. It is a snapshot, not an assertion. A fix whose only new
+  "coverage" is regenerated fixtures has no coverage at all.
+* **Never trust a test that was not seen red.** If the fix landed first, revert it and
+  watch the test fail — `git stash push <file>`, or
+  `git checkout <commit-before> -- <file>` when the fix is already committed. Report how
+  many assertions were red, per target.
+* A bug discovered *while* fixing another one gets its own assertion too. Verifying it by
+  hand in a scratch script and moving on is how it comes back.
+
+### Testing the dynamic dispatch path
+
+Many Elo defects live where operand types are not statically known, because the compilers
+emit different code there. Lambda parameters are typed `any`, which reaches that path
+without needing `_` (fixtures run with null input) :
+
+```
+assert((let f = fn( x, y ~> x - y ) in f(3, 1)) == 2)   # dynamic : emits k_sub / kSub
+assert(3 - 1 == 2)                                      # typed   : emits a bare `-`
+```
+
+**CRITICAL** : assert BOTH. The two must agree, and a divergence between them is exactly
+the bug class this catches — see `test/fixtures/reference/dynamic-temporal-dispatch.elo`
+and `reference/precedence-dynamic.elo`.
+
 ### Generating expected fixture files
 
 **CRITICAL**: NEVER generate `.expected.*` files by hand or via `eloc` directly. Always use:
@@ -89,14 +123,27 @@ them and act as if they were not written at all.
 When a tasks involves enhancing the Elo language (typically adding a new construct),
 a typical list of things to do is :
 
+- Add acceptance tests (fixtures) that assert the expected behavior, and SEE THEM FAIL
+  on every target before writing any implementation
 - Add the construct in parser and add unit tests for it
 - Adapt the intermediary representation IR if needed, add unit tests if needed
-- Add acceptance tests (fixtures) that assert expected behavior(s)
 - Extend the compilers for the new construct, under acceptance tests
 - Document in README then in Learn, Reference, and Stdlib sections of the website.
   Think about the relevant sections to adapt, to avoid end-user documentation bloat.
 - Re-run all the tests, since some consistency tests exist that check the documentation.
 - Commit and mark the task done.
+
+When a task is a **bug fix**, the list is :
+
+- Reproduce the bug as a `.elo` assertion in `test/fixtures/`, and SEE IT FAIL on every
+  affected target. Say which targets fail and which do not — a bug present on one target
+  and absent on another usually means the two emissions have diverged
+- Fix it, then watch the same assertion turn green
+- Regenerate the fixtures if the emission changed, and read the diff : it shows the
+  blast radius of the fix, and an unexpected line in it is a second bug
+- Re-run the three levels
+- Document it only if it changes documented behaviour
+- Commit and mark the task done
 
 **IMPORTANT** If you block on something and are in autonomous mode, adapt the
 task with your analysis and questions, move it to `analyzed` and move to the
