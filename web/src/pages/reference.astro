@@ -671,6 +671,7 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
             <tr><td>Argument of the wrong type</td><td><code class="language-elo" data-invalid>year('hello')</code></td></tr>
             <tr><td>Operator applied to the wrong types</td><td><code class="language-elo" data-invalid>'hello' - 5</code></td></tr>
             <tr><td>Condition that is not a Bool</td><td><code class="language-elo" data-invalid>if 42 then 1 else 2</code></td></tr>
+            <tr><td>A value that may be null, used as if it were not</td><td><code class="language-elo" data-invalid>k.a + 1</code> where <code>a :? Int</code></td></tr>
           </tbody>
         </table>
 
@@ -719,6 +720,31 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
           does not. Predicates inside a
           <a href="#type-selectors">subtype constraint</a> are checked too.
         </p>
+        <h3>Optional fields are strict about null</h3>
+        <p>
+          <code>:?</code> is a statement that a field may be absent, so
+          <code>&#123; a :? Int &#125;</code> makes <code>k.a</code> an
+          <code>Int|Null</code> and <code>k.a + 1</code> is reported. Null is
+          a bug factory, and this is the one place the checker insists. Any of
+          the usual ways of handling it clears the report:
+        </p>
+        <table class="type-table">
+          <thead><tr><th>Form</th><th>Reads as</th></tr></thead>
+          <tbody>
+            <tr><td><code class="language-elo" data-invalid>k.a | 0</code></td><td>a fallback — the result of <code>|</code> is never null</td></tr>
+            <tr><td><code class="language-elo" data-invalid>if isNull(k.a) then 0 else k.a + 1</code></td><td>tested; the <code>else</code> branch knows</td></tr>
+            <tr><td><code class="language-elo" data-invalid>if isNotNull(k.a) then k.a + 1 else 0</code></td><td>tested; the <code>then</code> branch knows</td></tr>
+            <tr><td><code class="language-elo" data-invalid>guard isNotNull(k.a) in k.a + 1</code></td><td>guarded for everything it guards</td></tr>
+          </tbody>
+        </table>
+        <p>
+          That knowledge is deliberately narrow: <code>isNull</code> and
+          <code>isNotNull</code> applied to a path, <code>&amp;&amp;</code>-chained,
+          plus the <code>|</code> operator. The checker does no boolean algebra,
+          so <code>isNotNull(a) || isNotNull(b)</code> establishes nothing about
+          either — you should not have to work out what the checker knows.
+        </p>
+
         <h3>Requiring a declaration</h3>
         <p>
           <code>--strict</code> turns the silence about unknown types into a

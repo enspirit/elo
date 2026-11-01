@@ -636,10 +636,13 @@ describe('Typecheck - declared schemas', () => {
     );
   });
 
-  it('leaves an optional field opaque rather than guessing', () => {
-    // Strict null handling sharpens this; until then, an absent field could be
-    // null and nothing certain can be said.
-    assert.deepStrictEqual(check('let X = { a :? Int }, k = _ |> X in k.a + 1'), []);
+  it('treats an optional field as possibly null', () => {
+    // See the strict-null suite below: `:?` makes the field `Int|Null`, so
+    // using it as an Int is reported and a null check or `|` clears it.
+    assert.deepStrictEqual(codes('let X = { a :? Int }, k = _ |> X in k.a + 1'), [
+      'nullable-misuse',
+    ]);
+    assert.deepStrictEqual(check('let X = { a :? Int }, k = _ |> X in (k.a | 0) + 1'), []);
   });
 
   it('reports reading a field off something that has none', () => {
@@ -886,6 +889,114 @@ describe('Typecheck - declaring the input type', () => {
     assert.deepStrictEqual(
       viaLanguage.map((d) => d.code),
       viaOption.map((d) => d.code)
+    );
+  });
+});
+
+describe('Typecheck - optional fields may be null', () => {
+  /**
+   * `:?` is the author's own statement that a field may be absent, so the
+   * checker treats it as `T|Null` and reports using it as a T. Null is a bug
+   * factory; this is the one place the checker insists.
+   *
+   * Which forces the checker's only flow sensitivity: without narrowing, every
+   * correct program that *does* handle the null would be a false positive.
+   */
+  const schema = 'let X = { a :? Int, b :? Int, s: String }, k = _ |> X in ';
+
+  it('reports using an optional field as its declared type', () => {
+    const [diagnostic] = check(`${schema}k.a + 1`);
+    assert.strictEqual(diagnostic.code, 'nullable-misuse');
+    assert.match(diagnostic.message, /does not accept a value that may be null/);
+  });
+
+  it('says how to handle it', () => {
+    const [diagnostic] = check(`${schema}k.a + 1`);
+    assert.match(diagnostic.message, /'x \| fallback'/);
+    assert.match(diagnostic.message, /isNotNull\(x\)/);
+  });
+
+  it('leaves a required field alone', () => {
+    assert.deepStrictEqual(check(`${schema}upper(k.s)`), []);
+  });
+
+  it('accepts a null-accepting function', () => {
+    assert.deepStrictEqual(check(`${schema}isNull(k.a)`), []);
+    assert.deepStrictEqual(check(`${schema}isNotNull(k.a)`), []);
+    assert.deepStrictEqual(check(`${schema}typeOf(k.a)`), []);
+  });
+
+  describe('narrowing', () => {
+    it('accepts an | fallback', () => {
+      assert.deepStrictEqual(check(`${schema}(k.a | 0) + 1`), []);
+    });
+
+    it('accepts the else branch of an isNull test', () => {
+      assert.deepStrictEqual(check(`${schema}if isNull(k.a) then 0 else k.a + 1`), []);
+    });
+
+    it('accepts the then branch of an isNotNull test', () => {
+      assert.deepStrictEqual(check(`${schema}if isNotNull(k.a) then k.a + 1 else 0`), []);
+    });
+
+    it('accepts a guard', () => {
+      assert.deepStrictEqual(check(`${schema}guard isNotNull(k.a) in k.a + 1`), []);
+    });
+
+    it('accepts an && chain of guards', () => {
+      assert.deepStrictEqual(
+        check(`${schema}guard isNotNull(k.a) && isNotNull(k.b) in k.a + k.b`),
+        []
+      );
+    });
+
+    it('narrows only the path that was checked', () => {
+      assert.deepStrictEqual(codes(`${schema}guard isNotNull(k.a) in k.b + 1`), [
+        'nullable-misuse',
+      ]);
+    });
+
+    it('does not narrow the wrong branch', () => {
+      assert.deepStrictEqual(codes(`${schema}if isNull(k.a) then k.a + 1 else 0`), [
+        'nullable-misuse',
+      ]);
+    });
+
+    it('stops narrowing outside the region', () => {
+      assert.deepStrictEqual(
+        codes(`${schema}(if isNotNull(k.a) then k.a + 1 else 0) + k.a`),
+        ['nullable-misuse']
+      );
+    });
+
+    it('establishes nothing from an || of null checks', () => {
+      // `isNotNull(a) || isNotNull(b)` says nothing certain about either, and
+      // the checker deliberately does no boolean algebra.
+      assert.deepStrictEqual(
+        codes(`${schema}guard isNotNull(k.a) || isNotNull(k.b) in k.a + 1`),
+        ['nullable-misuse']
+      );
+    });
+
+    it('narrows a nested path', () => {
+      const nested = 'let A = { x :? Int }, B = { a: A }, k = _ |> B in ';
+      assert.deepStrictEqual(codes(`${nested}k.a.x + 1`), ['nullable-misuse']);
+      assert.deepStrictEqual(check(`${nested}guard isNotNull(k.a.x) in k.a.x + 1`), []);
+    });
+
+    it('narrows a plain variable', () => {
+      const bound = `${schema}let v = k.a in `;
+      assert.deepStrictEqual(codes(`${bound}v + 1`), ['nullable-misuse']);
+      assert.deepStrictEqual(check(`${bound}guard isNotNull(v) in v + 1`), []);
+    });
+  });
+
+  it('types an | fallback as non-null', () => {
+    // The result of `a | b` is never null, which is what makes it the compact
+    // way to handle an optional field.
+    assert.strictEqual(
+      typecheckWithType(parse(`${schema}k.a | 0`)).type.kind,
+      'int'
     );
   });
 });

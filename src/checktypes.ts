@@ -129,6 +129,37 @@ export function isUnknown(type: CheckType): boolean {
 }
 
 /**
+ * A value that may be absent is a union with Null — `:? Int` is `Int|Null`.
+ *
+ * Modelling it that way rather than as its own case means the union rules
+ * already do the work: an operation must hold for every member, and `Null` is
+ * a member no arithmetic signature accepts. So `k.a + 1` on an optional field
+ * is reported for exactly the reason it is wrong.
+ */
+export function nullable(inner: CheckType): CheckType {
+  return join([inner, prim(Types.null)]);
+}
+
+/**
+ * True when the type admits null.
+ */
+export function isNullable(type: CheckType): boolean {
+  if (type.kind === 'primitive') return type.type.kind === 'null';
+  return type.kind === 'union' && type.members.some(isNullable);
+}
+
+/**
+ * The same type with null ruled out — what a null check, or an `|` fallback,
+ * establishes. Returns the type unchanged when it admitted no null.
+ */
+export function stripNull(type: CheckType): CheckType {
+  if (type.kind !== 'union') return type;
+  const members = type.members.filter((m) => !isNullable(m));
+  if (members.length === 0) return type;
+  return join(members);
+}
+
+/**
  * Combine the types of several branches into one.
  * Identical types collapse; anything else becomes a union, and an unknown
  * among them makes the whole thing unknown.
