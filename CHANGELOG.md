@@ -4,6 +4,30 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-11-01
+
+A conservative patch release: one security fix and one portability fix, no new
+features and no behaviour changes, so projects pinned below 1.1.0 can take the
+safety fix. The same two fixes ship in 1.1.1.
+
+### Security
+
+- Stop the parser going exponential on nested `let`, `guard` and `check`
+  bindings, closing a compile-host denial of service. A 390-character
+  expression such as `let a = 1 in` repeated 30 times never finished parsing;
+  20 levels took a second, and each further pair of levels quadrupled it. The
+  cause was the `in` keyword being overloaded between a binding and range
+  membership (`x in 1..10`), told apart by a speculative parse that re-parsed
+  the whole remaining expression at every level. The speculation is now skipped
+  where it could never have succeeded. Parsing accepts and rejects exactly what
+  it did before — verified by comparing both parsers over 1372 expressions —
+  and 40 levels of nesting now parse in milliseconds
+
+### Fixes
+
+- Guard `process.env` access so the runtime loads in a browser, where it is
+  undefined
+
 ## [1.0.2] - 2026-10-31
 
 A conservative patch release: security and correctness fixes only, no new
