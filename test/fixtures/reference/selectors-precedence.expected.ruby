@@ -5,7 +5,7 @@
 
 
 ->(_) { (raise "Assertion failed" unless (10 - 8).to_f == 2; true) }.call(nil);
-->(_) { def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; (raise "Assertion failed" unless k_div((10 - 8).to_f, 4) == 0.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (10 - 8).to_f / 4 == 0.5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (2 + 3).to_f == 5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (2 * 3).to_f == 6; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (7.5 - 0.5).to_i == 7; true) }.call(nil);

@@ -7,6 +7,7 @@
 set -e
 
 TEST_DIR="${1:-test/fixtures}"
+ELOC="./bin/eloc"
 FAILED=0
 PASSED=0
 SKIPPED=0
@@ -27,6 +28,24 @@ export PGPASSWORD
 # test has to catch. It hid 26 fixtures; see KNOWN_INVALID below.
 psql_run() {
     psql -v ON_ERROR_STOP=1 -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -t "$@"
+}
+
+# With ELO_OPTIMIZE=1, the fixture's .elo is recompiled with --optimize rather
+# than read from its .expected file. Every fixture line is an assert, so running
+# the corpus this way is the equivalence check for the annotated emission: it has
+# to behave the same, not merely be smaller.
+ELO_OPTIMIZE="${ELO_OPTIMIZE:-}"
+
+# The code to run for one fixture.
+emit() {
+    local file=$1
+    if [ -n "$ELO_OPTIMIZE" ]; then
+        # A line the checker reported on is emitted unannotated and exits 1;
+        # that is the documented refusal, not a test failure.
+        $ELOC -t sql --optimize "${file%.expected.*}.elo" 2>/dev/null || true
+    else
+        cat "$file"
+    fi
 }
 
 # Files that require variables or always throw - cannot be executed standalone
@@ -111,7 +130,7 @@ run_file() {
                 return 1
             fi
         fi
-    done < "$file"
+    done < <(emit "$file")
     return 0
 }
 

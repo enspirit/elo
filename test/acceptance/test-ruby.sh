@@ -14,6 +14,24 @@ SKIPPED=0
 # Get prelude using eloc --prelude-only
 PRELUDE=$($ELOC --prelude-only -t ruby)
 
+# With ELO_OPTIMIZE=1, the fixture's .elo is recompiled with --optimize rather
+# than read from its .expected file. Every fixture line is an assert, so running
+# the corpus this way is the equivalence check for the annotated emission: it has
+# to behave the same, not merely be smaller.
+ELO_OPTIMIZE="${ELO_OPTIMIZE:-}"
+
+# The code to run for one fixture.
+emit() {
+    local file=$1
+    if [ -n "$ELO_OPTIMIZE" ]; then
+        # A line the checker reported on is emitted unannotated and exits 1;
+        # that is the documented refusal, not a test failure.
+        $ELOC -t ruby -x --optimize "${file%.expected.*}.elo" 2>/dev/null || true
+    else
+        cat "$file"
+    fi
+}
+
 # Files that require variables or always throw - cannot be executed standalone
 SKIP_FILES=("member-access" "variables" "fail")
 
@@ -40,13 +58,13 @@ while IFS= read -r -d '' file; do
     relpath="${file#$TEST_DIR/}"
 
     # Fixtures now contain self-executing code, run directly with prelude
-    if { echo "$PRELUDE"; cat "$file"; } | ruby 2>/dev/null; then
+    if { echo "$PRELUDE"; emit "$file"; } | ruby 2>/dev/null; then
         echo "  ✓ $relpath"
         ((PASSED++)) || true
     else
         echo "  ✗ $relpath"
         ((FAILED++)) || true
-        { echo "$PRELUDE"; cat "$file"; } | ruby || true
+        { echo "$PRELUDE"; emit "$file"; } | ruby || true
     fi
 done < <(find "$TEST_DIR" -type f \( -name "*.expected.ruby" -o -name "*.expected.rb" \) -print0 | sort -z)
 

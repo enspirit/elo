@@ -384,6 +384,68 @@ describe('CLI - --typecheck', () => {
   });
 });
 
+describe('CLI - --optimize', () => {
+  const DECLARED = `let T = { a: Int, b: Int }, k = _ |> T in k.a - k.b`;
+
+  it('emits a typed operation where the schema declares the types', () => {
+    const result = elocWithError(`--optimize -t ruby -e "${DECLARED}"`);
+    assert.strictEqual(result.exitCode, 0);
+    assert.match(result.stdout, /k\[:a\] - k\[:b\]/);
+    assert.doesNotMatch(result.stdout, /k_sub/);
+  });
+
+  it('is the flag that makes the difference', () => {
+    const plain = eloc(`-t ruby -e "${DECLARED}"`);
+    assert.match(plain, /k_sub/);
+  });
+
+  it('implies --typecheck', () => {
+    const result = elocWithError('--optimize -e "upper(42)"');
+    assert.strictEqual(result.exitCode, 1);
+    assert.match(result.stderr, /No signature of upper/);
+  });
+
+  it('refuses to annotate a program the checker reported on, out loud', () => {
+    // On a reported node the recorded type is a guess rather than a
+    // conclusion, so emitting from it would turn a visible error into
+    // silently wrong code.
+    const result = elocWithError(`--optimize -e "'hello' - 5"`);
+    assert.strictEqual(result.exitCode, 1);
+    assert.match(result.stderr, /\[optimize-refused\]/);
+    assert.strictEqual(result.stdout, eloc(`-e "'hello' - 5"`));
+  });
+
+  it('changes nothing for an undeclared input', () => {
+    // The checker knows no more than the compiler about a bare `_`, so the
+    // benefit is proportional to how much the program declares.
+    for (const target of ['js', 'ruby', 'python', 'sql']) {
+      const result = elocWithError(`--optimize -t ${target} -e "_ - 1"`);
+      assert.strictEqual(result.exitCode, 0);
+      assert.strictEqual(result.stdout, eloc(`-t ${target} -e "_ - 1"`));
+    }
+  });
+
+  it('annotates each line of a file independently', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'elo-optimize-'));
+    const file = join(dir, 'input.elo');
+    writeFileSync(file, `${DECLARED}\n# a comment\n_ - 1\n`);
+    try {
+      const result = elocWithError(`--optimize -t ruby ${file}`);
+      assert.strictEqual(result.exitCode, 0);
+      const lines = result.stdout.split('\n');
+      assert.match(lines[0], /k\[:a\] - k\[:b\]/);
+      assert.strictEqual(lines[1], '');
+      assert.match(lines[2], /k_sub\(_, 1\)/);
+    } finally {
+      unlinkSync(file);
+    }
+  });
+
+  it('is listed in the help output', () => {
+    assert.ok(eloc('--help').includes('--optimize'));
+  });
+});
+
 /**
  * Tests for the elo evaluator command
  */

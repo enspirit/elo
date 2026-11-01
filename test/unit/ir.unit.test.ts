@@ -178,6 +178,9 @@ describe('IR member access factory', () => {
       type: 'member_access',
       object: irVariable('obj'),
       property: 'property',
+      // Reading a member of data says nothing about its type on its own; only
+      // the type checker's annotations ever fill this in.
+      inferredType: Types.any,
     });
   });
 

@@ -1,6 +1,7 @@
 import { Expr } from '../ast';
 import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
+import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createRubyBinding, isNativeBinaryOp, RUBY_OP_MAP } from '../bindings/ruby';
 import { RUBY_HELPERS, RUBY_HELPER_DEPS } from '../runtime';
@@ -16,6 +17,15 @@ export interface RubyCompileOptions {
   execute?: boolean;
   /** If true, strip guard/check assertions from output */
   stripGuards?: boolean;
+  /**
+   * Types the checker found for the AST, from `typecheckWithAnnotations`.
+   *
+   * With it, a declared field or coerced value gets a typed implementation
+   * instead of a runtime dispatcher. Without it the emission is exactly what
+   * it always was, which is why the compile path never calls the checker
+   * itself.
+   */
+  types?: TypeAnnotations;
 }
 
 /**
@@ -102,7 +112,7 @@ export function compileToRuby(expr: Expr, options?: RubyCompileOptions): string 
  * The usesInput field indicates whether _ is actually referenced.
  */
 export function compileToRubyWithMeta(expr: Expr, options?: RubyCompileOptions): RubyCompileResult {
-  const ir = transform(expr);
+  const ir = transform(expr, new Map(), new Set(), { types: options?.types });
   const actuallyUsesInput = usesInput(ir);
   const emitOptions: EmitOptions = { stripGuards: options?.stripGuards || false };
   const result = emitRubyWithHelpers(ir, emitOptions);

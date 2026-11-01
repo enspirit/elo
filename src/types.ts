@@ -5,6 +5,8 @@
  * Used by the IR transformation phase to generate typed function calls.
  */
 
+import type { Expr } from './ast';
+
 /**
  * Primitive type kinds in Elo
  */
@@ -16,6 +18,20 @@ export type TypeKind = 'int' | 'float' | 'bool' | 'null' | 'string' | 'date' | '
 export interface EloType {
   kind: TypeKind;
 }
+
+/**
+ * A type per AST node, keyed on node identity.
+ *
+ * What the type checker found, for `transform` to consult where its own
+ * inference says `any` — `_ |> Order` is opaque to the transform, and
+ * `order.total` with it, even though the author declared the field. Node
+ * identity is the key because the checker and the transform walk the same AST
+ * object.
+ *
+ * Declared here rather than in either module so neither has to depend on the
+ * other: the compile path stays independent of the checker.
+ */
+export type TypeAnnotations = ReadonlyMap<Expr, EloType>;
 
 /**
  * Type constants for convenience

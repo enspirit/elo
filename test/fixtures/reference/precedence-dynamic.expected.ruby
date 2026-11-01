@@ -23,7 +23,7 @@
 ->(_) { (raise "Assertion failed" unless 12 * (1 + 2) == 36; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 12 - (1 + 2) == 9; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless -(40 + 15) == -55; true) }.call(nil);
-->(_) { def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; (raise "Assertion failed" unless k_div(24, 6.fdiv(2)) == 8; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 24 / (6.fdiv(2)) == 8; true) }.call(nil);
 
 
 ->(_) { (raise "Assertion failed" unless (f = ->(x, y) { x + y > 10 }; f.call(6, 5)) == true; true) }.call(nil);

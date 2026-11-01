@@ -768,6 +768,36 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
         <pre class="language-shell">eloc --input-type '&#123; total: Int &#125;' -e "upper(_.total)"
 # 1:1: error: No signature of upper accepts upper(Int). ...</pre>
 
+        <h3>Compiling with the checker's types</h3>
+        <p>
+          <code>--optimize</code> hands what the checker found back to the code
+          generator. Without it, a coerced value is opaque to the compiler: it
+          knows the shape was validated at runtime, but not what the fields
+          are, so every operation on one is decided at runtime by a dispatcher.
+        </p>
+        <pre class="language-shell">eloc -t ruby -e "let T = &#123; a: Int, b: Int &#125;, k = _ |> T in k.a - k.b"
+# ... k_sub(k[:a], k[:b])
+
+eloc -t ruby --optimize -e "let T = &#123; a: Int, b: Int &#125;, k = _ |> T in k.a - k.b"
+# ... k[:a] - k[:b]</pre>
+        <p>
+          The gain is a real operation instead of a function call per operation,
+          and a smaller output — 23% smaller on JavaScript for the declared
+          schema programs it was measured against, where the dispatchers ship
+          inline. The benefit is proportional to <em>how much the program
+          declares</em>: for an undeclared <code>_</code> the checker knows no
+          more than the compiler, so the flag changes nothing.
+        </p>
+        <p>
+          It refuses to compile from the types of a program it reported on. On a
+          node carrying a diagnostic the recorded type is a guess rather than a
+          conclusion, and emitting from it would turn a visible error into
+          silently wrong code — so the output is the unannotated one and the run
+          fails. The two emissions must otherwise agree, which is the property
+          worth checking rather than the size: every line of the fixture corpus
+          is executed both ways, on all four targets, on every test run.
+        </p>
+
         <h3>What it does not see</h3>
         <p>
           The checker is a single pass over the expression, and these are its
@@ -926,6 +956,7 @@ eloc --typecheck -e "'hello' - 5"</pre>
             <tr><td><code>--typecheck</code></td><td>Report type errors, exit non-zero if any</td></tr>
             <tr><td><code>--strict</code></td><td>Also report what the checker cannot type</td></tr>
             <tr><td><code>--input-type</code></td><td>Declare the type of <code>_</code></td></tr>
+            <tr><td><code>--optimize</code></td><td>Compile with the checker's types</td></tr>
             <tr><td><code>-f, --file</code></td><td>Output to file</td></tr>
           </tbody>
         </table>

@@ -186,6 +186,14 @@ export interface IRMemberAccess {
   type: 'member_access';
   object: IRExpr;
   property: string;
+  /**
+   * The type of the member, when something knew it.
+   *
+   * Reading a member of data tells the transform nothing — `inferType` answers
+   * `any` for every member access — so this is only ever filled in from the
+   * type checker's annotations, where the field belongs to a declared schema.
+   */
+  inferredType: EloType;
 }
 
 /**
@@ -388,8 +396,12 @@ export function irLet(bindings: IRLetBinding[], body: IRExpr): IRLet {
   return { type: 'let', bindings, body };
 }
 
-export function irMemberAccess(object: IRExpr, property: string): IRMemberAccess {
-  return { type: 'member_access', object, property };
+export function irMemberAccess(
+  object: IRExpr,
+  property: string,
+  inferredType: EloType = Types.any
+): IRMemberAccess {
+  return { type: 'member_access', object, property, inferredType };
 }
 
 export function irIf(condition: IRExpr, thenBranch: IRExpr, elseBranch: IRExpr): IRIf {
@@ -470,7 +482,7 @@ export function inferType(ir: IRExpr): EloType {
     case 'let':
       return inferType(ir.body);
     case 'member_access':
-      return Types.any;
+      return ir.inferredType;
     case 'if':
       return inferType(ir.then);
     case 'lambda':

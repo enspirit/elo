@@ -18,11 +18,12 @@ export {
   typecheck,
   typecheckWithType,
   typecheckStructural,
+  typecheckWithAnnotations,
   formatDiagnostic,
   describeType,
   projectType,
 } from './typecheck';
-export type { CheckType, Diagnostic, DiagnosticCode, TypecheckOptions } from './typecheck';
+export type { CheckType, Diagnostic, DiagnosticCode, TypecheckOptions, TypeAnnotations } from './typecheck';
 export { JS_HELPERS } from './runtime';
 export { getPrelude } from './preludes';
 export type { Target as PreludeTarget } from './preludes';

@@ -8,7 +8,8 @@ import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
 import { compileToPythonWithMeta } from './compilers/python';
 import { getPrelude, Target as PreludeTarget } from './preludes';
-import { typecheck, formatDiagnostic } from './typecheck';
+import { typecheckWithAnnotations, formatDiagnostic, TypeAnnotations } from './typecheck';
+import type { Expr } from './ast';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json');
@@ -38,6 +39,13 @@ interface Options {
   strict?: boolean;
   /** Elo type expression declaring the shape of the input `_` */
   inputType?: string;
+  /**
+   * If true, compile with the checker's types (implies typecheck).
+   *
+   * What the author declared, the emitter gets to use: a field of a declared
+   * schema becomes a typed operation instead of a runtime dispatcher.
+   */
+  optimize?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
@@ -94,6 +102,13 @@ function parseArgs(args: string[]): Options {
       case '--strict':
         // Strict without checking would have nothing to be strict about.
         options.strict = true;
+        options.typecheck = true;
+        break;
+
+      case '--optimize':
+        // One pass over the AST serves both: there is no point annotating from
+        // a checker run whose diagnostics nobody looked at.
+        options.optimize = true;
         options.typecheck = true;
         break;
 
@@ -154,6 +169,11 @@ Options:
                             cannot type (implies --typecheck)
   --input-type <type>       Declare the type of the input _, as an Elo type
                             expression (implies --typecheck)
+  --optimize                Compile with the checker's types, so a declared
+                            field or coerced value gets a typed operation
+                            instead of a runtime dispatcher. Refuses to
+                            annotate a program the checker reported on
+                            (implies --typecheck)
   -f, --file <path>         Output to file instead of stdout
   -v, --version             Show version number
   -h, --help                Show this help message
@@ -198,33 +218,39 @@ interface CompileOptions {
   includePrelude?: boolean;
   execute?: boolean;
   stripGuards?: boolean;
+  /** The AST the checker walked, when its annotations are being reused. */
+  ast?: Expr;
+  /** The checker's types, keyed on the nodes of `ast`. */
+  types?: TypeAnnotations;
 }
 
 function compile(source: string, target: Target, options: CompileOptions = {}): string {
-  const ast = parse(source);
-  const { includePrelude = false, execute = false, stripGuards = false } = options;
+  const { includePrelude = false, execute = false, stripGuards = false, types } = options;
+  // Reuse the checker's tree when there is one: the annotations are keyed on
+  // node identity, so a second parse would produce a map that matches nothing.
+  const ast = options.ast ?? parse(source);
 
   let code: string;
   switch (target) {
     case 'ruby': {
-      const result = compileToRubyWithMeta(ast, { execute, stripGuards });
+      const result = compileToRubyWithMeta(ast, { execute, stripGuards, types });
       code = result.code;
       break;
     }
     case 'js': {
-      const result = compileToJavaScriptWithMeta(ast, { execute, stripGuards });
+      const result = compileToJavaScriptWithMeta(ast, { execute, stripGuards, types });
       code = result.code;
       break;
     }
     case 'sql': {
       // SQL doesn't support execute option (no function wrapping)
       // and guards already throw an error, so stripGuards is not needed
-      const result = compileToSQLWithMeta(ast);
+      const result = compileToSQLWithMeta(ast, { types });
       code = result.code;
       break;
     }
     case 'python': {
-      const result = compileToPythonWithMeta(ast, { execute, stripGuards });
+      const result = compileToPythonWithMeta(ast, { execute, stripGuards, types });
       code = result.code;
       break;
     }
@@ -298,8 +324,11 @@ function main() {
   // Type-check before compiling, so a type error is reported even when
   // compilation then fails for the same reason on some targets.
   let typeErrorsFound = false;
+  let checked: CheckedSource[] = [];
   if (options.typecheck) {
-    typeErrorsFound = reportTypeDiagnostics(sources, options);
+    const result = reportTypeDiagnostics(sources, options);
+    typeErrorsFound = result.found;
+    checked = result.checked;
   }
 
   // Compile each expression
@@ -315,7 +344,10 @@ function main() {
         return compile(trimmed, options.target, {
           includePrelude: index === 0 && options.prelude,
           execute: options.execute,
-          stripGuards: options.stripGuards
+          stripGuards: options.stripGuards,
+          // The annotations are keyed on AST node identity, so they only mean
+          // anything against the tree the checker walked.
+          ...(options.optimize ? checked[index] : {}),
         });
       } catch (error) {
         throw new Error(`Line ${index + 1}: ${error}`);
@@ -352,11 +384,25 @@ function main() {
   }
 }
 
+/** A source line the checker walked, and what it found for its nodes. */
+interface CheckedSource {
+  ast?: Expr;
+  types?: TypeAnnotations;
+}
+
 /**
  * Report type diagnostics for every source line to stderr.
- * Returns true if anything was reported.
+ *
+ * Also returns, per line, the tree the checker walked and the types it found,
+ * so `--optimize` can compile from that single pass. A line the checker
+ * reported on comes back with no annotations — `typecheckWithAnnotations`
+ * refuses them — so the emission falls back to what it would have been, and
+ * the non-zero exit says why.
  */
-function reportTypeDiagnostics(sources: string[], options: Options): boolean {
+function reportTypeDiagnostics(
+  sources: string[],
+  options: Options
+): { found: boolean; checked: CheckedSource[] } {
   // A bare name is a column reference in SQL, so undefined variables are
   // legitimate there and the checker must not be stricter than the compiler.
   const allowUndefinedVariables = options.target === 'sql';
@@ -373,6 +419,8 @@ function reportTypeDiagnostics(sources: string[], options: Options): boolean {
     }
   }
 
+  const checked: CheckedSource[] = sources.map(() => ({}));
+
   sources.forEach((source, index) => {
     if (isBlankSource(source)) return;
     let diagnostics;
@@ -382,11 +430,13 @@ function reportTypeDiagnostics(sources: string[], options: Options): boolean {
       // Not trimmed: the lexer skips leading whitespace itself, and keeping it
       // means the reported column matches the column in the file.
       const ast = parse(source, { locations: true });
-      diagnostics = typecheck(ast, {
+      const result = typecheckWithAnnotations(ast, {
         allowUndefinedVariables,
         strict: options.strict,
         inputType,
       });
+      diagnostics = result.diagnostics;
+      checked[index] = { ast, types: result.types };
     } catch {
       // A parse error is not the checker's business; compilation below will
       // report it with its own message.
@@ -405,7 +455,16 @@ function reportTypeDiagnostics(sources: string[], options: Options): boolean {
     }
   });
 
-  return found;
+  // Saying it out loud: without this, `--optimize` on a reported program would
+  // silently emit exactly what it emits without the flag.
+  if (found && options.optimize) {
+    console.error(
+      'error: --optimize will not compile from the types of a program the ' +
+      'checker reported on; the output above is unannotated [optimize-refused]'
+    );
+  }
+
+  return { found, checked };
 }
 
 main();

@@ -109,6 +109,13 @@ export function createRubyBinding(): StdLib<string> {
     const receiver = isNativeBinaryOp(args[0]) ? `(${left})` : left;
     return `${receiver}.fdiv(${ctx.emit(args[1])})`;
   });
+  // Integer / Integer is the only case Ruby truncates, so as soon as either
+  // operand is statically a Float the bare operator is already right. These
+  // were missing, which sent `1.5 / 2.0` through k_div with both types known —
+  // the same split `sub` above already makes.
+  rubyLib.register('div', [Types.int, Types.float], simpleBinaryOp('/'));
+  rubyLib.register('div', [Types.float, Types.int], simpleBinaryOp('/'));
+  rubyLib.register('div', [Types.float, Types.float], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.duration, Types.int], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.duration, Types.float], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.any, Types.any], helperCall('k_div'));

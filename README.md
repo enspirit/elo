@@ -150,6 +150,7 @@ Options:
 - `--typecheck` - Report static type errors to stderr, exit non-zero if any
 - `--strict` - Also report anything the checker cannot type (implies `--typecheck`)
 - `--input-type <type>` - Declare the type of `_` (implies `--typecheck`)
+- `--optimize` - Compile with the checker's types (implies `--typecheck`)
 - `-f, --file <path>` - Output to file instead of stdout
 - `-h, --help` - Show help message
 
@@ -160,7 +161,8 @@ unknown functions, wrong argument counts, arguments of the wrong type,
 operators applied to types they do not accept, and conditions that are not
 `Bool`. Each problem is reported with its line and column, it reports every
 problem it finds in one pass, and it does not change the generated code — the
-same code is emitted with or without the flag.
+same code is emitted with or without the flag. (`--optimize`, below, is the one
+flag that does change it.)
 
 The checker is deliberately silent about what it cannot know. The input `_` has
 type `Any` until it is coerced, so a call with an unknown argument type is
@@ -219,6 +221,40 @@ practice means *declare your input*. It is how a host can require the idiomatic
 form and then promise that a saved formula will not fail at evaluation for type
 reasons. Functions that genuinely accept anything — `isNull`, `typeOf`,
 `assert`, `fetch` — stay quiet under it.
+
+### Compiling with the checker's types
+
+`--optimize` hands what the checker found back to the code generator. Without
+it, a coerced value is opaque to the compiler: it knows the shape was validated
+at runtime but not what the fields are, so every operation on one is decided at
+runtime by a dispatcher.
+
+```bash
+./bin/eloc -t ruby -e "let T = { a: Int, b: Int }, k = _ |> T in k.a - k.b"
+# ... k_sub(k[:a], k[:b])
+
+./bin/eloc -t ruby --optimize -e "let T = { a: Int, b: Int }, k = _ |> T in k.a - k.b"
+# ... k[:a] - k[:b]
+```
+
+So the gain is a real operation instead of a function call per operation, and a
+smaller output — on the six declared-schema programs it was measured against,
+23% smaller on JavaScript, where the dispatchers ship inline.
+
+**The benefit is proportional to how much the program declares.** An undeclared
+`_` tells the checker no more than it tells the compiler, so `--optimize`
+changes nothing at all for it. Declared schemas, lambda parameters typed from a
+declared list's element type, and `let`-bound values carrying a field through
+are where it applies.
+
+It refuses to compile from the types of a program it reported on: on a node
+with a diagnostic the recorded type is a guess rather than a conclusion, and
+emitting from it would turn a visible error into silently wrong code. The
+output in that case is the unannotated one, and the run fails.
+
+The two emissions must agree, which is the property worth checking rather than
+the size: every line of the fixture corpus is executed both ways on all four
+targets on every test run.
 
 ### What the checker does not see
 

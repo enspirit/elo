@@ -6,6 +6,12 @@
  * calls it: `parse`, `transform` and the four compilers behave exactly the same
  * whether or not it runs.
  *
+ * The dependency can be made to run the other way, and only that way: a caller
+ * that wants it (`eloc --optimize`) takes the per-node types from
+ * `typecheckWithAnnotations` and hands them to `transform`, which consults them
+ * where its own inference says `any`. The checker still knows nothing about the
+ * compilers, and a compiler with no map behaves as it always did.
+ *
  * Four properties shape the design:
  *
  *  - **It reads the AST only.** The one thing it shares with the compiler is
@@ -37,7 +43,7 @@
  */
 
 import { Constraint, Expr, Lambda, SourceLocation, TypeExpr } from './ast';
-import { EloType, Types } from './types';
+import { EloType, Types, TypeAnnotations, typeEquals } from './types';
 import { eloTypeDefs } from './typedefs';
 import { formatSignature } from './stdlib';
 import { parseExtractTemplate } from './extract';
@@ -196,6 +202,25 @@ export function typecheckWithType(
 }
 
 /**
+ * Check an expression and return the per-node types alongside the diagnostics,
+ * for a caller that wants to compile with them (`--optimize`).
+ *
+ * A program the checker objected to gets **no** annotations, and the refusal is
+ * here rather than at each call site so it cannot be skipped by accident. On a
+ * reported node the recorded type is `any`-by-recovery: it carries the
+ * checker's attempt at a guess, not its conclusion, and emitting from it would
+ * turn a visible diagnostic into silently wrong code. A caller that wants to
+ * compile anyway can simply not pass the map.
+ */
+export function typecheckWithAnnotations(
+  expr: Expr,
+  options: TypecheckOptions = {}
+): { types: TypeAnnotations; diagnostics: Diagnostic[] } {
+  const { types, diagnostics } = new Checker(options).run(expr);
+  return { types: diagnostics.length > 0 ? new Map() : types, diagnostics };
+}
+
+/**
  * Check an expression and return the checker's own structural type, which is
  * richer than anything `EloType` can say. Exposed for hosts that want to know
  * the shape of a result, and for the tests.
@@ -209,6 +234,12 @@ export function typecheckStructural(
 
 class Checker {
   private readonly diagnostics: Diagnostic[] = [];
+  /**
+   * The type found for every node, keyed on node identity, or `null` where two
+   * visits disagreed. Keyed on the object because the checker and `transform`
+   * walk the same AST.
+   */
+  private readonly annotations = new Map<Expr, EloType | null>();
   private readonly allowUndefinedVariables: boolean;
   private readonly maxDepth: number;
   private readonly strict: boolean;
@@ -223,21 +254,57 @@ class Checker {
     this.inputType = options.inputType;
   }
 
-  run(expr: Expr): { type: CheckType; diagnostics: Diagnostic[] } {
+  run(expr: Expr): { type: CheckType; diagnostics: Diagnostic[]; types: TypeAnnotations } {
     const env: TypeEnv = new Map();
     if (this.inputType) {
       env.set('_', this.typeExprToCheckType(this.inputType, env, new Map(), 0));
     }
     const type = this.check(expr, env, new Map(), 0);
-    return { type, diagnostics: this.diagnostics };
+    return { type, diagnostics: this.diagnostics, types: this.exportAnnotations() };
   }
 
   /**
-   * Infer the type of an expression, reporting what cannot be justified.
+   * The annotations worth handing to the emitter: the nodes one visit agreed
+   * on, minus the ones it could say nothing useful about. `any` is dropped
+   * because it is what the transform already assumes, so keeping it would only
+   * make the map bigger.
+   */
+  private exportAnnotations(): TypeAnnotations {
+    const exported = new Map<Expr, EloType>();
+    for (const [expr, type] of this.annotations) {
+      if (type && type.kind !== 'any') exported.set(expr, type);
+    }
+    return exported;
+  }
+
+  /**
+   * Infer the type of an expression, recording what was found for `transform`
+   * to consult, and reporting what cannot be justified.
+   *
+   * A node can be visited more than once with different answers — a lambda
+   * body is checked once per argument type combination of a union — and the
+   * recording has no way to say which visit the emitter will be looking at. So
+   * a second, disagreeing answer poisons the entry rather than overwriting it:
+   * emitting from the wrong one of two types is the failure mode this feature
+   * has to not have.
+   */
+  private check(expr: Expr, env: TypeEnv, types: TypeNameEnv, depth: number): CheckType {
+    const type = this.checkNode(expr, env, types, depth);
+    const projected = project(type);
+    if (!this.annotations.has(expr)) {
+      this.annotations.set(expr, projected);
+    } else {
+      const seen = this.annotations.get(expr);
+      if (seen && !typeEquals(seen, projected)) this.annotations.set(expr, null);
+    }
+    return type;
+  }
+
+  /**
    * Always returns a type: on failure that type is `any`, which stops one
    * mistake from cascading into a diagnostic at every enclosing node.
    */
-  private check(expr: Expr, env: TypeEnv, types: TypeNameEnv, depth: number): CheckType {
+  private checkNode(expr: Expr, env: TypeEnv, types: TypeNameEnv, depth: number): CheckType {
     if (depth > this.maxDepth) {
       this.report('nesting-too-deep', `Maximum expression depth exceeded (${this.maxDepth})`, expr.loc);
       return ANY;
@@ -1045,5 +1112,6 @@ export const BUILTIN_TYPE_NAMES: readonly string[] = Object.keys(BUILTIN_TYPE_RE
 
 // Re-exported so a host can work with the checker's richer types without
 // reaching into an internal module.
+export type { TypeAnnotations } from './types';
 export type { CheckType } from './checktypes';
 export { describe as describeType, project as projectType, equals as typesEqual } from './checktypes';

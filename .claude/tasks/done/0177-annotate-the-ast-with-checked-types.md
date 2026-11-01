@@ -162,3 +162,106 @@ fixed on its own merits.
 4. **Is the ~2 kB and one-call-per-operation worth the coupling?** For a browser
    bundle or a hot SQL expression, likely yes. Measure a realistic Klaro-style
    formula set before committing to making it the default.
+
+## Decision
+
+1. --optimize
+2. coupling the two flags is no problem, one pass only
+3. refusing to annotate is ok, failing out loud is even better
+4. I don't see much coupling after all, --typecheck & --optimize stay optional
+   and having type-annotations on AST seems legit anyway.
+
+## Addendum: what was done
+
+Built to the decisions above: the flag is `--optimize`, it implies
+`--typecheck` and shares its single pass, it refuses to annotate a reported
+program and says so, and the per-node types now live on the AST.
+
+### The mechanism
+
+`Checker.check` records `project(type)` for every node it visits, keyed on the
+AST object. A node visited twice with *different* answers — a lambda body
+checked once per argument combination of a union — **poisons** its entry rather
+than overwriting it: emitting from the wrong one of two types is precisely the
+failure mode this feature must not have. `any` entries are dropped on export,
+since that is what the transform already assumes.
+
+`transform` consults the map through one function:
+
+```ts
+function checkedType(expr, ctx, fallback) {
+  if (fallback.kind !== 'any') return fallback;   // the transform always wins
+  return ctx.types?.get(expr) ?? fallback;
+}
+```
+
+One direction only, enforced in one place. Two call sites use it: `variable`
+(where a lambda parameter and a coerced value are both registered as `any`) and
+`member_access` (where `inferType` answered `Types.any` unconditionally, which
+is why a declared field was opaque). `IRMemberAccess` gained an `inferredType`
+to carry it.
+
+`TransformOptions` grew a `types` map, and the five positional parameters the
+walk threaded through seven helpers became one `TransformContext` — a net
+simplification that made the feature nearly free to plumb. `TypeAnnotations` is
+declared in `types.ts` so neither the checker nor the transform depends on the
+other; the compile path still never calls the checker.
+
+### Measured
+
+The six declared-schema programs now pull in **no dynamic helper on any
+target**, which is `optimize.integration.test.ts`. Seen red first: with the two
+`checkedType` call sites reverted, **18 of its 24 assertions fail**. Output over
+those six programs:
+
+| target | plain | `--optimize` | |
+|---|---|---|---|
+| javascript | 11 815 ch | 9 066 ch | **-23%** |
+| ruby | 8 943 ch | 8 328 ch | -6% |
+| python | 1 158 ch | 1 124 ch | -2% (helpers live in the prelude) |
+
+Over the whole fixture corpus the gain is small — javascript -16 648 ch
+(-2.6%), ruby -104, python -179, sql ±0 — because the corpus declares almost
+nothing. That is the honest shape of the feature and it is what the docs say:
+**the benefit is proportional to how much the program declares.**
+
+### Equivalence, which is the part that matters
+
+Two tests, both of which bite:
+
+- `optimize-equivalence.integration.test.ts` compiles every line of every
+  fixture both ways on all four targets, asserts annotating never changes
+  whether it compiles, and *executes* the JavaScript both ways comparing value
+  or thrown message. 111 fixtures.
+- `npm run test:acceptance:optimize` (`ELO_OPTIMIZE=1`) recompiles each
+  fixture's `.elo` with `--optimize` and runs it on ruby, node, python3 and
+  psql, instead of reading the `.expected` file. It is now part of `npm test`,
+  so the corpus executes four ways on every run.
+
+Neither is worth anything if it cannot fail, so both were mutation-tested with
+a deliberately wrong annotation (`checkedType` returning `Types.int` for every
+unknown): the integration test failed 9 fixtures, the optimized acceptance run
+failed 5 across the four targets, and the unannotated acceptance run stayed
+green — which also proves `ELO_OPTIMIZE=1` is not passing vacuously.
+
+### One bug found on the way
+
+Ruby registered `div` for `[Int, Int]`, `[Duration, Int]` and `[Duration,
+Float]`, and nothing else — so `1.5 / 2.0` went through the `k_div` dispatcher
+with *both* types statically known. Integer / Integer is the only case Ruby
+truncates, so the three float combinations are a bare `/`; registered, which is
+the same split `sub` above it already makes. This was in scope rather than
+filed because the task's own measurement says `k_div` should disappear from the
+margin program, and it could not until the typed signature existed.
+Regenerating touched six ruby fixtures, all of them `k_div(…)` collapsing to a
+bare `/`, with the dynamic (lambda-parameter) sites unchanged.
+
+### Documented
+
+README, next to the type checker: what it does, the before/after emission, the
+23%, the refusal, and the proportionality. Same on the website's Reference page
+under Type Checking, plus `--optimize` in both CLI option tables. Not in Learn
+— a compiler flag is not part of learning the language.
+
+`typecheckWithAnnotations` and `TypeAnnotations` are exported from the package
+for a host that wants to do this itself.

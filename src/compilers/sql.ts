@@ -1,7 +1,7 @@
 import { Expr } from '../ast';
 import { IRExpr, IRCall, inferType, usesInput } from '../ir';
 import { transform } from '../transform';
-import { Types } from '../types';
+import { Types, TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP } from '../bindings/sql';
 import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
@@ -12,6 +12,15 @@ import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertS
 export interface SQLCompileOptions {
   /** If true, always mark as using input (even if _ is not used) */
   asFunction?: boolean;
+  /**
+   * Types the checker found for the AST, from `typecheckWithAnnotations`.
+   *
+   * With it, a declared field or coerced value gets a typed implementation
+   * instead of a runtime dispatcher. Without it the emission is exactly what
+   * it always was, which is why the compile path never calls the checker
+   * itself.
+   */
+  types?: TypeAnnotations;
 }
 
 /**
@@ -84,7 +93,7 @@ export function compileToSQL(expr: Expr, options?: SQLCompileOptions): string {
  */
 export function compileToSQLWithMeta(expr: Expr, options?: SQLCompileOptions): SQLCompileResult {
   // SQL allows undefined variables since they represent column names
-  const ir = transform(expr, new Map(), new Set(), { allowUndefinedVariables: true });
+  const ir = transform(expr, new Map(), new Set(), { allowUndefinedVariables: true, types: options?.types });
   const needsInput = usesInput(ir) || options?.asFunction;
   const code = emitSQL(ir);
 

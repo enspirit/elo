@@ -1,6 +1,7 @@
 import { Expr } from '../ast';
 import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
+import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createPythonBinding, isNativeBinaryOp, PYTHON_OP_MAP } from '../bindings/python';
 import { PY_HELPER_DEPS } from '../runtime';
@@ -14,6 +15,15 @@ export interface PythonCompileOptions {
   execute?: boolean;
   /** If true, strip guard/check assertions from output */
   stripGuards?: boolean;
+  /**
+   * Types the checker found for the AST, from `typecheckWithAnnotations`.
+   *
+   * With it, a declared field or coerced value gets a typed implementation
+   * instead of a runtime dispatcher. Without it the emission is exactly what
+   * it always was, which is why the compile path never calls the checker
+   * itself.
+   */
+  types?: TypeAnnotations;
 }
 
 /**
@@ -88,7 +98,7 @@ export function compileToPython(expr: Expr, options?: PythonCompileOptions): str
  * Compiles Elo expressions to Python with metadata about input usage.
  */
 export function compileToPythonWithMeta(expr: Expr, options?: PythonCompileOptions): PythonCompileResult {
-  const ir = transform(expr);
+  const ir = transform(expr, new Map(), new Set(), { types: options?.types });
   const actuallyUsesInput = usesInput(ir);
   const emitOptions: EmitOptions = { stripGuards: options?.stripGuards || false };
   const result = emitPyWithHelpers(ir, emitOptions);
