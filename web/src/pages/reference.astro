@@ -763,6 +763,40 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
         <pre class="language-shell">eloc --input-type '&#123; total: Int &#125;' -e "upper(_.total)"
 # 1:1: error: No signature of upper accepts upper(Int). ...</pre>
 
+        <h3>What it does not see</h3>
+        <p>
+          The checker is a single pass over the expression, and these are its
+          blind spots. None of them produce a wrong answer — the checker stays
+          silent rather than guessing — but it is worth knowing where its
+          silence means "fine" and where it means "cannot tell".
+        </p>
+        <table class="type-table">
+          <thead><tr><th>Not seen</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code class="language-elo" data-invalid>let f = fn(x ~> upper(x)) in f(1)</code></td>
+              <td>a function bound with <code>let</code> is checked once, not once per call site, so its parameters stay <code>Any</code>. Written inline, <code>upper(1)</code> is reported.</td>
+            </tr>
+            <tr>
+              <td><code class="language-elo" data-invalid>upper(fetch(k, .a))</code></td>
+              <td><a href="#data-paths">data paths</a> and <code>fetch</code> reach into data by a key computed at runtime, so the result is <code>Any</code> even when <code>k</code> is declared.</td>
+            </tr>
+            <tr>
+              <td>a union of more than a handful of members</td>
+              <td>the checker tries each member combination, and gives up past a small cap rather than doing exponential work. It widens to <code>Any</code>, so it never reports something wrong — it just stops reporting.</td>
+            </tr>
+            <tr>
+              <td>anything about an undeclared <code>_</code></td>
+              <td>the headline limitation, and the one you can do something about: declare the input and most of the rest follows.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Nor does it say anything about <em>runtime</em> cost or failure. A
+          well-typed expression can still divide by zero, exhaust memory, or
+          take a long time — see <a href="/running-safely">Running Elo safely</a>.
+        </p>
+
         <p class="note">
           <strong>Note:</strong> an unknown field is reported for a
           <em>declared schema</em>, not for an object literal. A schema is a

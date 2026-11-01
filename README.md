@@ -220,9 +220,32 @@ form and then promise that a saved formula will not fail at evaluation for type
 reasons. Functions that genuinely accept anything — `isNull`, `typeOf`,
 `assert`, `fetch` — stay quiet under it.
 
-It is a correctness and portability tool, not a security feature: the sandbox
-guarantees in [the security model](https://elo-lang.org/security) hold whether
-or not you run it.
+### What the checker does not see
+
+The checker is a single pass over the expression, and it stays silent rather
+than guessing. Its blind spots:
+
+- **A `let`-bound function is checked once, not per call site**, so its
+  parameters stay `Any`: `let f = fn(x ~> upper(x)) in f(1)` is not reported,
+  though the inline `upper(1)` is.
+- **Data paths and `fetch` are opaque** — they reach into data by a key
+  computed at runtime, so `upper(fetch(k, .a))` is not reported even when `k`
+  is declared.
+- **Wide unions widen to `Any`.** Member combinations are tried up to a small
+  cap, past which the checker stops reporting rather than do exponential work.
+- **An undeclared `_` tells it nothing** — the headline limitation, and the one
+  you can do something about.
+
+What it guarantees in the other direction is the part worth relying on: **if it
+is silent, every target compiles the program.** A corpus of ~9000 expressions
+built from the signature table is checked against all four compilers on every
+test run to keep that true.
+
+It says nothing about *runtime* cost or failure: a well-typed expression can
+still divide by zero, exhaust memory or take a long time. It is a correctness
+and portability tool, not a security feature — the sandbox guarantees in
+[the security model](https://elo-lang.org/security) hold whether or not you
+run it.
 
 ### Evaluator (elo)
 
