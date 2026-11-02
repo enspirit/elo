@@ -850,8 +850,34 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
       arr
     );
   });
-  sqlLib.register('flat', [Types.array], (args, ctx) =>
-    `(SELECT ARRAY_AGG(elem) FROM UNNEST(${ctx.emit(args[0])}) AS sub, UNNEST(sub) AS elem)`);
+  // PostgreSQL has no array of arrays. `ARRAY[ARRAY[1, 2], ARRAY[3, 4]]` is a
+  // single *two-dimensional* integer[], so UNNEST already yields the four
+  // scalars and the second UNNEST this used to emit had an integer to unnest —
+  // "function unnest(integer) does not exist". Worse, a ragged list cannot be
+  // built at all: `ARRAY[ARRAY[1], ARRAY[2, 3]]` is rejected outright.
+  //
+  // Concatenating the parts sidesteps both: it never constructs the nested
+  // array, so it is exact for a ragged list and for an empty part. Available
+  // whenever the list is written in place and its elements are lists, which is
+  // every use of `flat` that a nested list could be written for.
+  sqlLib.register('flat', [Types.array], (args, ctx) => {
+    const outer = args[0];
+    if (outer.type === 'array_literal' && outer.elements.every(e => inferType(e).kind === 'array')) {
+      if (outer.elements.length === 0) return arrayArg(outer, ctx);
+      // An empty part has no element type of its own, so it borrows one from a
+      // sibling: `[[], [1, 2]]` concatenates integer arrays.
+      const sibling = outer.elements
+        .map(e => (e.type === 'array_literal' ? e.elementType : Types.any))
+        .find(t => t.kind !== 'any') ?? Types.string;
+      const parts = outer.elements.map(e => arrayArg(e, ctx, sibling));
+      return parts.length === 1 ? parts[0] : `(${parts.join(' || ')})`;
+    }
+    // Otherwise one UNNEST, which flattens a rectangular two-dimensional array
+    // in a single step and leaves a flat list alone — the most SQL can do for a
+    // value it only sees at runtime.
+    const arr = arrayArg(outer, ctx);
+    return aggregatedArray(outer, `(SELECT ARRAY_AGG(elem) FROM UNNEST(${arr}) AS elem)`, arr);
+  });
 
   // Join list elements with separator
   sqlLib.register('join', [Types.array, Types.string], (args, ctx) =>

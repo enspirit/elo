@@ -2,3 +2,17 @@ assert(flat([[1, 2], [3, 4]]) == [1, 2, 3, 4])
 assert(flat([[1], [2], [3]]) == [1, 2, 3])
 assert(flat([[], [1, 2]]) == [1, 2])
 assert(flat([]) == [])
+
+# Ragged, which PostgreSQL cannot even build as a nested array:
+# `ARRAY[ARRAY[1], ARRAY[2, 3]]` is "multidimensional arrays must have array
+# expressions with matching dimensions". Concatenating the parts never
+# constructs it.
+assert(flat([[1], [2, 3]]) == [1, 2, 3])
+assert(flat([[1, 2, 3], [4]]) == [1, 2, 3, 4])
+assert(flat([[1, 2], []]) == [1, 2])
+assert(flat([[], []]) == [])
+assert(flat([[1, 2]]) == [1, 2])
+
+# Over a type other than Int, and over a list that is already flat
+assert(flat([['a'], ['b', 'c']]) == ['a', 'b', 'c'])
+assert(flat([1, 2]) == [1, 2])

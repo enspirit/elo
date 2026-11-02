@@ -63,3 +63,27 @@ case needs no new analysis — only the decision about what to do with it.
 'List')`) is the failing line. Whatever is decided, the mixed-list assertions
 need an acceptance fixture that states it: on three targets if SQL refuses, on
 four if it does not.
+
+## Widened by 0185: nesting, not only mixing
+
+Fixing `flat` showed that this task is one case of a larger rule: **a
+PostgreSQL array is more restrictive than an Elo list in two ways, not one.**
+
+- Its elements must share a type — this task.
+- Nesting must be *rectangular*. `ARRAY[ARRAY[1], ARRAY[2, 3]]` is rejected
+  with "multidimensional arrays must have array expressions with matching
+  dimensions", so a ragged list of lists cannot be constructed at all:
+
+```
+$ eloc -t sql -e "[[1], [2, 3]] == [[1], [2, 3]]"
+ARRAY[ARRAY[1], ARRAY[2, 3]] = ARRAY[ARRAY[1], ARRAY[2, 3]]
+ERROR:  multidimensional arrays must have array expressions with matching dimensions
+```
+
+`flat` escapes it by concatenating the parts instead of building the nested
+array (see `done/0185-…`), which is exact and needs no decision. Nothing else
+can: a nested list that is merely *held* has to exist as a value.
+
+Both restrictions have the same two answers — reject, or make a list `jsonb` —
+and they should be answered together, which is why this is recorded here rather
+than in a second task.

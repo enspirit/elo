@@ -295,8 +295,12 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     const arr = ctx.emit(args[0]);
     return `(lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])(${arr})`;
   });
+  // One level deep, and an element that is not a list passes through — which is
+  // what `.flat()` does on JavaScript and `.flatten(1)` on Ruby. Iterating
+  // every element unconditionally made `flat([1, 2])` raise "'int' object is
+  // not iterable" where the other three targets answer `[1, 2]`.
   pyLib.register('flat', [Types.array], (args, ctx) =>
-    `[x for sub in ${ctx.emit(args[0])} for x in sub]`);
+    `[x for sub in ${ctx.emit(args[0])} for x in (sub if isinstance(sub, list) else [sub])]`);
   pyLib.register('join', [Types.array, Types.string], (args, ctx) =>
     `${ctx.emit(args[1])}.join(${ctx.emit(args[0])})`);
 

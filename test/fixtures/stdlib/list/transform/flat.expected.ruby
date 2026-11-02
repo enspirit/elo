@@ -2,3 +2,17 @@
 ->(_) { (raise "Assertion failed" unless [[1], [2], [3]].flatten(1) == [1, 2, 3]; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [[], [1, 2]].flatten(1) == [1, 2]; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless [].flatten(1) == []; true) }.call(nil);
+
+
+
+
+
+->(_) { (raise "Assertion failed" unless [[1], [2, 3]].flatten(1) == [1, 2, 3]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [[1, 2, 3], [4]].flatten(1) == [1, 2, 3, 4]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [[1, 2], []].flatten(1) == [1, 2]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [[], []].flatten(1) == []; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [[1, 2]].flatten(1) == [1, 2]; true) }.call(nil);
+
+
+->(_) { (raise "Assertion failed" unless [["a"], ["b", "c"]].flatten(1) == ["a", "b", "c"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless [1, 2].flatten(1) == [1, 2]; true) }.call(nil);

@@ -76,9 +76,6 @@ KNOWN_INVALID=(
     # 0187 - a list whose elements have different types has no homogeneous
     # PostgreSQL array: ARRAY types integer and boolean cannot be matched
     "reference/arrays"
-    # 0185 - PostgreSQL has no nested arrays, so `flat` unnests a scalar:
-    # function unnest(integer) does not exist
-    "stdlib/list/transform/flat"
 )
 
 is_known_invalid() {
