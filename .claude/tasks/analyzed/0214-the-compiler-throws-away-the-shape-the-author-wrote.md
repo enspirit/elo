@@ -114,6 +114,77 @@ If the narrow version does not clearly pay for itself, move this to
 `analyzed` with the measurement recorded, and leave the workaround documented
 where it is. A measured decision not to do it is a good outcome for this task.
 
+## Measured, 2026-11-02 — and the answer changes the task
+
+The task asked for a number before any code: how many SQL emissions actually
+depend on `demandedPgType` guessing, and whether field types alone remove them.
+
+Instrumented `demandedPgType` and `readsJsonField`, then compiled every line of
+every fixture to SQL (948 lines compile; 231 are refused, as they should be —
+lambdas, type definitions, guards):
+
+|  | without field types | with them |
+| --- | --- | --- |
+| `demandedPgType` calls | 54 | 21 |
+| **`OPERATOR_DEMAND` guesses** | **8** | **0** |
+| derived from the sibling's known type | 46 | 21 |
+| member reads that know their own type | 0 | 38 |
+
+So **field types alone do it**, and they do it completely: the one genuinely
+unsound mechanism — inferring an operand's type from the *operator* — fires 8
+times over the corpus without field types and **never** with them. Unions and
+nullability are not needed for this. The other 46/21 calls are not guessing at
+all; they propagate a type the sibling already knows, which is what a compiler
+should do.
+
+### But the narrow change is not the one this task describes
+
+"With them" above is `typecheckWithAnnotations` + `types` passed to the
+compiler — which is to say **`--optimize` already removes all the guessing
+today**. Restructuring `EloType` is not required to get there.
+
+That matters because `transform.ts` cannot find a field's type on its own.
+`let T = { a: Int } in _ |> T` makes `T` a `fn` in the type table and its
+result `any`; the shape is in the AST, and the only thing that reads it
+structurally is `checktypes.ts`. Putting field types in `EloType` without
+making the transform propagate them structurally buys nothing — and making it
+propagate them means duplicating the checker's walk in the compile path, which
+is the duplication the architecture exists to avoid.
+
+So the real options are:
+
+1. **Make the checker's annotations mandatory on the compile path.** Small
+   change, and the measurement says it reaches 0 guesses. But it reverses the
+   stated invariant in `typecheck.ts`: "Nothing in the compile path calls it
+   […] the four compilers behave exactly the same whether or not it runs." It
+   costs a second AST walk per compile, and it leaves a hole: a program the
+   checker *reports on* gets no annotations, so it would still compile down the
+   guessing path — two semantics again, just with a rarer trigger.
+2. **Keep it optional and accept the workaround**, documenting that
+   `OPERATOR_DEMAND` is the price of compiling without the checker, and that
+   `--optimize` removes it. 8 occurrences in the whole corpus, none of them
+   wrong today.
+3. **The task as written** — structural `EloType` *and* structural propagation
+   in the transform. Removes the asymmetry at the root, and is the only option
+   that makes `--optimize` purely an optimisation rather than a semantics. Also
+   by far the largest, and the one that can make the language less simple.
+
+### Why this is where it stops
+
+Which of those three is right is a question about what the checker *is* — an
+optional lint, or part of the compiler — and that is a design decision rather
+than a cleanup. The audit this task came from was asked to find complexity, and
+the finding stands: there are three type representations and the third one is a
+shadow of the first being too weak. What to do about it is the owner's call.
+
+The measurement above is the thing that was missing from the decision, and it
+is now recorded. Option 2 is what ships today and nothing is broken by it, so
+there is no pressure.
+
+Worth noting for whichever option wins: `0205` (a SQL binding forgets the type
+of the member it holds) is the same root cause and should be decided with it,
+not separately.
+
 ## Tests
 
 `typecheck-differential.integration.test.ts` already asserts the invariant this
