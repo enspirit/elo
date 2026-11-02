@@ -9,12 +9,20 @@
  * This allows target compilers to generate optimal code based on types.
  */
 
+import { Located } from './ast';
 import { EloType, Types } from './types';
 
 /**
- * IR expression types
+ * IR expression types.
+ *
+ * Every node may carry the position of the source it came from — the transform
+ * copies it off the AST node it came from — so a refusal raised while emitting
+ * can say where in the source it is about. Absent unless the parse recorded
+ * positions.
  */
-export type IRExpr =
+export type IRExpr = IRNode & Located;
+
+type IRNode =
   | IRIntLiteral
   | IRFloatLiteral
   | IRBoolLiteral

@@ -9,8 +9,9 @@ export type Expr = Literal | NullLiteral | StringLiteral | Variable | BinaryOp |
  *
  * Opt-in: `parse(source)` produces no locations and the factory functions
  * never add any, so an AST built by hand or compared with deepStrictEqual is
- * unaffected. `parse(source, { locations: true })` fills them in, which is what
- * the type checker needs to say *where* a problem is.
+ * unaffected. `parse(source, { locations: true })` fills them in, which is
+ * what every diagnostic needs to say *where* a problem is — the checker, the
+ * transform and the emission alike, so `eloc` and `elo` always ask for them.
  */
 export interface SourceLocation {
   line: number;
@@ -30,6 +31,46 @@ export interface SourceLocation {
  */
 export interface Located {
   loc?: SourceLocation;
+}
+
+/**
+ * How a position is written in a refusal: the spelling parse errors have
+ * always used, so one diagnostic reads like the next.
+ */
+export function formatSourceLocation(loc: SourceLocation): string {
+  const where = `line ${loc.line}, column ${loc.column}`;
+  return loc.file ? `${where} of ${loc.file}` : where;
+}
+
+/** An error that has already been told where it happened. */
+interface LocatedError extends Error {
+  loc?: SourceLocation;
+}
+
+/** True of a refusal that already says where it happened. */
+export function isLocated(error: unknown): boolean {
+  return error instanceof Error && (error as LocatedError).loc !== undefined;
+}
+
+/**
+ * Say where a refusal happened, if that is not already known.
+ *
+ * The first frame to know wins, which is the innermost one: the compiler
+ * recurses, so the node in hand at the throw is the smallest piece of source
+ * the refusal is about, and every frame above it is a larger piece of the same
+ * program. A refusal that named them all would name the whole file.
+ *
+ * Returns what it was given when there is no position to add, so a caller
+ * reads as `throw locate(error, node.loc)` either way — including when
+ * positions were not recorded at all, where every message is what it was.
+ */
+export function locate(error: unknown, loc: SourceLocation | undefined): unknown {
+  if (!loc || !(error instanceof Error)) return error;
+  const located = error as LocatedError;
+  if (located.loc) return located;
+  located.loc = loc;
+  located.message = `${located.message} at ${formatSourceLocation(loc)}`;
+  return located;
 }
 
 /**
@@ -162,7 +203,7 @@ export interface MemberAccess extends Located {
 /**
  * Variable binding in a let expression
  */
-export interface LetBinding {
+export interface LetBinding extends Located {
   name: string;
   value: Expr;
 }
@@ -259,13 +300,25 @@ export function memberAccess(object: Expr, property: string): MemberAccess {
  * legal JavaScript. Nesting is the unambiguous way to shadow a name, and it
  * stays legal.
  */
-export function assertDistinctNames(names: string[], what: string): void {
-  const seen = new Set<string>();
-  for (const name of names) {
-    if (seen.has(name)) {
-      throw new Error(`Duplicate ${what} '${name}'`);
+export function assertDistinctNames(named: Array<{ name: string } & Located>, what: string): void {
+  const seen = new Map<string, Located>();
+  for (const item of named) {
+    const first = seen.get(item.name);
+    if (first) {
+      // Reported at the second one, with the first mentioned: the author is
+      // reading the line they just wrote, and the earlier name is the context
+      // they need rather than the thing to fix.
+      const error = locate(new Error(`Duplicate ${what} '${item.name}'`), item.loc) as Error;
+      if (first.loc) {
+        // The file is named once: two names colliding in one file is the usual
+        // case, and saying it twice reads as though they were in two.
+        const sameFile = first.loc.file === item.loc?.file;
+        const where = formatSourceLocation(sameFile ? { ...first.loc, file: undefined } : first.loc);
+        error.message += ` (first at ${where})`;
+      }
+      throw error;
     }
-    seen.add(name);
+    seen.set(item.name, item);
   }
 }
 
@@ -279,7 +332,7 @@ export function letExpr(bindings: LetBinding[], body: Expr): LetExpr {
     throw new Error('Let expression must have at least one binding');
   }
 
-  assertDistinctNames(bindings.map((binding) => binding.name), 'binding');
+  assertDistinctNames(bindings, 'binding');
 
   // Kept flat on purpose. Desugaring `let a = 1, b = 2, c = 3 in body` into
   // nested single-binding lets made every binding count as one level of
@@ -304,7 +357,7 @@ export function lambda(params: string[], body: Expr): Lambda {
   // The parameters share the lambda's scope, and no target accepts a name
   // twice in a parameter list — `(a, a) => a`, `->(a, a) { a }` and
   // `lambda a, a: a` are all syntax errors.
-  assertDistinctNames(params, 'parameter');
+  assertDistinctNames(params.map((name) => ({ name })), 'parameter');
 
   return { type: 'lambda', params, body };
 }
@@ -464,7 +517,7 @@ export interface TypeSchemaProperty {
  * This is what a file's type prelude declares. It becomes a `TypeDef` node
  * once there is a body to use it in — see `withTypeDefs`.
  */
-export interface TypeBinding {
+export interface TypeBinding extends Located {
   name: string;
   typeExpr: TypeExpr;
 }
@@ -535,7 +588,7 @@ export function typeDef(definitions: TypeBinding[], body: Expr): TypeDef {
   // The definitions share one scope now that they are flat, so a name defined
   // twice is refused rather than silently resolved to one of the two — the
   // targets do not even agree on which one that would be.
-  assertDistinctNames(definitions.map((definition) => definition.name), 'type definition');
+  assertDistinctNames(definitions, 'type definition');
 
   return { type: 'typedef', definitions, body };
 }

@@ -288,7 +288,7 @@ function loadModule(
     const program = loadProgramIn(source, nested, [...stack, id], linking);
     // A module with no value is never checked by `typeDef`, so its own scope
     // is checked here: a name defined twice is refused wherever it is written.
-    assertDistinctNames(program.typeDefs.map((type) => type.name), 'type definition');
+    assertDistinctNames(program.typeDefs, 'type definition');
     const value = hasNoExpression(program.body)
       ? undefined
       : scopeProgram(program, parse(program.body, parserOptions(nested)));

@@ -13,6 +13,7 @@ import { compileToPythonWithMeta } from './compilers/python';
 import { getPrelude, isPreludePrependable, Target as PreludeTarget } from './preludes';
 import { typecheckWithAnnotations, formatDiagnostic, TypeAnnotations } from './typecheck';
 import type { Expr } from './ast';
+import { isLocated } from './ast';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json');
@@ -242,13 +243,23 @@ interface CompileOptions {
   types?: TypeAnnotations;
   /** What the file's header declares — its imports and type prelude — which scopes every line. */
   scope?: LoadedProgram;
+  /** The file the source came from, so a refusal in it names the file. */
+  file?: string;
+  /** Which line of that file the source starts on. */
+  firstLine?: number;
 }
 
 function compile(source: string, target: Target, options: CompileOptions = {}): string {
   const { includePrelude = false, execute = false, stripGuards = false, types } = options;
   // Reuse the checker's tree when there is one: the annotations are keyed on
   // node identity, so a second parse would produce a map that matches nothing.
-  const ast = options.ast ?? scopeProgram(options.scope, parse(source));
+  // Positions are recorded on the compile path too, and not only under
+  // --typecheck: every refusal below here reports the line and column it is
+  // about, which is the whole reason to pay for them.
+  const ast = options.ast ?? scopeProgram(
+    options.scope,
+    parse(source, { locations: true, file: options.file, firstLine: options.firstLine })
+  );
 
   let code: string;
   switch (target) {
@@ -307,6 +318,11 @@ function readProgram(body: string, lines?: boolean): string[] {
     const trimmed = line.trim();
     return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
   });
+}
+
+/** The file a source came from, for a diagnostic to name. */
+function fileOf(options: Options): string | undefined {
+  return options.inputFile && options.inputFile !== '-' ? options.inputFile : undefined;
 }
 
 /**
@@ -385,10 +401,10 @@ function main() {
   try {
     scope = loadProgram(source, {
       loader: nodeLoader(),
-      file: options.inputFile && options.inputFile !== '-' ? options.inputFile : undefined,
+      file: fileOf(options),
       // An inlined module keeps the locations of its own file, so a diagnostic
       // about it says which file its line and column are in.
-      locations: options.typecheck,
+      locations: true,
     });
     sources = readProgram(scope.body, options.lines);
   } catch (error) {
@@ -411,22 +427,27 @@ function main() {
   try {
     results = sources.map((source, index) => {
       try {
-        const trimmed = source.trim();
         // Skip blank lines and comment-only sources
         if (hasNoExpression(source)) {
           return '';
         }
-        return compile(trimmed, options.target, {
+        // Not trimmed: the lexer skips leading whitespace itself, and keeping
+        // it means a reported line and column match the ones in the file.
+        return compile(source, options.target, {
           includePrelude: index === 0 && options.prelude,
           execute: options.execute,
           stripGuards: options.stripGuards,
           scope,
+          file: fileOf(options),
+          firstLine: options.lines ? index + 1 : 1,
           // The annotations are keyed on AST node identity, so they only mean
           // anything against the tree the checker walked.
           ...(options.optimize ? checked[index] : {}),
         });
       } catch (error) {
-        throw options.lines ? new Error(`Line ${index + 1}: ${error}`) : error;
+        // The line is in the message already when the refusal knows where it
+        // happened, which is everything but a refusal about the whole source.
+        throw options.lines && !isLocated(error) ? new Error(`Line ${index + 1}: ${error}`) : error;
       }
     });
   } catch (error) {
@@ -505,9 +526,9 @@ function reportTypeDiagnostics(
     try {
       // Locations are opt-in at parse time, and this is exactly what they are
       // for: a diagnostic the author can act on points at a column.
-      // Not trimmed: the lexer skips leading whitespace itself, and keeping it
-      // means the reported column matches the column in the file.
-      const ast = scopeProgram(scope, parse(source, { locations: true }));
+      // `firstLine` is what makes a line number count from the top of the file
+      // rather than from the top of the line this read on its own.
+      const ast = scopeProgram(scope, parse(source, { locations: true, firstLine: index + 1 }));
       const result = typecheckWithAnnotations(ast, {
         allowUndefinedVariables,
         strict: options.strict,
@@ -522,16 +543,9 @@ function reportTypeDiagnostics(
     }
     for (const diagnostic of diagnostics) {
       found = true;
-      // A single -e expression is always line 1, so its own line number adds
-      // nothing; a file's lines are numbered from the source. A diagnostic
-      // that names a file came from an imported module and already carries the
-      // line it means — renumbering it would point into the wrong file.
-      const renumber = multiLine && diagnostic.loc && !diagnostic.loc.file;
-      const formatted = formatDiagnostic(
-        renumber
-          ? { ...diagnostic, loc: { ...diagnostic.loc!, line: index + 1 } }
-          : diagnostic
-      );
+      const formatted = formatDiagnostic(diagnostic);
+      // A diagnostic with no position of its own is the only one that still
+      // needs its line said out loud.
       console.error(multiLine && !diagnostic.loc ? `${index + 1}: ${formatted}` : formatted);
     }
   });

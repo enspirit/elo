@@ -2,6 +2,7 @@
 
 import { readFileSync } from 'fs';
 import { parse, TRAILING_INPUT } from './parser';
+import { isLocated } from './ast';
 import { loadProgram, scopeProgram, hasNoExpression } from './modules';
 import type { LoadedProgram } from './modules';
 import { nodeLoader } from './node-loader';
@@ -207,12 +208,24 @@ function parseInputData(inputData: string, format: InputFormat | undefined, form
   }
 }
 
+/** The file a source came from, for a diagnostic to name. */
+function fileOf(options: Options): string | undefined {
+  return options.inputFile && options.inputFile !== '-' ? options.inputFile : undefined;
+}
+
 /**
  * Compile and evaluate a single Elo expression, under what the file's header
  * declares — its imports and its type prelude, if any.
  */
-function evaluate(source: string, inputValue: unknown, scope?: LoadedProgram): unknown {
-  const ast = scopeProgram(scope, parse(source));
+function evaluate(
+  source: string,
+  inputValue: unknown,
+  scope?: LoadedProgram,
+  where: { file?: string; firstLine?: number } = {}
+): unknown {
+  // Positions are recorded so that a refusal says which line of which file it
+  // is about, which is the only thing an author can act on.
+  const ast = scopeProgram(scope, parse(source, { locations: true, ...where }));
   const result = compileToJavaScriptWithMeta(ast);
 
   // Create function with luxon DateTime, Duration, and Interval in scope
@@ -283,7 +296,8 @@ function main() {
   try {
     scope = loadProgram(source, {
       loader: nodeLoader(),
-      file: options.inputFile && options.inputFile !== '-' ? options.inputFile : undefined,
+      file: fileOf(options),
+      locations: true,
     });
     sources = readProgram(scope.body, options.lines);
   } catch (error) {
@@ -313,7 +327,6 @@ function main() {
   const outputs: string[] = [];
   for (let i = 0; i < sources.length; i++) {
     const source = sources[i];
-    const trimmed = source.trim();
 
     // Skip blank lines and comment-only sources
     if (hasNoExpression(source)) {
@@ -321,12 +334,17 @@ function main() {
     }
 
     try {
-      const result = evaluate(trimmed, inputValue, scope);
+      // Not trimmed: the lexer skips leading whitespace itself, and keeping it
+      // means a reported column matches the column in the file.
+      const result = evaluate(source, inputValue, scope, {
+        file: fileOf(options),
+        firstLine: options.lines ? i + 1 : 1,
+      });
       outputs.push(outputAdapter.serialize(result));
     } catch (error) {
-      // A whole program's errors carry their own line and column; a line read
-      // on its own has to be told which one it was.
-      console.error(options.lines ? `Error on line ${i + 1}: ${error}` : `Error: ${error}`);
+      // Every compile-time refusal carries its own line and column; a runtime
+      // one does not yet, and a line read on its own has to be told which.
+      console.error(options.lines && !isLocated(error) ? `Error on line ${i + 1}: ${error}` : `Error: ${error}`);
       if (!options.lines && String(error).includes(TRAILING_INPUT)) {
         console.error(
           'hint: a source is one expression, newlines included. Pass --lines to ' +

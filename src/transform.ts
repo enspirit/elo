@@ -9,7 +9,7 @@
  * - Tracks variable types through let bindings
  */
 
-import { Expr } from './ast';
+import { Expr, locate } from './ast';
 import {
   IRExpr,
   IRTypeExpr,
@@ -223,9 +223,34 @@ function checkedType(expr: Expr, ctx: TransformContext, fallback: EloType): EloT
 }
 
 /**
- * Internal transform function that tracks depth
+ * Internal transform function that tracks depth.
+ *
+ * Every refusal below here is told which node it happened on, at this one
+ * point rather than at each of the throw sites: the transform is a recursion,
+ * so the node in hand is always the piece of source the refusal is about, and
+ * a refusal added later is positioned by the same construction. `locate`
+ * keeps the innermost position, which is the most specific one.
  */
 function transformWithDepth(
+  expr: Expr,
+  env: TypeEnv,
+  defining: DefiningSet,
+  depth: number,
+  ctx: TransformContext
+): IRExpr {
+  try {
+    const ir = transformNode(expr, env, defining, depth, ctx);
+    // The position travels with the node, so a refusal raised later — while
+    // emitting, where a target may have no implementation of a signature —
+    // can say where in the source it is about.
+    if (expr.loc) ir.loc = expr.loc;
+    return ir;
+  } catch (error) {
+    throw locate(error, expr.loc);
+  }
+}
+
+function transformNode(
   expr: Expr,
   env: TypeEnv,
   defining: DefiningSet,

@@ -4,6 +4,9 @@ import { parse, parseTypeExpr } from '../../src/parser';
 import { typecheck, typecheckWithType, formatDiagnostic, Diagnostic } from '../../src/typecheck';
 import { transform } from '../../src/transform';
 import { inferType } from '../../src/ir';
+import { compileToJavaScript } from '../../src/compilers/javascript';
+import { compileToRuby } from '../../src/compilers/ruby';
+import { compileToPython } from '../../src/compilers/python';
 import { Types } from '../../src/types';
 
 function check(source: string): Diagnostic[] {
@@ -473,8 +476,11 @@ describe('Typecheck - source locations', () => {
   });
 
   it('locates a non-bool condition at the condition', () => {
+    //                            1234
     const [diagnostic] = located('if 42 then 1 else 2');
-    assert.deepStrictEqual(diagnostic.loc, { line: 1, column: 1 });
+    // The literal, not the `if`: every node carries a position now, so the
+    // innermost one the diagnostic is about is the one it gets.
+    assert.deepStrictEqual(diagnostic.loc, { line: 1, column: 4 });
   });
 
   it('locates a unary operator mistake', () => {
@@ -568,10 +574,17 @@ describe('Parser - opt-in locations', () => {
 
   it('leaves the compile path indifferent to locations', () => {
     // An AST with locations must compile to exactly the same code as one
-    // without, or the feature would not be free.
-    const plain = transform(parse("upper('a') + 'b'"));
-    const withLocs = transform(parse("upper('a') + 'b'", { locations: true }));
-    assert.strictEqual(inferType(plain).kind, inferType(withLocs).kind);
+    // without, or the feature would not be free. The IR carries the positions
+    // too — that is how a refusal raised while emitting says where it is — so
+    // the emission is where the two have to agree.
+    const source = "let X = { a: Int }, k = _ |> X in upper('a') + 'b' + k.a";
+    for (const compile of [compileToJavaScript, compileToRuby, compileToPython]) {
+      assert.strictEqual(
+        compile(parse(source)),
+        compile(parse(source, { locations: true })),
+        compile.name
+      );
+    }
   });
 });
 

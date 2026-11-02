@@ -1,4 +1,4 @@
-import { Expr } from '../ast';
+import { Expr, locate } from '../ast';
 import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
@@ -139,9 +139,22 @@ function emitPyWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
 }
 
 /**
- * Emit Python code from IR
+ * Emit Python code from IR, saying where in the source a refusal was about.
+ *
+ * Positioned here rather than at each throw site: emission is a recursion, so
+ * the node in hand is the piece of source the refusal is about, and a refusal
+ * added later is positioned by the same construction. The position is there
+ * only when the parse recorded one.
  */
 function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+  try {
+    return emitPyNode(ir, requiredHelpers, options);
+  } catch (error) {
+    throw locate(error, ir.loc);
+  }
+}
+
+function emitPyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
   const ctx: EmitContext<string> = {
     emit: (child) => emitPy(child, requiredHelpers, options),
     emitWithParens: (child, parentOp, side) => {

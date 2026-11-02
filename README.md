@@ -177,6 +177,18 @@ cat input.elo | ./bin/eloc - -t ruby
 # 1:9: error: No signature of operator '-' accepts sub(String, Int). ...
 ```
 
+Every compile-time refusal names **where** it is — the line, the column, and
+the file when the source came from one. With `--lines` the line counts from the
+top of the file, and a refusal inside an imported module names the module:
+
+```
+./bin/eloc main.elo
+# Compilation error: Error: Unknown function rond(Any, Int) at line 1, column 18 of helper.elo
+
+./bin/eloc twice.elo
+# Compilation error: Error: Duplicate type definition 'T' at line 2, column 1 of twice.elo (first at line 1, column 1)
+```
+
 Options:
 - `-e, --expression <expr>` - Expression to compile
 - `-t, --target <lang>` - Target language: `ruby`, `js` (default), `python`, `sql`

@@ -1,4 +1,4 @@
-import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr, TypeBinding, withTypeDefs, ImportDecl, Located } from './ast';
+import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr, TypeBinding, withTypeDefs, ImportDecl, Located, locate, SourceLocation, formatSourceLocation } from './ast';
 
 /**
  * Token types
@@ -526,8 +526,9 @@ export interface ParserOptions {
    *
    * Off by default, so an AST is a plain value: comparing one with
    * deepStrictEqual, serializing it with toEloCode or building one by hand all
-   * behave exactly as before. Ask for locations when you need to report *where*
-   * a problem is — the type checker does.
+   * behave exactly as before. Ask for locations when you need a diagnostic to
+   * report *where* a problem is — `eloc` and `elo` always do, since every
+   * refusal below the parse takes its position off the node in hand.
    */
   locations?: boolean;
   /**
@@ -538,6 +539,14 @@ export interface ParserOptions {
    * file its line and column are in.
    */
   file?: string;
+  /**
+   * Which line of its file the source starts on, 1-based and 1 by default.
+   *
+   * A `.elo` read one expression per line parses each line on its own, and a
+   * position is only useful to its author if it counts from the top of the
+   * file rather than from the top of the line.
+   */
+  firstLine?: number;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -574,6 +583,7 @@ export class Parser {
   private maxDepth: number;
   private locations: boolean;
   private file?: string;
+  private firstLine: number;
 
   constructor(input: string, options: ParserOptions = {}) {
     this.lexer = new Lexer(input);
@@ -581,6 +591,7 @@ export class Parser {
     this.maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
     this.locations = options.locations ?? false;
     this.file = options.file;
+    this.firstLine = options.firstLine ?? 1;
   }
 
   /**
@@ -590,9 +601,23 @@ export class Parser {
    */
   private at<T extends Located>(node: T, token: Token): T {
     if (this.locations) {
-      node.loc = { line: token.line, column: token.column, ...(this.file ? { file: this.file } : {}) };
+      node.loc = this.locationOf(token);
     }
     return node;
+  }
+
+  /**
+   * Where a token is, counted from the top of its file.
+   *
+   * The one place a position is built, so a parse error, a node's `loc` and a
+   * refused construct all say where they are the same way.
+   */
+  private locationOf(token: Token): SourceLocation {
+    return {
+      line: this.firstLine - 1 + token.line,
+      column: token.column,
+      ...(this.file ? { file: this.file } : {}),
+    };
   }
 
   /**
@@ -601,6 +626,23 @@ export class Parser {
    */
   private here(): Token {
     return this.currentToken;
+  }
+
+  /**
+   * Build a node, saying where it was written if building it is refused.
+   *
+   * The AST factories refuse what no target can express — a name bound twice,
+   * a parameter named twice — and they are given names rather than tokens, so
+   * the position comes from here. A refusal that already names a position
+   * keeps it: with `locations` on, the bindings carry one of their own and
+   * point at the offending name rather than at the construct holding it.
+   */
+  private built<T>(token: Token, build: () => T): T {
+    try {
+      return build();
+    } catch (error) {
+      throw locate(error, this.locationOf(token));
+    }
   }
 
   private checkDepth(): void {
@@ -640,8 +682,7 @@ export class Parser {
   }
 
   private formatLocation(token: Token): string {
-    const where = `line ${token.line}, column ${token.column}`;
-    return this.file ? `${where} of ${this.file}` : where;
+    return formatSourceLocation(this.locationOf(token));
   }
 
   private eat(tokenType: TokenType): void {
@@ -654,7 +695,21 @@ export class Parser {
     }
   }
 
+  /**
+   * A primary expression, positioned at the token it starts with.
+   *
+   * Tagged here rather than at each of the fifteen returns below, and only
+   * where nothing more precise is known: a member access points at the field
+   * name and a binary operator at the operator, which is where a reader looks.
+   * Every node carrying a position is what lets a refusal name one.
+   */
   private primary(): Expr {
+    const token = this.currentToken;
+    const node = this.primaryNode();
+    return node.loc ? node : this.at(node, token);
+  }
+
+  private primaryNode(): Expr {
     const token = this.currentToken;
 
     if (token.type === 'NUMBER') {
@@ -1211,6 +1266,7 @@ export class Parser {
    * Trailing commas are allowed: let x=2, y=3, in x*y
    */
   private letExpr(): Expr {
+    const letToken = this.here();
     this.eat('LET');
 
     // Check if this is a type definition (uppercase identifier)
@@ -1221,12 +1277,15 @@ export class Parser {
     const bindings: LetBinding[] = [];
 
     // Parse first binding
+    const firstToken = this.here();
     const firstName = this.currentToken.value;
     this.eat('IDENTIFIER');
     this.eat('ASSIGN');
     // Binding values parsed at pipe level (pipe won't consume 'in'/'guard'/'check' keywords)
     const firstValue = this.pipe();
-    bindings.push({ name: firstName, value: firstValue });
+    // The binding is tagged with the position of its name, not of the `let`:
+    // a name bound twice is reported where the second one is written.
+    bindings.push(this.at<LetBinding>({ name: firstName, value: firstValue }, firstToken));
 
     // Parse additional bindings
     while (this.currentToken.type === 'COMMA') {
@@ -1234,27 +1293,28 @@ export class Parser {
       // Allow trailing comma: check if next token ends bindings (IN, GUARD, CHECK)
       const nextType = (this.currentToken as Token).type;
       if (nextType === 'IN' || nextType === 'GUARD' || nextType === 'CHECK') break;
+      const nameToken = this.here();
       const name = this.currentToken.value;
       this.eat('IDENTIFIER');
       this.eat('ASSIGN');
       const value = this.pipe();
-      bindings.push({ name, value });
+      bindings.push(this.at<LetBinding>({ name, value }, nameToken));
     }
 
     // Check for let...guard or let...check sugar: let x = ... guard/check condition in body
     if ((this.currentToken as Token).type === 'GUARD') {
       const inner = this.guardExprParse('guard');
-      return letExpr(bindings, inner);
+      return this.built(letToken, () => letExpr(bindings, inner));
     }
     if ((this.currentToken as Token).type === 'CHECK') {
       const inner = this.guardExprParse('check');
-      return letExpr(bindings, inner);
+      return this.built(letToken, () => letExpr(bindings, inner));
     }
 
     this.eat('IN');
     const body = this.expr(); // Body can be any expression including nested let
 
-    return letExpr(bindings, body);
+    return this.built(letToken, () => letExpr(bindings, body));
   }
 
   /**
@@ -1270,10 +1330,11 @@ export class Parser {
     // Collected in a loop rather than by recursing on the tail: a hundred type
     // definitions are a hundred names, not a hundred levels of nesting.
     for (;;) {
+      const defToken = this.here();
       const name = this.currentToken.value;
       this.eat('UPPER_IDENTIFIER');
       this.eat('ASSIGN');
-      definitions.push({ name, typeExpr: this.typeExpr() });
+      definitions.push(this.at<TypeBinding>({ name, typeExpr: this.typeExpr() }, defToken));
 
       if (this.currentToken.type !== 'COMMA') break;
       this.eat('COMMA');
@@ -1285,13 +1346,13 @@ export class Parser {
       if (nextTokenType !== 'UPPER_IDENTIFIER') {
         // Value binding - parse remaining as let bindings
         const body = this.parseLetBindingsAfterComma();
-        return this.at(typeDef(definitions, body), nameToken);
+        return this.at(this.built(nameToken, () => typeDef(definitions, body)), nameToken);
       }
     }
 
     this.eat('IN');
     const body = this.expr();
-    return this.at(typeDef(definitions, body), nameToken);
+    return this.at(this.built(nameToken, () => typeDef(definitions, body)), nameToken);
   }
 
   /**
@@ -1677,6 +1738,7 @@ export class Parser {
    * Parse lambda expression: fn( ~> body ) or fn( x ~> body ) or fn( x, y ~> body )
    */
   private lambdaParse(): Expr {
+    const fnToken = this.here();
     this.eat('FN');
     this.eat('LPAREN');
 
@@ -1703,7 +1765,7 @@ export class Parser {
     const body = this.expr();
     this.eat('RPAREN');
 
-    return lambda(params, body);
+    return this.built(fnToken, () => lambda(params, body));
   }
 
   /**
@@ -2068,6 +2130,7 @@ export class Parser {
 
     while ((this.currentToken as Token).type === 'UPPER_IDENTIFIER') {
       const saved = this.saveState();
+      const nameToken = this.here();
       const name = this.currentToken.value;
       this.eat('UPPER_IDENTIFIER');
 
@@ -2079,7 +2142,9 @@ export class Parser {
       }
       this.eat('ASSIGN');
 
-      bindings.push({ name, typeExpr: this.typeExpr() });
+      // Positioned at its name: a name defined twice is reported where the
+      // second one is written, and the prelude of a module names its file.
+      bindings.push(this.at<TypeBinding>({ name, typeExpr: this.typeExpr() }, nameToken));
 
       // The comma between two definitions is optional, as it is between two
       // schema properties.

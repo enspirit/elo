@@ -945,3 +945,64 @@ describe('Elo Evaluator - Error handling', () => {
     assert.ok(result.stderr.includes('Error parsing'));
   });
 });
+
+describe('CLI - a diagnostic says where it is', () => {
+  /**
+   * The compile path records positions, not only `--typecheck`, so a refusal
+   * an author can act on names the line, the column, and the file it is in.
+   * With `--lines` the line counts from the top of the file, not from the top
+   * of the line read on its own.
+   */
+  const dir = mkdtempSync(join(tmpdir(), 'elo-where-'));
+
+  function wrote(name: string, content: string): string {
+    const path = join(dir, name);
+    writeFileSync(path, content);
+    return path;
+  }
+
+  it('names the position of an unknown function', () => {
+    const result = elocWithError('-e "rond(1, 2)"');
+    assert.strictEqual(result.exitCode, 1);
+    assert.match(result.stderr, /Unknown function rond\(Int, Int\) at line 1, column 1/);
+  });
+
+  it('names the position of a signature that does not exist', () => {
+    const result = elocWithError(`-e "1 + concat('a', 'b', 'c')"`);
+    assert.match(result.stderr, /No signature of concat accepts .* at line 1, column 5/);
+  });
+
+  it('names the line of the file, not of the line', () => {
+    const path = wrote('lines.elo', 'assert(1 == 1)\nassert(2 == 2)\nassert(rond(1) == 1)\n');
+    const result = elocWithError(`--lines ${path}`);
+    assert.match(result.stderr, /Unknown function rond\(Int\) at line 3, column 8 of /);
+    assert.match(result.stderr, /lines\.elo/);
+  });
+
+  it('names the file and both positions of a name defined twice', () => {
+    const path = wrote('twice.elo', 'T = Int\nT = String\n1\n');
+    const result = elocWithError(path);
+    assert.match(
+      result.stderr,
+      /Duplicate type definition 'T' at line 2, column 1 of .*twice\.elo \(first at line 1, column 1\)/
+    );
+  });
+
+  it('names the module a refusal came from', () => {
+    wrote('helper.elo', "let h = fn( n ~> rond(n, 2) ) in { h: h }\n");
+    const path = wrote('main.elo', "import { h } from './helper'\nh(1)\n");
+    const result = elocWithError(path);
+    assert.match(result.stderr, /Unknown function rond\(Any, Int\) at line 1, column 18 of .*helper\.elo/);
+  });
+
+  it('reports a runtime failure of the evaluator by line', () => {
+    const path = wrote('fails.elo', 'assert(1 == 1)\nassert(1 == 2)\n');
+    const result = eloWithError(`${path} --lines`);
+    assert.strictEqual(result.exitCode, 1);
+    assert.match(result.stderr, /Error on line 2/);
+  });
+
+  it('cleans up', () => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

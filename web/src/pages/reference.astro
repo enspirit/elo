@@ -1133,6 +1133,14 @@ eloc program.elo -t ruby
 
 # Report type errors before compiling
 eloc --typecheck -e "'hello' - 5"</pre>
+        <p>
+          Every compile-time refusal names <strong>where</strong> it is — the
+          line, the column, and the file when the source came from one. With
+          <code>--lines</code> the line counts from the top of the file, and a
+          refusal inside an imported module names the module:
+        </p>
+        <pre class="language-shell">eloc main.elo
+# Compilation error: Error: Unknown function rond(Any, Int) at line 1, column 18 of helper.elo</pre>
         <table class="type-table">
           <thead><tr><th>Option</th><th>Description</th></tr></thead>
           <tbody>
