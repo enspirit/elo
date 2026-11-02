@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { literal, variable, binary, unary } from '../../src/ast';
+import { literal, variable, binary, unary, typeRef, withTypeDefs } from '../../src/ast';
 
 describe('AST - literal() helper', () => {
   it('should create numeric literal', () => {
@@ -212,5 +212,33 @@ describe('AST - Complex tree construction', () => {
     assert.strictEqual(tree.operator, '&&');
     assert.strictEqual(tree.left.type, 'binary');
     assert.strictEqual(tree.right.type, 'binary');
+  });
+});
+
+describe('AST - withTypeDefs() helper', () => {
+  it('returns the body untouched when there is nothing to scope', () => {
+    const body = literal(1);
+    assert.strictEqual(withTypeDefs([], body), body);
+  });
+
+  it('nests the definitions so that a later one can see an earlier one', () => {
+    const scoped = withTypeDefs(
+      [
+        { name: 'A', typeExpr: typeRef('Int') },
+        { name: 'B', typeExpr: typeRef('A') }
+      ],
+      variable('x')
+    );
+    assert.deepStrictEqual(scoped, {
+      type: 'typedef',
+      name: 'A',
+      typeExpr: { kind: 'type_ref', name: 'Int' },
+      body: {
+        type: 'typedef',
+        name: 'B',
+        typeExpr: { kind: 'type_ref', name: 'A' },
+        body: { type: 'variable', name: 'x' }
+      }
+    });
   });
 });

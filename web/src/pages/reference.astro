@@ -557,6 +557,17 @@ import Footer from '../components/Footer.astro';
 in &#123; name: 'Alice', age: '30' &#125; |> Person</pre>
           <p class="example-desc">Define multiple types and reference them by name.</p>
         </div>
+
+        <h3>Type Prelude</h3>
+        <p>A <code>.elo</code> file may open with type definitions, before any expression. They scope every expression below them, so a schema is declared once for the file instead of once per expression. A file that defines types and nothing else is a valid file — it simply compiles to nothing.</p>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">File-level definitions</div>
+          <pre class="language-elo">Age = Int(a | a >= 0)
+Person = &#123; name: String, age: Age &#125;
+
+&#123; name: 'Alice', age: '30' &#125; |> Person</pre>
+          <p class="example-desc">Sugar for the <code>let Age = …, Person = … in</code> above. The comma between two definitions is optional, as is the <code>in</code>.</p>
+        </div>
       </section>
 
       <section class="doc-section" id="data-formats">

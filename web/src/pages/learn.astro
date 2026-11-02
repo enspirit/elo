@@ -535,6 +535,19 @@ in &#123; name: 'Alice', age: '30' &#125; |> Person</pre>
         </div>
         <p>Named types can reference other named types for reusable schemas.</p>
 
+        <h3>Defining Types for a Whole File</h3>
+        <p>A <code>.elo</code> file can open with its type definitions, before any expression:</p>
+        <div class="lesson-example" data-action="click->doc#tryExample">
+          <pre class="language-elo">Age = Int(a | a >= 0)
+Person = &#123; name: String, age: Age &#125;
+
+&#123; name: 'Alice', age: '30' &#125; |> Person</pre>
+        </div>
+        <p>
+          This <em>type prelude</em> is sugar for the <code>let … in</code> above, and it scopes
+          every expression in the file. A file that defines types and nothing else is valid too.
+        </p>
+
         <p class="lesson-tip">
           <strong>Think Finitio:</strong> Elo's type definitions are inspired by <a href="https://finitio.io">Finitio</a>.
           They validate and transform external data in one step—perfect for API responses and user input.

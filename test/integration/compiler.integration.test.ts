@@ -2,7 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { join, relative, dirname, basename } from 'path';
-import { parse } from '../../src/parser';
+import { parse, splitTypePrelude } from '../../src/parser';
+import { withTypeDefs } from '../../src/ast';
+import type { TypeBinding } from '../../src/ast';
 import { compileToJavaScript } from '../../src/compilers/javascript';
 import { compileToRuby } from '../../src/compilers/ruby';
 import { compileToSQL } from '../../src/compilers/sql';
@@ -52,6 +54,8 @@ function findEloFiles(dir: string): string[] {
 interface TestSuite {
   name: string;
   elo: string[];
+  /** The fixture's type prelude, which scopes every one of its lines. */
+  typeDefs: TypeBinding[];
   expectedJS: string[] | null;
   expectedRuby: string[] | null;
   expectedSQL: string[] | null;
@@ -89,8 +93,12 @@ function loadTestSuites(): TestSuite[] {
     const pythonPath = join(dir, `${baseName}.expected.py`);
 
     const eloContent = readFileSync(eloPath, 'utf-8');
+    // A fixture may open with type definitions, which eloc lifts off the top
+    // and applies to every line below. Read them the same way here, so the
+    // expected emission is the one eloc produced.
+    const { typeDefs, body } = splitTypePrelude(eloContent);
     // Remove trailing newline before splitting to match generated fixture line counts
-    const elo = eloContent.replace(/\n$/, '').split('\n');
+    const elo = body.replace(/\n$/, '').split('\n');
     const expectedJS = tryReadFile(jsPath);
     const expectedRuby = tryReadFile(rubyPath);
     const expectedSQL = tryReadFile(sqlPath);
@@ -99,6 +107,7 @@ function loadTestSuites(): TestSuite[] {
     suites.push({
       name,
       elo,
+      typeDefs,
       expectedJS,
       expectedRuby,
       expectedSQL,
@@ -167,7 +176,7 @@ for (const suite of testSuites) {
       const lineNum = i + 1;
 
       it(`should compile line ${lineNum}: ${expr}`, () => {
-        const ast = parse(expr);
+        const ast = withTypeDefs(suite.typeDefs, parse(expr));
 
         // Test JavaScript compilation (if expected file exists)
         // Fixtures are generated with --execute, so we use { execute: true }

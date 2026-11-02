@@ -49,6 +49,7 @@ See also the Related work section below.
 - **Alternative operator**: `|` for fallback chains (returns first defined value)
 - **Type selectors**: `Int()`, `Float()`, `Bool()`, `String()`, `Null()`, `Date()`, `Datetime()`, `Duration()`, `Interval()`, `Data()` for parsing and converting values
 - **Type definitions**: Finitio-like schema validation with `let Person = { name: String, age: Int } in data |> Person`. Schema field types are `Int`, `Float`, `Bool`, `String`, `Null`, `Date`, `Datetime`, `Duration`, `Data`, and `.` for any value
+- **Type prelude**: a `.elo` file may open with type definitions — `Person = { name: String, age: Int }` on its own line — which scope every expression below them. A file of definitions only is a valid file
 - **Lambdas**: `fn(x ~> x * 2)` or `x ~> x * 2` (sugar) for anonymous functions
 - **Guards**: `guard condition in body` for runtime validation with `check` for postconditions
 - **Input variable**: `_` for accessing external data passed to expressions

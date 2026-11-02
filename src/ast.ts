@@ -459,6 +459,31 @@ export function typeDef(name: string, typeExpr: TypeExpr, body: Expr): TypeDef {
 }
 
 /**
+ * A type name bound to a type expression, outside of any expression.
+ *
+ * This is what a file's type prelude declares. It becomes a `TypeDef` node
+ * once there is a body to use it in — see `withTypeDefs`.
+ */
+export interface TypeBinding {
+  name: string;
+  typeExpr: TypeExpr;
+}
+
+/**
+ * Scopes `body` under `bindings`, innermost last.
+ *
+ * `[A, B]` around `body` gives `typedef A in typedef B in body`, so B may
+ * refer to A, exactly as `let A = …, B = … in body` does. A type prelude is
+ * sugar for that let, and this is where the sugar is undone.
+ */
+export function withTypeDefs(bindings: TypeBinding[], body: Expr): Expr {
+  return bindings.reduceRight<Expr>(
+    (inner, binding) => typeDef(binding.name, binding.typeExpr, inner),
+    body
+  );
+}
+
+/**
  * Creates a subtype constraint: Int(i | i > 0) or Int(i | positive: i > 0, even: i % 2 == 0)
  */
 export function subtypeConstraint(baseType: TypeExpr, variable: string, constraints: Constraint[]): SubtypeConstraint {

@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
 import { DateTime, Duration, Interval } from 'luxon';
-import { parse } from '../../src/parser';
+import { parse, splitTypePrelude } from '../../src/parser';
+import { withTypeDefs } from '../../src/ast';
+import type { TypeBinding } from '../../src/ast';
 import { typecheckWithAnnotations } from '../../src/typecheck';
 import { compileToJavaScript } from '../../src/compilers/javascript';
 import { compileToRuby } from '../../src/compilers/ruby';
@@ -50,15 +52,23 @@ function findEloFiles(dir: string): string[] {
   return files.sort();
 }
 
-/** The expression lines of a fixture, with their 1-based line numbers. */
-function expressionsOf(path: string): Array<{ line: number; source: string }> {
-  return readFileSync(path, 'utf-8')
+/**
+ * A fixture read the way eloc reads it: its type prelude, then its expression
+ * lines with their 1-based line numbers.
+ */
+function programOf(path: string): {
+  typeDefs: TypeBinding[];
+  expressions: Array<{ line: number; source: string }>;
+} {
+  const { typeDefs, body } = splitTypePrelude(readFileSync(path, 'utf-8'));
+  const expressions = body
     .split('\n')
     .map((source, i) => ({ line: i + 1, source }))
     .filter(({ source }) => {
       const trimmed = source.trim();
       return trimmed !== '' && !trimmed.startsWith('#');
     });
+  return { typeDefs, expressions };
 }
 
 /** What the fixture runners do: run the expression with a null input. */
@@ -85,9 +95,10 @@ describe('--optimize is equivalent, not merely smaller', () => {
     const executable = !NOT_EXECUTABLE.some(skip => name.split(/[/\\]/).pop()!.startsWith(skip));
 
     it(`${name} compiles and behaves the same with the checker's types`, () => {
-      for (const { line, source } of expressionsOf(path)) {
+      const { typeDefs, expressions } = programOf(path);
+      for (const { line, source } of expressions) {
         const where = `${name}:${line}`;
-        const ast = parse(source);
+        const ast = withTypeDefs(typeDefs, parse(source));
         const { types } = typecheckWithAnnotations(ast);
 
         for (const [target, compileTo] of Object.entries(TARGETS)) {
@@ -104,7 +115,7 @@ describe('--optimize is equivalent, not merely smaller', () => {
         }
 
         // SQL has its own transform options, so it is compiled separately.
-        const sqlAst = parse(source);
+        const sqlAst = withTypeDefs(typeDefs, parse(source));
         const { types: sqlTypes } = typecheckWithAnnotations(sqlAst, {
           allowUndefinedVariables: true,
         });

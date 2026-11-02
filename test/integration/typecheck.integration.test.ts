@@ -2,7 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
-import { parse } from '../../src/parser';
+import { parse, splitTypePrelude } from '../../src/parser';
+import { withTypeDefs } from '../../src/ast';
+import type { TypeBinding } from '../../src/ast';
 import { typecheck, typecheckWithType } from '../../src/typecheck';
 import { transform } from '../../src/transform';
 import { inferType } from '../../src/ir';
@@ -47,17 +49,24 @@ interface FixtureLine {
   fixture: string;
   line: number;
   source: string;
+  /** The fixture's type prelude, which scopes every one of its lines. */
+  typeDefs: TypeBinding[];
+}
+
+/** A fixture line, parsed under the type definitions of its file. */
+function astOf(entry: FixtureLine) {
+  return withTypeDefs(entry.typeDefs, parse(entry.source));
 }
 
 function loadFixtureLines(): FixtureLine[] {
   const lines: FixtureLine[] = [];
   for (const eloPath of findEloFiles(TEST_DIR)) {
     const fixture = relative(TEST_DIR, eloPath).replace('.elo', '');
-    const content = readFileSync(eloPath, 'utf-8').replace(/\n$/, '');
-    content.split('\n').forEach((raw, index) => {
+    const { typeDefs, body } = splitTypePrelude(readFileSync(eloPath, 'utf-8').replace(/\n$/, ''));
+    body.split('\n').forEach((raw, index) => {
       const source = raw.trim();
       if (!source || source.startsWith('#')) return;
-      lines.push({ fixture, line: index + 1, source });
+      lines.push({ fixture, line: index + 1, source, typeDefs });
     });
   }
   return lines;
@@ -83,7 +92,7 @@ describe('Typecheck - the fixture corpus is clean', () => {
     it(`reports nothing in ${fixture}`, () => {
       const problems: string[] = [];
       for (const entry of entries) {
-        const diagnostics = typecheck(parse(entry.source), {
+        const diagnostics = typecheck(astOf(entry), {
           // Fixtures are compiled for every target, SQL included, where a bare
           // name is a column reference.
           allowUndefinedVariables: true,
@@ -117,7 +126,7 @@ describe('Typecheck - never less precise than the transform', () => {
    */
   for (const entry of fixtureLines) {
     it(`${entry.fixture}:${entry.line}`, () => {
-      const ast = parse(entry.source);
+      const ast = astOf(entry);
       const fromChecker = typecheckWithType(ast, { allowUndefinedVariables: true }).type;
       const fromTransform = inferType(
         transform(ast, new Map(), new Set(), { allowUndefinedVariables: true })

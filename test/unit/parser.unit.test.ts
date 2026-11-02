@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { parse } from '../../src/parser';
+import { parse, splitTypePrelude } from '../../src/parser';
 import { Expr } from '../../src/ast';
 
 describe('Parser - Numeric Literals', () => {
@@ -1877,5 +1877,70 @@ describe('Parser - Trailing Commas', () => {
       assert.strictEqual(ast.name, 'T');
       assert.strictEqual(ast.typeExpr.kind, 'type_ref');
     }
+  });
+});
+
+describe('Parser - Type prelude', () => {
+  it('should read a definition off the top of a source', () => {
+    const ast = parse('Ints = [Int]\n[1] |> Ints');
+    assert.deepStrictEqual(ast, parse('let Ints = [Int] in [1] |> Ints'));
+  });
+
+  it('should scope several definitions, innermost last', () => {
+    const ast = parse('Person = { name: String }\nPeople = [Person]\n[] |> People');
+    assert.deepStrictEqual(
+      ast,
+      parse('let Person = { name: String }, People = [Person] in [] |> People')
+    );
+  });
+
+  it('should accept a comma between definitions, or none', () => {
+    const withComma = parse('A = Int, B = String\n1 |> A');
+    const without = parse('A = Int B = String\n1 |> A');
+    assert.deepStrictEqual(withComma, without);
+    assert.deepStrictEqual(withComma, parse('let A = Int, B = String in 1 |> A'));
+  });
+
+  it('should accept every type expression a let definition accepts', () => {
+    const ast = parse("Adult = Int(i | i >= 18)\n'18' |> Adult");
+    assert.deepStrictEqual(ast, parse("let Adult = Int(i | i >= 18) in '18' |> Adult"));
+  });
+
+  it('should leave an expression opening on an uppercase name alone', () => {
+    assert.deepStrictEqual(parse('TODAY'), { type: 'temporal_keyword', keyword: 'TODAY' });
+    assert.strictEqual(parse('Interval({start: NOW, end: NOW})').type, 'function_call');
+    assert.strictEqual(parse('TODAY == TODAY').type, 'binary');
+  });
+
+  it('should refuse a type prelude with no expression under it', () => {
+    assert.throws(() => parse('Ints = [Int]'), /Expected an expression after the type definitions/);
+  });
+});
+
+describe('splitTypePrelude', () => {
+  it('should lift the definitions off and keep every other line in place', () => {
+    const { typeDefs, body } = splitTypePrelude('Ints = [Int]\nassert(([1] |> Ints) == [1])\n');
+    assert.strictEqual(typeDefs.length, 1);
+    assert.strictEqual(typeDefs[0].name, 'Ints');
+    assert.deepStrictEqual(typeDefs[0].typeExpr, { kind: 'array_type', elementType: { kind: 'type_ref', name: 'Int' } });
+    // The body keeps its line numbering: the prelude becomes blanks.
+    assert.deepStrictEqual(body.split('\n'), ['            ', 'assert(([1] |> Ints) == [1])', '']);
+  });
+
+  it('should report no definitions for a source without a type prelude', () => {
+    const { typeDefs, body } = splitTypePrelude('1 + 1');
+    assert.deepStrictEqual(typeDefs, []);
+    assert.strictEqual(body, '1 + 1');
+  });
+
+  it('should accept a source that is nothing but definitions', () => {
+    const { typeDefs, body } = splitTypePrelude('Ints = [Int]\nStrings = [String]\n');
+    assert.deepStrictEqual(typeDefs.map(d => d.name), ['Ints', 'Strings']);
+    assert.strictEqual(body.trim(), '');
+  });
+
+  it('should skip comments above and between definitions', () => {
+    const { typeDefs } = splitTypePrelude('# the input\nInts = [Int]\n# and out\nStrings = [String]\n1');
+    assert.deepStrictEqual(typeDefs.map(d => d.name), ['Ints', 'Strings']);
   });
 });

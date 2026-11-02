@@ -1,4 +1,4 @@
-import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr } from './ast';
+import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr, TypeBinding, withTypeDefs } from './ast';
 
 /**
  * Token types
@@ -489,6 +489,8 @@ class Lexer {
  * Recursive descent parser for expressions
  *
  * Grammar:
+ *   program     -> typePrelude expr
+ *   typePrelude -> (UPPER_IDENTIFIER '=' typeExpr ','?)*  // file-level type definitions
  *   expr        -> pipe
  *   pipe        -> logical_or ('|>' IDENTIFIER call?)*  // lowest precedence, left-assoc, parens optional
  *   logical_or  -> logical_and ('||' logical_and)*
@@ -1913,10 +1915,64 @@ export class Parser {
     return this.guardExprParse(guardType);
   }
 
+  /**
+   * Parse the type prelude: the type definitions a source may open with.
+   *
+   *   typePrelude -> (UPPER_IDENTIFIER '=' typeExpr ','?)*
+   *
+   * `Name =` is the only shape a definition can take, and nothing in the value
+   * grammar starts that way, so one token of lookahead tells a definition from
+   * the expression that follows it.
+   */
+  private typePrelude(): TypeBinding[] {
+    const bindings: TypeBinding[] = [];
+
+    while ((this.currentToken as Token).type === 'UPPER_IDENTIFIER') {
+      const saved = this.saveState();
+      const name = this.currentToken.value;
+      this.eat('UPPER_IDENTIFIER');
+
+      if ((this.currentToken as Token).type !== 'ASSIGN') {
+        // An expression opening on an uppercase name, such as `TODAY` or a
+        // type selector call. Give the token back and stop.
+        this.restoreState(saved);
+        break;
+      }
+      this.eat('ASSIGN');
+
+      bindings.push({ name, typeExpr: this.typeExpr() });
+
+      // The comma between two definitions is optional, as it is between two
+      // schema properties.
+      if ((this.currentToken as Token).type === 'COMMA') {
+        this.eat('COMMA');
+      }
+    }
+
+    return bindings;
+  }
+
   parse(): Expr {
+    const prelude = this.typePrelude();
+    if (prelude.length > 0 && this.currentToken.type === 'EOF') {
+      throw new Error(
+        `Expected an expression after the type definitions at ${this.formatLocation(this.currentToken)}`
+      );
+    }
     const result = this.expr();
     this.eat('EOF');
-    return result;
+    return withTypeDefs(prelude, result);
+  }
+
+  /**
+   * Parse the type prelude alone, and say where the rest of the source starts.
+   *
+   * A file holds one expression per line, so its prelude has to be lifted off
+   * the top before the lines below it can be read — see `splitTypePrelude`.
+   */
+  parseTypePrelude(): { typeDefs: TypeBinding[]; offset: number } {
+    const typeDefs = this.typePrelude();
+    return { typeDefs, offset: this.currentToken.position };
   }
 
   /**
@@ -1937,6 +1993,35 @@ export class Parser {
 export function parse(input: string, options: ParserOptions = {}): Expr {
   const parser = new Parser(input, options);
   return parser.parse();
+}
+
+/**
+ * A source split into its type prelude and what follows it.
+ */
+export interface TypePreludeSplit {
+  /** The type definitions the source opens with, in order. */
+  typeDefs: TypeBinding[];
+  /**
+   * What follows the prelude, with the prelude region replaced by whitespace
+   * so that every remaining line keeps its line and column numbers.
+   */
+  body: string;
+}
+
+/**
+ * Lift the type prelude off the top of a source.
+ *
+ * A `.elo` file holds one expression per line, while its prelude is file-wide
+ * and may span several lines. Reading the two apart is what lets a host scope
+ * every line of a file under the types the file declares. A source with no
+ * prelude comes back with no type definitions and a body that still parses the
+ * same.
+ */
+export function splitTypePrelude(source: string, options: ParserOptions = {}): TypePreludeSplit {
+  const parser = new Parser(source, options);
+  const { typeDefs, offset } = parser.parseTypePrelude();
+  const blanked = source.slice(0, offset).replace(/[^\n]/g, ' ');
+  return { typeDefs, body: blanked + source.slice(offset) };
 }
 
 /**

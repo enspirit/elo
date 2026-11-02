@@ -186,6 +186,68 @@ describe('CLI - File input', () => {
   });
 });
 
+describe('CLI - Type prelude', () => {
+  it('scopes every line of a file under the type definitions on top of it', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
+    const inputFile = join(tmpDir, 'test.elo');
+    writeFileSync(inputFile, "Ints = [Int]\n['1'] |> Ints\n['2', '3'] |> Ints\n");
+
+    try {
+      const lines = eloc(`${inputFile}`).split('\n');
+      // One expression line in, one line out, each carrying the prelude's
+      // parser; the definition itself emits nothing.
+      assert.strictEqual(lines.length, 2);
+      for (const line of lines) {
+        assert.ok(line.includes('const Ints ='), `prelude type missing from: ${line}`);
+      }
+    } finally {
+      unlinkSync(inputFile);
+    }
+  });
+
+  it('accepts a file that defines types and nothing else', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
+    const inputFile = join(tmpDir, 'types.elo');
+    writeFileSync(inputFile, 'Ints = [Int]\nPerson = { name: String }\n');
+
+    try {
+      const result = elocWithError(`${inputFile}`);
+      assert.strictEqual(result.exitCode, 0);
+      assert.strictEqual(result.stdout, '');
+    } finally {
+      unlinkSync(inputFile);
+    }
+  });
+
+  it('reports a malformed definition rather than compiling it', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
+    const inputFile = join(tmpDir, 'bad.elo');
+    writeFileSync(inputFile, 'Ints = [Int\n1 + 1\n');
+
+    try {
+      const result = elocWithError(`${inputFile}`);
+      assert.strictEqual(result.exitCode, 1);
+      assert.ok(result.stderr.includes('Compilation error'), result.stderr);
+    } finally {
+      unlinkSync(inputFile);
+    }
+  });
+
+  it('checks a line against the types its file declares', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
+    const inputFile = join(tmpDir, 'checked.elo');
+    writeFileSync(inputFile, "Ints = [Int]\nsum(['1'] |> Ints)\n");
+
+    try {
+      const result = elocWithError(`${inputFile} --typecheck`);
+      assert.strictEqual(result.exitCode, 0, result.stderr);
+      assert.strictEqual(result.stderr, '');
+    } finally {
+      unlinkSync(inputFile);
+    }
+  });
+});
+
 describe('CLI - File output', () => {
   it('should write output to file', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
@@ -568,6 +630,32 @@ describe('Elo Evaluator - File input', () => {
     try {
       const result = elo(inputFile);
       assert.strictEqual(result, '2\n4');
+    } finally {
+      unlinkSync(inputFile);
+    }
+  });
+});
+
+describe('Elo Evaluator - Type prelude', () => {
+  it('evaluates every line of a file under its type definitions', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
+    const inputFile = join(tmpDir, 'test.elo');
+    writeFileSync(inputFile, "Ints = [Int]\nsum(['1', '2'] |> Ints)\nlength(['3'] |> Ints)\n");
+
+    try {
+      assert.strictEqual(elo(inputFile), '3\n1');
+    } finally {
+      unlinkSync(inputFile);
+    }
+  });
+
+  it('prints nothing for a file that only defines types', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
+    const inputFile = join(tmpDir, 'types.elo');
+    writeFileSync(inputFile, 'Ints = [Int]\n');
+
+    try {
+      assert.strictEqual(elo(inputFile), '');
     } finally {
       unlinkSync(inputFile);
     }

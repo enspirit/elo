@@ -2,13 +2,14 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
+import { splitTypePrelude } from '../../src/parser';
 
 /**
  * Fixture validation tests.
  *
  * Ensures that all .elo fixture files follow the required format:
  * - Every line must be an assert() call (for effective acceptance testing)
- * - Empty lines and comments are allowed
+ * - Empty lines, comments and the file's type prelude are allowed
  */
 
 const TEST_DIR = join(__dirname, '../../../test/fixtures');
@@ -51,7 +52,10 @@ describe('Fixture validation', () => {
 
     it(`${displayName} should have assert() on every line`, () => {
       const content = readFileSync(filePath, 'utf-8');
-      const lines = content.split('\n');
+      // A type prelude declares types rather than asserting anything, so the
+      // requirement is on what follows it. splitTypePrelude blanks the prelude out
+      // and keeps every other line where it was.
+      const lines = splitTypePrelude(content).body.split('\n');
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();

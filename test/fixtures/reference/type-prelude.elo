@@ -1,0 +1,21 @@
+# Types defined in the file's type prelude are in scope for every expression
+# below; the comma between two definitions is optional
+Ints = [Int]
+Person = { name: String, age: Int },
+People = [Person]
+Adult = Int(i | i >= 18)
+
+# A prelude type is used like any other: through the pipe operator
+assert((['1', '2', '3'] |> Ints) == [1, 2, 3])
+assert(({ name: 'Alice', age: '30' } |> Person) == { name: 'Alice', age: 30 })
+# A prelude type can refer to one defined before it
+assert(([{ name: 'Alice', age: '30' }] |> People) == [{ name: 'Alice', age: 30 }])
+assert(sum(['1', '2'] |> Ints) == 3)
+# Constraints are enforced, as in a let type definition
+assert(('18' |> Adult) == 18)
+assertFails(fn( ~> '17' |> Adult ))
+assertFails(fn( ~> ['1', 'bad'] |> Ints ))
+assertFails(fn( ~> { name: 'Alice' } |> Person ))
+# Prelude types are visible inside nested expressions
+assert((let xs = ['1', '2'] |> Ints in sum(xs)) == 3)
+assert(map(['1', '2'], fn( x ~> [x] |> Ints )) == [[1], [2]])

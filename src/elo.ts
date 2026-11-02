@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'fs';
-import { parse } from './parser';
+import { parse, splitTypePrelude } from './parser';
+import { withTypeDefs } from './ast';
+import type { TypeBinding } from './ast';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { DateTime, Duration, Interval } from 'luxon';
 import { defaultFormats, getFormat, FormatRegistry } from './formats';
@@ -191,10 +193,11 @@ function parseInputData(inputData: string, format: InputFormat | undefined, form
 }
 
 /**
- * Compile and evaluate a single Elo expression
+ * Compile and evaluate a single Elo expression, under the type definitions of
+ * the file's type prelude, if any.
  */
-function evaluate(source: string, inputValue: unknown): unknown {
-  const ast = parse(source);
+function evaluate(source: string, inputValue: unknown, typeDefs: TypeBinding[] = []): unknown {
+  const ast = withTypeDefs(typeDefs, parse(source));
   const result = compileToJavaScriptWithMeta(ast);
 
   // Create function with luxon DateTime, Duration, and Interval in scope
@@ -232,23 +235,35 @@ function main() {
 
   // Get the source expression(s)
   let sources: string[];
+  // A file may open with a type prelude, whose definitions scope every
+  // expression below them. An expression given with -e carries its own
+  // prelude, which parse() reads for itself.
+  let typeDefs: TypeBinding[] = [];
   if (options.expression) {
     sources = [options.expression];
   } else if (options.inputFile) {
+    let content: string;
     try {
       // Use file descriptor 0 for stdin when input is '-'
-      const content = options.inputFile === '-'
+      content = options.inputFile === '-'
         ? readFileSync(0, 'utf-8')
         : readFileSync(options.inputFile, 'utf-8');
-      // Split into lines - keep all lines but mark empty/comment lines as null
-      sources = content.split('\n').map(line => {
-        const trimmed = line.trim();
-        return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
-      });
     } catch (error) {
       console.error(`Error reading ${options.inputFile === '-' ? 'stdin' : `file ${options.inputFile}`}: ${error}`);
       process.exit(1);
     }
+    let body: string;
+    try {
+      ({ typeDefs, body } = splitTypePrelude(content));
+    } catch (error) {
+      console.error(`Error: ${error}`);
+      process.exit(1);
+    }
+    // Split into lines - keep all lines but mark empty/comment lines as null
+    sources = body.split('\n').map(line => {
+      const trimmed = line.trim();
+      return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
+    });
   } else {
     console.error('Error: Must provide either -e <expression>, an input file, or - for stdin');
     printHelp();
@@ -285,7 +300,7 @@ function main() {
     }
 
     try {
-      const result = evaluate(trimmed, inputValue);
+      const result = evaluate(trimmed, inputValue, typeDefs);
       outputs.push(outputAdapter.serialize(result));
     } catch (error) {
       console.error(`Error on line ${i + 1}: ${error}`);

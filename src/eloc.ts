@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync } from 'fs';
-import { parse, parseTypeExpr } from './parser';
-import type { TypeExpr } from './ast';
+import { parse, parseTypeExpr, splitTypePrelude } from './parser';
+import { withTypeDefs } from './ast';
+import type { TypeBinding, TypeExpr } from './ast';
 import { compileToRubyWithMeta } from './compilers/ruby';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
@@ -225,13 +226,15 @@ interface CompileOptions {
   ast?: Expr;
   /** The checker's types, keyed on the nodes of `ast`. */
   types?: TypeAnnotations;
+  /** The type definitions of the file's type prelude, which scope every line. */
+  typeDefs?: TypeBinding[];
 }
 
 function compile(source: string, target: Target, options: CompileOptions = {}): string {
   const { includePrelude = false, execute = false, stripGuards = false, types } = options;
   // Reuse the checker's tree when there is one: the annotations are keyed on
   // node identity, so a second parse would produce a map that matches nothing.
-  const ast = options.ast ?? parse(source);
+  const ast = options.ast ?? withTypeDefs(options.typeDefs ?? [], parse(source));
 
   let code: string;
   switch (target) {
@@ -317,24 +320,36 @@ function main() {
 
   // Get the source expression(s)
   let sources: string[];
+  // A file may open with a type prelude, whose definitions scope every
+  // expression below them. An expression given with -e carries its own
+  // prelude, which parse() reads for itself.
+  let typeDefs: TypeBinding[] = [];
   if (options.expression) {
     sources = [options.expression];
   } else if (options.inputFile) {
+    let content: string;
     try {
       // Use file descriptor 0 for stdin when input is '-'
-      const content = options.inputFile === '-'
+      content = options.inputFile === '-'
         ? readFileSync(0, 'utf-8')
         : readFileSync(options.inputFile, 'utf-8');
-      // Split into lines - keep all lines but mark empty/comment lines as null
-      // so we can output empty lines for them to preserve line numbers
-      sources = content.split('\n').map(line => {
-        const trimmed = line.trim();
-        return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
-      });
     } catch (error) {
       console.error(`Error reading ${options.inputFile === '-' ? 'stdin' : `file ${options.inputFile}`}: ${error}`);
       process.exit(1);
     }
+    let body: string;
+    try {
+      ({ typeDefs, body } = splitTypePrelude(content));
+    } catch (error) {
+      console.error(`Compilation error: ${error}`);
+      process.exit(1);
+    }
+    // Split into lines - keep all lines but mark empty/comment lines as null
+    // so we can output empty lines for them to preserve line numbers
+    sources = body.split('\n').map(line => {
+      const trimmed = line.trim();
+      return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
+    });
   } else {
     console.error('Error: Must provide either -e <expression>, an input file, or - for stdin');
     printHelp();
@@ -346,7 +361,7 @@ function main() {
   let typeErrorsFound = false;
   let checked: CheckedSource[] = [];
   if (options.typecheck) {
-    const result = reportTypeDiagnostics(sources, options);
+    const result = reportTypeDiagnostics(sources, options, typeDefs);
     typeErrorsFound = result.found;
     checked = result.checked;
   }
@@ -365,6 +380,7 @@ function main() {
           includePrelude: index === 0 && options.prelude,
           execute: options.execute,
           stripGuards: options.stripGuards,
+          typeDefs,
           // The annotations are keyed on AST node identity, so they only mean
           // anything against the tree the checker walked.
           ...(options.optimize ? checked[index] : {}),
@@ -421,7 +437,8 @@ interface CheckedSource {
  */
 function reportTypeDiagnostics(
   sources: string[],
-  options: Options
+  options: Options,
+  typeDefs: TypeBinding[] = []
 ): { found: boolean; checked: CheckedSource[] } {
   // A bare name is a column reference in SQL, so undefined variables are
   // legitimate there and the checker must not be stricter than the compiler.
@@ -449,7 +466,7 @@ function reportTypeDiagnostics(
       // for: a diagnostic the author can act on points at a column.
       // Not trimmed: the lexer skips leading whitespace itself, and keeping it
       // means the reported column matches the column in the file.
-      const ast = parse(source, { locations: true });
+      const ast = withTypeDefs(typeDefs, parse(source, { locations: true }));
       const result = typecheckWithAnnotations(ast, {
         allowUndefinedVariables,
         strict: options.strict,
