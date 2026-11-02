@@ -101,21 +101,24 @@ export function createRubyBinding(): StdLib<string> {
   }
   rubyLib.register('mul', [Types.any, Types.any], simpleBinaryOp('*'));
   // Ruby truncates Integer / Integer, where Elo's `/` is real division in
-  // every other target. When both operands are statically integers we can
-  // emit fdiv directly; otherwise the helper decides at runtime, so that
-  // Duration / Integer keeps using the overloaded operator.
-  rubyLib.register('div', [Types.int, Types.int], (args, ctx) => {
-    const left = ctx.emit(args[0]);
-    const receiver = isNativeBinaryOp(args[0]) ? `(${left})` : left;
-    return `${receiver}.fdiv(${ctx.emit(args[1])})`;
-  });
-  // Integer / Integer is the only case Ruby truncates, so as soon as either
-  // operand is statically a Float the bare operator is already right. These
-  // were missing, which sent `1.5 / 2.0` through k_div with both types known —
-  // the same split `sub` above already makes.
-  rubyLib.register('div', [Types.int, Types.float], simpleBinaryOp('/'));
-  rubyLib.register('div', [Types.float, Types.int], simpleBinaryOp('/'));
-  rubyLib.register('div', [Types.float, Types.float], simpleBinaryOp('/'));
+  // every other target, so numeric division goes through `fdiv` rather than
+  // the operator. Every numeric combination, not only Int / Int: a value
+  // *declared* Float can still be an Integer at runtime — `2 ^ 3` is 8 on
+  // Ruby while `pow(Int, Int)` is declared Float — and `8 / 16` would then
+  // truncate to 0 where Elo says 0.5. `fdiv` is real division whatever the
+  // operands turn out to be, which is what the declaration promises.
+  //
+  // The unknown-type case still needs the helper, so that Duration / Integer
+  // keeps using the overloaded operator.
+  for (const leftType of [Types.int, Types.float]) {
+    for (const rightType of [Types.int, Types.float]) {
+      rubyLib.register('div', [leftType, rightType], (args, ctx) => {
+        const left = ctx.emit(args[0]);
+        const receiver = isNativeBinaryOp(args[0]) ? `(${left})` : left;
+        return `${receiver}.fdiv(${ctx.emit(args[1])})`;
+      });
+    }
+  }
   rubyLib.register('div', [Types.duration, Types.int], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.duration, Types.float], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.any, Types.any], helperCall('k_div'));

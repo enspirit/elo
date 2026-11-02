@@ -14,4 +14,4 @@
 
 ->(_) { (raise "Assertion failed" unless 7.fdiv(2) == 3.5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 1.fdiv(4) == 0.25; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 7.5 / 2.5 == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 7.5.fdiv(2.5) == 3; true) }.call(nil);

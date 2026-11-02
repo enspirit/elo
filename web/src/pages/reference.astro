@@ -71,6 +71,12 @@ import Footer from '../components/Footer.astro';
           <pre class="language-elo">typeOf(42) == 'Int' and typeOf(P1D) == 'Duration'</pre>
           <p class="example-desc">Use <code>typeOf()</code> to get the type name as a string.</p>
         </div>
+        <p class="note"><strong>Note:</strong> <code>typeOf</code> inspects the
+        value at run time, not the type the compiler worked out, and
+        JavaScript has a single number type — so <code>typeOf(2.0)</code> is
+        <code>'Int'</code> there and <code>'Float'</code> on Ruby, Python and
+        PostgreSQL. A Float that happens to be whole is the one case where
+        <code>typeOf</code> is target-dependent; everything else agrees.</p>
       </section>
 
       <section class="doc-section" id="literals">
@@ -175,6 +181,12 @@ import Footer from '../components/Footer.astro';
           <pre class="language-elo">2 ^ 10 + 17 % 5</pre>
           <p class="example-desc">Power <code>^</code> and modulo <code>%</code> operators.</p>
         </div>
+        <p class="note"><strong><code>^</code> yields a Float</strong>, even
+        on two whole numbers: <code>2 ^ -1</code> is <code>0.5</code> and
+        nothing tells the compiler the exponent's sign, so
+        <code>round</code>, <code>floor</code>, <code>ceil</code> and
+        <code>/</code> all treat a power as a Float. Ruby's <code>**</code>
+        answers a Rational for a negative exponent, which Elo converts.</p>
         <p class="note"><strong><code>/</code> is real division</strong> and
         <strong><code>%</code> is floored</strong>, on every target.
         <code>7 / 2</code> is <code>3.5</code>, never 3, so Ruby compiles it to

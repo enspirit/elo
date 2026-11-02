@@ -164,13 +164,15 @@ describe('transform - binary operators with integers', () => {
     }
   });
 
-  it('transforms int ^ int', () => {
+  it('transforms int ^ int, whose result is a Float', () => {
+    // Elo cannot know the exponent's sign statically and `2 ^ -1` is 0.5, so
+    // the declared result is Float even on two Ints.
     const ir = transform(binary('^', literal(2), literal(3)));
     assert.strictEqual(ir.type, 'call');
     if (ir.type === 'call') {
       assert.strictEqual(ir.fn, 'pow');
       assert.deepStrictEqual(ir.argTypes, [Types.int, Types.int]);
-      assert.deepStrictEqual(ir.resultType, Types.int);
+      assert.deepStrictEqual(ir.resultType, Types.float);
     }
   });
 });

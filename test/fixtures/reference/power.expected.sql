@@ -31,3 +31,16 @@ CASE WHEN (SELECT POWER(2, e) FROM (SELECT -1 AS e) AS _let) = 0.5 THEN TRUE ELS
 
 
 
+
+CASE WHEN ROUND((POWER(2, -1))::numeric) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ROUND((POWER(2, -2))::numeric) = 0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN FLOOR(POWER(2, -1)) = 0 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN CEIL(POWER(2, -1)) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN FLOOR(POWER(2, 10)) = 1024 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ROUND((POWER(2, 10))::numeric) = 1024 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+
+
+
+CASE WHEN POWER(2, 3) / 2 = 4 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN POWER(2, 3) / 16 = 0.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN POWER(5, 1) / 2 = 2.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

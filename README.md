@@ -34,8 +34,14 @@ See also the Related work section below.
     inside `[0, n)` for a positive `n`, which is what a cycle like `day % 7` is
     written for. JavaScript and PostgreSQL take the sign of the dividend
     natively, so Elo corrects them.
-  - `^` never yields a Rational: Ruby's `**` answers `(1/2)` for `2 ^ -1`,
-    where every other target answers `0.5`, so Elo converts it.
+  - `^` yields a **Float**, even on two whole numbers: `2 ^ -1` is `0.5` and
+    nothing tells the compiler the exponent's sign, so `round`, `floor`,
+    `ceil` and `/` all treat a power as a Float. It never yields a Rational
+    either: Ruby's `**` answers `(1/2)` for `2 ^ -1`, which Elo converts.
+  - `typeOf` inspects the *value*, not the declared type, and JavaScript has a
+    single number type — so `typeOf(2.0)` is `'Int'` there and `'Float'` on the
+    other three. A whole-valued Float is the one case where `typeOf` is
+    target-dependent.
 - **Comparison operators**: `<`, `>`, `<=`, `>=`, `==`, `!=`
 - **Logical operators**: `&&`, `||`, `!`
 - **Unary operators**: `-`, `+`, `!`

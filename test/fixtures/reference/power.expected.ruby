@@ -31,3 +31,16 @@
 
 
 
+
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, -1)).round == 1; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, -2)).round == 0; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, -1)).floor == 0; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, -1)).ceil == 1; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, 10)).floor == 1024; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, 10)).round == 1024; true) }.call(nil);
+
+
+
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, 3)).fdiv(2) == 4; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(2, 3)).fdiv(16) == 0.5; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless (k_pow(5, 1)).fdiv(2) == 2.5; true) }.call(nil);

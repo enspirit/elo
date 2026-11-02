@@ -165,7 +165,11 @@ export function createTypeDefs(): TypeDefs {
   defs.register('mul', [Types.int, Types.int], Types.int);
   defs.register('div', [Types.int, Types.int], Types.float); // division always returns float
   defs.register('mod', [Types.int, Types.int], Types.int);
-  defs.register('pow', [Types.int, Types.int], Types.int);
+  // Power is a Float even on two Ints: Elo cannot know the exponent's sign
+  // statically, and `2 ^ -1` is 0.5. Declared Int, every operation that
+  // dispatches on Int versus Float picked the wrong one — and `round`, `floor`
+  // and `ceil` of an Int are the identity, so they silently did nothing.
+  defs.register('pow', [Types.int, Types.int], Types.float);
 
   // float involved -> float
   defs.register('add', [Types.float, Types.float], Types.float);

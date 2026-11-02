@@ -23,7 +23,7 @@
 ->(_) { (raise "Assertion failed" unless 12 * (1 + 2) == 36; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 12 - (1 + 2) == 9; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless -(40 + 15) == -55; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 24 / (6.fdiv(2)) == 8; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 24.fdiv(6.fdiv(2)) == 8; true) }.call(nil);
 
 
 ->(_) { (raise "Assertion failed" unless (f = ->(x, y) { x + y > 10 }; f.call(6, 5)) == true; true) }.call(nil);

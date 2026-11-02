@@ -27,7 +27,20 @@ assert(2 ^ -1 + 0.5 == 1)
 assert(2 ^ -1 * 4 == 2)
 assert((let e = -1 in 2 ^ e) == 0.5)
 
-# `round(2 ^ -1)` is missing on purpose: the type table declares
-# `pow(Int, Int) -> Int`, which is false for a negative exponent, so `round`
-# picks its Int implementation — the identity — on all four targets. Filed
-# as 0190, since it is the type table rather than the emitters.
+# Anything that dispatches on Int versus Float. `pow(Int, Int)` is declared
+# `Float`, because Elo cannot know the exponent's sign statically and `2 ^ -1`
+# is not an Int. Declared `Int`, these picked the Int implementations — and
+# `round`, `floor` and `ceil` on an Int are the identity, so they did nothing
+# at all.
+assert(round(2 ^ -1) == 1)
+assert(round(2 ^ -2) == 0)
+assert(floor(2 ^ -1) == 0)
+assert(ceil(2 ^ -1) == 1)
+assert(floor(2 ^ 10) == 1024)
+assert(round(2 ^ 10) == 1024)
+
+# Division of a power, which is where a declared Float that is secretly an
+# integer at runtime would truncate
+assert(2 ^ 3 / 2 == 4)
+assert(2 ^ 3 / 16 == 0.5)
+assert(5 ^ 1 / 2 == 2.5)

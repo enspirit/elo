@@ -31,3 +31,16 @@
 
 
 
+
+(function(_) { function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); } return (function() { if (!(kRound(Math.pow(2, -1)) == 1)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); } return (function() { if (!(kRound(Math.pow(2, -2)) == 0)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Math.floor(Math.pow(2, -1)) == 0)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Math.ceil(Math.pow(2, -1)) == 1)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Math.floor(Math.pow(2, 10)) == 1024)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); } return (function() { if (!(kRound(Math.pow(2, 10)) == 1024)) throw new Error("Assertion failed"); return true; })(); })(null);
+
+
+
+(function(_) { return (function() { if (!(Math.pow(2, 3) / 2 == 4)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Math.pow(2, 3) / 16 == 0.5)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(Math.pow(5, 1) / 2 == 2.5)) throw new Error("Assertion failed"); return true; })(); })(null);

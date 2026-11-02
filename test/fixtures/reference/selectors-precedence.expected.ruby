@@ -5,7 +5,7 @@
 
 
 ->(_) { (raise "Assertion failed" unless (10 - 8).to_f == 2; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (10 - 8).to_f / 4 == 0.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (10 - 8).to_f.fdiv(4) == 0.5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (2 + 3).to_f == 5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (2 * 3).to_f == 6; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (7.5 - 0.5).to_i == 7; true) }.call(nil);

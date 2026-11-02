@@ -266,10 +266,11 @@ describe('Ruby Compiler - Operator Precedence', () => {
   });
 
   it('should handle right-associative division', () => {
-    // `10 / 2` is a Float, so the outer division is Int / Float — the one case
-    // Ruby's `/` does not truncate, hence a bare operator rather than k_div.
+    // Every numeric division goes through fdiv, including the outer one: a
+    // value declared Float can still be an Integer at runtime, and Ruby's `/`
+    // would then truncate.
     const ast = binary('/', literal(20), binary('/', literal(10), literal(2)));
-    assert.strictEqual(compileToRuby(ast), '->(_) { 20 / (10.fdiv(2)) }');
+    assert.strictEqual(compileToRuby(ast), '->(_) { 20.fdiv(10.fdiv(2)) }');
   });
 
   it('should handle power precedence', () => {

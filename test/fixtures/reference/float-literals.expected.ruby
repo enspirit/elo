@@ -8,13 +8,13 @@
 
 
 
-->(_) { (raise "Assertion failed" unless 7.0 / 2 == 3.5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 1.0 / 4 == 0.25; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 10.0 / 4 == 2.5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 3.0 / 2 * 2 == 3; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 5.0 / 2 == 2.5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 1.0 / 3 > 0.33; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (n = 2; 5.0 / n) == 2.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 7.0.fdiv(2) == 3.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 1.0.fdiv(4) == 0.25; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 10.0.fdiv(4) == 2.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 3.0.fdiv(2) * 2 == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 5.0.fdiv(2) == 2.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless 1.0.fdiv(3) > 0.33; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (n = 2; 5.0.fdiv(n)) == 2.5; true) }.call(nil);
 ->(_) { def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; (raise "Assertion failed" unless (f = ->(x) { k_div(9.0, x) }; f.call(2)) == 4.5; true) }.call(nil);
 
 
