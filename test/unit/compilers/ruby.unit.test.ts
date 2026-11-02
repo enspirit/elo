@@ -11,6 +11,10 @@ function wrapRuby(code: string): string {
   return `->(_) { ${code} }`;
 }
 
+// Ruby's `**` answers a Rational for a negative Integer exponent, which no
+// other target does, so every power goes through the helper.
+const POW = 'def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; ';
+
 // Emitted ahead of the expression when the division has to decide at runtime.
 const K_DIV = 'def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; ';
 
@@ -171,9 +175,11 @@ describe('Ruby Compiler - Arithmetic Operators', () => {
     assert.strictEqual(compileToRuby(ast), wrapRuby('10 % 3'));
   });
 
-  it('should compile power to **', () => {
+  it('should compile power through k_pow, which never yields a Rational', () => {
+    // `2 ** -1` is (1/2) in Ruby and 0.5 everywhere else, so the helper
+    // converts a Rational result and leaves every other one alone.
     const ast = binary('^', literal(2), literal(3));
-    assert.strictEqual(compileToRuby(ast), wrapRuby('2 ** 3'));
+    assert.strictEqual(compileToRuby(ast), `->(_) { ${POW}k_pow(2, 3) }`);
   });
 });
 
@@ -268,7 +274,7 @@ describe('Ruby Compiler - Operator Precedence', () => {
 
   it('should handle power precedence', () => {
     const ast = binary('+', binary('^', literal(2), literal(3)), literal(1));
-    assert.strictEqual(compileToRuby(ast), wrapRuby('2 ** 3 + 1'));
+    assert.strictEqual(compileToRuby(ast), `->(_) { ${POW}k_pow(2, 3) + 1 }`);
   });
 });
 

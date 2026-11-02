@@ -79,8 +79,10 @@ describe('CLI - Basic compilation', () => {
   });
 
   it('should handle power operator in Ruby', () => {
+    // Through a helper: Ruby's `**` answers a Rational for a negative Integer
+    // exponent, where every other target answers a Float.
     const result = eloc('-e "2 ^ 3" -t ruby');
-    assert.strictEqual(result, '->(_) { 2 ** 3 }');
+    assert.strictEqual(result, '->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
   });
 
   it('should handle power operator in SQL', () => {
@@ -165,7 +167,7 @@ describe('CLI - File input', () => {
 
     try {
       const result = eloc(`${inputFile} -t ruby`);
-      assert.strictEqual(result, '->(_) { 2 ** 3 }');
+      assert.strictEqual(result, '->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
     } finally {
       unlinkSync(inputFile);
     }
@@ -240,7 +242,7 @@ describe('CLI - Long options', () => {
 
   it('should accept --target', () => {
     const result = eloc('-e "2 ^ 3" --target ruby');
-    assert.strictEqual(result, '->(_) { 2 ** 3 }');
+    assert.strictEqual(result, '->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
   });
 
   it('should accept --prelude', () => {

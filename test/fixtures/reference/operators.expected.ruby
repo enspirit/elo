@@ -3,7 +3,7 @@
 ->(_) { (raise "Assertion failed" unless 4 * 3 == 12; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 10.fdiv(2) == 5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 10 % 3 == 1; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 2 ** 3 == 8; true) }.call(nil);
+->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless k_pow(2, 3) == 8; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 5 < 10; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 15 > 10; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 10 <= 10; true) }.call(nil);

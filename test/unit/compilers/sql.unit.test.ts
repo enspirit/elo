@@ -75,9 +75,12 @@ describe('SQL Compiler - Arithmetic Operators', () => {
     assert.strictEqual(compileToSQL(binary('/', literal(10.0, true), literal(2))), '10.0 / 2');
   });
 
-  it('should compile modulo', () => {
+  it('should compile modulo as a floored modulo', () => {
+    // Elo's `%` takes the sign of the divisor; PostgreSQL's takes the sign of
+    // the dividend and has no floored modulo to call, so the correction is
+    // inline.
     const ast = binary('%', literal(10), literal(3));
-    assert.strictEqual(compileToSQL(ast), '10 % 3');
+    assert.strictEqual(compileToSQL(ast), '((10 % 3) + 3) % 3');
   });
 
   it('should compile power to POWER()', () => {

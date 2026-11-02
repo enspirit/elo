@@ -173,8 +173,18 @@ import Footer from '../components/Footer.astro';
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Power &amp; Modulo</div>
           <pre class="language-elo">2 ^ 10 + 17 % 5</pre>
-          <p class="example-desc">Power <code>^</code> and remainder <code>%</code> operators.</p>
+          <p class="example-desc">Power <code>^</code> and modulo <code>%</code> operators.</p>
         </div>
+        <p class="note"><strong><code>/</code> is real division</strong> and
+        <strong><code>%</code> is floored</strong>, on every target.
+        <code>7 / 2</code> is <code>3.5</code>, never 3, so Ruby compiles it to
+        <code>fdiv</code> and PostgreSQL casts to <code>double precision</code>
+        — both truncate integer division natively. <code>%</code> takes the sign
+        of the <em>divisor</em>, so <code>-7 % 3</code> is <code>2</code> and
+        <code>7 % -3</code> is <code>-2</code>: <code>x % n</code> stays inside
+        <code>[0, n)</code> for a positive <code>n</code>, which is what a
+        cycle like <code>day % 7</code> is written for. JavaScript and
+        PostgreSQL take the sign of the dividend natively, so Elo corrects them.</p>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Date Arithmetic</div>
           <pre class="language-elo">TODAY + P7D</pre>

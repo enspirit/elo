@@ -26,6 +26,16 @@ See also the Related work section below.
 - **Temporal types** with dates, datetimes, and ISO8601 durations
 - **Infix notation** (standard mathematical notation)
 - **Arithmetic operators**: `+`, `-`, `*`, `/`, `%`, `^` (power, plus string repeat and array concat)
+  - `/` is **real division** on every target: `7 / 2` is `3.5`, never 3. Ruby
+    and PostgreSQL truncate integer division natively, so Elo compiles to
+    `fdiv` and to a `double precision` cast there.
+  - `%` is **floored** on every target: the result takes the sign of the
+    *divisor*, so `-7 % 3` is `2` and `7 % -3` is `-2`. That keeps `x % n`
+    inside `[0, n)` for a positive `n`, which is what a cycle like `day % 7` is
+    written for. JavaScript and PostgreSQL take the sign of the dividend
+    natively, so Elo corrects them.
+  - `^` never yields a Rational: Ruby's `**` answers `(1/2)` for `2 ^ -1`,
+    where every other target answers `0.5`, so Elo converts it.
 - **Comparison operators**: `<`, `>`, `<=`, `>=`, `==`, `!=`
 - **Logical operators**: `&&`, `||`, `!`
 - **Unary operators**: `-`, `+`, `!`

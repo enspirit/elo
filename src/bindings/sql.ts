@@ -423,7 +423,16 @@ export function createSQLBinding(): StdLib<string> {
     return `${left}::double precision / ${right}`;
   });
   sqlLib.register('div', [Types.any, Types.any], sqlBinaryOp('/'));
-  sqlLib.register('mod', [Types.any, Types.any], sqlBinaryOp('%'));
+  // Elo's `%` is floored: the result takes the sign of the divisor, as it does
+  // in Ruby and Python. PostgreSQL's `%` is truncated like C's, so `-7 % 3` is
+  // -1 there where Elo says 2, and it has no floored modulo to call. A pure
+  // expression has nowhere to define a helper either, so the correction is
+  // inline — which does evaluate the divisor twice.
+  sqlLib.register('mod', [Types.any, Types.any], (args, ctx) => {
+    const left = ctx.emitWithParens(args[0], '%', 'left');
+    const right = ctx.emitWithParens(args[1], '%', 'right');
+    return `((${left} % ${right}) + ${right}) % ${right}`;
+  });
   sqlLib.register('pow', [Types.any, Types.any], fnCall('POWER'));
 
   // Temporal arithmetic

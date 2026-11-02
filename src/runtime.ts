@@ -98,7 +98,10 @@ export const JS_HELPERS: Record<string, string> = {
      JavaScript, so an unknown type has to be looked at. Ruby's `.reverse` and
      Python's `[::-1]` cover both and need no helper. */
   kReverse: `function kReverse(x) { return Array.isArray(x) ? [...x].reverse() : x.split('').reverse().join(''); }`,
-  kMod: `function kMod(l, r) { return l % r; }`,
+  /* Elo's `%` is floored: the result takes the sign of the divisor, as it does
+     in Ruby and Python. JavaScript's `%` is truncated like C's, so `-7 % 3` is
+     -1 there where Elo says 2. */
+  kMod: `function kMod(l, r) { return ((l % r) + r) % r; }`,
   kPow: `function kPow(l, r) { return Math.pow(l, r); }`,
   kEq: `function kEq(l, r) {
   if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis();
@@ -320,6 +323,7 @@ export const JS_HELPERS: Record<string, string> = {
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   k_sub: [],
   k_round_to: [],
+  k_pow: [],
   k_div: [],
   k_str_mul: [],
   k_pad: [],
@@ -344,6 +348,14 @@ end`,
   k_pad: `def k_pad(s, n, p, at_start)
   raise "String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if n > ${MAX_STRING_LENGTH}
   at_start ? s.rjust(n, p) : s.ljust(n, p)
+end`,
+  /* Ruby answers a Rational for an Integer base and a negative Integer
+     exponent: `2 ** -1` is (1/2), where every other target says 0.5. A
+     Rational compares equal to the Float, so only typeOf and formatting show
+     it — typeOf said 'Tuple', having no case for one. */
+  k_pow: `def k_pow(l, r)
+  v = l ** r
+  v.is_a?(Rational) ? v.to_f : v
 end`,
   k_round_to: `def k_round_to(x, n)
   f = 10 ** n

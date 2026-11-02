@@ -120,7 +120,9 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('div', [Types.duration, Types.float], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.any, Types.any], helperCall('k_div'));
   rubyLib.register('mod', [Types.any, Types.any], simpleBinaryOp('%'));
-  rubyLib.register('pow', [Types.any, Types.any], simpleBinaryOp('**'));
+  // `**` answers a Rational for an Integer base and a negative Integer
+  // exponent, which no other target does and which typeOf could not name.
+  rubyLib.register('pow', [Types.any, Types.any], helperCall('k_pow'));
 
   // String repetition, length-bounded to prevent OOM (handles both operand orders)
   rubyLib.register('mul', [Types.string, Types.int], (args, ctx) => {

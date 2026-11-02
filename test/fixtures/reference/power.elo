@@ -1,0 +1,33 @@
+# `^` with a negative exponent.
+#
+# Ruby's `**` answers a **Rational** for an Integer base and a negative Integer
+# exponent: `2 ** -1` is `(1/2)`, not `0.5`. It compares equal to 0.5, so no
+# assertion on the value could catch it — but `typeOf` could, and did: it said
+# 'Tuple', because the type dispatcher has no case for a Rational and fell
+# through to the last one. A Rational leaking into the rest of an expression is
+# the same surprise `Date - Date` produced before 0175.
+
+assert(2 ^ 10 == 1024)
+assert(2 ^ 1 == 2)
+assert(2 ^ 0 == 1)
+assert(9 ^ 0.5 == 3)
+
+assert(2 ^ -1 == 0.5)
+assert(2 ^ -2 == 0.25)
+assert(4 ^ -1 == 0.25)
+assert(10 ^ -3 == 0.001)
+
+# The type, which is where the Rational showed
+assert(typeOf(2 ^ -1) == 'Float')
+assert(typeOf(2 ^ -2) == 'Float')
+assert(isNull(2 ^ -1) == false)
+
+# And it composes, rather than carrying a Rational along
+assert(2 ^ -1 + 0.5 == 1)
+assert(2 ^ -1 * 4 == 2)
+assert((let e = -1 in 2 ^ e) == 0.5)
+
+# `round(2 ^ -1)` is missing on purpose: the type table declares
+# `pow(Int, Int) -> Int`, which is false for a negative exponent, so `round`
+# picks its Int implementation — the identity — on all four targets. Filed
+# as 0190, since it is the type table rather than the emitters.

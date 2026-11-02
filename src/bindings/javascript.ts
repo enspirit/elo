@@ -109,7 +109,10 @@ export function createJavaScriptBinding(): StdLib<string> {
       jsLib.register('sub', [leftType, rightType], simpleBinaryOp('-'));
       jsLib.register('mul', [leftType, rightType], simpleBinaryOp('*'));
       jsLib.register('div', [leftType, rightType], simpleBinaryOp('/'));
-      jsLib.register('mod', [leftType, rightType], simpleBinaryOp('%'));
+      // Not a bare `%`: JavaScript truncates where Elo floors. Same reason
+      // `round` goes through kRound — when the native operator disagrees with
+      // Elo's semantics, the helper is the emission.
+      jsLib.register('mod', [leftType, rightType], helperCall('kMod'));
       jsLib.register('pow', [leftType, rightType], fnCall('Math.pow'));
     }
   }

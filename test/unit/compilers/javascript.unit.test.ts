@@ -87,9 +87,16 @@ describe('JavaScript Compiler - Arithmetic Operators (typed literals)', () => {
     assert.strictEqual(compileToJavaScript(ast), wrapJS('10 / 2'));
   });
 
-  it('should compile modulo with native JS when types known', () => {
+  it('should compile modulo through kMod, which floors', () => {
+    // Elo's `%` takes the sign of the divisor, as Ruby and Python do;
+    // JavaScript's `%` takes the sign of the dividend. The helper is the
+    // emission even when both types are known, for the same reason `round`
+    // goes through kRound.
     const ast = binary('%', literal(10), literal(3));
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('10 % 3'));
+    assert.strictEqual(
+      compileToJavaScript(ast),
+      '(function(_) { function kMod(l, r) { return ((l % r) + r) % r; } return kMod(10, 3); })'
+    );
   });
 
   it('should compile power to Math.pow() when types known', () => {
