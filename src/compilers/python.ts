@@ -1,11 +1,11 @@
-import { Expr, locate } from '../ast';
+import { Expr } from '../ast';
 import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createPythonBinding, isNativeBinaryOp, PYTHON_OP_MAP } from '../bindings/python';
-import { PY_HELPER_DEPS } from '../runtime';
-import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { Emitter, emit, resolveHelpers } from './_emit';
 
 /**
  * Python compilation options
@@ -34,14 +34,6 @@ export interface PythonCompileResult {
   code: string;
   /** Whether the code uses the input variable _ */
   usesInput: boolean;
-}
-
-/**
- * Result of Python emission including required helpers
- */
-interface EmitResult {
-  code: string;
-  requiredHelpers: Set<string>;
 }
 
 /**
@@ -107,228 +99,123 @@ export function compileToPython(expr: Expr, options?: PythonCompileOptions): str
 export function compileToPythonWithMeta(expr: Expr, options?: PythonCompileOptions): PythonCompileResult {
   const ir = transform(expr, new Map(), new Set(), { types: options?.types });
   const actuallyUsesInput = usesInput(ir);
-  const emitOptions: EmitOptions = { stripGuards: options?.stripGuards || false };
-  const result = emitPyWithHelpers(ir, emitOptions);
+  // Helpers are provided by the prelude (--prelude-only), not embedded
+  // per-expression, so the set is collected and not read back.
+  const requiredHelpers = new Set<string>();
+  const code = emit(ir, pyEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);
 
-  // Resolve helper dependencies
-  const allHelpers = new Set(result.requiredHelpers);
-  for (const helper of result.requiredHelpers) {
-    const deps = PY_HELPER_DEPS[helper];
-    if (deps) {
-      for (const dep of deps) {
-        allHelpers.add(dep);
-      }
-    }
-  }
-
-  // Helpers are provided by the prelude (--prelude-only), not embedded per-expression.
   // Wrap as lambda: (lambda _: CODE)(None)
   const suffix = options?.execute ? '(None)' : '';
-  return { code: `(lambda _: ${result.code})${suffix}`, usesInput: actuallyUsesInput };
+  return { code: `(lambda _: ${code})${suffix}`, usesInput: actuallyUsesInput };
 }
 
-
-interface EmitOptions {
-  stripGuards: boolean;
-}
-
-function emitPyWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
-  const requiredHelpers = new Set<string>();
-  const code = emitPy(ir, requiredHelpers, options);
-  return { code, requiredHelpers };
-}
 
 /**
- * Emit Python code from IR, saying where in the source a refusal was about.
+ * How Python spells each kind of IR node.
  *
- * Positioned here rather than at each throw site: emission is a recursion, so
- * the node in hand is the piece of source the refusal is about, and a refusal
- * added later is positioned by the same construction. The position is there
- * only when the parse recorded one.
+ * The walk itself lives in `_emit.ts`; this is the whole of what makes the
+ * emission Python. Children arrive already emitted.
+ *
+ * Python has no block expression, so a sequence is a tuple read at `[-1]` and
+ * a binding is a walrus.
  */
-function emitPy(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
-  try {
-    return emitPyNode(ir, requiredHelpers, options);
-  } catch (error) {
-    throw locate(error, ir.loc);
-  }
-}
+const pyEmitter: Emitter = {
+  lib: pyLib,
+  needsParens,
 
-function emitPyNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
-  const ctx: EmitContext<string> = {
-    emit: (child) => emitPy(child, requiredHelpers, options),
-    emitWithParens: (child, parentOp, side) => {
-      const emitted = emitPy(child, requiredHelpers, options);
-      if (needsParens(child, parentOp, side)) {
-        return `(${emitted})`;
-      }
-      return emitted;
-    },
-    requireHelper: (name) => requiredHelpers.add(name),
-  };
+  boolLiteral: (value) => (value ? 'True' : 'False'),
+  nullLiteral: 'None',
+  stringLiteral: (value) => JSON.stringify(value),
 
-  switch (ir.type) {
-    case 'int_literal':
-      return assertNumericLiteral(ir.value).toString();
+  dateLiteral: (value) => {
+    const [y, m, d] = value.split('-').map(Number);
+    return `_elo_dt(${y}, ${m}, ${d})`;
+  },
 
-    case 'float_literal':
-      return formatFloatLiteral(ir.value);
+  datetimeLiteral: (value) => {
+    // "2024-01-15T10:30:00" or "2024-01-15T10:30:00Z"
+    const [datePart, timePart] = value.replace(/Z$/, '').split('T');
+    const [dy, dm, dd] = datePart.split('-').map(Number);
+    if (!timePart) return `_elo_dt(${dy}, ${dm}, ${dd})`;
+    const [th, tm, ts] = timePart.split(':').map(Number);
+    return `_elo_dt(${dy}, ${dm}, ${dd}, ${th}, ${tm}, ${ts || 0})`;
+  },
 
-    case 'bool_literal':
-      return ir.value ? 'True' : 'False';
+  durationLiteral: (value) => `EloDuration.from_iso(${JSON.stringify(value)})`,
 
-    case 'null_literal':
-      return 'None';
+  objectLiteral: (properties) =>
+    `{${properties.map(p => `${JSON.stringify(p.key)}: ${p.value}`).join(', ')}}`,
 
-    case 'string_literal':
-      return JSON.stringify(ir.value);
+  arrayLiteral: (elements) => `[${elements.join(', ')}]`,
 
-    case 'date_literal': {
-      // Parse date string to emit as _elo_dt(y, m, d)
-      const [y, m, d] = ir.value.split('-').map(Number);
-      return `_elo_dt(${y}, ${m}, ${d})`;
+  variable: (name) => assertSafeIdentifier(name, 'variable name'),
+
+  memberAccess: (object, property) =>
+    `${object}.get(${JSON.stringify(assertSafeIdentifier(property, 'member_access property'))})`,
+
+  letExpr: (bindings, body) => {
+    const assignments = bindings
+      .map(b => `${assertSafeIdentifier(b.name, 'let binding name')} := ${b.value}`);
+    return `(${[...assignments, body].join(', ')})[-1]`;
+  },
+
+  ifExpr: (condition, then, otherwise) => `(${then}) if (${condition}) else (${otherwise})`,
+
+  lambda: (params, body) =>
+    `lambda ${params.map(p => assertSafeIdentifier(p, 'lambda parameter')).join(', ')}: ${body}`,
+
+  apply: (fn, args, ir) => {
+    const fnExpr = ir.fn.type === 'lambda' ? `(${fn})` : fn;
+    return `${fnExpr}(${args.join(', ')})`;
+  },
+
+  // Built from the right: the last branch is the default, each prior one binds
+  // a walrus and checks it for None.
+  alternative: (alternatives) => {
+    if (alternatives.length === 1) return alternatives[0].code;
+    let result = alternatives[alternatives.length - 1].code;
+    for (let i = alternatives.length - 2; i >= 0; i--) {
+      const tmpVar = `_alt${i}`;
+      result = `(${tmpVar}) if (${tmpVar} := ${alternatives[i].code}) is not None else (${result})`;
     }
+    return `(${result})`;
+  },
 
-    case 'datetime_literal': {
-      // Parse datetime string: "2024-01-15T10:30:00" or "2024-01-15T10:30:00Z"
-      const dtVal = ir.value.replace(/Z$/, '');
-      const [datePart, timePart] = dtVal.split('T');
-      const [dy, dm, dd] = datePart.split('-').map(Number);
-      if (timePart) {
-        const [th, tm, ts] = timePart.split(':').map(Number);
-        return `_elo_dt(${dy}, ${dm}, ${dd}, ${th}, ${tm}, ${ts || 0})`;
-      }
-      return `_elo_dt(${dy}, ${dm}, ${dd})`;
-    }
+  datapath: (segments) => {
+    const emitted = segments.map(s => {
+      const safe = assertSafeDatapathSegment(s);
+      return typeof safe === 'string' ? JSON.stringify(safe) : safe.toString();
+    });
+    return `[${emitted.join(', ')}]`;
+  },
 
-    case 'duration_literal':
-      return `EloDuration.from_iso(${JSON.stringify(ir.value)})`;
+  // All definitions go in one tuple, so a long prelude costs one level of
+  // nesting rather than one per type. The type name becomes a lambda that
+  // calls the parser and unwraps the result.
+  typedef: (definitions, body, ctx) => {
+    ctx.requireHelper('pUnwrap');
+    const decls = definitions.flatMap(({ name, parser }) => {
+      const safe = assertSafeIdentifier(name, 'typedef name');
+      return [`_p_${safe} := ${parser}`, `${safe} := lambda v: pUnwrap(_p_${safe}(v, ''))`];
+    });
+    return `(${[...decls, body].join(', ')})[-1]`;
+  },
 
-    case 'object_literal': {
-      const props = ir.properties.map(p => `${JSON.stringify(p.key)}: ${ctx.emit(p.value)}`).join(', ');
-      return `{${props}}`;
-    }
+  typeParser: emitTypeExprParser,
 
-    case 'array_literal': {
-      const elements = ir.elements.map(e => ctx.emit(e)).join(', ');
-      return `[${elements}]`;
-    }
+  guard: (constraints, body, guardType, ctx) => {
+    // The error says which kind of assertion it was and what it was called,
+    // so a host does not have to read that back out of the message.
+    ctx.requireHelper('pAssert');
+    const checks = constraints.map(({ label, condition, message }) => {
+      const name = label ? JSON.stringify(label) : 'None';
+      return `pAssert(${condition}, ${JSON.stringify(guardType)}, ${name}, ${JSON.stringify(message)})`;
+    });
+    return `(${[...checks, body].join(', ')})[-1]`;
+  },
 
-    case 'variable':
-      return assertSafeIdentifier(ir.name, 'variable name');
-
-    case 'member_access': {
-      const object = ctx.emit(ir.object);
-      return `${object}.get(${JSON.stringify(assertSafeIdentifier(ir.property, 'member_access property'))})`;
-    }
-
-    case 'let': {
-      // Use walrus operator: (x := val, body)[-1]
-      // For multiple bindings, chain: (a := 1, b := 2, body)[-1]
-      const allBindings: Array<{ name: string; value: string }> = [];
-      let current: IRExpr = ir;
-
-      while (current.type === 'let') {
-        for (const b of current.bindings) {
-          allBindings.push({ name: b.name, value: ctx.emit(b.value) });
-        }
-        current = current.body;
-      }
-
-      const body = ctx.emit(current);
-      const assignments = allBindings.map(b => `${assertSafeIdentifier(b.name, 'let binding name')} := ${b.value}`);
-      return `(${[...assignments, body].join(', ')})[-1]`;
-    }
-
-    case 'call':
-      return pyLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
-
-    case 'if': {
-      const cond = ctx.emit(ir.condition);
-      const thenBranch = ctx.emit(ir.then);
-      const elseBranch = ctx.emit(ir.else);
-      return `(${thenBranch}) if (${cond}) else (${elseBranch})`;
-    }
-
-    case 'lambda': {
-      const params = ir.params.map(p => assertSafeIdentifier(p.name, 'lambda parameter')).join(', ');
-      const body = ctx.emit(ir.body);
-      return `lambda ${params}: ${body}`;
-    }
-
-    case 'apply': {
-      const fn = ctx.emit(ir.fn);
-      const args = ir.args.map(a => ctx.emit(a)).join(', ');
-      // Wrap lambda in parens
-      const needsParensWrap = ir.fn.type === 'lambda';
-      const fnExpr = needsParensWrap ? `(${fn})` : fn;
-      return `${fnExpr}(${args})`;
-    }
-
-    case 'alternative': {
-      // Null-coalescing: (lambda: v if (v := a) is not None else b)()
-      // For simplicity, use nested ternary
-      const alts = ir.alternatives;
-      if (alts.length === 1) return ctx.emit(alts[0]);
-
-      // Build from right: last is default, each prior checks for None
-      let result = ctx.emit(alts[alts.length - 1]);
-      for (let i = alts.length - 2; i >= 0; i--) {
-        const alt = ctx.emit(alts[i]);
-        const tmpVar = `_alt${i}`;
-        result = `(${tmpVar}) if (${tmpVar} := ${alt}) is not None else (${result})`;
-      }
-      return `(${result})`;
-    }
-
-    case 'datapath': {
-      const segments = ir.segments.map(s => {
-        const safe = assertSafeDatapathSegment(s);
-        return typeof safe === 'string' ? JSON.stringify(safe) : safe.toString();
-      });
-      return `[${segments.join(', ')}]`;
-    }
-
-    case 'typedef': {
-      // Generate a parser function per type and bind it
-      ctx.requireHelper('pUnwrap');
-      // Use walrus pattern: (_p_Name := parser, Name := lambda v: pUnwrap(_p_Name(v, '')), body)[-1]
-      // All definitions go in one tuple, so a long prelude costs one level of
-      // nesting rather than one per type
-      const decls = ir.definitions.flatMap(definition => {
-        const parserCode = emitTypeExprParser(definition.typeExpr, ctx);
-        const name = assertSafeIdentifier(definition.name, 'typedef name');
-        return [
-          `_p_${name} := ${parserCode}`,
-          `${name} := lambda v: pUnwrap(_p_${name}(v, ''))`,
-        ];
-      });
-      const body = ctx.emit(ir.body);
-      return `(${[...decls, body].join(', ')})[-1]`;
-    }
-
-    case 'guard': {
-      const body = ctx.emit(ir.body);
-      if (options.stripGuards) {
-        return body;
-      }
-      // Generate guard checks that raise on failure. The error says which kind
-      // of assertion it was and what it was called, so a host does not have to
-      // read that back out of the message.
-      ctx.requireHelper('pAssert');
-      const guardChecks = ir.constraints.map(c => {
-        const conditionCode = ctx.emit(c.condition);
-        const errorMsg = c.label
-          ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
-          : `${ir.guardType} failed`;
-        const label = c.label ? JSON.stringify(c.label) : 'None';
-        return `pAssert(${conditionCode}, ${JSON.stringify(ir.guardType)}, ${label}, ${JSON.stringify(errorMsg)})`;
-      });
-      // Chain with tuple: (check1, check2, body)[-1]
-      return `(${[...guardChecks, body].join(', ')})[-1]`;
-    }
-  }
-}
+  unsupported: {},
+};
 
 /**
  * Emit a parser expression for a type expression in Python.

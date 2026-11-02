@@ -1,11 +1,12 @@
-import { Expr, locate } from '../ast';
+import { Expr } from '../ast';
 import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createJavaScriptBinding, isNativeBinaryOp } from '../bindings/javascript';
 import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
-import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { Emitter, emit, resolveHelpers } from './_emit';
 
 /**
  * JavaScript compilation options
@@ -39,20 +40,12 @@ export interface JavaScriptCompileResult {
 }
 
 /**
- * Result of JavaScript emission including required helpers
- */
-interface EmitResult {
-  code: string;
-  requiredHelpers: Set<string>;
-}
-
-/**
  * Compiles Elo expressions to JavaScript code
  * Uses luxon for temporal operations
  *
  * This compiler works in two phases:
  * 1. Transform AST to typed IR
- * 2. Emit JavaScript from IR (tracking required helpers)
+ * 2. Emit JavaScript from IR, through the shared walk in `_emit.ts`
  * 3. Wrap in IIFE with helper definitions if needed
  *
  * If the expression uses `_` (input variable), the output is a function
@@ -73,49 +66,18 @@ export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptio
 export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptCompileOptions): JavaScriptCompileResult {
   const ir = transform(expr, new Map(), new Set(), { types: options?.types });
   const actuallyUsesInput = usesInput(ir);
-  const emitOptions = { stripGuards: options?.stripGuards || false };
-  const result = emitJSWithHelpers(ir, emitOptions);
+  const requiredHelpers = new Set<string>();
+  const code = emit(ir, jsEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);
 
-  // Resolve helper dependencies
-  const allHelpers = new Set(result.requiredHelpers);
-  for (const helper of result.requiredHelpers) {
-    const deps = JS_HELPER_DEPS[helper];
-    if (deps) {
-      for (const dep of deps) {
-        allHelpers.add(dep);
-      }
-    }
-  }
-
-  // Build helper definitions (sorted for deterministic output)
-  const helperDefs = Array.from(allHelpers)
-    .sort()
+  const helperDefs = resolveHelpers(requiredHelpers, JS_HELPER_DEPS)
     .map(name => JS_HELPERS[name].replace(/\n\s*/g, ' '))
     .join(' ');
 
   // Always wrap as a function taking _ as input parameter
   // When execute is true, add (null) to call the function and ; to make it a statement
   const suffix = options?.execute ? '(null);' : '';
-  if (result.requiredHelpers.size === 0) {
-    return { code: `(function(_) { return ${result.code}; })${suffix}`, usesInput: actuallyUsesInput };
-  }
-  return { code: `(function(_) { ${helperDefs} return ${result.code}; })${suffix}`, usesInput: actuallyUsesInput };
-}
-
-/**
- * Options for JS emission
- */
-interface EmitOptions {
-  stripGuards: boolean;
-}
-
-/**
- * Emit JavaScript with helper tracking
- */
-function emitJSWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
-  const requiredHelpers = new Set<string>();
-  const code = emitJS(ir, requiredHelpers, options);
-  return { code, requiredHelpers };
+  const prefix = helperDefs ? `${helperDefs} ` : '';
+  return { code: `(function(_) { ${prefix}return ${code}; })${suffix}`, usesInput: actuallyUsesInput };
 }
 
 /**
@@ -162,184 +124,97 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
 const jsLib = createJavaScriptBinding();
 
 /**
- * Emit JavaScript code from IR, saying where in the source a refusal was about.
+ * How JavaScript spells each kind of IR node.
  *
- * Positioned here rather than at each throw site: emission is a recursion, so
- * the node in hand is the piece of source the refusal is about, and a refusal
- * added later is positioned by the same construction. The position is there
- * only when the parse recorded one.
+ * The walk itself lives in `_emit.ts`; this is the whole of what makes the
+ * emission JavaScript. Children arrive already emitted.
  */
-function emitJS(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
-  try {
-    return emitJSNode(ir, requiredHelpers, options);
-  } catch (error) {
-    throw locate(error, ir.loc);
-  }
-}
+const jsEmitter: Emitter = {
+  lib: jsLib,
+  needsParens,
 
-function emitJSNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
-  const ctx: EmitContext<string> = {
-    emit: (child) => emitJS(child, requiredHelpers, options),
-    emitWithParens: (child, parentOp, side) => {
-      const emitted = emitJS(child, requiredHelpers, options);
-      if (needsParens(child, parentOp, side)) {
-        return `(${emitted})`;
-      }
-      return emitted;
-    },
-    requireHelper: (name) => requiredHelpers.add(name),
-  };
+  boolLiteral: (value) => value.toString(),
+  nullLiteral: 'null',
+  stringLiteral: (value) => JSON.stringify(value),
+  dateLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)})`,
+  datetimeLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)})`,
+  durationLiteral: (value) => `Duration.fromISO(${JSON.stringify(value)})`,
 
-  switch (ir.type) {
-    case 'int_literal':
-      return assertNumericLiteral(ir.value).toString();
+  // Wrapped in parens to avoid the ambiguity with a block
+  objectLiteral: (properties) =>
+    `({${properties.map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${p.value}`).join(', ')}})`,
 
-    case 'float_literal':
-      return formatFloatLiteral(ir.value);
+  arrayLiteral: (elements) => `[${elements.join(', ')}]`,
 
-    case 'bool_literal':
-      return ir.value.toString();
+  variable: (name) => assertSafeIdentifier(name, 'variable name'),
 
-    case 'null_literal':
-      return 'null';
+  memberAccess: (object, property, ir) => {
+    const objectExpr = ir.object.type === 'call' ? `(${object})` : object;
+    return `${objectExpr}.${assertSafeIdentifier(property, 'member_access property')}`;
+  },
 
-    case 'string_literal':
-      return JSON.stringify(ir.value);
+  letExpr: (bindings, body) => {
+    const declarations = bindings
+      .map(b => `const ${assertSafeIdentifier(b.name, 'let binding name')} = ${b.value};`)
+      .join(' ');
+    return `(() => { ${declarations} return ${body}; })()`;
+  },
 
-    case 'date_literal':
-      return `DateTime.fromISO(${JSON.stringify(ir.value)})`;
+  ifExpr: (condition, then, otherwise) => `(${condition}) ? (${then}) : (${otherwise})`,
 
-    case 'datetime_literal':
-      return `DateTime.fromISO(${JSON.stringify(ir.value)})`;
+  lambda: (params, body) =>
+    `(${params.map(p => assertSafeIdentifier(p, 'lambda parameter')).join(', ')}) => ${body}`,
 
-    case 'duration_literal':
-      return `Duration.fromISO(${JSON.stringify(ir.value)})`;
+  apply: (fn, args, ir) => {
+    // Wrap the function in parens if it is a lambda expression
+    const fnExpr = ir.fn.type === 'lambda' ? `(${fn})` : fn;
+    return `${fnExpr}(${args.join(', ')})`;
+  },
 
-    case 'object_literal': {
-      const props = ir.properties
-        .map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${ctx.emit(p.value)}`)
-        .join(', ');
-      // Wrap in parens to avoid parsing ambiguity with blocks
-      return `({${props}})`;
-    }
+  // A nullish coalescing chain: a ?? b ?? c, each branch parenthesised when
+  // it is a complex expression.
+  alternative: (alternatives) => {
+    const alts = alternatives.map(({ code, node }) =>
+      node.type === 'call' || node.type === 'alternative' ? `(${code})` : code
+    );
+    return `(${alts.join(' ?? ')})`;
+  },
 
-    case 'array_literal': {
-      const elements = ir.elements.map(e => ctx.emit(e)).join(', ');
-      return `[${elements}]`;
-    }
+  datapath: (segments) => {
+    const emitted = segments.map(s => {
+      const safe = assertSafeDatapathSegment(s);
+      return typeof safe === 'string' ? JSON.stringify(safe) : safe.toString();
+    });
+    return `[${emitted.join(', ')}]`;
+  },
 
-    case 'variable':
-      return assertSafeIdentifier(ir.name, 'variable name');
+  // One declaration per definition in a single scope, so a long prelude costs
+  // one closure rather than one per type. The type name becomes a function
+  // that calls the parser and unwraps the result.
+  typedef: (definitions, body, ctx) => {
+    ctx.requireHelper('pUnwrap');
+    const decls = definitions.map(({ name, parser }) => {
+      const safe = assertSafeIdentifier(name, 'typedef name');
+      return `const _p_${safe} = ${parser}; const ${safe} = (v) => pUnwrap(_p_${safe}(v, ''));`;
+    }).join(' ');
+    return `(() => { ${decls} return ${body}; })()`;
+  },
 
-    case 'member_access': {
-      const object = ctx.emit(ir.object);
-      const needsParensForMember = ir.object.type === 'call';
-      const objectExpr = needsParensForMember ? `(${object})` : object;
-      return `${objectExpr}.${assertSafeIdentifier(ir.property, 'member_access property')}`;
-    }
+  typeParser: emitTypeExprParser,
 
-    case 'let': {
-      // Collect consecutive let bindings into one scope. A binding that
-      // shadows another cannot arrive here: the transform emits it under a
-      // name of its own, so `let x = 1 in let x = x + 1 in x` reaches this
-      // point as `x` and `x__2`.
-      const allBindings: Array<{ name: string; value: string }> = [];
-      let current: IRExpr = ir;
+  guard: (constraints, body, guardType, ctx) => {
+    // The error says which kind of assertion it was and what it was called,
+    // so a host does not have to read that back out of the message.
+    ctx.requireHelper('pRaise');
+    const checks = constraints.map(({ label, condition, message }) => {
+      const name = label ? JSON.stringify(label) : 'null';
+      return `if (!(${condition})) pRaise(${JSON.stringify(guardType)}, ${name}, ${JSON.stringify(message)});`;
+    }).join(' ');
+    return `(() => { ${checks} return ${body}; })()`;
+  },
 
-      while (current.type === 'let') {
-        for (const b of current.bindings) {
-          allBindings.push({ name: b.name, value: ctx.emit(b.value) });
-        }
-        current = current.body;
-      }
-
-      const declarations = allBindings.map(b => `const ${assertSafeIdentifier(b.name, 'let binding name')} = ${b.value};`).join(' ');
-      const body = ctx.emit(current);
-      return `(() => { ${declarations} return ${body}; })()`;
-    }
-
-    case 'call':
-      return jsLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
-
-    case 'if': {
-      const cond = ctx.emit(ir.condition);
-      const thenBranch = ctx.emit(ir.then);
-      const elseBranch = ctx.emit(ir.else);
-      return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
-    }
-
-    case 'lambda': {
-      const params = ir.params.map(p => assertSafeIdentifier(p.name, 'lambda parameter')).join(', ');
-      const body = ctx.emit(ir.body);
-      return `(${params}) => ${body}`;
-    }
-
-    case 'apply': {
-      const fn = ctx.emit(ir.fn);
-      const args = ir.args.map(a => ctx.emit(a)).join(', ');
-      // Wrap function in parens if it's a lambda expression
-      const needsParens = ir.fn.type === 'lambda';
-      const fnExpr = needsParens ? `(${fn})` : fn;
-      return `${fnExpr}(${args})`;
-    }
-
-    case 'alternative': {
-      // Compile to nullish coalescing chain: a ?? b ?? c
-      const alts = ir.alternatives.map(alt => {
-        const code = ctx.emit(alt);
-        // Wrap in parens if it's a complex expression
-        return alt.type === 'call' || alt.type === 'alternative' ? `(${code})` : code;
-      });
-      return `(${alts.join(' ?? ')})`;
-    }
-
-    case 'datapath': {
-      // Compile datapath as an array of segments
-      const segments = ir.segments.map(s => {
-        const safe = assertSafeDatapathSegment(s);
-        return typeof safe === 'string' ? JSON.stringify(safe) : safe.toString();
-      });
-      return `[${segments.join(', ')}]`;
-    }
-
-    case 'typedef': {
-      // Generate a parser function per type and bind it
-      // Wrap it so calling TypeName(value) auto-unwraps the result
-      ctx.requireHelper('pUnwrap');
-      // One declaration per definition in a single scope, so a long prelude
-      // costs one closure rather than one per type
-      const decls = ir.definitions.map(definition => {
-        const parserCode = emitTypeExprParser(definition.typeExpr, ctx);
-        // The type name becomes a function that calls the parser and unwraps
-        const name = assertSafeIdentifier(definition.name, 'typedef name');
-        return `const _p_${name} = ${parserCode}; const ${name} = (v) => pUnwrap(_p_${name}(v, ''));`;
-      }).join(' ');
-      const body = ctx.emit(ir.body);
-      return `(() => { ${decls} return ${body}; })()`;
-    }
-
-    case 'guard': {
-      const body = ctx.emit(ir.body);
-      // If stripGuards is enabled, just emit the body
-      if (options.stripGuards) {
-        return body;
-      }
-      // Generate guard checks that throw on failure. The error says which kind
-      // of assertion it was and what it was called, so a host does not have to
-      // read that back out of the message.
-      ctx.requireHelper('pRaise');
-      const guardChecks = ir.constraints.map(c => {
-        const conditionCode = ctx.emit(c.condition);
-        const errorMsg = c.label
-          ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
-          : `${ir.guardType} failed`;
-        const label = c.label ? JSON.stringify(c.label) : 'null';
-        return `if (!(${conditionCode})) pRaise(${JSON.stringify(ir.guardType)}, ${label}, ${JSON.stringify(errorMsg)});`;
-      }).join(' ');
-      return `(() => { ${guardChecks} return ${body}; })()`;
-    }
-  }
-}
+  unsupported: {},
+};
 
 /**
  * Emit a parser function for a type expression

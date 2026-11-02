@@ -1,11 +1,12 @@
-import { Expr, locate } from '../ast';
+import { Expr } from '../ast';
 import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createRubyBinding, isNativeBinaryOp, RUBY_OP_MAP } from '../bindings/ruby';
 import { RUBY_HELPERS, RUBY_HELPER_DEPS } from '../runtime';
-import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { Emitter, emit, resolveHelpers } from './_emit';
 
 /**
  * Ruby compilation options
@@ -81,14 +82,6 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
 const rubyLib = createRubyBinding();
 
 /**
- * Result of Ruby emission including required helpers
- */
-interface EmitResult {
-  code: string;
-  requiredHelpers: Set<string>;
-}
-
-/**
  * Compiles Elo expressions to Ruby code
  *
  * This compiler works in two phases:
@@ -114,49 +107,18 @@ export function compileToRuby(expr: Expr, options?: RubyCompileOptions): string 
 export function compileToRubyWithMeta(expr: Expr, options?: RubyCompileOptions): RubyCompileResult {
   const ir = transform(expr, new Map(), new Set(), { types: options?.types });
   const actuallyUsesInput = usesInput(ir);
-  const emitOptions: EmitOptions = { stripGuards: options?.stripGuards || false };
-  const result = emitRubyWithHelpers(ir, emitOptions);
+  const requiredHelpers = new Set<string>();
+  const code = emit(ir, rubyEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);
 
-  // Resolve helper dependencies
-  const allHelpers = new Set(result.requiredHelpers);
-  for (const helper of result.requiredHelpers) {
-    const deps = RUBY_HELPER_DEPS[helper];
-    if (deps) {
-      for (const dep of deps) {
-        allHelpers.add(dep);
-      }
-    }
-  }
-
-  // Build helper definitions (sorted for deterministic output)
-  const helperDefs = Array.from(allHelpers)
-    .sort()
+  const helperDefs = resolveHelpers(requiredHelpers, RUBY_HELPER_DEPS)
     .map(name => RUBY_HELPERS[name].replace(/\n\s*/g, '; ').replace(/; end/, ' end'))
     .join('; ');
 
   // Always wrap as a lambda taking _ as input parameter
   // When execute is true, add .call(nil) to call the lambda and ; to make it a statement
   const suffix = options?.execute ? '.call(nil);' : '';
-  if (result.requiredHelpers.size === 0) {
-    return { code: `->(_) { ${result.code} }${suffix}`, usesInput: actuallyUsesInput };
-  }
-  return { code: `->(_) { ${helperDefs}; ${result.code} }${suffix}`, usesInput: actuallyUsesInput };
-}
-
-/**
- * Options for Ruby emission
- */
-interface EmitOptions {
-  stripGuards: boolean;
-}
-
-/**
- * Emit Ruby with helper tracking
- */
-function emitRubyWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
-  const requiredHelpers = new Set<string>();
-  const code = emitRuby(ir, requiredHelpers, options);
-  return { code, requiredHelpers };
+  const prefix = helperDefs ? `${helperDefs}; ` : '';
+  return { code: `->(_) { ${prefix}${code} }${suffix}`, usesInput: actuallyUsesInput };
 }
 
 /**
@@ -176,179 +138,92 @@ function escapeRubyDQ(s: string): string {
 }
 
 /**
- * Emit Ruby code from IR, saying where in the source a refusal was about.
+ * How Ruby spells each kind of IR node.
  *
- * Positioned here rather than at each throw site: emission is a recursion, so
- * the node in hand is the piece of source the refusal is about, and a refusal
- * added later is positioned by the same construction. The position is there
- * only when the parse recorded one.
+ * The walk itself lives in `_emit.ts`; this is the whole of what makes the
+ * emission Ruby. Children arrive already emitted.
  */
-function emitRuby(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
-  try {
-    return emitRubyNode(ir, requiredHelpers, options);
-  } catch (error) {
-    throw locate(error, ir.loc);
-  }
-}
+const rubyEmitter: Emitter = {
+  lib: rubyLib,
+  needsParens,
 
-function emitRubyNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
-  const ctx: EmitContext<string> = {
-    emit: (child) => emitRuby(child, requiredHelpers, options),
-    emitWithParens: (child, parentOp, side) => {
-      const emitted = emitRuby(child, requiredHelpers, options);
-      if (needsParens(child, parentOp, side)) {
-        return `(${emitted})`;
-      }
-      return emitted;
-    },
-    requireHelper: (name) => requiredHelpers.add(name),
-  };
+  boolLiteral: (value) => value.toString(),
+  nullLiteral: 'nil',
+  stringLiteral: (value) => `"${escapeRubyDQ(value)}"`,
+  dateLiteral: (value) => `Date.parse(${JSON.stringify(value)})`,
+  datetimeLiteral: (value) => `DateTime.parse(${JSON.stringify(value)})`,
+  durationLiteral: (value) => `ActiveSupport::Duration.parse(${JSON.stringify(value)})`,
 
-  switch (ir.type) {
-    case 'int_literal':
-      return assertNumericLiteral(ir.value).toString();
+  objectLiteral: (properties) =>
+    `{${properties.map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${p.value}`).join(', ')}}`,
 
-    case 'float_literal':
-      return formatFloatLiteral(ir.value);
+  arrayLiteral: (elements) => `[${elements.join(', ')}]`,
 
-    case 'bool_literal':
-      return ir.value.toString();
+  variable: (name) => assertSafeIdentifier(name, 'variable name'),
 
-    case 'null_literal':
-      return 'nil';
+  memberAccess: (object, property, ir) => {
+    const objectExpr = ir.object.type === 'call' && isNativeBinaryOp(ir.object) ? `(${object})` : object;
+    return `${objectExpr}[:${assertSafeIdentifier(property, 'member_access property')}]`;
+  },
 
-    case 'string_literal':
-      return `"${escapeRubyDQ(ir.value)}"`;
+  letExpr: (bindings, body) => {
+    const assignments = bindings
+      .map(b => `${assertSafeIdentifier(b.name, 'let binding name')} = ${b.value}`)
+      .join('; ');
+    return `(${assignments}; ${body})`;
+  },
 
-    case 'date_literal':
-      return `Date.parse(${JSON.stringify(ir.value)})`;
+  ifExpr: (condition, then, otherwise) => `(${condition}) ? (${then}) : (${otherwise})`,
 
-    case 'datetime_literal':
-      return `DateTime.parse(${JSON.stringify(ir.value)})`;
+  lambda: (params, body) =>
+    `->(${params.map(p => assertSafeIdentifier(p, 'lambda parameter')).join(', ')}) { ${body} }`,
 
-    case 'duration_literal':
-      return `ActiveSupport::Duration.parse(${JSON.stringify(ir.value)})`;
+  apply: (fn, args) => `${fn}.call(${args.join(', ')})`,
 
-    case 'object_literal': {
-      const props = ir.properties
-        .map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${ctx.emit(p.value)}`)
-        .join(', ');
-      return `{${props}}`;
-    }
+  // A lambda with an early return per branch: Ruby has no nil-coalescing
+  // operator, and `||` would also take a `false` for a missing value.
+  alternative: (alternatives) => {
+    const parts = alternatives.slice(0, -1).map(({ code }) => `v = ${code}; return v unless v.nil?`);
+    parts.push(alternatives[alternatives.length - 1].code);
+    return `->() { ${parts.join('; ')} }.call`;
+  },
 
-    case 'array_literal': {
-      const elements = ir.elements.map(e => ctx.emit(e)).join(', ');
-      return `[${elements}]`;
-    }
+  // Symbols for names, integers for indices
+  datapath: (segments) => {
+    const emitted = segments.map(s => {
+      const safe = assertSafeDatapathSegment(s);
+      return typeof safe === 'string' ? `:${safe}` : safe.toString();
+    });
+    return `[${emitted.join(', ')}]`;
+  },
 
-    case 'variable':
-      return assertSafeIdentifier(ir.name, 'variable name');
+  // One assignment per definition in a single sequence, so a long prelude
+  // costs one level of parentheses rather than one per type. The type name
+  // becomes a lambda that calls the parser and unwraps the result.
+  typedef: (definitions, body, ctx) => {
+    ctx.requireHelper('p_unwrap');
+    const decls = definitions.map(({ name, parser }) => {
+      const safe = assertSafeIdentifier(name, 'typedef name');
+      return `_p_${safe} = ${parser}; ${safe} = ->(v) { p_unwrap(_p_${safe}.call(v, '')) }`;
+    }).join('; ');
+    return `(${decls}; ${body})`;
+  },
 
-    case 'member_access': {
-      const object = ctx.emit(ir.object);
-      const needsParensForMember = ir.object.type === 'call' && isNativeBinaryOp(ir.object);
-      const objectExpr = needsParensForMember ? `(${object})` : object;
-      return `${objectExpr}[:${assertSafeIdentifier(ir.property, 'member_access property')}]`;
-    }
+  typeParser: emitTypeExprParser,
 
-    case 'let': {
-      // Collect all consecutive let bindings for flattened output
-      const allBindings: Array<{ name: string; value: string }> = [];
-      let current: IRExpr = ir;
+  guard: (constraints, body, guardType, ctx) => {
+    // The error says which kind of assertion it was and what it was called,
+    // so a host does not have to read that back out of the message.
+    ctx.requireHelper('p_raise');
+    const checks = constraints.map(({ label, condition, message }) => {
+      const name = label ? `"${escapeRubyDQ(label)}"` : 'nil';
+      return `p_raise('${guardType}', ${name}, "${escapeRubyDQ(message)}") unless ${condition}`;
+    }).join('; ');
+    return `(${checks}; ${body})`;
+  },
 
-      while (current.type === 'let') {
-        for (const b of current.bindings) {
-          allBindings.push({ name: b.name, value: ctx.emit(b.value) });
-        }
-        current = current.body;
-      }
-
-      const assignments = allBindings.map(b => `${assertSafeIdentifier(b.name, 'let binding name')} = ${b.value}`).join('; ');
-      const body = ctx.emit(current);
-      return `(${assignments}; ${body})`;
-    }
-
-    case 'call':
-      return rubyLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
-
-    case 'if': {
-      const cond = ctx.emit(ir.condition);
-      const thenBranch = ctx.emit(ir.then);
-      const elseBranch = ctx.emit(ir.else);
-      return `(${cond}) ? (${thenBranch}) : (${elseBranch})`;
-    }
-
-    case 'lambda': {
-      const params = ir.params.map(p => assertSafeIdentifier(p.name, 'lambda parameter')).join(', ');
-      const body = ctx.emit(ir.body);
-      return `->(${params}) { ${body} }`;
-    }
-
-    case 'apply': {
-      const fn = ctx.emit(ir.fn);
-      const args = ir.args.map(a => ctx.emit(a)).join(', ');
-      return `${fn}.call(${args})`;
-    }
-
-    case 'alternative': {
-      // Compile to lambda with early returns for non-nil values
-      const alts = ir.alternatives;
-      const parts = alts.slice(0, -1).map((alt) => {
-        const code = ctx.emit(alt);
-        return `v = ${code}; return v unless v.nil?`;
-      });
-      // Last alternative is just returned directly
-      const last = ctx.emit(alts[alts.length - 1]);
-      parts.push(last);
-      return `->() { ${parts.join('; ')} }.call`;
-    }
-
-    case 'datapath': {
-      // Compile datapath as an array of segments (symbols for strings, integers for numbers)
-      const segments = ir.segments.map(s => {
-        const safe = assertSafeDatapathSegment(s);
-        return typeof safe === 'string' ? `:${safe}` : safe.toString();
-      });
-      return `[${segments.join(', ')}]`;
-    }
-
-    case 'typedef': {
-      // Generate a parser lambda per type and bind it
-      ctx.requireHelper('p_unwrap');
-      // One assignment per definition in a single sequence, so a long prelude
-      // costs one level of parentheses rather than one per type
-      const decls = ir.definitions.map(definition => {
-        const parserCode = emitTypeExprParser(definition.typeExpr, ctx);
-        // The type name becomes a lambda that calls the parser and unwraps
-        const name = assertSafeIdentifier(definition.name, 'typedef name');
-        return `_p_${name} = ${parserCode}; ${name} = ->(v) { p_unwrap(_p_${name}.call(v, '')) }`;
-      }).join('; ');
-      const body = ctx.emit(ir.body);
-      return `(${decls}; ${body})`;
-    }
-
-    case 'guard': {
-      const body = ctx.emit(ir.body);
-      // If stripGuards is enabled, just emit the body
-      if (options.stripGuards) {
-        return body;
-      }
-      // Generate guard checks that raise on failure. The error says which kind
-      // of assertion it was and what it was called, so a host does not have to
-      // read that back out of the message.
-      ctx.requireHelper('p_raise');
-      const guardChecks = ir.constraints.map(c => {
-        const conditionCode = ctx.emit(c.condition);
-        const errorMsg = c.label
-          ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
-          : `${ir.guardType} failed`;
-        const label = c.label ? `"${escapeRubyDQ(c.label)}"` : 'nil';
-        return `p_raise('${ir.guardType}', ${label}, "${escapeRubyDQ(errorMsg)}") unless ${conditionCode}`;
-      }).join('; ');
-      return `(${guardChecks}; ${body})`;
-    }
-  }
-}
+  unsupported: {},
+};
 
 /**
  * Emit a parser lambda for a type expression in Ruby

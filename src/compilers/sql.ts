@@ -1,10 +1,10 @@
-import { Expr, locate } from '../ast';
+import { Expr } from '../ast';
 import { IRExpr, IRCall, IRArrayLiteral, inferType, usesInput } from '../ir';
 import { transform } from '../transform';
 import { Types, TypeAnnotations } from '../types';
-import { EmitContext, NO_HELPERS } from '../stdlib';
+import { Emitter, emit } from './_emit';
 import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE, pgTypeOf, jsonFieldPgType, jsonPath } from '../bindings/sql';
-import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
  * SQL compilation options
@@ -174,205 +174,154 @@ export function compileToSQLWithMeta(expr: Expr, options?: SQLCompileOptions): S
   // SQL allows undefined variables since they represent column names
   const ir = transform(expr, new Map(), new Set(), { allowUndefinedVariables: true, types: options?.types });
   const needsInput = usesInput(ir) || options?.asFunction;
-  const code = emitSQL(ir);
+  // SQL's prelude is installed in the database rather than emitted, so there
+  // are no helpers to collect. See `isPreludePrependable`.
+  const code = emit(ir, sqlEmitter, { stripGuards: false }, new Set());
 
   return { code, usesInput: needsInput || false };
 }
 
 /**
- * Emit SQL code from IR, saying where in the source a refusal was about.
+ * How PostgreSQL spells each kind of IR node.
  *
- * Positioned here rather than at each throw site: emission is a recursion, so
- * the node in hand is the piece of source the refusal is about, and a refusal
- * added later is positioned by the same construction. The position is there
- * only when the parse recorded one.
+ * The walk itself lives in `_emit.ts`; this is the whole of what makes the
+ * emission SQL. Children arrive already emitted — except in the three cases
+ * where SQL's data model genuinely differs and the node is needed too:
+ * `member_access`, `array_literal` and `alternative`. See `_emit.ts`.
  */
-function emitSQL(ir: IRExpr): string {
-  try {
-    return emitSQLNode(ir);
-  } catch (error) {
-    throw locate(error, ir.loc);
-  }
-}
+const sqlEmitter: Emitter = {
+  lib: sqlLib,
+  needsParens,
 
-function emitSQLNode(ir: IRExpr): string {
-  const ctx: EmitContext<string> = {
-    emit: emitSQL,
-    emitWithParens: (child, parentOp, side) => {
-      const emitted = emitSQL(child);
-      if (needsParens(child, parentOp, side)) {
-        return `(${emitted})`;
-      }
-      return emitted;
-    },
-    // SQL's prelude is installed in the database rather than emitted, so there
-    // is nothing to collect. See `isPreludePrependable`.
-    requireHelper: NO_HELPERS,
-  };
+  boolLiteral: (value) => (value ? 'TRUE' : 'FALSE'),
+  nullLiteral: 'NULL',
 
-  switch (ir.type) {
-    case 'int_literal':
-      return assertNumericLiteral(ir.value).toString();
+  // Single quotes, with a quote escaped by doubling. E'...' only when the
+  // string really holds an escape sequence.
+  stringLiteral: (value) => {
+    const escaped = value
+      .replace(/\\/g, '\\\\').replace(/'/g, "''")
+      .replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
+    const prefix = escaped !== value.replace(/'/g, "''") ? 'E' : '';
+    return `${prefix}'${escaped}'`;
+  },
 
-    case 'float_literal':
-      return formatFloatLiteral(ir.value);
+  dateLiteral: (value) => `DATE '${value.replace(/'/g, "''")}'`,
 
-    case 'bool_literal':
-      return ir.value ? 'TRUE' : 'FALSE';
+  // ISO8601 to the PostgreSQL TIMESTAMP format
+  datetimeLiteral: (value) => {
+    const formatted = value.replace('T', ' ').replace('Z', '').split('.')[0];
+    return `TIMESTAMP '${formatted.replace(/'/g, "''")}'`;
+  },
 
-    case 'null_literal':
-      return 'NULL';
+  durationLiteral: (value) => `INTERVAL '${value.replace(/'/g, "''")}'`,
 
-    case 'string_literal': {
-      // SQL strings use single quotes, escape single quotes by doubling
-      const escaped = ir.value.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
-      // Use E'...' escape syntax if string contains escape sequences
-      const prefix = escaped !== ir.value.replace(/'/g, "''") ? 'E' : '';
-      return `${prefix}'${escaped}'`;
+  objectLiteral: (properties) => {
+    if (properties.length === 0) return `'{}'::jsonb`;
+    const args = properties
+      .map(p => `'${assertSafeIdentifier(p.key, 'object_literal key')}', ${p.value}`)
+      .join(', ');
+    return `jsonb_build_object(${args})`;
+  },
+
+  arrayLiteral: (elements, ir) => {
+    // PostgreSQL rejects `ARRAY[]`: an array constructor takes its element
+    // type from its elements, and there are none. The typed empty-array
+    // literal is the way to write it, with the element type the list carries.
+    // Reached where nothing else supplies one — `typeOf([])` — so the fallback
+    // only has to be *an* array.
+    if (ir.elements.length === 0) {
+      return `'{}'::${PG_TYPE[ir.elementType.kind] ?? 'text'}[]`;
+    }
+    assertRepresentableList(ir.elements);
+    return `ARRAY[${elements.join(', ')}]`;
+  },
+
+  // _ is the input, which is a parameter placeholder
+  variable: (name) => (name === '_' ? '$1' : assertSafeIdentifier(name, 'variable name')),
+
+  memberAccess: (object, property, ir, ctx) => {
+    const prop = assertSafeIdentifier(property, 'member_access property');
+    const resolved = jsonPath(ir);
+
+    if (resolved) {
+      // A chain collapses into one read against the json root, which is not
+      // `ir.object`, so this emits the root itself rather than using the
+      // object the walk already emitted.
+      const root = ctx.emit(resolved.root);
+      const rootExpr = isNativeBinaryOp(resolved.root) ? `(${root})` : root;
+      const keys = resolved.path.map(
+        key => `'${assertSafeIdentifier(key, 'member_access property')}'`
+      );
+      // One key is `->>`; a path needs `#>>`, because `jsonb->>'user'` is
+      // *text* and reading `.name` off that is not a json operation at all.
+      const read = keys.length === 1
+        ? `${rootExpr}->>${keys[0]}`
+        : `${rootExpr} #>> ARRAY[${keys.join(', ')}]`;
+      // Either way the read is text whatever the field holds. When the type
+      // checker told us what it holds (`--optimize`), say so here and the
+      // value composes like any other; otherwise it stays text and the
+      // operation using it supplies the type — see readsJsonField.
+      const pg = jsonFieldPgType(ir.inferredType);
+      return pg ? `(${read})::${pg}` : read;
     }
 
-    case 'date_literal': {
-      const escaped = ir.value.replace(/'/g, "''");
-      return `DATE '${escaped}'`;
-    }
+    // The input is a *row* on SQL, not a document: `_.person.age` is a field
+    // reference, which is what a host passing a record expects.
+    const objectExpr = isNativeBinaryOp(ir.object) ? `(${object})` : object;
+    return `${objectExpr}.${prop}`;
+  },
 
-    case 'datetime_literal': {
-      // Convert ISO8601 to PostgreSQL TIMESTAMP format
-      const formatted = ir.value.replace('T', ' ').replace('Z', '').split('.')[0];
-      const escaped = formatted.replace(/'/g, "''");
-      return `TIMESTAMP '${escaped}'`;
-    }
+  // Bindings are sequential: a binding may use the previous ones. SQL cannot
+  // reference an alias within the same SELECT list, so each binding gets its
+  // own scope and they are nested here — the other targets emit a flat
+  // sequence from the same flattened list.
+  letExpr: (bindings, body) => {
+    const nest = (index: number): string => {
+      const binding = bindings[index];
+      const column = `${binding.value} AS ${assertSafeIdentifier(binding.name, 'let binding name')}`;
+      const inner = index === bindings.length - 1 ? body : nest(index + 1);
+      return `(SELECT ${inner} FROM (SELECT ${column}) AS _let)`;
+    };
+    return nest(0);
+  },
 
-    case 'duration_literal': {
-      const escaped = ir.value.replace(/'/g, "''");
-      return `INTERVAL '${escaped}'`;
-    }
+  ifExpr: (condition, then, otherwise) =>
+    `CASE WHEN ${condition} THEN ${then} ELSE ${otherwise} END`,
 
-    case 'object_literal': {
-      if (ir.properties.length === 0) {
-        return `'{}'::jsonb`;
-      }
-      const args = ir.properties
-        .map(p => `'${assertSafeIdentifier(p.key, 'object_literal key')}', ${emitSQL(p.value)}`)
-        .join(', ');
-      return `jsonb_build_object(${args})`;
-    }
+  // COALESCE returns the first non-NULL value, but needs one type for all its
+  // arguments where Elo does not: `tuple.x | 0` is a String with an Int
+  // default, and a json field read is text, so PostgreSQL refuses to match
+  // them. The alternative's value is the first one's, so that is the type the
+  // rest are brought to.
+  alternative: (alternatives) => {
+    const target = pgTypeOf(alternatives[0].node);
+    const conflict = target !== null && alternatives.some(({ node }) => {
+      const type = pgTypeOf(node);
+      return type !== null && type !== target;
+    });
+    const alts = alternatives
+      .map(({ code, node }) =>
+        !conflict || pgTypeOf(node) === target ? code : `(${code})::${target}`)
+      .join(', ');
+    return `COALESCE(${alts})`;
+  },
 
-    case 'array_literal': {
-      // PostgreSQL rejects `ARRAY[]`: an array constructor takes its element
-      // type from its elements, and there are none. The typed empty-array
-      // literal is the way to write it, with the element type the list
-      // carries. Reached where nothing else supplies one — `typeOf([])` — so
-      // the fallback only has to be *an* array.
-      if (ir.elements.length === 0) {
-        return `'{}'::${PG_TYPE[ir.elementType.kind] ?? 'text'}[]`;
-      }
-      assertRepresentableList(ir.elements);
-      const elements = ir.elements.map(e => emitSQL(e)).join(', ');
-      return `ARRAY[${elements}]`;
-    }
+  datapath: (segments) => {
+    const emitted = segments.map(s => {
+      const safe = assertSafeDatapathSegment(s);
+      return typeof safe === 'string' ? `'${safe}'` : safe.toString();
+    });
+    return `ARRAY[${emitted.join(', ')}]`;
+  },
 
-    case 'variable':
-      // Map _ to $1 (PostgreSQL parameter placeholder for input)
-      if (ir.name === '_') return '$1';
-      return assertSafeIdentifier(ir.name, 'variable name');
+  // A type definition and a guard have no SQL at all, which is a restriction
+  // Elo accepts in exchange for being portable.
+  unsupported: {
+    lambda: 'Lambda expressions are not supported in SQL target',
+    apply: 'Lambda invocation is not supported in SQL target',
+    typedef: 'Type definitions are not yet supported in SQL compilation',
+    guard: 'Guard expressions are not supported in SQL compilation',
+  },
+};
 
-    case 'member_access': {
-      const prop = assertSafeIdentifier(ir.property, 'member_access property');
-      const resolved = jsonPath(ir);
-
-      if (resolved) {
-        const root = emitSQL(resolved.root);
-        const rootExpr = isNativeBinaryOp(resolved.root) ? `(${root})` : root;
-        const keys = resolved.path.map(
-          key => `'${assertSafeIdentifier(key, 'member_access property')}'`
-        );
-        // One key is `->>`; a path needs `#>>`, because `jsonb->>'user'` is
-        // *text* and reading `.name` off that is not a json operation at all.
-        const read = keys.length === 1
-          ? `${rootExpr}->>${keys[0]}`
-          : `${rootExpr} #>> ARRAY[${keys.join(', ')}]`;
-        // Either way the read is text whatever the field holds. When the type
-        // checker told us what it holds (`--optimize`), say so here and the
-        // value composes like any other; otherwise it stays text and the
-        // operation using it supplies the type — see readsJsonField.
-        const pg = jsonFieldPgType(ir.inferredType);
-        return pg ? `(${read})::${pg}` : read;
-      }
-
-      // The input is a *row* on SQL, not a document: `_.person.age` is a field
-      // reference, which is what a host passing a record expects.
-      const object = emitSQL(ir.object);
-      const objectExpr = isNativeBinaryOp(ir.object) ? `(${object})` : object;
-      return `${objectExpr}.${prop}`;
-    }
-
-    case 'let': {
-      // Bindings are sequential: a binding may use the previous ones. SQL
-      // cannot reference an alias within the same SELECT list, so each
-      // binding gets its own scope and they are nested here rather than in
-      // the AST — the other targets emit a flat sequence.
-      const nest = (index: number): string => {
-        const binding = ir.bindings[index];
-        const column = `${emitSQL(binding.value)} AS ${assertSafeIdentifier(binding.name, 'let binding name')}`;
-        const body = index === ir.bindings.length - 1 ? emitSQL(ir.body) : nest(index + 1);
-        return `(SELECT ${body} FROM (SELECT ${column}) AS _let)`;
-      };
-      return nest(0);
-    }
-
-    case 'call':
-      return sqlLib.emit(ir.fn, ir.args, ir.argTypes, ctx);
-
-    case 'if': {
-      const cond = emitSQL(ir.condition);
-      const thenBranch = emitSQL(ir.then);
-      const elseBranch = emitSQL(ir.else);
-      return `CASE WHEN ${cond} THEN ${thenBranch} ELSE ${elseBranch} END`;
-    }
-
-    case 'lambda':
-      throw new Error('Lambda expressions are not supported in SQL target');
-
-    case 'apply':
-      throw new Error('Lambda invocation is not supported in SQL target');
-
-    case 'alternative': {
-      // Compile to COALESCE - returns first non-NULL value.
-      //
-      // COALESCE needs one type for all its arguments where Elo does not:
-      // `tuple.x | 0` is a String with an Int default, and a json field read
-      // is text, so PostgreSQL refuses to match them. The alternative's value
-      // is the first one's, so that is the type the rest are brought to.
-      const target = pgTypeOf(ir.alternatives[0]);
-      const conflict = target !== null &&
-        ir.alternatives.some(alt => {
-          const type = pgTypeOf(alt);
-          return type !== null && type !== target;
-        });
-      const alts = ir.alternatives
-        .map(alt => {
-          const emitted = emitSQL(alt);
-          if (!conflict || pgTypeOf(alt) === target) return emitted;
-          return `(${emitted})::${target}`;
-        })
-        .join(', ');
-      return `COALESCE(${alts})`;
-    }
-
-    case 'datapath': {
-      // Compile datapath as an array of path segments for use with fetch
-      const segments = ir.segments.map(s => {
-        const safe = assertSafeDatapathSegment(s);
-        return typeof safe === 'string' ? `'${safe}'` : safe.toString();
-      });
-      return `ARRAY[${segments.join(', ')}]`;
-    }
-
-    case 'typedef':
-      throw new Error('Type definitions are not yet supported in SQL compilation');
-
-    case 'guard':
-      throw new Error('Guard expressions are not supported in SQL compilation');
-  }
-}
