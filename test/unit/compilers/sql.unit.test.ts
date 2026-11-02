@@ -63,9 +63,16 @@ describe('SQL Compiler - Arithmetic Operators', () => {
     assert.strictEqual(compileToSQL(ast), '4 * 3');
   });
 
-  it('should compile division', () => {
+  it('should compile division as real division', () => {
+    // PostgreSQL truncates integer / integer, where Elo's `/` is real in every
+    // target: `7 / 2` is 3.5.
     const ast = binary('/', literal(10), literal(2));
-    assert.strictEqual(compileToSQL(ast), '10 / 2');
+    assert.strictEqual(compileToSQL(ast), '10::double precision / 2');
+  });
+
+  it('leaves a division with a float operand alone', () => {
+    // PostgreSQL already divides as reals as soon as either operand is one.
+    assert.strictEqual(compileToSQL(binary('/', literal(10.0, true), literal(2))), '10.0 / 2');
   });
 
   it('should compile modulo', () => {

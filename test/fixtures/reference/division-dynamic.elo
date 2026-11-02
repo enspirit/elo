@@ -1,0 +1,17 @@
+# Division where the operand types are only known at runtime.
+#
+# Ruby truncates Integer / Integer, so it cannot emit a bare `/` even here: the
+# k_div dispatcher looks at the values. Separate from division.elo because SQL
+# has no lambdas — and could not do this if it had, since PostgreSQL has no
+# polymorphic real division to dispatch to.
+
+assert((let f = fn( a, b ~> a / b ) in f(7, 2)) == 3.5)
+assert((let f = fn( a, b ~> a / b ) in f(1, 4)) == 0.25)
+assert((let f = fn( a, b ~> a / b ) in f(7.5, 2.5)) == 3)
+assert((let f = fn( a, b ~> a / b ) in f(10, 4)) == 2.5)
+assert((let f = fn( a, b ~> a / b ) in f(-7, 2)) == -3.5)
+
+# The typed twins, which must keep agreeing
+assert(7 / 2 == 3.5)
+assert(1 / 4 == 0.25)
+assert(7.5 / 2.5 == 3)

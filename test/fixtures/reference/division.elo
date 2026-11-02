@@ -1,8 +1,10 @@
 # `/` is real division in Elo, in every target.
 #
-# Ruby truncates Integer / Integer, so the Ruby binding has to opt out of the
-# native operator when both operands are integers — including when that is
-# only known at runtime.
+# Ruby and PostgreSQL both truncate Integer / Integer, so both bindings have to
+# opt out of the native operator when the operands are statically integers:
+# Ruby emits `fdiv`, SQL casts to double precision. The lambda cases, where the
+# types are only known at runtime, are in division-dynamic.elo — SQL has no
+# lambdas, and no way to divide two unknown operands as reals either.
 
 assert(7 / 2 == 3.5)
 assert(1 / 4 == 0.25)
@@ -18,10 +20,7 @@ assert(7.0 / 2 == 3.5)
 assert(7 / 2.0 == 3.5)
 assert(7.5 / 2.5 == 3)
 
-# Dynamic operands: the type is only known at runtime
-assert((let f = fn( a, b ~> a / b ) in f(7, 2)) == 3.5)
-assert((let f = fn( a, b ~> a / b ) in f(1, 4)) == 0.25)
-assert((let f = fn( a, b ~> a / b ) in f(7.5, 2.5)) == 3)
+# Through a let binding, where the type comes from the binding's value
 assert((let n = 2 in 7 / n) == 3.5)
 assert((let a = 10, b = 4 in a / b) == 2.5)
 

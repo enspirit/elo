@@ -406,6 +406,22 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('add', [Types.any, Types.any], sqlBinaryOp('+'));
   sqlLib.register('sub', [Types.any, Types.any], sqlBinaryOp('-'));
   sqlLib.register('mul', [Types.any, Types.any], sqlBinaryOp('*'));
+  // PostgreSQL truncates integer / integer, where Elo's `/` is real division
+  // in every target — `7 / 2` is 3.5, not 3. Casting the left operand is
+  // enough to make the division real, and `double precision` is what the
+  // other three produce: Ruby's fdiv, JavaScript's `/` and Python's `/` are
+  // all IEEE doubles. Ruby's binding makes the same opt-out, for the same
+  // reason, right above its own numeric registrations.
+  //
+  // Only the statically-integer case. As soon as either operand is a Float
+  // PostgreSQL divides as reals already, and when neither type is known there
+  // is nothing to cast to: a cast that fixed Int / Int would break
+  // Duration / Int, which goes through the same `Any` signature.
+  sqlLib.register('div', [Types.int, Types.int], (args, ctx) => {
+    const left = ctx.emitWithParens(args[0], '/', 'left');
+    const right = ctx.emitWithParens(args[1], '/', 'right');
+    return `${left}::double precision / ${right}`;
+  });
   sqlLib.register('div', [Types.any, Types.any], sqlBinaryOp('/'));
   sqlLib.register('mod', [Types.any, Types.any], sqlBinaryOp('%'));
   sqlLib.register('pow', [Types.any, Types.any], fnCall('POWER'));
