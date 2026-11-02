@@ -533,6 +533,17 @@ export interface ParserOptions {
 const DEFAULT_MAX_DEPTH = 100;
 
 /**
+ * The part of the message `parse` gives when a source continues after its
+ * expression has ended.
+ *
+ * Exported so that a host can recognise that case and say something more
+ * useful about it than the parser can: the CLIs point at `--lines`, because a
+ * source holding two expressions is almost always a file meant to be read one
+ * expression per line.
+ */
+export const TRAILING_INPUT = 'after the end of the expression';
+
+/**
  * Tokens that can never begin the start of a range.
  *
  * Each of these opens a construct whose body runs to the end of the
@@ -1960,7 +1971,14 @@ export class Parser {
       );
     }
     const result = this.expr();
-    this.eat('EOF');
+    if (this.currentToken.type !== 'EOF') {
+      // A source is one expression. Saying where it ended beats "expected
+      // EOF": what is left over is usually a second expression, or a stray
+      // bracket, and the column points at it.
+      throw new Error(
+        `Unexpected ${this.currentToken.type} ${TRAILING_INPUT} at ${this.formatLocation(this.currentToken)}`
+      );
+    }
     return withTypeDefs(prelude, result);
   }
 

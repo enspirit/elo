@@ -187,13 +187,13 @@ describe('CLI - File input', () => {
 });
 
 describe('CLI - Type prelude', () => {
-  it('scopes every line of a file under the type definitions on top of it', () => {
+  it('scopes every line of a --lines file under the type definitions on top of it', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
     const inputFile = join(tmpDir, 'test.elo');
     writeFileSync(inputFile, "Ints = [Int]\n['1'] |> Ints\n['2', '3'] |> Ints\n");
 
     try {
-      const lines = eloc(`${inputFile}`).split('\n');
+      const lines = eloc(`${inputFile} --lines`).split('\n');
       // One expression line in, one line out, each carrying the prelude's
       // parser; the definition itself emits nothing.
       assert.strictEqual(lines.length, 2);
@@ -239,12 +239,90 @@ describe('CLI - Type prelude', () => {
     writeFileSync(inputFile, "Ints = [Int]\nsum(['1'] |> Ints)\n");
 
     try {
-      const result = elocWithError(`${inputFile} --typecheck`);
+      const result = elocWithError(`${inputFile} --lines --typecheck`);
       assert.strictEqual(result.exitCode, 0, result.stderr);
       assert.strictEqual(result.stderr, '');
     } finally {
       unlinkSync(inputFile);
     }
+  });
+});
+
+describe('CLI - A file is one program', () => {
+  const PROGRAM = `Age = Int(a | a >= 0)
+Person = {
+  name: String,
+  age: Age
+}
+
+{
+  name: 'Alice',
+  age: '30'
+} |> Person
+`;
+
+  function withFile(content: string, run: (path: string) => void): void {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
+    const inputFile = join(tmpDir, 'program.elo');
+    writeFileSync(inputFile, content);
+    try {
+      run(inputFile);
+    } finally {
+      unlinkSync(inputFile);
+    }
+  }
+
+  it('compiles an expression that spans several lines', () => {
+    withFile('1 +\n  2 +\n  3\n', path => {
+      assert.strictEqual(eloc(path), '(function(_) { return 1 + 2 + 3; })');
+    });
+  });
+
+  it('compiles a type prelude and a multi-line expression as one program', () => {
+    withFile(PROGRAM, path => {
+      const code = eloc(path);
+      assert.strictEqual(code.split('\n').length, 1, 'one program, one line of output');
+      assert.ok(code.includes('const Person ='), code);
+    });
+  });
+
+  it('evaluates a type prelude and a multi-line expression as one program', () => {
+    withFile(PROGRAM, path => {
+      assert.strictEqual(elo(path), '{"name":"Alice","age":30}');
+    });
+  });
+
+  it('evaluates examples/test.elo, which is exactly that', () => {
+    assert.strictEqual(elo('examples/test.elo'), '{"name":"Alice","age":30}');
+    assert.ok(eloc('examples/test.elo').includes('const Person ='));
+  });
+
+  it('still accepts a file that defines types and nothing else', () => {
+    withFile('Ints = [Int]\nPerson = { name: String }\n', path => {
+      const result = elocWithError(path);
+      assert.strictEqual(result.exitCode, 0, result.stderr);
+      assert.strictEqual(result.stdout, '');
+      assert.strictEqual(elo(path), '');
+    });
+  });
+
+  it('refuses a second expression, and names the flag that wants one per line', () => {
+    withFile('1 + 1\n2 + 2\n', path => {
+      const result = elocWithError(path);
+      assert.strictEqual(result.exitCode, 1);
+      assert.ok(result.stderr.includes('--lines'), result.stderr);
+      const evaluated = eloWithError(path);
+      assert.strictEqual(evaluated.exitCode, 1);
+      assert.ok(evaluated.stderr.includes('--lines'), evaluated.stderr);
+    });
+  });
+
+  it('reports a type error where it is in the file, lines included', () => {
+    withFile("'a' +\n  upper(42)\n", path => {
+      const result = elocWithError(`${path} --typecheck`);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /^2:3: error: No signature of upper/m);
+    });
   });
 });
 
@@ -364,12 +442,12 @@ describe('CLI - --typecheck', () => {
     assert.match(result.stderr, /No signature of length/);
   });
 
-  it('prefixes line numbers for multi-line input', () => {
+  it('prefixes line numbers for --lines input', () => {
     const dir = mkdtempSync(join(tmpdir(), 'elo-typecheck-'));
     const file = join(dir, 'input.elo');
     writeFileSync(file, "1 + 2\nupper(42)\n# a comment\nyear('x')\n");
     try {
-      const result = elocWithError(`--typecheck ${file}`);
+      const result = elocWithError(`--typecheck --lines ${file}`);
       assert.strictEqual(result.exitCode, 1);
       assert.match(result.stderr, /^2:1: error: No signature of upper/m);
       assert.match(result.stderr, /^4:1: error: No signature of year/m);
@@ -447,12 +525,12 @@ describe('CLI - --typecheck', () => {
     assert.ok(help.includes('--input-type'));
   });
 
-  it('numbers lines from the file, not from the expression', () => {
+  it('numbers --lines expressions from the file, not from the line', () => {
     const dir = mkdtempSync(join(tmpdir(), 'elo-typecheck-loc-'));
     const file = join(dir, 'input.elo');
     writeFileSync(file, "1 + 2\n  upper(42)\n");
     try {
-      const result = elocWithError(`--typecheck ${file}`);
+      const result = elocWithError(`--typecheck --lines ${file}`);
       assert.match(result.stderr, /^2:3: error: No signature of upper/m);
     } finally {
       unlinkSync(file);
@@ -501,12 +579,12 @@ describe('CLI - --optimize', () => {
     }
   });
 
-  it('annotates each line of a file independently', () => {
+  it('annotates each line of a --lines file independently', () => {
     const dir = mkdtempSync(join(tmpdir(), 'elo-optimize-'));
     const file = join(dir, 'input.elo');
     writeFileSync(file, `${DECLARED}\n# a comment\n_ - 1\n`);
     try {
-      const result = elocWithError(`--optimize -t ruby ${file}`);
+      const result = elocWithError(`--optimize --lines -t ruby ${file}`);
       assert.strictEqual(result.exitCode, 0);
       const lines = result.stdout.split('\n');
       assert.match(lines[0], /k\[:a\] - k\[:b\]/);
@@ -609,26 +687,26 @@ describe('Elo Evaluator - File input', () => {
     }
   });
 
-  it('should evaluate multiple lines from file', () => {
+  it('should evaluate multiple lines from file with --lines', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
     const inputFile = join(tmpDir, 'test.elo');
     writeFileSync(inputFile, '2 + 3\n4 * 5');
 
     try {
-      const result = elo(inputFile);
+      const result = elo(`${inputFile} --lines`);
       assert.strictEqual(result, '5\n20');
     } finally {
       unlinkSync(inputFile);
     }
   });
 
-  it('should skip empty lines and comments', () => {
+  it('should skip empty lines and comments with --lines', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
     const inputFile = join(tmpDir, 'test.elo');
     writeFileSync(inputFile, '1 + 1\n\n# comment\n2 + 2');
 
     try {
-      const result = elo(inputFile);
+      const result = elo(`${inputFile} --lines`);
       assert.strictEqual(result, '2\n4');
     } finally {
       unlinkSync(inputFile);
@@ -637,25 +715,25 @@ describe('Elo Evaluator - File input', () => {
 });
 
 describe('Elo Evaluator - Type prelude', () => {
-  it('evaluates every line of a file under its type definitions', () => {
+  it('evaluates every --lines expression under its type definitions', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
     const inputFile = join(tmpDir, 'test.elo');
     writeFileSync(inputFile, "Ints = [Int]\nsum(['1', '2'] |> Ints)\nlength(['3'] |> Ints)\n");
 
     try {
-      assert.strictEqual(elo(inputFile), '3\n1');
+      assert.strictEqual(elo(`${inputFile} --lines`), '3\n1');
     } finally {
       unlinkSync(inputFile);
     }
   });
 
-  it('prints nothing for a file that only defines types', () => {
+  it('prints nothing for a --lines file that only defines types', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'elo-test-'));
     const inputFile = join(tmpDir, 'types.elo');
     writeFileSync(inputFile, 'Ints = [Int]\n');
 
     try {
-      assert.strictEqual(elo(inputFile), '');
+      assert.strictEqual(elo(`${inputFile} --lines`), '');
     } finally {
       unlinkSync(inputFile);
     }

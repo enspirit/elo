@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'fs';
-import { parse, splitTypePrelude } from './parser';
+import { parse, splitTypePrelude, TRAILING_INPUT } from './parser';
 import { withTypeDefs } from './ast';
 import type { TypeBinding } from './ast';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
@@ -25,6 +25,11 @@ interface Options {
   inputFormat?: InputFormat;
   /** Output format (json, elo, or csv, default: json) */
   outputFormat?: OutputFormat;
+  /**
+   * If true, read the source as one expression per line rather than as one
+   * program, printing one result per line.
+   */
+  lines?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
@@ -64,6 +69,10 @@ function parseArgs(args: string[]): Options {
           console.error(`Invalid output format: ${options.outputFormat}. Use 'json', 'elo', or 'csv'.`);
           process.exit(1);
         }
+        break;
+
+      case '--lines':
+        options.lines = true;
         break;
 
       case '-h':
@@ -111,6 +120,8 @@ Options:
   --stdin                   Read input data from stdin
   -f, --input-format <fmt>  Input data format: json (default), csv, or elo
   -o, --output-format <fmt> Output format: json (default), elo, or csv
+  --lines                   Evaluate each line as its own expression, instead
+                            of the whole source as one program
   -v, --version             Show version number
   -h, --help                Show this help message
 
@@ -134,7 +145,10 @@ Examples:
   elo -e "_.name" -d @data.json
 
   # Evaluate from .elo file
-  elo expressions.elo
+  elo program.elo
+
+  # Evaluate a file of one-line expressions, one result per line
+  elo expressions.elo --lines
 
   # Pipe data through stdin
   echo '{"x": 10}' | elo -e "_.x * 2" --stdin
@@ -220,6 +234,23 @@ function isBlankSource(source: string): boolean {
   });
 }
 
+/**
+ * The expressions to evaluate, out of what follows a source's type prelude.
+ *
+ * One program by default: the source is a single expression whose newlines
+ * mean nothing, and a source with nothing under its prelude holds none. With
+ * `lines`, every line is its own expression and gives its own result.
+ */
+function readProgram(body: string, lines?: boolean): string[] {
+  if (!lines) {
+    return isBlankSource(body) ? [] : [body];
+  }
+  return body.split('\n').map(line => {
+    const trimmed = line.trim();
+    return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
+  });
+}
+
 function main() {
   const args = process.argv.slice(2);
 
@@ -233,40 +264,37 @@ function main() {
   // Use default formats (can be extended by users in programmatic usage)
   const formats = defaultFormats;
 
-  // Get the source expression(s)
-  let sources: string[];
-  // A file may open with a type prelude, whose definitions scope every
-  // expression below them. An expression given with -e carries its own
-  // prelude, which parse() reads for itself.
-  let typeDefs: TypeBinding[] = [];
+  // Get the source
+  let source: string;
   if (options.expression) {
-    sources = [options.expression];
+    source = options.expression;
   } else if (options.inputFile) {
-    let content: string;
     try {
       // Use file descriptor 0 for stdin when input is '-'
-      content = options.inputFile === '-'
+      source = options.inputFile === '-'
         ? readFileSync(0, 'utf-8')
         : readFileSync(options.inputFile, 'utf-8');
     } catch (error) {
       console.error(`Error reading ${options.inputFile === '-' ? 'stdin' : `file ${options.inputFile}`}: ${error}`);
       process.exit(1);
     }
-    let body: string;
-    try {
-      ({ typeDefs, body } = splitTypePrelude(content));
-    } catch (error) {
-      console.error(`Error: ${error}`);
-      process.exit(1);
-    }
-    // Split into lines - keep all lines but mark empty/comment lines as null
-    sources = body.split('\n').map(line => {
-      const trimmed = line.trim();
-      return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
-    });
   } else {
     console.error('Error: Must provide either -e <expression>, an input file, or - for stdin');
     printHelp();
+    process.exit(1);
+  }
+
+  // The source is one program: a type prelude, then one expression whose
+  // newlines mean nothing. A program that declares types and nothing else
+  // evaluates to nothing.
+  let typeDefs: TypeBinding[] = [];
+  let sources: string[];
+  try {
+    const program = splitTypePrelude(source);
+    typeDefs = program.typeDefs;
+    sources = readProgram(program.body, options.lines);
+  } catch (error) {
+    console.error(`Error: ${error}`);
     process.exit(1);
   }
 
@@ -303,7 +331,15 @@ function main() {
       const result = evaluate(trimmed, inputValue, typeDefs);
       outputs.push(outputAdapter.serialize(result));
     } catch (error) {
-      console.error(`Error on line ${i + 1}: ${error}`);
+      // A whole program's errors carry their own line and column; a line read
+      // on its own has to be told which one it was.
+      console.error(options.lines ? `Error on line ${i + 1}: ${error}` : `Error: ${error}`);
+      if (!options.lines && String(error).includes(TRAILING_INPUT)) {
+        console.error(
+          'hint: a source is one expression, newlines included. Pass --lines to ' +
+          'read it as one expression per line instead.'
+        );
+      }
       process.exit(1);
     }
   }

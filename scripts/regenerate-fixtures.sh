@@ -2,6 +2,11 @@
 
 # Regenerate expected fixture files for Elo compiler tests
 #
+# Fixtures are compiled with --lines: a fixture is a list of one-line
+# assertions, and the runners need one line of emitted code per line of source
+# so they can be compared and executed line-wise. That is a test convention —
+# an ordinary .elo file is one program, newlines included.
+#
 # Usage:
 #   ./scripts/regenerate-fixtures.sh              # Regenerate all fixtures
 #   ./scripts/regenerate-fixtures.sh arithmetic   # Regenerate specific fixture
@@ -113,9 +118,9 @@ regenerate_fixture() {
         if [ -f "$expected_file" ] || [ ${#TARGET_LIST[@]} -gt 0 ]; then
             # Use --execute for JS, Ruby, and Python so fixtures are self-executing
             if [ "$target" = "js" ] || [ "$target" = "ruby" ] || [ "$target" = "python" ]; then
-                $ELOC "$elo_file" -t "$target" --execute -f "$expected_file"
+                $ELOC "$elo_file" -t "$target" --lines --execute -f "$expected_file"
             else
-                $ELOC "$elo_file" -t "$target" -f "$expected_file"
+                $ELOC "$elo_file" -t "$target" --lines -f "$expected_file"
             fi
             regenerated="$regenerated $target"
         fi

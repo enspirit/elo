@@ -49,7 +49,7 @@ See also the Related work section below.
 - **Alternative operator**: `|` for fallback chains (returns first defined value)
 - **Type selectors**: `Int()`, `Float()`, `Bool()`, `String()`, `Null()`, `Date()`, `Datetime()`, `Duration()`, `Interval()`, `Data()` for parsing and converting values
 - **Type definitions**: Finitio-like schema validation with `let Person = { name: String, age: Int } in data |> Person`. Schema field types are `Int`, `Float`, `Bool`, `String`, `Null`, `Date`, `Datetime`, `Duration`, `Data`, and `.` for any value
-- **Type prelude**: a `.elo` file may open with type definitions — `Person = { name: String, age: Int }` on its own line — which scope every expression below them. A file of definitions only is a valid file
+- **Type prelude**: a `.elo` file may open with type definitions — `Person = { name: String, age: Int }` on their own lines — which scope the expression that follows. A file of definitions only is a valid file
 - **Lambdas**: `fn(x ~> x * 2)` or `x ~> x * 2` (sugar) for anonymous functions
 - **Guards**: `guard condition in body` for runtime validation with `check` for postconditions
 - **Input variable**: `_` for accessing external data passed to expressions
@@ -158,8 +158,11 @@ The compiler translates Elo expressions to Ruby, JavaScript, or SQL:
 # SQL's prelude is installed in the database once, not prepended (see below)
 ./bin/eloc --prelude-only -t sql | psql "$DATABASE_URL"
 
-# Compile from file (each line is compiled separately)
+# Compile a file: one program — an optional type prelude, then one expression
 ./bin/eloc input.elo -t ruby
+
+# Compile a file of one-line expressions, one line of output per line of source
+./bin/eloc expressions.elo -t ruby --lines
 
 # Compile to file
 ./bin/eloc -e "2 + 3" -t ruby -f output.rb
@@ -178,6 +181,20 @@ Options:
 - `-t, --target <lang>` - Target language: `ruby`, `js` (default), `python`, `sql`
 - `-p, --prelude` - Include necessary library imports/requires (not for `sql`)
 - `--prelude-only` - Output only the prelude (no expression needed)
+- `--lines` - Read the source as one expression per line, instead of as one program
+
+### A file is one program
+
+A `.elo` file holds **one program**: an optional type prelude, then one
+expression. Newlines inside that expression mean nothing, so a schema
+or a `let` may be laid out over as many lines as it needs. A file that declares
+types and no expression is valid too, and compiles to nothing.
+
+`--lines` asks for the other reading — every line is its own expression, and
+every line of source gives one line of emitted code. That is what the test
+fixtures are written in, where each line is a self-contained `assert(...)`;
+`scripts/regenerate-fixtures.sh` and the acceptance runners pass it. A source
+holding two expressions without `--lines` is a parse error that says so.
 
 ### The prelude
 
@@ -363,8 +380,11 @@ The evaluator compiles to JavaScript and immediately evaluates the expression:
 ./bin/elo -e "{a: 1, b: 2}" -o elo    # Elo code format
 ./bin/elo -e "[{name: 'Alice'}]" -o csv  # CSV format
 
-# Evaluate from .elo file
-./bin/elo expressions.elo
+# Evaluate a .elo file: one program, as for eloc
+./bin/elo program.elo
+
+# Evaluate a file of one-line expressions, one result per line
+./bin/elo expressions.elo --lines
 
 # Pipe data through stdin
 echo '{"x": 10}' | ./bin/elo -e "_.x * 2" --stdin
@@ -377,6 +397,7 @@ Options:
 - `--stdin` - Read input data from stdin
 - `-f, --input-format <fmt>` - Input data format: `json` (default) or `csv`
 - `-o, --output-format <fmt>` - Output format: `json` (default), `elo`, or `csv`
+- `--lines` - Evaluate each line as its own expression, instead of as one program
 - `-h, --help` - Show help message
 
 ## Using Elo in JavaScript/TypeScript

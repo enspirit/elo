@@ -1,0 +1,10 @@
+Age = Int(a | a >= 0)
+Person = {
+  name: String,
+  age: Age
+}
+
+{
+  name: 'Alice',
+  age: '30'
+} |> Person

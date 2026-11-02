@@ -42,7 +42,7 @@ emit() {
     if [ -n "$ELO_OPTIMIZE" ]; then
         # A line the checker reported on is emitted unannotated and exits 1;
         # that is the documented refusal, not a test failure.
-        $ELOC -t sql --optimize "${file%.expected.*}.elo" 2>/dev/null || true
+        $ELOC -t sql --lines --optimize "${file%.expected.*}.elo" 2>/dev/null || true
     else
         cat "$file"
     fi

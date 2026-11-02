@@ -460,7 +460,7 @@ describe('Parser - Error Handling', () => {
   });
 
   it('should throw on unexpected closing parenthesis', () => {
-    assert.throws(() => parse('2 + 3)'), /Expected EOF/);
+    assert.throws(() => parse('2 + 3)'), /Unexpected RPAREN after the end of the expression/);
   });
 
   it('should throw on empty expression', () => {
@@ -472,7 +472,7 @@ describe('Parser - Error Handling', () => {
   });
 
   it('should throw on invalid token sequence', () => {
-    assert.throws(() => parse('2 3'), /Expected EOF/);
+    assert.throws(() => parse('2 3'), /Unexpected NUMBER after the end of the expression/);
   });
 
   it('should include line and column in error messages', () => {

@@ -962,14 +962,18 @@ elo -e "2 + 3 * 4"     # => 14
 # Evaluate with input data
 elo -e "_.x + _.y" -d '&#123;"x": 1, "y": 2&#125;'   # => 3
 
-# Evaluate from file
-elo expressions.elo</pre>
+# Evaluate a file: one program
+elo program.elo
+
+# Evaluate a file of one-line expressions, one result per line
+elo expressions.elo --lines</pre>
         <table class="type-table">
           <thead><tr><th>Option</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td><code>-e, --expression</code></td><td>Expression to evaluate</td></tr>
             <tr><td><code>-d, --data</code></td><td>JSON input data for <code>_</code></td></tr>
             <tr><td><code>--stdin</code></td><td>Read JSON input from stdin</td></tr>
+            <tr><td><code>--lines</code></td><td>One expression per line, instead of one program</td></tr>
           </tbody>
         </table>
 
@@ -993,6 +997,9 @@ eloc -e "NOW + PT2H" -t ruby -p
 # Emit a target's prelude on its own
 eloc --prelude-only -t ruby
 
+# Compile a file: one program
+eloc program.elo -t ruby
+
 # Report type errors before compiling
 eloc --typecheck -e "'hello' - 5"</pre>
         <table class="type-table">
@@ -1003,6 +1010,7 @@ eloc --typecheck -e "'hello' - 5"</pre>
             <tr><td><code>-p, --prelude</code></td><td>Include runtime imports (not for <code>sql</code>)</td></tr>
             <tr><td><code>--prelude-only</code></td><td>Emit only the prelude</td></tr>
             <tr><td><code>--strip-guards</code></td><td>Remove guard/check assertions</td></tr>
+            <tr><td><code>--lines</code></td><td>One expression per line, instead of one program</td></tr>
             <tr><td><code>--typecheck</code></td><td>Report type errors, exit non-zero if any</td></tr>
             <tr><td><code>--strict</code></td><td>Also report what the checker cannot type</td></tr>
             <tr><td><code>--input-type</code></td><td>Declare the type of <code>_</code></td></tr>
@@ -1010,6 +1018,22 @@ eloc --typecheck -e "'hello' - 5"</pre>
             <tr><td><code>-f, --file</code></td><td>Output to file</td></tr>
           </tbody>
         </table>
+
+        <h3>A file is one program</h3>
+        <p>
+          A <code>.elo</code> file holds one program: an optional
+          <a href="#data-schemas">type prelude</a>, then one expression.
+          Newlines inside that expression mean nothing, so a schema or a
+          <code>let</code> may be laid out over as many lines as it needs. A
+          file that declares types and no expression is valid too, and compiles
+          to nothing.
+        </p>
+        <p>
+          <code>--lines</code> asks for the other reading: every line is its
+          own expression, and every line of source gives one line of emitted
+          code. A source holding two expressions without it is a parse error
+          that says so.
+        </p>
 
         <h3>The prelude</h3>
         <p>

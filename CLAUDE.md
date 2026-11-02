@@ -59,6 +59,11 @@ The tests are organized as follows :
 **CRITICAL** when adding acceptance tests, every line of .elo files MUST have be an assert for
 testing to be effective.
 
+A fixture is therefore compiled with `eloc --lines`, which reads one expression per line so that
+one line of source gives one line of emitted code. That is a **test convention only**: an ordinary
+`.elo` file is one program — an optional type prelude, then one expression whose newlines mean
+nothing. Do not write a multi-line expression in a fixture; put it in an integration test instead.
+
 ### Red first
 
 **CRITICAL** : for bug fixes AND for features, the failing test comes FIRST. Write it,

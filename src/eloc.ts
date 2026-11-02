@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync } from 'fs';
-import { parse, parseTypeExpr, splitTypePrelude } from './parser';
+import { parse, parseTypeExpr, splitTypePrelude, TRAILING_INPUT } from './parser';
 import { withTypeDefs } from './ast';
 import type { TypeBinding, TypeExpr } from './ast';
 import { compileToRubyWithMeta } from './compilers/ruby';
@@ -34,6 +34,12 @@ interface Options {
   execute?: boolean;
   /** If true, strip guard/check assertions from output */
   stripGuards?: boolean;
+  /**
+   * If true, read the source as one expression per line rather than as one
+   * program. The fixture corpus is written that way: one line of source, one
+   * line of emitted code, so the two can be compared and executed line-wise.
+   */
+  lines?: boolean;
   /** If true, report static type diagnostics to stderr */
   typecheck?: boolean;
   /** If true, also require every call to be fully typed (implies typecheck) */
@@ -94,6 +100,10 @@ function parseArgs(args: string[]): Options {
 
       case '--strip-guards':
         options.stripGuards = true;
+        break;
+
+      case '--lines':
+        options.lines = true;
         break;
 
       case '--typecheck':
@@ -167,6 +177,8 @@ Options:
                             For sql, the runtime helpers to install once:
                             eloc --prelude-only -t sql | psql "$DATABASE_URL"
   --strip-guards            Strip guard/check assertions from output
+  --lines                   Compile each line as its own expression, instead
+                            of the whole source as one program
   --typecheck               Report static type errors to stderr, and exit
                             non-zero if any were found
   --strict                  With --typecheck, also report anything the checker
@@ -286,6 +298,40 @@ function isBlankSource(source: string): boolean {
   });
 }
 
+/**
+ * The expressions to compile, out of what follows a source's type prelude.
+ *
+ * One program by default: the source is a single expression whose newlines
+ * mean nothing, and a source with nothing under its prelude holds none. With
+ * `lines`, every line is its own expression — the convention the fixture
+ * corpus is written in, where one line of source must give one line of
+ * emitted code.
+ */
+function readProgram(body: string, lines?: boolean): string[] {
+  if (!lines) {
+    return isBlankSource(body) ? [] : [body];
+  }
+  // Keep every line, blanking the ones that carry no expression, so that the
+  // emitted code keeps the line numbering of the source.
+  return body.split('\n').map(line => {
+    const trimmed = line.trim();
+    return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
+  });
+}
+
+/**
+ * Point at `--lines` when a source turns out to hold more than one
+ * expression, which is what a file written in the fixture convention looks
+ * like to a compiler expecting one program.
+ */
+function hintAboutLines(error: unknown, options: Options): void {
+  if (options.lines || !String(error).includes(TRAILING_INPUT)) return;
+  console.error(
+    'hint: a source is one expression, newlines included. Pass --lines to ' +
+    'read it as one expression per line instead.'
+  );
+}
+
 function main() {
   const args = process.argv.slice(2);
 
@@ -318,41 +364,38 @@ function main() {
     process.exit(1);
   }
 
-  // Get the source expression(s)
-  let sources: string[];
-  // A file may open with a type prelude, whose definitions scope every
-  // expression below them. An expression given with -e carries its own
-  // prelude, which parse() reads for itself.
-  let typeDefs: TypeBinding[] = [];
+  // Get the source
+  let source: string;
   if (options.expression) {
-    sources = [options.expression];
+    source = options.expression;
   } else if (options.inputFile) {
-    let content: string;
     try {
       // Use file descriptor 0 for stdin when input is '-'
-      content = options.inputFile === '-'
+      source = options.inputFile === '-'
         ? readFileSync(0, 'utf-8')
         : readFileSync(options.inputFile, 'utf-8');
     } catch (error) {
       console.error(`Error reading ${options.inputFile === '-' ? 'stdin' : `file ${options.inputFile}`}: ${error}`);
       process.exit(1);
     }
-    let body: string;
-    try {
-      ({ typeDefs, body } = splitTypePrelude(content));
-    } catch (error) {
-      console.error(`Compilation error: ${error}`);
-      process.exit(1);
-    }
-    // Split into lines - keep all lines but mark empty/comment lines as null
-    // so we can output empty lines for them to preserve line numbers
-    sources = body.split('\n').map(line => {
-      const trimmed = line.trim();
-      return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
-    });
   } else {
     console.error('Error: Must provide either -e <expression>, an input file, or - for stdin');
     printHelp();
+    process.exit(1);
+  }
+
+  // The source is one program: a type prelude, then one expression whose
+  // newlines mean nothing. The definitions are lifted off the top so that the
+  // expression can be read on its own, and so that a program which declares
+  // types and nothing else is accepted and compiles to nothing.
+  let typeDefs: TypeBinding[] = [];
+  let sources: string[];
+  try {
+    const program = splitTypePrelude(source);
+    typeDefs = program.typeDefs;
+    sources = readProgram(program.body, options.lines);
+  } catch (error) {
+    console.error(`Compilation error: ${error}`);
     process.exit(1);
   }
 
@@ -386,11 +429,12 @@ function main() {
           ...(options.optimize ? checked[index] : {}),
         });
       } catch (error) {
-        throw new Error(`Line ${index + 1}: ${error}`);
+        throw options.lines ? new Error(`Line ${index + 1}: ${error}`) : error;
       }
     });
   } catch (error) {
     console.error(`Compilation error: ${error}`);
+    hintAboutLines(error, options);
     process.exit(1);
   }
 
