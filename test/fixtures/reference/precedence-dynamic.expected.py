@@ -27,5 +27,5 @@
 
 
 (lambda _: kAssert(kEq((f := lambda x, y: (kAdd(x, y) > 10), f(6, 5))[-1], True)))(None)
-(lambda _: kAssert(kEq((f := lambda x, y: (x > y) == True, f(2, 1))[-1], True)))(None)
+(lambda _: kAssert(kEq((f := lambda x, y: ((x > y)) == True, f(2, 1))[-1], True)))(None)
 (lambda _: kAssert(kEq((f := lambda x, y: not ((x > y)), f(1, 2))[-1], True)))(None)

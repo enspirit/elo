@@ -45,6 +45,9 @@ const SQL_PRECEDENCE: Record<string, number> = {
   '*': 5, '/': 5, '%': 5,
 };
 
+/** The operators PostgreSQL refuses to associate. */
+const COMPARISONS = ['=', '<>', '<', '>', '<=', '>='];
+
 /**
  * Check if an IR expression needs parentheses when used as child of a binary op
  */
@@ -60,6 +63,13 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
 
   if (childPrec < parentPrec) return true;
   if (childPrec === parentPrec && side === 'right' && (parentOp === '-' || parentOp === '/')) {
+    return true;
+  }
+  // PostgreSQL's comparison operators are non-associative: `1 = 1 = TRUE` is
+  // a syntax error on either side, and so is `1 < 2 = TRUE` even though `<`
+  // binds tighter. A comparison inside a comparison is therefore always
+  // parenthesised, whatever the precedences say.
+  if (COMPARISONS.includes(parentOp) && COMPARISONS.includes(childOp)) {
     return true;
   }
 

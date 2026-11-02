@@ -1,0 +1,38 @@
+# A comparison whose operand is itself a comparison.
+#
+# Elo's parentheses say which is which, and the emitters dropped them because
+# the two operators have the same precedence. Two targets then read the result
+# differently, one loudly and one not:
+#
+#   PostgreSQL's comparison operators are *non-associative*, so `1 = 1 = TRUE`
+#   does not parse at all — "syntax error at or near =".
+#
+#   Python's *chain*: `1 < 2 == True` means `1 < 2 and 2 == True`, which is
+#   False where Elo means `(1 < 2) == true`. No error, just the wrong answer.
+#
+# JavaScript and Ruby happen to be right: `==` is left-associative there and
+# binds looser than the ordering operators, which is what Elo means.
+
+assert((1 == 1) == true)
+assert((1 == 2) == false)
+assert((1 != 2) == true)
+assert((1 == 1) != false)
+assert((1 == 2) != true)
+
+assert((1 < 2) == true)
+assert((2 < 1) == false)
+assert((1 > 2) == false)
+assert((2 >= 2) == true)
+assert((2 <= 1) == false)
+
+# Both operands a comparison, which is where Python's chaining bites hardest
+assert((1 <= 2) == (3 > 2))
+assert((1 > 2) == (3 < 2))
+assert((1 >= 1) != (2 > 3))
+assert((1 < 2) != (2 < 1))
+
+# Nested one deeper, and over types other than Int
+assert(((1 == 1) == true) == true)
+assert(('a' == 'a') == true)
+assert((isNull(null) == true) == true)
+assert((D2024-01-15 == D2024-01-15) == true)

@@ -7,7 +7,7 @@ CASE WHEN 3.14 <> 3.15 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pi
 CASE WHEN TRUE = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN FALSE = FALSE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN TRUE <> FALSE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN 1 = 1 = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (1 = 1) = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN 'hello' = 'hello' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN 'hel' || 'lo' = 'hello' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN 'hello' <> 'world' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

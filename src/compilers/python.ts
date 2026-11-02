@@ -57,6 +57,9 @@ const PY_PRECEDENCE: Record<string, number> = {
   '**': 6,
 };
 
+/** The operators Python chains, and PostgreSQL refuses to associate. */
+const COMPARISONS = ['==', '!=', '<', '>', '<=', '>='];
+
 /**
  * Check if an IR expression needs parentheses when used as child of a binary op
  */
@@ -74,9 +77,13 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
   if (childPrec === parentPrec && side === 'right' && (parentOp === '-' || parentOp === '/')) {
     return true;
   }
-  // Non-associative operators need parens when chained
-  const nonAssociative = ['==', '!=', '<', '>', '<=', '>='];
-  if (childPrec === parentPrec && nonAssociative.includes(parentOp) && nonAssociative.includes(childOp)) {
+  // Python *chains* comparisons rather than nesting them: `1 < 2 == True` is
+  // `1 < 2 and 2 == True`, which is False where Elo means `(1 < 2) == true`.
+  // The table above gives the ordering operators a tighter precedence than
+  // equality, as C does, but Python has one comparison level and chains across
+  // all of it — so a comparison inside a comparison is always parenthesised,
+  // whatever their relative precedence here.
+  if (COMPARISONS.includes(parentOp) && COMPARISONS.includes(childOp)) {
     return true;
   }
 
