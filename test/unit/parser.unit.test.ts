@@ -1766,6 +1766,22 @@ describe('Parser - Guard expressions', () => {
     }
   });
 
+  it('reads `( name |` as the pipe form, not as a parenthesised alternative', () => {
+    // `guard (a | b) in 1` and `guard(a | b)` are the same three tokens after
+    // the keyword, so the two forms are genuinely ambiguous here and the pipe
+    // form wins. Pinned because the lookahead that decides it is three tokens
+    // wide: widening or narrowing it would silently flip this.
+    const ast = parse('guard (a | b)');
+    assert.strictEqual(ast.type, 'lambda');
+    assert.throws(() => parse('guard (a | b) in 1'), /after the end of the expression/);
+  });
+
+  it('reads a block guard whose condition is parenthesised', () => {
+    // Not the pipe form: `(` is not followed by `name |`.
+    const ast = parse('guard (a) in 1');
+    assert.strictEqual(ast.type, 'guard');
+  });
+
   it('should parse pipe-style guard with label', () => {
     const ast = parse('guard(x | positive: x > 0)');
     assert.strictEqual(ast.type, 'lambda');

@@ -672,6 +672,25 @@ export class Parser {
   }
 
   /**
+   * The `count` tokens that follow the current one, consuming nothing.
+   *
+   * Lexical lookahead, and deliberately only that: it re-lexes a fixed number
+   * of tokens and puts the lexer back where it was. Saving and restoring a
+   * *parse* can re-parse a whole subtree, which is what made the `in`
+   * disambiguation exponential — see CANNOT_START_A_RANGE. A look costs three
+   * tokens whatever the expression is.
+   */
+  private peek(count: number): Token[] {
+    const state = this.lexer.saveState();
+    const tokens: Token[] = [];
+    for (let i = 0; i < count; i++) {
+      tokens.push(this.lexer.nextToken());
+    }
+    this.lexer.restoreState(state);
+    return tokens;
+  }
+
+  /**
    * Build a node, saying where it was written if building it is refused.
    *
    * The AST factories refuse what no target can express — a name bound twice,
@@ -867,16 +886,9 @@ export class Parser {
         return lambda([name], body);
       }
 
-      // Check if this is a function call
+      // Check if this is a function call. `guard` and `check` cannot arrive
+      // here: the lexer makes them keywords, so they are never an IDENTIFIER.
       if (this.currentToken.type === 'LPAREN') {
-        // Special handling for guard/check pipe-style: guard(x | condition)
-        if (name === 'guard' || name === 'check') {
-          const pipeGuard = this.tryParsePipeGuard(name as 'guard' | 'check');
-          if (pipeGuard) {
-            return pipeGuard;
-          }
-        }
-
         return this.at(functionCall(name, this.argumentList()), token);
       }
 
@@ -902,7 +914,12 @@ export class Parser {
     }
 
     // Handle guard expressions: guard [label:] condition in body
-    // Note: pipe-style guard(x | condition) is handled in expr() via guardOrPipeGuard
+    //
+    // The block form only. The pipe form is admitted at two positions — the
+    // top of an expression, from `expr`, and the right of a `|>` — and this is
+    // neither, so `let g = guard(y | y > 0) in g(5)` is a parse error today.
+    // Calling `guardOrCheck` here instead would accept it, which is a change
+    // to the language rather than to its parser; see the ideation task 0215.
     if (token.type === 'GUARD') {
       return this.guardExprParse('guard');
     }
@@ -1110,20 +1127,16 @@ export class Parser {
         );
       }
 
-      const funcName = tok.value;
-      const isGuardOrCheck = tok.type === 'GUARD' || tok.type === 'CHECK';
-      this.eat(tok.type);
-
-      // For guard/check with pipe-style syntax, parse specially
-      if (isGuardOrCheck && (this.currentToken as Token).type === 'LPAREN') {
-        const guardType = funcName as 'guard' | 'check';
-        const pipeGuard = this.tryParsePipeGuardBody(guardType);
-        if (pipeGuard) {
-          // Apply the lambda to the piped value: node |> guard(x | cond) -> pipeGuard(node)
-          node = apply(pipeGuard, [node]);
-          continue;
-        }
+      // `a |> guard(x | cond)` applies the lambda the pipe form builds to the
+      // piped value. Decided before the keyword is eaten, by the same look as
+      // everywhere else.
+      if ((tok.type === 'GUARD' || tok.type === 'CHECK') && this.opensPipeGuard()) {
+        node = apply(this.pipeGuard(tok.type === 'GUARD' ? 'guard' : 'check'), [node]);
+        continue;
       }
+
+      const funcName = tok.value;
+      this.eat(tok.type);
 
       // Left side becomes the first argument. Parentheses are optional, so
       // `a |> f` and `a |> f()` are the same call.
@@ -1414,45 +1427,21 @@ export class Parser {
    * - 'string message': condition
    */
   private parseConstraint(): Constraint {
-    // Check for label (identifier or string followed by colon)
+    // A name or a string followed by `:` is the label; anything else is the
+    // start of the condition. One token of lookahead tells them apart, so the
+    // condition is parsed once either way.
+    const labelled = this.currentToken.type === 'IDENTIFIER' || this.currentToken.type === 'STRING';
     let label: string | undefined;
 
-    if (this.currentToken.type === 'IDENTIFIER') {
-      // Could be a label or the start of the condition
-      // Look ahead: if next is COLON, it's a label
-      const savedState = this.saveState();
-      const potentialLabel = this.currentToken.value;
-      this.eat('IDENTIFIER');
-
-      if ((this.currentToken as Token).type === 'COLON') {
-        // It's a label
-        this.eat('COLON');
-        label = potentialLabel;
-      } else {
-        // Not a label, restore and parse as expression
-        this.restoreState(savedState);
-      }
-    } else if (this.currentToken.type === 'STRING') {
-      // String label
-      const savedState = this.saveState();
-      const potentialLabel = this.currentToken.value;
-      this.eat('STRING');
-
-      if ((this.currentToken as Token).type === 'COLON') {
-        // It's a label
-        this.eat('COLON');
-        label = potentialLabel;
-      } else {
-        // Not a label, restore and parse as expression
-        this.restoreState(savedState);
-      }
+    if (labelled && this.peek(1)[0].type === 'COLON') {
+      label = this.currentToken.value;
+      this.eat(this.currentToken.type);
+      this.eat('COLON');
     }
 
-    // Parse the constraint condition
-    // Use logical_or to avoid consuming COMMA and RPAREN which delimit constraints
-    const condition = this.logical_or();
-
-    return { label, condition };
+    // Parsed at logical_or, which stops before the COMMA and RPAREN that
+    // delimit one constraint from the next.
+    return { label, condition: this.logical_or() };
   }
 
   /**
@@ -1513,57 +1502,48 @@ export class Parser {
   }
 
   /**
-   * Try to parse pipe-style guard: guard(x | condition, ...)
-   * Returns a lambda that checks constraints and returns the input value.
-   * Returns null if not a pipe-style guard (e.g., regular function call).
-   * Called from lowercase identifier parsing (when guard/check used as function name).
+   * Whether a `guard`/`check` keyword in hand opens the pipe form,
+   * `guard(x | cond)`, rather than the block form, `guard cond in body`.
+   *
+   * Three tokens of lookahead — `( IDENTIFIER |` — and nothing else in the
+   * language starts that way, so one look decides it. This used to be decided
+   * by parsing the pipe form and backtracking when it did not fit, through
+   * three functions and three save/restore pairs.
    */
-  private tryParsePipeGuard(guardType: 'guard' | 'check'): Expr | null {
-    const savedState = this.saveState();
-    this.eat('LPAREN');
-    return this.parsePipeGuardBody(guardType, savedState);
+  private opensPipeGuard(): boolean {
+    const [lparen, name, bar] = this.peek(3);
+    return lparen.type === 'LPAREN' && name.type === 'IDENTIFIER' && bar.type === 'PIPE';
   }
 
   /**
-   * Try to parse pipe-style guard body after LPAREN has been seen.
-   * Called from GUARD/CHECK keyword parsing.
-   * Returns null if not a valid pipe-style guard pattern.
+   * The pipe form: `guard(x | cond, …)`, the keyword not yet eaten.
+   *
+   * Becomes a lambda that checks its constraints and returns its argument
+   * unchanged, so `v |> guard(x | x > 0)` passes `v` through or fails.
+   * Trailing commas are allowed: `guard(i | i > 0, i < 9,)`.
    */
-  private tryParsePipeGuardBody(guardType: 'guard' | 'check'): Expr | null {
-    const savedState = this.saveState();
+  private pipeGuard(guardType: 'guard' | 'check'): Expr {
+    this.eat(guardType === 'guard' ? 'GUARD' : 'CHECK');
     this.eat('LPAREN');
-    return this.parsePipeGuardBody(guardType, savedState);
-  }
-
-  /**
-   * Parse the body of a pipe-style guard after LPAREN has been consumed.
-   * Returns null if not a valid pattern, restoring the saved state.
-   * Trailing commas are allowed: guard(i | i>0, i<0,)
-   */
-  private parsePipeGuardBody(guardType: 'guard' | 'check', savedState: ParserState): Expr | null {
-    // Check for IDENTIFIER PIPE pattern
-    if (this.currentToken.type !== 'IDENTIFIER') {
-      this.restoreState(savedState);
-      return null;
-    }
 
     const varName = this.currentToken.value;
     this.eat('IDENTIFIER');
-
-    if ((this.currentToken as Token).type !== 'PIPE') {
-      this.restoreState(savedState);
-      return null;
-    }
     this.eat('PIPE');
 
     const constraints = this.commaSeparated(() => this.parseConstraint(), ['RPAREN']);
     this.eat('RPAREN');
 
-    // Create a lambda: fn(x ~> guard constraints in x)
-    // The guard body is just the variable itself (returns input if guard passes)
-    const varRef = variable(varName);
-    const guardBody = guardExpr(constraints, varRef, guardType);
-    return lambda([varName], guardBody);
+    return lambda([varName], guardExpr(constraints, variable(varName), guardType));
+  }
+
+  /**
+   * `guard`/`check` in a statement position: the pipe form when one follows,
+   * the block form otherwise.
+   */
+  private guardOrCheck(guardType: 'guard' | 'check'): Expr {
+    return this.opensPipeGuard()
+      ? this.pipeGuard(guardType)
+      : this.guardExprParse(guardType);
   }
 
   /**
@@ -1753,35 +1733,15 @@ export class Parser {
       }
       // Handle guard/check: either block-style or pipe-style
       if (this.currentToken.type === 'GUARD') {
-        return this.guardOrPipeGuard('guard');
+        return this.guardOrCheck('guard');
       }
       if (this.currentToken.type === 'CHECK') {
-        return this.guardOrPipeGuard('check');
+        return this.guardOrCheck('check');
       }
       return this.pipe();
     } finally {
       this.depth--;
     }
-  }
-
-  /**
-   * Parse guard/check: detect if it's pipe-style guard(x | cond) or block-style guard cond in body
-   */
-  private guardOrPipeGuard(guardType: 'guard' | 'check'): Expr {
-    const savedState = this.saveState();
-    this.eat(guardType === 'guard' ? 'GUARD' : 'CHECK');
-
-    // Check for pipe-style: guard(x | condition)
-    if ((this.currentToken as Token).type === 'LPAREN') {
-      const pipeGuard = this.tryParsePipeGuardBody(guardType);
-      if (pipeGuard) {
-        return pipeGuard;
-      }
-    }
-
-    // Not pipe-style, restore and parse as block-style
-    this.restoreState(savedState);
-    return this.guardExprParse(guardType);
   }
 
   /**
@@ -1909,17 +1869,14 @@ export class Parser {
     const bindings: TypeBinding[] = [];
 
     while ((this.currentToken as Token).type === 'UPPER_IDENTIFIER') {
-      const saved = this.saveState();
+      // Without the `=` this is an expression opening on an uppercase name,
+      // such as `TODAY` or a type selector call. Looked at rather than eaten
+      // and given back, so the token the expression starts on is never moved.
+      if (this.peek(1)[0].type !== 'ASSIGN') break;
+
       const nameToken = this.here();
       const name = this.currentToken.value;
       this.eat('UPPER_IDENTIFIER');
-
-      if ((this.currentToken as Token).type !== 'ASSIGN') {
-        // An expression opening on an uppercase name, such as `TODAY` or a
-        // type selector call. Give the token back and stop.
-        this.restoreState(saved);
-        break;
-      }
       this.eat('ASSIGN');
 
       // Positioned at its name: a name defined twice is reported where the

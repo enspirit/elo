@@ -61,6 +61,14 @@ describe('Parser - termination on nested bindings', () => {
     assert.ok(elapsed < BUDGET_MS, `took ${elapsed}ms, budget ${BUDGET_MS}ms`);
   });
 
+  it('parses a long chain of pipe guards promptly', () => {
+    // `guard(x | …)` is told from `guard … in …` by three tokens of lookahead
+    // rather than by parsing the pipe form and backtracking. A look costs the
+    // same whatever follows it, so a chain of them is linear.
+    const elapsed = timeParse('5' + ' |> guard(x | x > 0)'.repeat(200));
+    assert.ok(elapsed < BUDGET_MS, `took ${elapsed}ms, budget ${BUDGET_MS}ms`);
+  });
+
   it('stays prompt when a real range is present', () => {
     // The speculation is still attempted where a range could genuinely follow,
     // so this is the case that must not have been made slow by the fix.
