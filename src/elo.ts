@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs';
 import { parse, TRAILING_INPUT } from './parser';
 import { isLocated } from './ast';
-import { loadProgram, scopeProgram, hasNoExpression } from './modules';
+import { loadProgram, scopeProgram, hasNoExpression, readProgram } from './modules';
 import type { LoadedProgram } from './modules';
 import { nodeLoader } from './node-loader';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
@@ -234,23 +234,6 @@ function evaluate(
   const fn = execFn(DateTime, Duration, Interval);
 
   return fn(inputValue);
-}
-
-/**
- * The expressions to evaluate, out of what follows a source's header.
- *
- * One program by default: the source is a single expression whose newlines
- * mean nothing, and a source with nothing under its prelude holds none. With
- * `lines`, every line is its own expression and gives its own result.
- */
-function readProgram(body: string, lines?: boolean): string[] {
-  if (!lines) {
-    return hasNoExpression(body) ? [] : [body];
-  }
-  return body.split('\n').map(line => {
-    const trimmed = line.trim();
-    return (trimmed === '' || trimmed.startsWith('#')) ? '' : line;
-  });
 }
 
 function main() {

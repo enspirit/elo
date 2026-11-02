@@ -28,7 +28,7 @@ export { JS_HELPERS } from './runtime';
 export type { EloFailure } from './runtime';
 export { getPrelude, isPreludePrependable } from './preludes';
 export type { Target as PreludeTarget } from './preludes';
-export { loadProgram, scopeProgram, hasNoExpression } from './modules';
+export { loadProgram, scopeProgram, hasNoExpression, readProgram } from './modules';
 export type { ModuleLoader, LoadOptions, LoadedProgram } from './modules';
 export { toEloCode } from './serialize';
 export { parseCSV, toCSV } from './csv';

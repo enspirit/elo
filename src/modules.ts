@@ -168,6 +168,23 @@ export function scopeProgram(program: LoadedProgram | undefined, expr: Expr): Ex
 }
 
 /**
+ * The expressions a program's body holds, out of what follows its header.
+ *
+ * One expression by default: a source is a single expression whose newlines
+ * mean nothing, and a source with nothing under its prelude holds none. With
+ * `lines`, every line is its own expression — the reading `--lines` serves and
+ * the convention the fixture corpus is written in, where one line of source
+ * must give one line of emitted code, so a line carrying no expression comes
+ * back blank rather than dropped.
+ */
+export function readProgram(body: string, lines?: boolean): string[] {
+  if (!lines) {
+    return hasNoExpression(body) ? [] : [body];
+  }
+  return body.split('\n').map((line) => (hasNoExpression(line) ? '' : line));
+}
+
+/**
  * True when a source holds no expression — all that is left under its header
  * is blank lines and comments. Such a module exports types and no value.
  */

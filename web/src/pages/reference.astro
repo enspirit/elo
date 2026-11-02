@@ -1071,6 +1071,40 @@ try &#123;
           their own errors from their own preludes, and do not carry these
           fields yet.
         </p>
+        <h3>A source that imports</h3>
+        <p>
+          An import makes the compiler read a file, so it is a capability the
+          host grants: pass a <strong>loader</strong>, and the <code>file</code>
+          the source came from, which a path is resolved against. Without a
+          loader, an import is refused.
+        </p>
+        <pre class="language-js">import &#123; compile &#125; from '@enspirit/elo';
+import &#123; nodeLoader &#125; from '@enspirit/elo/node';   // reads the filesystem
+
+const run = compile(source, &#123;
+  runtime: &#123; DateTime, Duration, Interval &#125;,
+  loader: nodeLoader(),
+  file: 'main.elo',
+&#125;);</pre>
+        <p class="note">
+          <code>nodeLoader</code> is behind a second entry point on purpose:
+          <code>@enspirit/elo</code> itself must stay importable in a browser,
+          where there are no files to read — this playground is such a host, and
+          refuses an import. A host may pass its own <code>ModuleLoader</code>
+          instead, over a map of sources, a database, or a bundler's virtual
+          filesystem.
+        </p>
+        <h3>A file of one-line expressions</h3>
+        <p>
+          <code>readProgram</code> is the <code>--lines</code> reading: the
+          header is lifted off once with <code>loadProgram</code> and scopes
+          every line, which is what the <code>scope</code> option is for.
+        </p>
+        <pre class="language-js">const program = loadProgram(source, &#123; loader: nodeLoader(), file &#125;);
+for (const line of readProgram(program.body, true)) &#123;
+  if (hasNoExpression(line)) continue;     // a blank or a comment
+  console.log(compile(line, &#123; runtime, scope: program, file &#125;)(input));
+&#125;</pre>
         <h3>Lower-Level API</h3>
         <pre class="language-js">import &#123; parse, compileToJavaScript, compileToRuby, compileToPython, compileToSQL &#125; from '@enspirit/elo';
 

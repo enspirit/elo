@@ -7,6 +7,8 @@
 
 import { parse } from './parser';
 import { compileToJavaScript } from './compilers/javascript';
+import { loadProgram, scopeProgram } from './modules';
+import type { LoadedProgram, ModuleLoader } from './modules';
 
 /**
  * Runtime dependencies that can be injected into compiled functions.
@@ -23,6 +25,32 @@ export interface EloRuntime {
  */
 export interface CompileOptions {
   runtime?: EloRuntime;
+  /**
+   * How to find and read an imported module.
+   *
+   * Without one, an import is refused — there is nothing for the compiler to
+   * read from, and reading files is a capability a host grants rather than
+   * one the compiler takes. `nodeLoader` from `@enspirit/elo/node` reads the
+   * filesystem; a host may pass its own over a map of sources, a database or
+   * a bundler's virtual filesystem.
+   */
+  loader?: ModuleLoader;
+  /**
+   * Which file the source came from.
+   *
+   * An import is resolved against it, and a diagnostic names it. Without one,
+   * a path is resolved against the loader's own base.
+   */
+  file?: string;
+  /**
+   * What a header already resolved to, from `loadProgram`.
+   *
+   * For a source read one expression per line — `readProgram(body, true)` —
+   * where the header was lifted off the top once and scopes every line. With
+   * it, the source is read as an expression under that scope and may hold no
+   * header of its own.
+   */
+  scope?: LoadedProgram;
 }
 
 /**
@@ -55,13 +83,34 @@ const RUNTIME_DEPS = ['DateTime', 'Duration', 'Interval'] as const;
  *   { runtime: { DateTime, Duration } }
  * );
  * inThisWeek(DateTime.now()); // => true or false
+ *
+ * // A source that imports, given something to read from
+ * import { nodeLoader } from '@enspirit/elo/node';
+ *
+ * const greet = compile<(input: null) => unknown>(
+ *   "import { double } from './helpers'\nfn( n ~> double(n) + 1 )",
+ *   { runtime: { DateTime, Duration }, loader: nodeLoader(), file: 'main.elo' }
+ * );
  * ```
  */
 export function compile<T = unknown>(
   source: string,
   options?: CompileOptions
 ): T {
-  const ast = parse(source);
+  const { file } = options ?? {};
+  // Positions are recorded so that a refusal says which line of which file it
+  // is about — including the file, when the source came from one or from a
+  // module it imported.
+  const parserOptions = { locations: true, file };
+
+  // A scope already resolved is a program whose header was read once, for a
+  // source read one expression per line; otherwise this source is the program
+  // and its own header is read here.
+  const scope = options?.scope
+    ?? loadProgram(source, { loader: options?.loader, file, locations: true });
+  const body = options?.scope ? source : scope.body;
+  const ast = scopeProgram(scope, parse(body, parserOptions));
+
   const jsCode = compileToJavaScript(ast);
 
   // Extract runtime dependencies

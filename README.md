@@ -530,6 +530,44 @@ of it is how rewording a diagnostic silently breaks a host. Ruby and Python
 raise their own errors from their own preludes, and do not carry these fields
 yet.
 
+### Compiling a source that imports
+
+An import makes the compiler read a file, so it is a capability the host
+grants: pass a **loader**, and the `file` the source came from, which a path is
+resolved against. Without a loader, an import is refused.
+
+```typescript
+import { compile } from '@enspirit/elo';
+import { nodeLoader } from '@enspirit/elo/node';   // reads the filesystem
+
+const run = compile<(input: null) => unknown>(readFileSync('main.elo', 'utf-8'), {
+  runtime: { DateTime, Duration, Interval },
+  loader: nodeLoader(),
+  file: 'main.elo',
+});
+```
+
+`nodeLoader` is behind a **second entry point** on purpose: `@enspirit/elo`
+itself must stay importable in a browser, where there are no files to read.
+A host may pass its own `ModuleLoader` instead — over a map of sources, a
+database, or a bundler's virtual filesystem — which is sometimes what it wants.
+
+### Reading a file of one-line expressions
+
+`readProgram` is the `--lines` reading (see [A file is one program](#a-file-is-one-program)):
+the header is lifted off once with `loadProgram` and scopes every line, which
+is what the `scope` option is for.
+
+```typescript
+import { compile, loadProgram, readProgram, hasNoExpression } from '@enspirit/elo';
+
+const program = loadProgram(source, { loader: nodeLoader(), file });
+for (const line of readProgram(program.body, true)) {
+  if (hasNoExpression(line)) continue;     // a blank or a comment
+  console.log(compile(line, { runtime, scope: program, file })(input));
+}
+```
+
 ## Data Format Adapters
 
 The CLI and playground support multiple input/output formats (JSON, CSV). The format system is pluggable—you can provide custom adapters using libraries like PapaParse or SheetJS. See `src/formats.ts` for the `FormatAdapter` interface and built-in implementations.
