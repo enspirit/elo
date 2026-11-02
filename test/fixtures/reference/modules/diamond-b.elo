@@ -1,0 +1,7 @@
+# The other side of the diamond, importing the same helper as its sibling.
+import './shared-helper' as s
+
+{
+  b: s.label,
+  label: s.label
+}

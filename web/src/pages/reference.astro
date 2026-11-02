@@ -734,14 +734,16 @@ People = [Person]
           An imported type is <strong>expanded</strong>: the module's own type
           names are substituted into it, so you get that one type and nothing
           else of the module's becomes visible. A module's value is bound
-          <strong>once</strong> per program, however many names come from it,
-          and its <code>_</code> is the importing program's input.
+          <strong>once</strong> per program — however many names come from it,
+          and however many other modules import it — and its <code>_</code> is
+          the importing program's input.
         </p>
         <p class="note">
           Imports are resolved <strong>at compile time, by inlining</strong>:
           the emitted code is one self-contained expression, so there is nothing
-          to deploy beside it and nothing is read at runtime — but a module's
-          code appears once per program that imports it. An import inherits the
+          to deploy beside it and nothing is read at runtime. The modules of a
+          program are bound at its root, in dependency order, so a shared helper
+          is emitted once and evaluated once however many paths reach it. An import inherits the
           portability of what it brings in: an imported type is a type
           definition and an imported function is a lambda, so the SQL target
           refuses either exactly as it refuses the construct written inline.

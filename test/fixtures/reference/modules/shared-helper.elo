@@ -1,0 +1,8 @@
+# A module imported by two others — the diamond any shared helper makes the
+# moment a second module wants it. It exports plain strings, so the diamond it
+# is part of compiles to SQL too. The label is what a test counts: it appears
+# once per copy of this module in the emitted code.
+{
+  name: 'helper',
+  label: 'shared-helper'
+}

@@ -239,8 +239,11 @@ a future package. Cycles are refused, naming the chain.
 
 Imports are resolved **at compile time, by inlining**: the emitted code is one
 self-contained expression, as it is without them. So there is nothing to
-deploy alongside it, and nothing is read at runtime — but a module's code
-appears once per program that imports it.
+deploy alongside it, and nothing is read at runtime. A module appears **once**
+in that expression, however many others import it: the modules of a program are
+bound at its root, in dependency order, and an import is a reference to one of
+those bindings. A module's expression is therefore also evaluated once, so
+splitting a program into small modules costs neither size nor work.
 
 An import is the one thing in Elo that makes the **compiler** read a file, so a
 host that compiles sources it does not trust must not hand it a filesystem:

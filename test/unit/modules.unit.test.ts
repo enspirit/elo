@@ -130,31 +130,43 @@ describe('loadProgram - importing values', () => {
     assert.deepStrictEqual(program.bindings[0].value, parse(REUSABLE.trim()));
   });
 
-  it('binds the module under its alias when it has one', () => {
+  it("makes an alias a name for the module's binding", () => {
     const program = loadProgram("import './reusable' as r\nr.one", {
       loader: mapLoader({ 'reusable.elo': REUSABLE }),
     });
-    assert.deepStrictEqual(program.bindings.map(b => b.name), ['r']);
+    assert.deepStrictEqual(program.bindings.map(b => b.name), ['_module_0', 'r']);
+    assert.deepStrictEqual(program.bindings[1].value, { type: 'variable', name: '_module_0' });
   });
 
-  it('binds a module imported both ways once, under the alias', () => {
+  it('binds a module imported both ways once', () => {
     const program = loadProgram("import { double } from './reusable'\nimport './reusable' as r\ndouble(1)", {
       loader: mapLoader({ 'reusable.elo': REUSABLE }),
     });
-    assert.deepStrictEqual(program.bindings.map(b => b.name), ['r', 'double']);
+    assert.deepStrictEqual(program.bindings.map(b => b.name), ['_module_0', 'double', 'r']);
     assert.deepStrictEqual(program.bindings[1].value, {
       type: 'member_access',
-      object: { type: 'variable', name: 'r' },
+      object: { type: 'variable', name: '_module_0' },
       property: 'double',
     });
+    assert.deepStrictEqual(program.bindings[2].value, { type: 'variable', name: '_module_0' });
   });
 
-  it('makes a second alias the first binding under another name', () => {
+  it('makes a second alias another name for the same binding', () => {
     const program = loadProgram("import './reusable' as r\nimport './reusable' as s\nr.one + s.one", {
       loader: mapLoader({ 'reusable.elo': REUSABLE }),
     });
-    assert.deepStrictEqual(program.bindings.map(b => b.name), ['r', 's']);
-    assert.deepStrictEqual(program.bindings[1].value, { type: 'variable', name: 'r' });
+    assert.deepStrictEqual(program.bindings.map(b => b.name), ['_module_0', 'r', 's']);
+    assert.deepStrictEqual(program.bindings[1].value, { type: 'variable', name: '_module_0' });
+    assert.deepStrictEqual(program.bindings[2].value, { type: 'variable', name: '_module_0' });
+  });
+
+  it("refuses an import that would take a module binding's name", () => {
+    assert.throws(
+      () => loadProgram("import './reusable' as _module_0\n_module_0.one", {
+        loader: mapLoader({ 'reusable.elo': REUSABLE }),
+      }),
+      /'_module_0' cannot name an import/
+    );
   });
 
   it('refuses a value import from a module that has no expression', () => {
@@ -208,10 +220,25 @@ describe('loadProgram - a module of its own', () => {
     );
   });
 
-  it('refuses a graph that asks for more inlining than it looks', () => {
-    // Each level imports the one below it through two wrappers, so the leaf is
-    // inlined 2^n times from n levels of small files. The depth guard would
-    // let this through; the inlining budget is what stops it.
+  it('refuses a program that binds more modules than it is allowed to', () => {
+    // A module is bound once however many importers name it, so the budget is
+    // reached by a program that honestly reads that many distinct files.
+    const files: Record<string, string> = {};
+    const imports: string[] = [];
+    for (let index = 0; index <= 200; index++) {
+      files[`m${index}.elo`] = '{ v: 1 }';
+      imports.push(`import './m${index}' as m${index}`);
+    }
+    assert.throws(
+      () => loadProgram(`${imports.join('\n')}\nm0.v`, { loader: mapLoader(files) }),
+      /imports more than 200 modules/
+    );
+  });
+
+  it('accepts a graph that branches at every level', () => {
+    // Each level reaches the one below it through two wrappers, so the leaf is
+    // on 2^12 paths from 37 small files. Inlining per path is what used to make
+    // that a budget overrun; sharing makes it 37 bindings.
     const files: Record<string, string> = { 'leaf.elo': '{ v: 1 }' };
     for (let level = 1; level <= 12; level++) {
       const below = level === 1 ? 'leaf' : `m${level - 1}`;
@@ -219,10 +246,8 @@ describe('loadProgram - a module of its own', () => {
       files[`b${level}.elo`] = `import './${below}' as b\n{ v: b.v }`;
       files[`m${level}.elo`] = `import './a${level}' as x\nimport './b${level}' as y\n{ v: x.v + y.v }`;
     }
-    assert.throws(
-      () => loadProgram("import './m12' as m\nm.v", { loader: mapLoader(files) }),
-      /inlines more than 200 modules/
-    );
+    const program = loadProgram("import './m12' as m\nm.v", { loader: mapLoader(files) });
+    assert.strictEqual(moduleBindings(program), 37);
   });
 
   it('accepts the same module imported by two imports of its own', () => {
@@ -270,6 +295,67 @@ describe('loadProgram - a module of its own', () => {
       lambda.type === 'lambda' ? lambda.body.loc : undefined,
       { line: 1, column: 28, file: 'reusable.elo' }
     );
+  });
+});
+
+/**
+ * A module reached by two paths.
+ *
+ * `shared.elo` carries a tag, `9901`, which appears once per copy of it in the
+ * tree — so counting the tag counts both the bytes and the work: the module's
+ * expression is evaluated once per copy of it.
+ */
+const DIAMOND: Record<string, string> = {
+  'shared.elo': '{ tag: 9901 }\n',
+  'a.elo': "import './shared' as s\n{ a: s.tag }\n",
+  'b.elo': "import './shared' as s\n{ b: s.tag }\n",
+};
+
+/** How many copies of `shared.elo` the program holds. */
+function tagCopies(program: ReturnType<typeof loadProgram>): number {
+  return JSON.stringify(scopeProgram(program, parse('1'))).split('9901').length - 1;
+}
+
+/** How many of the program's root bindings are module values. */
+function moduleBindings(program: ReturnType<typeof loadProgram>): number {
+  return program.bindings.filter((binding) => /^_module_\d+$/.test(binding.name)).length;
+}
+
+describe('loadProgram - a module imported by two others', () => {
+  it('binds it once, at the root of the program, in dependency order', () => {
+    const program = loadProgram("import './a' as a\nimport './b' as b\n{ a: a.a, b: b.b }", {
+      loader: mapLoader(DIAMOND),
+    });
+    // One binding per distinct module — shared, a, b — then the two aliases.
+    assert.deepStrictEqual(program.bindings.map(b => b.name), [
+      '_module_0', '_module_1', '_module_2', 'a', 'b',
+    ]);
+    assert.deepStrictEqual(program.bindings[3].value, { type: 'variable', name: '_module_1' });
+    assert.deepStrictEqual(program.bindings[4].value, { type: 'variable', name: '_module_2' });
+  });
+
+  it('holds one copy of it, so its expression is evaluated once', () => {
+    const program = loadProgram("import './a' as a\nimport './b' as b\n{ a: a.a, b: b.b }", {
+      loader: mapLoader(DIAMOND),
+    });
+    assert.strictEqual(tagCopies(program), 1);
+  });
+
+  it('collapses a chain of modules that all read one helper', () => {
+    // Each module imports the one before it and the shared helper, and the
+    // program reads them all: the shape that cost N(N+1)/2 copies.
+    for (const length of [2, 3, 5, 8]) {
+      const files: Record<string, string> = { 'shared.elo': DIAMOND['shared.elo'] };
+      const imports: string[] = [];
+      for (let index = 1; index <= length; index++) {
+        const below = index === 1 ? '' : `import './m${index - 1}' as below\n`;
+        files[`m${index}.elo`] = `import './shared' as s\n${below}{ v: s.tag }\n`;
+        imports.push(`import './m${index}' as m${index}`);
+      }
+      const program = loadProgram(`${imports.join('\n')}\nm1.v`, { loader: mapLoader(files) });
+      assert.strictEqual(tagCopies(program), 1, `chain of ${length}`);
+      assert.strictEqual(moduleBindings(program), length + 1, `chain of ${length}`);
+    }
   });
 });
 

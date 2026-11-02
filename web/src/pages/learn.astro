@@ -701,13 +701,15 @@ r.double(21) + r.one</pre>
         <p>
           Imports are resolved <strong>when you compile</strong>, by inlining what they bring
           in. So the emitted code is one self-contained expression, exactly as it is without
-          them: there is nothing to deploy beside it, and nothing is read when it runs. The
-          trade is size — a module's code appears in every program that imports it.
+          them: there is nothing to deploy beside it, and nothing is read when it runs. Each
+          module appears in it once, however many of your files import it.
         </p>
         <p class="lesson-tip">
-          <strong>Keep modules small and honest:</strong> a module that only declares types
-          costs nothing at runtime, and one that exports functions is as portable as the
-          functions themselves — lambdas compile to JavaScript, Ruby and Python, not to SQL.
+          <strong>Keep modules small and honest:</strong> a helper two modules share is
+          emitted once and evaluated once, so splitting a long computation into named steps
+          costs nothing. A module that only declares types costs nothing at runtime, and one
+          that exports functions is as portable as the functions themselves — lambdas compile
+          to JavaScript, Ruby and Python, not to SQL.
         </p>
       </section>
 

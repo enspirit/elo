@@ -1,0 +1,14 @@
+# A module imported by two others is one module: it is bound once, at the root
+# of the program, and every importer reads that one binding. Here the helper is
+# reached three ways — through each side of a diamond, and directly.
+import './modules/diamond-a' as a
+import './modules/diamond-b' as b
+import { name, label } from './modules/shared-helper'
+
+assert(a.a == 'helper')
+assert(b.b == 'shared-helper')
+assert(name == 'helper')
+assert(label == 'shared-helper')
+# The value is the same one however it was reached
+assert(a.label == label)
+assert(b.label == label)

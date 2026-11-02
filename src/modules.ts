@@ -13,6 +13,11 @@
  * which: `Person` is a prelude type of `./m`, `double` a property of its
  * value. `import './m' as r` binds the value alone.
  *
+ * Inlining is **once per program**, not once per import: the modules of a
+ * program are bound at its root, in dependency order, and every import of one
+ * is a reference to its binding. A shared helper is therefore emitted once and
+ * evaluated once, which is what makes a small module free to write.
+ *
  * This file reads no files. It is given a `ModuleLoader`, so the same linking
  * runs under a filesystem (`src/node-loader.ts`), under a map of sources in a
  * test, or not at all in a host that has no modules to offer — the web
@@ -38,8 +43,8 @@ import { parse, ParserOptions, splitProgramHeader } from './parser';
  *
  * `path` is what the import wrote, `from` the id of the module it was written
  * in (absent for the program itself). The `id` that comes back identifies the
- * module: two imports resolving to the same id are the same module, loaded and
- * inlined once, and it is what a diagnostic names.
+ * module: two imports resolving to the same id are the same module, read and
+ * bound once, and it is what a diagnostic names.
  */
 export interface ModuleLoader {
   (path: string, from: string | undefined): { id: string; source: string };
@@ -72,7 +77,10 @@ export interface LoadOptions {
 export interface LoadedProgram {
   /** Imported types, then the source's own prelude, each in scope for the next. */
   typeDefs: TypeBinding[];
-  /** One binding per imported module value, then one per imported name. */
+  /**
+   * One binding per module in the graph, in dependency order, then one per
+   * name the source's own header brings in.
+   */
   bindings: LetBinding[];
   /** The source with its header blanked out, so lines and columns still hold. */
   body: string;
@@ -81,14 +89,27 @@ export interface LoadedProgram {
 const DEFAULT_MAX_IMPORT_DEPTH = 32;
 
 /**
- * How many modules one program may inline.
+ * How many modules one program may import.
  *
- * Inlining duplicates: a module imported by two others appears in both, so a
- * graph that is a diamond at every level costs two inlinings per level — a
- * handful of small files could otherwise ask the compiler for billions of
- * copies. The depth guard alone does not bound that, and this does.
+ * A module counts once however many importers name it, so this is reached by a
+ * program that honestly reads that many distinct files — a graph's size, not
+ * its shape. The depth guard does not bound it, and this does.
  */
-const MAX_INLINED_MODULES = 200;
+const MAX_MODULES = 200;
+
+/**
+ * The prefix of the names module values are bound under.
+ *
+ * These bindings are the compiler's, at the root of the program, and what a
+ * module reaches its own imports through. An import that bound one of these
+ * names would redirect the imports written after it, so a name of this shape
+ * is refused there. Nowhere else can: a module's expression is scoped *under*
+ * the bindings that reference the modules, so what it binds for itself is
+ * invisible to them.
+ */
+const MODULE_BINDING_PREFIX = '_module_';
+
+const MODULE_BINDING_NAME = new RegExp(`^${MODULE_BINDING_PREFIX}\\d+$`);
 
 /**
  * A refusal that already says which module it is about.
@@ -106,15 +127,31 @@ class ImportError extends Error {}
  * one a single source could have produced.
  */
 export function loadProgram(source: string, options: LoadOptions = {}): LoadedProgram {
+  const linking: Linking = { modules: new Map(), bindings: [], read: 0 };
   // The source itself is on the stack, so a module that imports it back is a
   // cycle named from where the author started.
-  return loadProgramIn(source, options, options.file ? [options.file] : [], { inlined: 0 });
+  const program = loadProgramIn(source, options, options.file ? [options.file] : [], linking);
+  // The module values are the outermost bindings of the whole program: one per
+  // distinct module, in dependency order, and the header's own names after.
+  return { ...program, bindings: [...linking.bindings, ...program.bindings] };
 }
 
-/** What the whole load shares, as opposed to what one frame of it has. */
-interface Budget {
-  /** Modules inlined so far, across the graph. */
-  inlined: number;
+/**
+ * What the whole load shares, as opposed to what one frame of it has.
+ *
+ * A module is read, parsed and bound once, and every import of it — from the
+ * program or from another module — becomes a reference to that one binding.
+ * Inlining it per importer gave the same answer, at a cost that grew with the
+ * square of the graph: a shared helper was copied once per path reaching it,
+ * and its expression evaluated once per copy.
+ */
+interface Linking {
+  /** Every module read so far, by the id its loader gave it. */
+  modules: Map<string, Module>;
+  /** One binding per module value, in dependency order. */
+  bindings: LetBinding[];
+  /** How many modules have been read, including the ones still being read. */
+  read: number;
 }
 
 /**
@@ -148,16 +185,21 @@ interface Module {
   types: TypeBinding[];
   /** Its value, scoped under its own imports and types. Absent if it has none. */
   value?: Expr;
+  /**
+   * The root binding its value is bound under, once something asks for it.
+   * A module imported for its types alone is never bound, and costs nothing.
+   */
+  binding?: string;
 }
 
 function loadProgramIn(
   source: string,
   options: LoadOptions,
   stack: string[],
-  budget: Budget
+  linking: Linking
 ): LoadedProgram {
   const { imports, typeDefs, body } = splitProgramHeader(source, parserOptions(options));
-  const resolved = resolveImports(imports, options, stack, budget);
+  const resolved = resolveImports(imports, options, stack, linking);
   return {
     typeDefs: [...resolved.typeDefs, ...typeDefs],
     bindings: resolved.bindings,
@@ -169,7 +211,7 @@ function resolveImports(
   imports: ImportDecl[],
   options: LoadOptions,
   stack: string[],
-  budget: Budget
+  linking: Linking
 ): { typeDefs: TypeBinding[]; bindings: LetBinding[] } {
   const typeDefs: TypeBinding[] = [];
   const bindings: LetBinding[] = [];
@@ -184,51 +226,34 @@ function resolveImports(
     );
   }
 
-  // A module is loaded once and bound once, however many imports name it.
-  const loaded = new Map<string, Module>();
-  const boundAs = new Map<string, string>();
-
   const moduleOf = (decl: ImportDecl): Module => {
     const { id, source } = loader(decl.path, options.file);
-    const already = loaded.get(id);
+    // A module already read is the same module: there is nothing to read again
+    // and nothing to bind again, whoever imported it first.
+    const already = linking.modules.get(id);
     if (already) return already;
-    const module = loadModule(id, source, options, stack, budget);
-    loaded.set(id, module);
+    const module = loadModule(id, source, options, stack, linking);
+    linking.modules.set(id, module);
     return module;
   };
 
-  // The alias form first, so that a module imported both ways is bound under
-  // the name its author chose rather than under one of ours.
   for (const decl of imports) {
-    if (!decl.alias) continue;
     const module = moduleOf(decl);
-    const bound = boundAs.get(module.id);
-    // A second alias for the same module is that one binding under a second name.
-    bindings.push({
-      name: decl.alias,
-      value: bound === undefined ? requireValue(module, decl) : variable(bound),
-    });
-    if (bound === undefined) {
-      boundAs.set(module.id, decl.alias);
-    }
-  }
 
-  for (const decl of imports) {
-    if (decl.alias) continue;
-    const module = moduleOf(decl);
+    if (decl.alias) {
+      bindings.push({ name: refuseModuleName(decl.alias, decl), value: valueOf(module, decl, linking) });
+      continue;
+    }
 
     for (const name of decl.names) {
       if (isTypeName(name)) {
         typeDefs.push({ name, typeExpr: exportedType(module, name, decl) });
         continue;
       }
-      let bound = boundAs.get(module.id);
-      if (bound === undefined) {
-        bound = `_module_${bindings.length}`;
-        boundAs.set(module.id, bound);
-        bindings.push({ name: bound, value: requireValue(module, decl) });
-      }
-      bindings.push({ name, value: memberAccess(variable(bound), name) });
+      bindings.push({
+        name: refuseModuleName(name, decl),
+        value: memberAccess(valueOf(module, decl, linking), name),
+      });
     }
   }
 
@@ -240,16 +265,15 @@ function loadModule(
   source: string,
   options: LoadOptions,
   stack: string[],
-  budget: Budget
+  linking: Linking
 ): Module {
   if (stack.includes(id)) {
     throw new ImportError(`Import cycle: ${[...stack, id].join(' -> ')}`);
   }
-  if (++budget.inlined > MAX_INLINED_MODULES) {
+  if (++linking.read > MAX_MODULES) {
     throw new ImportError(
-      `This program inlines more than ${MAX_INLINED_MODULES} modules, at ${[...stack, id].join(' -> ')}. ` +
-      `A module imported by two others is inlined in both, so a graph that branches at every ` +
-      `level costs far more than it looks.`
+      `This program imports more than ${MAX_MODULES} modules, at ${[...stack, id].join(' -> ')}. ` +
+      `A module counts once however many importers name it, so this is that many distinct files.`
     );
   }
   const maxDepth = options.maxImportDepth ?? DEFAULT_MAX_IMPORT_DEPTH;
@@ -261,7 +285,7 @@ function loadModule(
 
   const nested: LoadOptions = { ...options, file: id };
   try {
-    const program = loadProgramIn(source, nested, [...stack, id], budget);
+    const program = loadProgramIn(source, nested, [...stack, id], linking);
     // A module with no value is never checked by `typeDef`, so its own scope
     // is checked here: a name defined twice is refused wherever it is written.
     assertDistinctNames(program.typeDefs.map((type) => type.name), 'type definition');
@@ -326,13 +350,44 @@ function expandTypeRefs(typeExpr: TypeExpr, scope: Map<string, TypeExpr>): TypeE
   }
 }
 
-function requireValue(module: Module, decl: ImportDecl): Expr {
+/**
+ * A reference to the module's value, binding it at the root on first need.
+ *
+ * The binding is made here rather than when the module was read, so a module
+ * imported for its types alone is not bound at all. Its dependencies were
+ * bound while it was being read, which is before this, so the bindings come
+ * out in dependency order.
+ */
+function valueOf(module: Module, decl: ImportDecl, linking: Linking): Expr {
   if (!module.value) {
     throw new ImportError(
       `'${module.id}' has no expression, so it exports no value, imported from '${decl.path}'`
     );
   }
-  return module.value;
+  if (module.binding === undefined) {
+    module.binding = `${MODULE_BINDING_PREFIX}${linking.bindings.length}`;
+    linking.bindings.push({ name: module.binding, value: module.value });
+  }
+  return variable(module.binding);
+}
+
+/**
+ * A name an import may not bring in.
+ *
+ * An import's bindings sit between the module bindings and the importer's own
+ * expression, and are what carries a reference to a module value, so one of
+ * them taking a module binding's name would redirect the imports written after
+ * it. Nothing else can: a module's expression is scoped under those bindings,
+ * so whatever it binds for itself is invisible to them.
+ */
+function refuseModuleName(name: string, decl: ImportDecl): string {
+  if (MODULE_BINDING_NAME.test(name)) {
+    throw new ImportError(
+      `'${name}' cannot name an import from '${decl.path}': the compiler binds ` +
+      `the modules of a program under '${MODULE_BINDING_PREFIX}<n>'`
+    );
+  }
+  return name;
 }
 
 function parserOptions(options: LoadOptions): ParserOptions {
