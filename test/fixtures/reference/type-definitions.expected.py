@@ -48,6 +48,13 @@
 (lambda _: kAssert((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (x := 5, y := 3, x + y)[-1])[-1] == 8))(None)
 
 
+(lambda _: kAssert((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (x := 5, x * 2)[-1])[-1] == 10))(None)
+(lambda _: kAssert((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (x := 5, (kAssert(x > 0, "guard failed"), x * 2)[-1])[-1])[-1] == 10))(None)
+(lambda _: kAssert((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (x := 5, (kAssert(x > 0, "check failed"), x * 2)[-1])[-1])[-1] == 10))(None)
+(lambda _: kAssert((x := 5, (kAssert(x > 0, "guard failed"), x * 2)[-1])[-1] == 10))(None)
+(lambda _: kAssert((x := 5, (kAssert(x > 0, "check failed"), x * 2)[-1])[-1] == 10))(None)
+
+
 
 (lambda _: kAssert(kEq((_p_Ints := pArray(pInt), Ints := lambda v: pUnwrap(_p_Ints(v, '')), Ints([]))[-1], [])))(None)
 

@@ -46,6 +46,13 @@ assert((let Item = { id: Int }, Items = [Item] in [{ id: '1' }, { id: '2' }] |> 
 # Type binding followed by value binding
 assert((let T = Int, x = 5 in x * 2) == 10)
 assert((let T = Int, x = 5, y = 3 in x + y) == 8)
+# A value binding reached through a type definition ends the same ways as one
+# that is not: a trailing comma, and the guard/check sugar
+assert((let T = Int, x = 5, in x * 2) == 10)
+assert((let T = Int, x = 5, guard x > 0 in x * 2) == 10)
+assert((let T = Int, x = 5, check x > 0 in x * 2) == 10)
+assert((let x = 5, guard x > 0 in x * 2) == 10)
+assert((let x = 5, check x > 0 in x * 2) == 10)
 
 # Sceptic tests: boundary cases and missing type coverage
 # Empty array with typed elements

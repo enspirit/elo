@@ -576,6 +576,16 @@ const CANNOT_START_A_RANGE: ReadonlySet<TokenType> = new Set<TokenType>([
   'CHECK',
 ]);
 
+/**
+ * The tokens that end the bindings of a `let`, and the constraints of a
+ * block `guard`.
+ *
+ * `in` is the ordinary ending. `guard` and `check` are there because of the
+ * sugar: `let x = 1 guard x > 0 in x` ends the bindings without an `in`, and
+ * `guard a check b in x` chains two constraint lists the same way.
+ */
+const LET_BINDING_CLOSERS: readonly TokenType[] = ['IN', 'GUARD', 'CHECK'];
+
 export class Parser {
   private lexer: Lexer;
   private currentToken: Token;
@@ -696,6 +706,46 @@ export class Parser {
   }
 
   /**
+   * Parse a comma-separated list, allowing a trailing comma.
+   *
+   * Every list in the language goes through here, so the trailing comma is one
+   * rule rather than fifteen agreeing checks. It is legal by construction: a
+   * comma is eaten, and then a closer ends the list instead of starting an
+   * element.
+   *
+   * `closers` are the tokens that end the list. An empty list is one that
+   * starts on a closer, so a call needs no separate "is it empty" check.
+   *
+   * `startsItem` makes the comma *optional*, for the one list that allows it —
+   * the properties of a type schema, as in Finitio. Without a comma, a list
+   * continues only on one of those tokens.
+   */
+  private commaSeparated<T>(
+    parse: () => T,
+    closers: readonly TokenType[],
+    startsItem?: readonly TokenType[]
+  ): T[] {
+    const atCloser = () => closers.includes(this.currentToken.type);
+    const items: T[] = [];
+
+    if (atCloser()) return items;
+    items.push(parse());
+
+    for (;;) {
+      if (this.currentToken.type === 'COMMA') {
+        this.eat('COMMA');
+      } else if (startsItem === undefined) {
+        break;
+      }
+      if (atCloser()) break;
+      if (startsItem !== undefined && !startsItem.includes(this.currentToken.type)) break;
+      items.push(parse());
+    }
+
+    return items;
+  }
+
+  /**
    * A primary expression, positioned at the token it starts with.
    *
    * Tagged here rather than at each of the fifteen returns below, and only
@@ -762,20 +812,7 @@ export class Parser {
 
       // Check if this is a function call (uppercase functions like Type selectors)
       if (this.currentToken.type === 'LPAREN') {
-        this.eat('LPAREN');
-        const args: Expr[] = [];
-
-        const tok = this.currentToken as Token;
-        if (tok.type !== 'RPAREN') {
-          args.push(this.expr());
-          while ((this.currentToken as Token).type === 'COMMA') {
-            this.eat('COMMA');
-            args.push(this.expr());
-          }
-        }
-
-        this.eat('RPAREN');
-        return this.at(functionCall(name, args), token);
+        return this.at(functionCall(name, this.argumentList()), token);
       }
 
       throw new Error(
@@ -807,22 +844,7 @@ export class Parser {
           }
         }
 
-        this.eat('LPAREN');
-        const args: Expr[] = [];
-
-        // Parse arguments
-        // After eat(), currentToken changes - use type assertion to tell TypeScript
-        const tok = this.currentToken as Token;
-        if (tok.type !== 'RPAREN') {
-          args.push(this.expr());
-          while ((this.currentToken as Token).type === 'COMMA') {
-            this.eat('COMMA');
-            args.push(this.expr());
-          }
-        }
-
-        this.eat('RPAREN');
-        return this.at(functionCall(name, args), token);
+        return this.at(functionCall(name, this.argumentList()), token);
       }
 
       // Otherwise, it's a variable
@@ -880,6 +902,19 @@ export class Parser {
     throw new Error(`Unexpected token ${token.type} at ${this.formatLocation(token)}`);
   }
 
+  /**
+   * A parenthesised argument list, `(` already in sight: `(a, b, c)`.
+   *
+   * The one spelling of an argument list, for a call on a name, an application
+   * of an expression, and the extra arguments of a `|>`.
+   */
+  private argumentList(): Expr[] {
+    this.eat('LPAREN');
+    const args = this.commaSeparated(() => this.expr(), ['RPAREN']);
+    this.eat('RPAREN');
+    return args;
+  }
+
   private postfix(): Expr {
     let expr = this.primary();
 
@@ -895,18 +930,7 @@ export class Parser {
         expr = this.at(memberAccess(expr, property), nameToken);
       } else {
         // Function application: expr(args)
-        this.eat('LPAREN');
-        const args: Expr[] = [];
-        // After eat(), currentToken changes - use type assertion to tell TypeScript
-        if ((this.currentToken as Token).type !== 'RPAREN') {
-          args.push(this.expr());
-          while ((this.currentToken as Token).type === 'COMMA') {
-            this.eat('COMMA');
-            args.push(this.expr());
-          }
-        }
-        this.eat('RPAREN');
-        expr = apply(expr, args);
+        expr = apply(expr, this.argumentList());
       }
     }
 
@@ -1134,23 +1158,11 @@ export class Parser {
         }
       }
 
-      const args: Expr[] = [node]; // Left side becomes first argument
-
-      // Parentheses are optional - if present, parse additional arguments
-      const tok2 = this.currentToken as Token;
-      if (tok2.type === 'LPAREN') {
-        this.eat('LPAREN');
-
-        // Parse additional arguments
-        if ((this.currentToken as Token).type !== 'RPAREN') {
-          args.push(this.expr());
-          while ((this.currentToken as Token).type === 'COMMA') {
-            this.eat('COMMA');
-            args.push(this.expr());
-          }
-        }
-
-        this.eat('RPAREN');
+      // Left side becomes the first argument. Parentheses are optional, so
+      // `a |> f` and `a |> f()` are the same call.
+      const args: Expr[] = [node];
+      if ((this.currentToken as Token).type === 'LPAREN') {
+        args.push(...this.argumentList());
       }
 
       node = this.at(functionCall(funcName, args), tok);
@@ -1263,129 +1275,74 @@ export class Parser {
   }
 
   /**
-   * Trailing commas are allowed: let x=2, y=3, in x*y
+   * Parse a `let`: its bindings, then its body.
+   *
+   *   let -> 'let' binding (',' binding)* ','? (('guard'|'check') … | 'in' expr)
+   *   binding -> UPPER_IDENTIFIER '=' typeExpr      # a type definition
+   *            | IDENTIFIER '=' pipe                # a value
+   *
+   * Both kinds of binding are read by one list, so both end the same ways: a
+   * trailing comma, the `guard`/`check` sugar, or `in`. They used to be read
+   * by two loops and a third for the case where one followed the other, and
+   * the three did not agree — `let x = 1, guard x > 0 in x` parsed while
+   * `let T = Int, x = 1, guard x > 0 in x` did not.
+   *
+   * A hundred definitions are a hundred names rather than a hundred levels of
+   * nesting, which is why this is a list and not a recursion on the tail.
    */
   private letExpr(): Expr {
     const letToken = this.here();
     this.eat('LET');
 
-    // Check if this is a type definition (uppercase identifier)
-    if (this.currentToken.type === 'UPPER_IDENTIFIER') {
-      return this.typeDefExpr();
-    }
-
+    const typeDefs: TypeBinding[] = [];
     const bindings: LetBinding[] = [];
+    // A type definition may only be written before the value bindings, as it
+    // always could: `let x = 1, T = Int in x` is refused, and refused by the
+    // `eat('IDENTIFIER')` below rather than by a rule of its own.
+    let definingTypes = true;
 
-    // Parse first binding
-    const firstToken = this.here();
-    const firstName = this.currentToken.value;
-    this.eat('IDENTIFIER');
-    this.eat('ASSIGN');
-    // Binding values parsed at pipe level (pipe won't consume 'in'/'guard'/'check' keywords)
-    const firstValue = this.pipe();
-    // The binding is tagged with the position of its name, not of the `let`:
-    // a name bound twice is reported where the second one is written.
-    bindings.push(this.at<LetBinding>({ name: firstName, value: firstValue }, firstToken));
-
-    // Parse additional bindings
-    while (this.currentToken.type === 'COMMA') {
-      this.eat('COMMA');
-      // Allow trailing comma: check if next token ends bindings (IN, GUARD, CHECK)
-      const nextType = (this.currentToken as Token).type;
-      if (nextType === 'IN' || nextType === 'GUARD' || nextType === 'CHECK') break;
+    this.commaSeparated(() => {
+      // A binding is tagged with the position of its name, not of the `let`:
+      // a name bound twice is reported where the second one is written.
       const nameToken = this.here();
       const name = this.currentToken.value;
-      this.eat('IDENTIFIER');
-      this.eat('ASSIGN');
-      const value = this.pipe();
-      bindings.push(this.at<LetBinding>({ name, value }, nameToken));
-    }
 
-    // Check for let...guard or let...check sugar: let x = ... guard/check condition in body
-    if ((this.currentToken as Token).type === 'GUARD') {
-      const inner = this.guardExprParse('guard');
-      return this.built(letToken, () => letExpr(bindings, inner));
-    }
-    if ((this.currentToken as Token).type === 'CHECK') {
-      const inner = this.guardExprParse('check');
-      return this.built(letToken, () => letExpr(bindings, inner));
-    }
-
-    this.eat('IN');
-    const body = this.expr(); // Body can be any expression including nested let
-
-    return this.built(letToken, () => letExpr(bindings, body));
-  }
-
-  /**
-   * Parse a type definition: let Person = { name: String, age: Int } in body
-   * Called after 'let' when we see an UPPER_IDENTIFIER
-   * Supports multiple bindings: let Person = {...}, Persons = [Person] in body
-   * Trailing commas are allowed: let Person = {...}, in body
-   */
-  private typeDefExpr(): Expr {
-    const nameToken = this.here();
-    const definitions: TypeBinding[] = [];
-
-    // Collected in a loop rather than by recursing on the tail: a hundred type
-    // definitions are a hundred names, not a hundred levels of nesting.
-    for (;;) {
-      const defToken = this.here();
-      const name = this.currentToken.value;
-      this.eat('UPPER_IDENTIFIER');
-      this.eat('ASSIGN');
-      definitions.push(this.at<TypeBinding>({ name, typeExpr: this.typeExpr() }, defToken));
-
-      if (this.currentToken.type !== 'COMMA') break;
-      this.eat('COMMA');
-      // Next binding could be another type def or a value binding
-      // Use type assertion since eat() updates currentToken but TS doesn't track this
-      const nextTokenType = this.currentToken.type as TokenType;
-      // Allow trailing comma: check if next token is IN
-      if (nextTokenType === 'IN') break;
-      if (nextTokenType !== 'UPPER_IDENTIFIER') {
-        // Value binding - parse remaining as let bindings
-        const body = this.parseLetBindingsAfterComma();
-        return this.at(this.built(nameToken, () => typeDef(definitions, body)), nameToken);
+      if (definingTypes && this.currentToken.type === 'UPPER_IDENTIFIER') {
+        this.eat('UPPER_IDENTIFIER');
+        this.eat('ASSIGN');
+        typeDefs.push(this.at<TypeBinding>({ name, typeExpr: this.typeExpr() }, nameToken));
+        return;
       }
-    }
 
-    this.eat('IN');
-    const body = this.expr();
-    return this.at(this.built(nameToken, () => typeDef(definitions, body)), nameToken);
-  }
-
-  /**
-   * Parse remaining let bindings after a comma (when mixing type and value bindings)
-   * Returns a LetExpr with the remaining bindings
-   * Trailing commas are allowed
-   */
-  private parseLetBindingsAfterComma(): Expr {
-    const bindings: LetBinding[] = [];
-
-    // Parse first binding after comma
-    const firstName = this.currentToken.value;
-    this.eat('IDENTIFIER');
-    this.eat('ASSIGN');
-    const firstValue = this.pipe();
-    bindings.push({ name: firstName, value: firstValue });
-
-    // Parse additional bindings
-    while (this.currentToken.type === 'COMMA') {
-      this.eat('COMMA');
-      // Allow trailing comma: check if next token is IN
-      if ((this.currentToken as Token).type === 'IN') break;
-      const name = this.currentToken.value;
+      definingTypes = false;
       this.eat('IDENTIFIER');
       this.eat('ASSIGN');
-      const value = this.pipe();
-      bindings.push({ name, value });
+      // Parsed at pipe level, which stops before `in`, `guard` and `check`
+      // rather than swallowing them as part of the value.
+      bindings.push(this.at<LetBinding>({ name, value: this.pipe() }, nameToken));
+    }, LET_BINDING_CLOSERS);
+
+    // `let x = … guard cond in body` is sugar for `let x = … in guard cond in
+    // body`, so the guard becomes the body rather than ending the bindings.
+    let body: Expr;
+    const after = this.currentToken.type as TokenType;
+    if (after === 'GUARD' || after === 'CHECK') {
+      body = this.guardExprParse(after === 'GUARD' ? 'guard' : 'check');
+    } else {
+      this.eat('IN');
+      body = this.expr(); // Any expression, including a nested let
     }
 
-    this.eat('IN');
-    const body = this.expr();
-
-    return letExpr(bindings, body);
+    const valued = bindings.length > 0
+      ? this.built(letToken, () => letExpr(bindings, body))
+      : body;
+    if (typeDefs.length === 0) return valued;
+    // Positioned at the first name defined, which is what a reader told a type
+    // is defined twice looks at.
+    const typeToken = typeDefs[0].loc;
+    const node = this.built(letToken, () => typeDef(typeDefs, valued));
+    if (this.locations && typeToken) node.loc = typeToken;
+    return node;
   }
 
   /**
@@ -1476,17 +1433,7 @@ export class Parser {
     // Expect '|' separator
     this.eat('PIPE');
 
-    // Parse constraints (one or more, comma-separated)
-    const constraints: Constraint[] = [];
-    constraints.push(this.parseConstraint());
-
-    while ((this.currentToken as Token).type === 'COMMA') {
-      this.eat('COMMA');
-      // Allow trailing comma: check if next token closes the constraint
-      if ((this.currentToken as Token).type === 'RPAREN') break;
-      constraints.push(this.parseConstraint());
-    }
-
+    const constraints = this.commaSeparated(() => this.parseConstraint(), ['RPAREN']);
     this.eat('RPAREN');
 
     return subtypeConstraint(baseType, varName, constraints);
@@ -1552,17 +1499,18 @@ export class Parser {
   private typeSchemaExpr(): TypeExpr {
     this.eat('LBRACE');
 
-    const properties: TypeSchemaProperty[] = [];
+    // The comma between two properties is optional, as in Finitio, so a
+    // property list continues on an IDENTIFIER whether or not one was written.
+    const properties = this.commaSeparated(
+      () => this.typeSchemaProperty(),
+      ['RBRACE', 'RANGE_EXCL'],
+      ['IDENTIFIER']
+    );
+
+    // The spread is last, and says what the schema does with the attributes it
+    // does not declare: `...` ignores them, `...: Type` reads them at a type.
     let extras: 'closed' | 'ignored' | TypeExpr | undefined = undefined;
-
-    // Handle empty schema
-    if (this.currentToken.type === 'RBRACE') {
-      this.eat('RBRACE');
-      return typeSchema(properties, extras);
-    }
-
-    // Handle spread only: { ... } or { ...: Type }
-    if (this.currentToken.type === 'RANGE_EXCL') {
+    if ((this.currentToken as Token).type === 'RANGE_EXCL') {
       this.eat('RANGE_EXCL');
       if ((this.currentToken as Token).type === 'COLON') {
         this.eat('COLON');
@@ -1570,54 +1518,20 @@ export class Parser {
       } else {
         extras = 'ignored';
       }
-      this.eat('RBRACE');
-      return typeSchema(properties, extras);
-    }
-
-    // Parse first property
-    const firstName = this.currentToken.value;
-    this.eat('IDENTIFIER');
-    this.eat('COLON');
-    const firstOptional = (this.currentToken as Token).type === 'QUESTION';
-    if (firstOptional) this.eat('QUESTION');
-    const firstType = this.typeExpr();
-    properties.push({ key: firstName, typeExpr: firstType, optional: firstOptional || undefined });
-
-    // Parse additional properties (commas are optional, like Finitio)
-    while (true) {
-      // Consume optional comma
-      if (this.currentToken.type === 'COMMA') {
-        this.eat('COMMA');
-      }
-
-      // Check for spread operator: ... or ...: Type
-      if ((this.currentToken as Token).type === 'RANGE_EXCL') {
-        this.eat('RANGE_EXCL');
-        if ((this.currentToken as Token).type === 'COLON') {
-          this.eat('COLON');
-          extras = this.typeExpr();
-        } else {
-          extras = 'ignored';
-        }
-        break; // spread must be last
-      }
-
-      // Check for another property (identifier starts next property)
-      if ((this.currentToken as Token).type !== 'IDENTIFIER') {
-        break; // no more properties
-      }
-
-      const name = this.currentToken.value;
-      this.eat('IDENTIFIER');
-      this.eat('COLON');
-      const optional = (this.currentToken as Token).type === 'QUESTION';
-      if (optional) this.eat('QUESTION');
-      const propType = this.typeExpr();
-      properties.push({ key: name, typeExpr: propType, optional: optional || undefined });
     }
 
     this.eat('RBRACE');
     return typeSchema(properties, extras);
+  }
+
+  /** One property of a type schema: `name: Type` or `name :? Type`. */
+  private typeSchemaProperty(): TypeSchemaProperty {
+    const key = this.currentToken.value;
+    this.eat('IDENTIFIER');
+    this.eat('COLON');
+    const optional = (this.currentToken as Token).type === 'QUESTION';
+    if (optional) this.eat('QUESTION');
+    return { key, typeExpr: this.typeExpr(), optional: optional || undefined };
   }
 
   private ifExprParse(): Expr {
@@ -1675,17 +1589,7 @@ export class Parser {
     }
     this.eat('PIPE');
 
-    // Parse constraints (one or more, comma-separated) - reuse constraint parsing
-    const constraints: Constraint[] = [];
-    constraints.push(this.parseConstraint());
-
-    while ((this.currentToken as Token).type === 'COMMA') {
-      this.eat('COMMA');
-      // Allow trailing comma: check if next token closes the guard
-      if ((this.currentToken as Token).type === 'RPAREN') break;
-      constraints.push(this.parseConstraint());
-    }
-
+    const constraints = this.commaSeparated(() => this.parseConstraint(), ['RPAREN']);
     this.eat('RPAREN');
 
     // Create a lambda: fn(x ~> guard constraints in x)
@@ -1704,17 +1608,7 @@ export class Parser {
     const keyword = this.here();
     this.eat(guardType === 'guard' ? 'GUARD' : 'CHECK');
 
-    // Parse constraints (one or more, comma-separated)
-    const constraints: Constraint[] = [];
-    constraints.push(this.parseConstraint());
-
-    while ((this.currentToken as Token).type === 'COMMA') {
-      this.eat('COMMA');
-      // Allow trailing comma: check if next token ends constraints (IN, GUARD, CHECK)
-      const nextType = (this.currentToken as Token).type;
-      if (nextType === 'IN' || nextType === 'GUARD' || nextType === 'CHECK') break;
-      constraints.push(this.parseConstraint());
-    }
+    const constraints = this.commaSeparated(() => this.parseConstraint(), LET_BINDING_CLOSERS);
 
     // Check for guard...check sugar
     // guard cond check cond in body
@@ -1742,23 +1636,12 @@ export class Parser {
     this.eat('FN');
     this.eat('LPAREN');
 
-    const params: string[] = [];
-
-    // Check for parameterless lambda: fn( ~> body )
-    if (this.currentToken.type !== 'ARROW') {
-      // Parse first parameter
-      const firstName = this.currentToken.value;
+    // An empty list is a parameterless lambda, `fn( ~> body )`
+    const params = this.commaSeparated(() => {
+      const name = this.currentToken.value;
       this.eat('IDENTIFIER');
-      params.push(firstName);
-
-      // Parse additional parameters
-      while (this.currentToken.type === 'COMMA') {
-        this.eat('COMMA');
-        const name = this.currentToken.value;
-        this.eat('IDENTIFIER');
-        params.push(name);
-      }
-    }
+      return name;
+    }, ['ARROW']);
 
     this.eat('ARROW');
 
@@ -1775,32 +1658,12 @@ export class Parser {
   private objectParse(): Expr {
     this.eat('LBRACE');
 
-    const properties: ObjectProperty[] = [];
-
-    // Handle empty object
-    if (this.currentToken.type === 'RBRACE') {
-      this.eat('RBRACE');
-      return objectLiteral(properties);
-    }
-
-    // Parse first property
-    const firstName = this.currentToken.value;
-    this.eat('IDENTIFIER');
-    this.eat('COLON');
-    const firstValue = this.expr();
-    properties.push({ key: firstName, value: firstValue });
-
-    // Parse additional properties
-    while (this.currentToken.type === 'COMMA') {
-      this.eat('COMMA');
-      // Allow trailing comma: check if next token closes the object
-      if ((this.currentToken as Token).type === 'RBRACE') break;
-      const name = this.currentToken.value;
+    const properties = this.commaSeparated<ObjectProperty>(() => {
+      const key = this.currentToken.value;
       this.eat('IDENTIFIER');
       this.eat('COLON');
-      const value = this.expr();
-      properties.push({ key: name, value });
-    }
+      return { key, value: this.expr() };
+    }, ['RBRACE']);
 
     this.eat('RBRACE');
     return objectLiteral(properties);
@@ -1812,26 +1675,7 @@ export class Parser {
    */
   private arrayParse(): Expr {
     this.eat('LBRACKET');
-
-    const elements: Expr[] = [];
-
-    // Handle empty array
-    if (this.currentToken.type === 'RBRACKET') {
-      this.eat('RBRACKET');
-      return arrayLiteral(elements);
-    }
-
-    // Parse first element
-    elements.push(this.expr());
-
-    // Parse additional elements
-    while (this.currentToken.type === 'COMMA') {
-      this.eat('COMMA');
-      // Allow trailing comma: check if next token closes the array
-      if ((this.currentToken as Token).type === 'RBRACKET') break;
-      elements.push(this.expr());
-    }
-
+    const elements = this.commaSeparated(() => this.expr(), ['RBRACKET']);
     this.eat('RBRACKET');
     return arrayLiteral(elements);
   }
@@ -2026,22 +1870,16 @@ export class Parser {
     }
     this.eat('LBRACE');
 
-    const names: string[] = [];
-    while ((this.currentToken as Token).type !== 'RBRACE') {
+    const names = this.commaSeparated(() => {
       const token = this.currentToken as Token;
       if (token.type !== 'IDENTIFIER' && token.type !== 'UPPER_IDENTIFIER') {
         throw new Error(
           `Expected a name to import but got ${token.type} at ${this.formatLocation(token)}`
         );
       }
-      names.push(token.value);
       this.eat(token.type);
-      if ((this.currentToken as Token).type === 'COMMA') {
-        this.eat('COMMA');
-      } else {
-        break;
-      }
-    }
+      return token.value;
+    }, ['RBRACE']);
     this.eat('RBRACE');
 
     if (names.length === 0) {
