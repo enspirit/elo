@@ -3,7 +3,7 @@ import { IRExpr, IRCall, inferType, usesInput } from '../ir';
 import { transform } from '../transform';
 import { Types, TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
-import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE, pgTypeOf, jsonFieldPgType } from '../bindings/sql';
+import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE, pgTypeOf, jsonFieldPgType, jsonPath } from '../bindings/sql';
 import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
@@ -192,25 +192,32 @@ function emitSQL(ir: IRExpr): string {
       return assertSafeIdentifier(ir.name, 'variable name');
 
     case 'member_access': {
-      const object = emitSQL(ir.object);
-      const objectType = inferType(ir.object);
-      const needsParensForMember = ir.object.type === 'call' && isNativeBinaryOp(ir.object);
-      const objectExpr = needsParensForMember ? `(${object})` : object;
       const prop = assertSafeIdentifier(ir.property, 'member_access property');
+      const resolved = jsonPath(ir);
 
-      // Use JSON access for object types
-      if (objectType.kind === 'object') {
-        const read = `${objectExpr}->>'${prop}'`;
-        // `->>` is text whatever the field holds. When the type checker told
-        // us what it holds (`--optimize`), say so here and the value composes
-        // like any other; otherwise it stays text and the operation using it
-        // supplies the type — see readsJsonField.
+      if (resolved) {
+        const root = emitSQL(resolved.root);
+        const rootExpr = isNativeBinaryOp(resolved.root) ? `(${root})` : root;
+        const keys = resolved.path.map(
+          key => `'${assertSafeIdentifier(key, 'member_access property')}'`
+        );
+        // One key is `->>`; a path needs `#>>`, because `jsonb->>'user'` is
+        // *text* and reading `.name` off that is not a json operation at all.
+        const read = keys.length === 1
+          ? `${rootExpr}->>${keys[0]}`
+          : `${rootExpr} #>> ARRAY[${keys.join(', ')}]`;
+        // Either way the read is text whatever the field holds. When the type
+        // checker told us what it holds (`--optimize`), say so here and the
+        // value composes like any other; otherwise it stays text and the
+        // operation using it supplies the type — see readsJsonField.
         const pg = jsonFieldPgType(ir.inferredType);
         return pg ? `(${read})::${pg}` : read;
       }
 
       // The input is a *row* on SQL, not a document: `_.person.age` is a field
       // reference, which is what a host passing a record expects.
+      const object = emitSQL(ir.object);
+      const objectExpr = isNativeBinaryOp(ir.object) ? `(${object})` : object;
       return `${objectExpr}.${prop}`;
     }
 

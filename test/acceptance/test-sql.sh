@@ -76,11 +76,6 @@ KNOWN_INVALID=(
     # 0187 - a list whose elements have different types has no homogeneous
     # PostgreSQL array: ARRAY types integer and boolean cannot be matched
     "reference/arrays"
-    # 0184 - a jsonb result compared against an Elo literal: invalid input syntax
-    # for type json, jsonb = integer[], could not determine polymorphic type
-    "reference/datapath"
-    "stdlib/data/patch"
-    "stdlib/data/selector"
     # 0185 - PostgreSQL has no nested arrays, so `flat` unnests a scalar:
     # function unnest(integer) does not exist
     "stdlib/list/transform/flat"

@@ -1,0 +1,32 @@
+# A value taken out of data, compared against a literal of each Elo type.
+#
+# Everything in Elo's data family is `jsonb` on PostgreSQL, and jsonb only
+# compares against jsonb. `fetch(d, .name) = 'Alice'` made PostgreSQL read
+# 'Alice' *as json*, where a bare word is not valid json — so the error was
+# about the literal rather than about the types, which is the worst kind. The
+# corpus only ever compared a fetched String, on the one path that worked.
+
+assert(fetch({v: 'x'}, .v) == 'x')
+assert(fetch({v: 'x'}, .v) != 'y')
+assert(fetch({v: 42}, .v) == 42)
+assert(fetch({v: 42}, .v) != 43)
+assert(fetch({v: 1.5}, .v) == 1.5)
+assert(fetch({v: true}, .v) == true)
+assert(fetch({v: false}, .v) == false)
+assert(fetch({v: [1, 2]}, .v) == [1, 2])
+assert(fetch({v: {a: 1}}, .v) == {a: 1})
+assert(fetch({v: D2024-01-15}, .v) == D2024-01-15)
+
+# A nested path, which is where the chain matters: `jsonb->>'a'` is text, and
+# reading `.b` off that is not a json operation at all
+assert(fetch({a: {b: 7}}, .a.b) == 7)
+assert(fetch({a: {b: {c: 'deep'}}}, .a.b.c) == 'deep')
+
+# The same values reached by member access rather than by fetch
+assert({v: 42}.v == 42)
+assert(Data('{"v": 42}').v == 42)
+assert(Data('{"v": "x"}').v == 'x')
+assert(Data('{"v": true}').v == true)
+assert(Data('{"v": 1.5}').v == 1.5)
+assert(Data('{"a": {"b": 7}}').a.b == 7)
+assert(Data('{"a": {"b": {"c": "deep"}}}').a.b.c == 'deep')

@@ -96,6 +96,75 @@ function aggregatedArray(ir: IRExpr, aggregate: string, input: string): string {
 }
 
 /**
+ * The calls whose SQL emission is a `jsonb` value.
+ *
+ * SQL has two data models in play and Elo's `Object`/`Any` cannot tell them
+ * apart. The input `_` is a **row**: `_.person.age` is a field reference, which
+ * is what a host passing a record expects. Everything in Elo's data family is
+ * **jsonb**, where a field is read with `->>` and a value only compares against
+ * another jsonb. So the compiler tracks it from the expression's shape.
+ */
+const JSONB_CALLS: ReadonlySet<string> = new Set([
+  'fetch', 'patch', 'merge', 'deepMerge',
+]);
+
+/** Whether an emitted expression is a `jsonb` value. */
+export function isJsonb(ir: IRExpr): boolean {
+  switch (ir.type) {
+    case 'object_literal':
+      return true;
+    case 'call':
+      if (JSONB_CALLS.has(ir.fn)) return true;
+      // `Data` passes a list and an object literal straight through and wraps
+      // everything else in elo_data, so only the list case is not jsonb.
+      if (ir.fn === 'Data') return ir.argTypes[0]?.kind !== 'array';
+      return false;
+    case 'let':
+    case 'typedef':
+    case 'guard':
+      return isJsonb(ir.body);
+    case 'if':
+      return isJsonb(ir.then);
+    default:
+      return false;
+  }
+}
+
+/**
+ * A member read resolved against the json document it reads from: the
+ * expression holding the document, and the keys down to the value.
+ *
+ * `null` when the object is not a document, which is how `_.person.age` keeps
+ * compiling to a row field reference. A chain is resolved in one go because
+ * `jsonb->>'user'` is *text*, and reading `.name` off that is not a json
+ * operation at all — the whole path has to go through `#>>` instead.
+ */
+export function jsonPath(ir: IRExpr): { root: IRExpr; path: string[] } | null {
+  if (ir.type !== 'member_access') return null;
+  const inner = jsonPath(ir.object);
+  if (inner) return { root: inner.root, path: [...inner.path, ir.property] };
+  if (isJsonb(ir.object) || inferType(ir.object).kind === 'object') {
+    return { root: ir.object, path: [ir.property] };
+  }
+  return null;
+}
+
+/**
+ * `to_jsonb(x)`, with the cast PostgreSQL needs to resolve it.
+ *
+ * `to_jsonb` is polymorphic and a bare literal is `unknown`, so
+ * `to_jsonb('Alice')` does not resolve at all. The Elo type names the overload
+ * it wants. An array constructor already carries its type, and a value that is
+ * jsonb already needs nothing.
+ */
+export function toJsonb(ir: IRExpr, ctx: EmitContext<string>): string {
+  if (isJsonb(ir)) return ctx.emit(ir);
+  const pg = PG_TYPE[inferType(ir).kind];
+  const emitted = ctx.emit(ir);
+  return pg ? `to_jsonb(${emitted}::${pg})` : `to_jsonb(${emitted})`;
+}
+
+/**
  * Whether an expression is a field read off `jsonb`.
  *
  * Elo's `Object` is `jsonb` on PostgreSQL, and `jsonb->>'k'` is **text**
@@ -112,7 +181,7 @@ export function readsJsonField(ir: IRExpr): boolean {
     case 'member_access':
       // A read whose type the checker supplied is already cast, so it needs
       // nothing from its context.
-      return inferType(ir.object).kind === 'object' && ir.inferredType.kind === 'any';
+      return jsonPath(ir) !== null && ir.inferredType.kind === 'any';
     case 'let':
     case 'typedef':
     case 'guard':
@@ -239,6 +308,11 @@ function operandOf(
   side: 'left' | 'right',
   ctx: EmitContext<string>
 ): string {
+  // A jsonb value only compares against another jsonb: `fetch(d, .name) =
+  // 'Alice'` makes PostgreSQL read 'Alice' *as json*, where a bare word is not
+  // valid json, so the error is about the literal rather than the types.
+  if (isJsonb(sibling) && !isJsonb(ir)) return toJsonb(ir, ctx);
+
   const emitted = ctx.emitWithParens(ir, op, side);
   if (!readsJsonField(ir)) return emitted;
   const demand = demandedPgType(sibling, op);
@@ -638,7 +712,7 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
     const path = ctx.emit(args[1]);
     const value = ctx.emit(args[2]);
     // Use the elo_patch function which handles path creation
-    return `elo_patch((${data})::jsonb, (${path})::text[], to_jsonb(${value}))`;
+    return `elo_patch((${data})::jsonb, (${path})::text[], ${toJsonb(args[2], ctx)})`;
   });
 
   // Data merge functions
