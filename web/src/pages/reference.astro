@@ -1038,6 +1038,39 @@ import &#123; DateTime, Duration &#125; from 'luxon';
 
 const double = compile('_ * 2', &#123; runtime: &#123; DateTime, Duration &#125; &#125;);
 double(21); // => 42</pre>
+        <h3>When a call fails</h3>
+        <p>
+          A value Elo refuses raises an <code>EloFailure</code> — an ordinary
+          <code>Error</code> that also says <strong>what kind</strong> of thing
+          failed, so you do not have to read that back out of the message.
+        </p>
+        <pre class="language-js">import type &#123; EloFailure &#125; from '@enspirit/elo';
+
+try &#123;
+  compile("Pos = Int(i | positive: i &gt; 0)\nRec = &#123; a: Pos &#125;\n_ |&gt; Rec")(input);
+&#125; catch (error) &#123;
+  const failure = error as EloFailure;
+  failure.kind;   // 'schema' | 'missing' | 'constraint' | 'guard' | 'check'
+  failure.path;   // '.a' — where in the input, for the schema kinds
+  failure.label;  // 'positive' — the constraint, guard or check that named it
+&#125;</pre>
+        <table class="type-table">
+          <thead><tr><th>Input</th><th>kind</th><th>message</th></tr></thead>
+          <tbody>
+            <tr><td><code>&#123;"a":"x"&#125;</code></td><td><code>schema</code></td><td><code>.a: expected Int, got "x"</code></td></tr>
+            <tr><td><code>&#123;&#125;</code></td><td><code>missing</code></td><td><code>.a: expected Int, got undefined</code></td></tr>
+            <tr><td><code>&#123;"a":0&#125;</code></td><td><code>constraint</code></td><td><code>.a: constraint 'positive' failed</code></td></tr>
+            <tr><td><code>&#123;"a":1,"b":2&#125;</code></td><td><code>schema</code></td><td><code>.b: unexpected attribute</code></td></tr>
+          </tbody>
+        </table>
+        <p class="note">
+          <code>kind</code> and <code>label</code> come from the construct that
+          refused the value, so they are stable. <code>message</code> is for a
+          human and its wording is not: reading a category out of it is how
+          rewording a diagnostic silently breaks a host. Ruby and Python raise
+          their own errors from their own preludes, and do not carry these
+          fields yet.
+        </p>
         <h3>Lower-Level API</h3>
         <pre class="language-js">import &#123; parse, compileToJavaScript, compileToRuby, compileToPython, compileToSQL &#125; from '@enspirit/elo';
 

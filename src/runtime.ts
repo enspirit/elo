@@ -34,6 +34,33 @@ export const MAX_STRING_LENGTH: number = (() => {
 })();
 
 /**
+ * The error compiled JavaScript raises when a value is refused.
+ *
+ * `message` is for a human, and nothing promises its wording: a diagnostic
+ * worth rewording would otherwise be a breaking change for every host that
+ * read a category out of it. The other fields are the host's, and say what the
+ * message says in prose.
+ */
+export interface EloFailure extends Error {
+  /** Which construct refused the value. */
+  kind:
+    /** A value arrived and did not fit the type. */
+    | 'schema'
+    /** No value arrived at all — an attribute that is not there. */
+    | 'missing'
+    /** A subtype constraint did not hold. */
+    | 'constraint'
+    /** A `guard` did not hold. */
+    | 'guard'
+    /** A `check` did not hold. */
+    | 'check';
+  /** Where in the input, as a dotted path. Set for `schema` and `missing`. */
+  path?: string;
+  /** The name the constraint, guard or check was written under, if it had one. */
+  label?: string;
+}
+
+/**
  * Dependencies between helpers. If helper A uses helper B, A depends on B.
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
@@ -48,14 +75,15 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   // Parser helpers depend on pOk/pFail
   pAny: ['pOk'],
   pNull: ['pOk', 'pFail'],
-  pString: ['pOk', 'pFail'],
-  pInt: ['pOk', 'pFail'],
-  pBool: ['pOk', 'pFail'],
-  pDatetime: ['pOk', 'pFail'],
-  pFloat: ['pOk', 'pFail'],
-  pDate: ['pOk', 'pFail'],
-  pDuration: ['pOk', 'pFail'],
+  pString: ['pOk', 'pMiss'],
+  pInt: ['pOk', 'pMiss'],
+  pBool: ['pOk', 'pMiss'],
+  pDatetime: ['pOk', 'pMiss'],
+  pFloat: ['pOk', 'pMiss'],
+  pDate: ['pOk', 'pMiss'],
+  pDuration: ['pOk', 'pMiss'],
   pData: ['pOk', 'pFail'],
+  pMiss: ['pFail'],
 };
 
 export const JS_HELPERS: Record<string, string> = {
@@ -261,9 +289,18 @@ export const JS_HELPERS: Record<string, string> = {
   return s >= e ? Interval.fromDateTimes(s, s) : Interval.fromDateTimes(s, e);
 }`,
 
-  // Parser helpers - return Result: { success: boolean, path: string, message: string, value: any, cause: Result[] }
+  // Parser helpers - return Result: { success, path, message, value, cause, kind, label }
+  //
+  // `kind` and `label` are what a host branches on, and say what the message
+  // says in prose: a value refused ('schema'), a value that never arrived
+  // ('missing'), or a named constraint that did not hold ('constraint', with
+  // its label). They are set by the site that fails, so rewording a message
+  // leaves them alone.
   pOk: `function pOk(v, p) { return { success: true, path: p, message: '', value: v, cause: [] }; }`,
-  pFail: `function pFail(p, m, c) { return { success: false, path: p, message: m || '', value: null, cause: c || [] }; }`,
+  pFail: `function pFail(p, m, c, k, l) { return { success: false, path: p, message: m || '', value: null, cause: c || [], kind: k || 'schema', label: l }; }`,
+  // A type mismatch, where nothing arriving at all is its own kind of event:
+  // `undefined` is an absent attribute, as against a null that was written.
+  pMiss: `function pMiss(p, m, v) { return pFail(p, m, [], v === undefined ? 'missing' : 'schema'); }`,
   pAny: `function pAny(v, p) { return pOk(v, p); }`,
   pNull: `function pNull(v, p) {
   if (v === null || v === undefined) return pOk(null, p);
@@ -271,48 +308,62 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   pString: `function pString(v, p) {
   if (typeof v === 'string') return pOk(v, p);
-  return pFail(p, 'expected String, got ' + (v === null ? 'Null' : typeof v));
+  return pMiss(p, 'expected String, got ' + (v === null ? 'Null' : typeof v), v);
 }`,
   pInt: `function pInt(v, p) {
   if (typeof v === 'number' && Number.isInteger(v)) return pOk(v, p);
   if (typeof v === 'string') { const n = parseInt(v, 10); if (!isNaN(n)) return pOk(n, p); }
-  return pFail(p, 'expected Int, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
+  return pMiss(p, 'expected Int, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
 }`,
   pBool: `function pBool(v, p) {
   if (typeof v === 'boolean') return pOk(v, p);
   if (v === 'true') return pOk(true, p);
   if (v === 'false') return pOk(false, p);
-  return pFail(p, 'expected Bool, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
+  return pMiss(p, 'expected Bool, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
 }`,
   pDatetime: `function pDatetime(v, p) {
   if (DateTime.isDateTime(v)) return pOk(v, p);
   if (typeof v === 'string') { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d, p); }
-  return pFail(p, 'expected Datetime, got ' + (v === null ? 'Null' : typeof v === 'string' ? 'invalid datetime ' + JSON.stringify(v) : typeof v));
+  return pMiss(p, 'expected Datetime, got ' + (v === null ? 'Null' : typeof v === 'string' ? 'invalid datetime ' + JSON.stringify(v) : typeof v), v);
 }`,
   pFloat: `function pFloat(v, p) {
   if (typeof v === 'number') return pOk(v, p);
   if (typeof v === 'string') { const n = parseFloat(v); if (!isNaN(n)) return pOk(n, p); }
-  return pFail(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
+  return pMiss(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
 }`,
   pDate: `function pDate(v, p) {
   if (DateTime.isDateTime(v)) return pOk(v.startOf('day'), p);
   if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d.startOf('day'), p); }
-  return pFail(p, 'expected Date (YYYY-MM-DD), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
+  return pMiss(p, 'expected Date (YYYY-MM-DD), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
 }`,
   pDuration: `function pDuration(v, p) {
   if (Duration.isDuration(v)) return pOk(v, p);
   if (typeof v === 'string') { const d = Duration.fromISO(v); if (d.isValid) return pOk(d, p); }
-  return pFail(p, 'expected Duration (ISO 8601), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
+  return pMiss(p, 'expected Duration (ISO 8601), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
 }`,
   pData: `function pData(v, p) {
   if (typeof v === 'string') { try { return pOk(JSON.parse(v), p); } catch { return pFail(p, 'invalid JSON: ' + JSON.stringify(v)); } }
   return pOk(v, p);
 }`,
+  // The message is for a human and is not promised to anyone; `kind`, `path`
+  // and `label` are the host's, and carry what it used to read out of the prose.
   pUnwrap: `function pUnwrap(r) {
   if (r.success) return r.value;
   function findError(e) { if (e.message) return e; if (e.cause && e.cause[0]) return findError(e.cause[0]); return e; }
   const err = findError(r);
-  throw new Error((err.path || '.') + ': ' + (err.message || 'type error'));
+  const e = new Error((err.path || '.') + ': ' + (err.message || 'type error'));
+  e.kind = err.kind || 'schema';
+  e.path = err.path || '.';
+  if (err.label) e.label = err.label;
+  throw e;
+}`,
+  // A guard or a check: no path, since it is about the expression it guards
+  // rather than about a place in the input.
+  pRaise: `function pRaise(k, l, m) {
+  const e = new Error(m);
+  e.kind = k;
+  if (l) e.label = l;
+  throw e;
 }`,
 };
 

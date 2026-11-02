@@ -486,6 +486,38 @@ inThisWeek(DateTime.now()); // => true or false
 
 The `runtime` option injects dependencies (like `DateTime` and `Duration` from luxon) into the compiled function. This avoids global variables and keeps the compiled code portable.
 
+### When a call fails
+
+A value Elo refuses raises an `EloFailure` — an ordinary `Error` that also says
+**what kind** of thing failed, so a host does not have to read that back out of
+the message:
+
+```typescript
+import type { EloFailure } from '@enspirit/elo';
+
+try {
+  compile('Pos = Int(i | positive: i > 0)\nRec = { a: Pos }\n_ |> Rec')(input);
+} catch (error) {
+  const failure = error as EloFailure;
+  failure.kind;   // 'schema' | 'missing' | 'constraint' | 'guard' | 'check'
+  failure.path;   // '.a' — where in the input, for the schema kinds
+  failure.label;  // 'positive' — the constraint, guard or check that named it
+}
+```
+
+| Input | `kind` | `message` |
+| --- | --- | --- |
+| `{"a":"x"}` | `schema` | `.a: expected Int, got "x"` |
+| `{}` | `missing` | `.a: expected Int, got undefined` |
+| `{"a":0}` | `constraint` | `.a: constraint 'positive' failed` |
+| `{"a":1,"b":2}` | `schema` | `.b: unexpected attribute` |
+
+`kind` and `label` come from the construct that refused the value, so they are
+stable. `message` is for a human and its wording is not: reading a category out
+of it is how rewording a diagnostic silently breaks a host. Ruby and Python
+raise their own errors from their own preludes, and do not carry these fields
+yet.
+
 ## Data Format Adapters
 
 The CLI and playground support multiple input/output formats (JSON, CSV). The format system is pluggable—you can provide custom adapters using libraries like PapaParse or SheetJS. See `src/formats.ts` for the `FormatAdapter` interface and built-in implementations.

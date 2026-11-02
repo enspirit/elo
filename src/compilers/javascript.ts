@@ -321,13 +321,17 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
       if (options?.stripGuards) {
         return body;
       }
-      // Generate guard checks that throw on failure
+      // Generate guard checks that throw on failure. The error says which kind
+      // of assertion it was and what it was called, so a host does not have to
+      // read that back out of the message.
+      ctx.requireHelper?.('pRaise');
       const guardChecks = ir.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
           : `${ir.guardType} failed`;
-        return `if (!(${conditionCode})) throw new Error(${JSON.stringify(errorMsg)});`;
+        const label = c.label ? JSON.stringify(c.label) : 'null';
+        return `if (!(${conditionCode})) pRaise(${JSON.stringify(ir.guardType)}, ${label}, ${JSON.stringify(errorMsg)});`;
       }).join(' ');
       return `(() => { ${guardChecks} return ${body}; })()`;
     }
@@ -407,7 +411,8 @@ function emitTypeExprParser(
         extrasCheck = `const _ks = ${knownKeysSet}; const _ep = ${extrasParser}; for (const _k in v) { if (!_ks.includes(_k)) { const _re = _ep(v[_k], p + '.' + _k); if (!_re.success) return pFail(p, null, [_re]); _o[_k] = _re.value; } }`;
       }
 
-      return `(v, p) => { if (typeof v !== 'object' || v === null) return pFail(p, 'expected object, got ' + (v === null ? 'Null' : typeof v)); const _o = {}; ${propChecks} ${extrasCheck} return pOk(_o, p); }`;
+      ctx.requireHelper?.('pMiss');
+      return `(v, p) => { if (typeof v !== 'object' || v === null) return pMiss(p, 'expected object, got ' + (v === null ? 'Null' : typeof v), v); const _o = {}; ${propChecks} ${extrasCheck} return pOk(_o, p); }`;
     }
 
     case 'subtype_constraint': {
@@ -418,13 +423,15 @@ function emitTypeExprParser(
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
-      // Generate constraint checks
+      // Generate constraint checks. A constraint is its own kind of failure,
+      // and carries the label it was written under.
       const constraintChecks = typeExpr.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `constraint '${c.label}' failed`)
           : 'constraint failed';
-        return `if (!(${conditionCode})) return pFail(p, ${JSON.stringify(errorMsg)});`;
+        const label = c.label ? JSON.stringify(c.label) : 'null';
+        return `if (!(${conditionCode})) return pFail(p, ${JSON.stringify(errorMsg)}, [], 'constraint', ${label});`;
       }).join(' ');
 
       return `(v, p) => { const _r = ${baseParser}(v, p); if (!_r.success) return _r; const ${varName} = _r.value; ${constraintChecks} return _r; }`;
@@ -438,7 +445,8 @@ function emitTypeExprParser(
       const elemParser = emitTypeExprParser(typeExpr.elementType, ctx);
 
       // Store element parser in variable to handle inline functions (like object schemas)
-      return `(v, p) => { if (!Array.isArray(v)) return pFail(p, 'expected array, got ' + (v === null ? 'Null' : typeof v)); const _el = ${elemParser}; const _a = []; for (let _i = 0; _i < v.length; _i++) { const _r = _el(v[_i], p + '.' + _i); if (!_r.success) return pFail(p, null, [_r]); _a.push(_r.value); } return pOk(_a, p); }`;
+      ctx.requireHelper?.('pMiss');
+      return `(v, p) => { if (!Array.isArray(v)) return pMiss(p, 'expected array, got ' + (v === null ? 'Null' : typeof v), v); const _el = ${elemParser}; const _a = []; for (let _i = 0; _i < v.length; _i++) { const _r = _el(v[_i], p + '.' + _i); if (!_r.success) return pFail(p, null, [_r]); _a.push(_r.value); } return pOk(_a, p); }`;
     }
 
     case 'union_type': {
