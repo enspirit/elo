@@ -1,4 +1,4 @@
-import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr, TypeBinding, withTypeDefs, ImportDecl, Located, locate, SourceLocation, formatSourceLocation } from './ast';
+import { BinaryOp, Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr, TypeBinding, withTypeDefs, ImportDecl, Located, locate, SourceLocation, formatSourceLocation } from './ast';
 
 /**
  * Token types
@@ -500,10 +500,9 @@ class Lexer {
  *   alternative -> equality ('|' equality)*     // alternative/fallback operator
  *   equality    -> comparison (('==' | '!=') comparison)*
  *   comparison  -> addition (('<' | '>' | '<=' | '>=') addition)*
- *   addition    -> term (('+' | '-') term)*
- *   term        -> factor (('*' | '/' | '%') factor)*
- *   factor      -> power
- *   power       -> unary ('^' unary)*
+ *   addition    -> factor (('+' | '-') factor)*
+ *   factor      -> power (('*' | '/' | '%') power)*
+ *   power       -> unary ('^' power)?           // right-assoc
  *   unary       -> ('!' | '-' | '+') unary | primary
  *   primary     -> NUMBER | BOOLEAN | DATE | DATETIME | DURATION
  *                | IDENTIFIER '(' (expr (',' expr)*)? ')'  // function call
@@ -585,6 +584,40 @@ const CANNOT_START_A_RANGE: ReadonlySet<TokenType> = new Set<TokenType>([
  * `guard a check b in x` chains two constraint lists the same way.
  */
 const LET_BINDING_CLOSERS: readonly TokenType[] = ['IN', 'GUARD', 'CHECK'];
+
+/**
+ * The operators of one level of the precedence ladder, keyed on the token that
+ * spells each one.
+ */
+type BinaryOps = Readonly<Partial<Record<TokenType, BinaryOp['operator']>>>;
+
+/**
+ * The precedence ladder, loosest first. Each of these is one left-associative
+ * level — `binaryLevel` reads any of them, so adding an operator to Elo is one
+ * entry here rather than a function wedged between two others.
+ *
+ * Three rungs are not of this shape and stay functions of their own, at the
+ * precedence the chain below gives them: `alternative` (`a | b | c` is one
+ * n-ary node, between AND and EQUALITY), `comparison` (the range membership
+ * `in` comes before its operators) and `power` (right-associative, between
+ * FACTOR and unary).
+ *
+ *   logical_or  OR_OPS
+ *   logical_and AND_OPS
+ *   alternative '|'
+ *   equality    EQUALITY_OPS
+ *   comparison  'in' range, then COMPARISON_OPS
+ *   addition    ADDITION_OPS
+ *   factor      FACTOR_OPS
+ *   power       '^', right-associative
+ *   unary       '!' '-' '+'
+ */
+const OR_OPS: BinaryOps = { OR: '||' };
+const AND_OPS: BinaryOps = { AND: '&&' };
+const EQUALITY_OPS: BinaryOps = { EQ: '==', NEQ: '!=' };
+const COMPARISON_OPS: BinaryOps = { LT: '<', GT: '>', LTE: '<=', GTE: '>=' };
+const ADDITION_OPS: BinaryOps = { PLUS: '+', MINUS: '-' };
+const FACTOR_OPS: BinaryOps = { STAR: '*', SLASH: '/', PERCENT: '%' };
 
 export class Parser {
   private lexer: Lexer;
@@ -973,153 +1006,87 @@ export class Parser {
     return node;
   }
 
-  private factor(): Expr {
-    let node = this.power();
+  /**
+   * One left-associative level of the precedence ladder: the operators of this
+   * level, over whatever the level below it parses.
+   *
+   * The operator token locates the node, which is where a reader looks when
+   * told the operand types are wrong.
+   */
+  private binaryLevel(ops: BinaryOps, below: () => Expr): Expr {
+    return this.binaryLevelFrom(below(), ops, below);
+  }
 
-    while (['STAR', 'SLASH', 'PERCENT'].includes(this.currentToken.type)) {
+  /**
+   * The same, with the left operand already parsed — for `comparison`, which
+   * has to look at what follows its left operand before it knows whether it is
+   * reading a comparison or a range membership.
+   */
+  private binaryLevelFrom(left: Expr, ops: BinaryOps, below: () => Expr): Expr {
+    let node = left;
+
+    for (;;) {
+      const operator = ops[this.currentToken.type];
+      if (operator === undefined) break;
       const token = this.currentToken;
-
-      if (token.type === 'STAR') {
-        this.eat('STAR');
-        node = this.at(binary('*', node, this.power()), token);
-      } else if (token.type === 'SLASH') {
-        this.eat('SLASH');
-        node = this.at(binary('/', node, this.power()), token);
-      } else if (token.type === 'PERCENT') {
-        this.eat('PERCENT');
-        node = this.at(binary('%', node, this.power()), token);
-      }
+      this.eat(token.type);
+      node = this.at(binary(operator, node, below()), token);
     }
 
     return node;
   }
 
-  private term(): Expr {
-    return this.factor();
+  private factor(): Expr {
+    return this.binaryLevel(FACTOR_OPS, () => this.power());
   }
 
   private addition(): Expr {
-    let node = this.term();
-
-    while (['PLUS', 'MINUS'].includes(this.currentToken.type)) {
-      const token = this.currentToken;
-
-      if (token.type === 'PLUS') {
-        this.eat('PLUS');
-        node = this.at(binary('+', node, this.term()), token);
-      } else if (token.type === 'MINUS') {
-        this.eat('MINUS');
-        node = this.at(binary('-', node, this.term()), token);
-      }
-    }
-
-    return node;
+    return this.binaryLevel(ADDITION_OPS, () => this.factor());
   }
 
   private comparison(): Expr {
-    let node = this.addition();
+    const node = this.addition();
 
-    // Handle range membership: expr in expr..expr or expr in expr...expr
-    // Also handles: expr not in expr..expr (negated range membership)
-    // Use speculative parsing - if no range operator found after IN, restore state
-    if (this.currentToken.type === 'IN') {
-      const result = this.tryParseRangeMembership(node, false);
-      if (result !== null) {
-        return result;
-      }
-      // Not a range expression, continue with normal parsing
+    // Range membership: `expr in a..b`, and `expr not in a..b`. Told from the
+    // `in` of a let/guard by speculatively parsing a range; see
+    // tryParseRangeMembership, which returns null when this is not one.
+    if (this.currentToken.type === 'IN' || this.currentToken.type === 'NOT') {
+      const negated = this.currentToken.type === 'NOT';
+      const range = this.tryParseRangeMembership(node, negated);
+      if (range !== null) return range;
     }
 
-    // Handle "not in" for negated range membership
-    if (this.currentToken.type === 'NOT') {
-      const result = this.tryParseRangeMembership(node, true);
-      if (result !== null) {
-        return result;
-      }
-      // Not a range expression, continue with normal parsing
-    }
-
-    while (['LT', 'GT', 'LTE', 'GTE'].includes(this.currentToken.type)) {
-      const token = this.currentToken;
-
-      if (token.type === 'LT') {
-        this.eat('LT');
-        node = this.at(binary('<', node, this.addition()), token);
-      } else if (token.type === 'GT') {
-        this.eat('GT');
-        node = this.at(binary('>', node, this.addition()), token);
-      } else if (token.type === 'LTE') {
-        this.eat('LTE');
-        node = this.at(binary('<=', node, this.addition()), token);
-      } else if (token.type === 'GTE') {
-        this.eat('GTE');
-        node = this.at(binary('>=', node, this.addition()), token);
-      }
-    }
-
-    return node;
+    return this.binaryLevelFrom(node, COMPARISON_OPS, () => this.addition());
   }
 
   private equality(): Expr {
-    let node = this.comparison();
-
-    while (['EQ', 'NEQ'].includes(this.currentToken.type)) {
-      const token = this.currentToken;
-
-      if (token.type === 'EQ') {
-        this.eat('EQ');
-        node = this.at(binary('==', node, this.comparison()), token);
-      } else if (token.type === 'NEQ') {
-        this.eat('NEQ');
-        node = this.at(binary('!=', node, this.comparison()), token);
-      }
-    }
-
-    return node;
+    return this.binaryLevel(EQUALITY_OPS, () => this.comparison());
   }
 
   private logical_and(): Expr {
-    let node = this.alternative();
-
-    while (this.currentToken.type === 'AND') {
-      const token = this.here();
-      this.eat('AND');
-      node = this.at(binary('&&', node, this.alternative()), token);
-    }
-
-    return node;
+    return this.binaryLevel(AND_OPS, () => this.alternative());
   }
 
   /**
    * Parse alternative expressions: a | b | c
    * Returns first non-null value, left-to-right evaluation.
+   *
+   * Its own rung rather than a row of the operator table: `a | b | c` is one
+   * n-ary node, not two nested binaries.
    */
   private alternative(): Expr {
-    let node = this.equality();
-    const alternatives: Expr[] = [node];
+    const alternatives = [this.equality()];
 
     while (this.currentToken.type === 'PIPE') {
       this.eat('PIPE');
       alternatives.push(this.equality());
     }
 
-    if (alternatives.length === 1) {
-      return node;
-    }
-
-    return alternative(alternatives);
+    return alternatives.length === 1 ? alternatives[0] : alternative(alternatives);
   }
 
   private logical_or(): Expr {
-    let node = this.logical_and();
-
-    while (this.currentToken.type === 'OR') {
-      const token = this.here();
-      this.eat('OR');
-      node = this.at(binary('||', node, this.logical_and()), token);
-    }
-
-    return node;
+    return this.binaryLevel(OR_OPS, () => this.logical_and());
   }
 
   /**
