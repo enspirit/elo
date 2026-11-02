@@ -2,7 +2,7 @@ import { Expr, locate } from '../ast';
 import { IRExpr, IRCall, IRArrayLiteral, inferType, usesInput } from '../ir';
 import { transform } from '../transform';
 import { Types, TypeAnnotations } from '../types';
-import { EmitContext } from '../stdlib';
+import { EmitContext, NO_HELPERS } from '../stdlib';
 import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE, pgTypeOf, jsonFieldPgType, jsonPath } from '../bindings/sql';
 import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
@@ -205,6 +205,9 @@ function emitSQLNode(ir: IRExpr): string {
       }
       return emitted;
     },
+    // SQL's prelude is installed in the database rather than emitted, so there
+    // is nothing to collect. See `isPreludePrependable`.
+    requireHelper: NO_HELPERS,
   };
 
   switch (ir.type) {

@@ -146,7 +146,7 @@ function emitPyWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
  * added later is positioned by the same construction. The position is there
  * only when the parse recorded one.
  */
-function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+function emitPy(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
   try {
     return emitPyNode(ir, requiredHelpers, options);
   } catch (error) {
@@ -154,7 +154,7 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
   }
 }
 
-function emitPyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+function emitPyNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
   const ctx: EmitContext<string> = {
     emit: (child) => emitPy(child, requiredHelpers, options),
     emitWithParens: (child, parentOp, side) => {
@@ -164,7 +164,7 @@ function emitPyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOpt
       }
       return emitted;
     },
-    requireHelper: requiredHelpers ? (name) => requiredHelpers.add(name) : undefined,
+    requireHelper: (name) => requiredHelpers.add(name),
   };
 
   switch (ir.type) {
@@ -291,7 +291,7 @@ function emitPyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOpt
 
     case 'typedef': {
       // Generate a parser function per type and bind it
-      ctx.requireHelper?.('pUnwrap');
+      ctx.requireHelper('pUnwrap');
       // Use walrus pattern: (_p_Name := parser, Name := lambda v: pUnwrap(_p_Name(v, '')), body)[-1]
       // All definitions go in one tuple, so a long prelude costs one level of
       // nesting rather than one per type
@@ -309,11 +309,11 @@ function emitPyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOpt
 
     case 'guard': {
       const body = ctx.emit(ir.body);
-      if (options?.stripGuards) {
+      if (options.stripGuards) {
         return body;
       }
       // Generate guard checks using kAssert helper
-      ctx.requireHelper?.('kAssert');
+      ctx.requireHelper('kAssert');
       const guardChecks = ir.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
@@ -353,7 +353,7 @@ function emitTypeExprParser(
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
-        ctx.requireHelper?.(parserName);
+        ctx.requireHelper(parserName);
         return parserName;
       }
       // User-defined type reference
@@ -365,7 +365,7 @@ function emitTypeExprParser(
     }
 
     case 'type_schema': {
-      ctx.requireHelper?.('pSchema');
+      ctx.requireHelper('pSchema');
       const propEntries = typeExpr.properties.map(prop => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
         const key = assertSafeIdentifier(prop.key, 'type_schema property key');
@@ -387,7 +387,7 @@ function emitTypeExprParser(
     }
 
     case 'subtype_constraint': {
-      ctx.requireHelper?.('pSubtype');
+      ctx.requireHelper('pSubtype');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
@@ -403,13 +403,13 @@ function emitTypeExprParser(
     }
 
     case 'array_type': {
-      ctx.requireHelper?.('pArray');
+      ctx.requireHelper('pArray');
       const elemParser = emitTypeExprParser(typeExpr.elementType, ctx);
       return `pArray(${elemParser})`;
     }
 
     case 'union_type': {
-      ctx.requireHelper?.('pUnion');
+      ctx.requireHelper('pUnion');
       const parsers = typeExpr.types.map(t => emitTypeExprParser(t, ctx));
       return `pUnion([${parsers.join(', ')}])`;
     }

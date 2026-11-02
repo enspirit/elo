@@ -65,11 +65,11 @@ export function createPythonBinding(): StdLib<string> {
 
   // String repetition, length-bounded to prevent OOM
   pyLib.register('mul', [Types.string, Types.int], (args, ctx) => {
-    ctx.requireHelper?.('kStrMul');
+    ctx.requireHelper('kStrMul');
     return `kStrMul(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('mul', [Types.int, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kStrMul');
+    ctx.requireHelper('kStrMul');
     return `kStrMul(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
   });
 
@@ -119,23 +119,23 @@ export function createPythonBinding(): StdLib<string> {
 
   // Assert - uses helper that raises on failure
   pyLib.register('assert', [Types.bool], (args, ctx) => {
-    ctx.requireHelper?.('kAssert');
+    ctx.requireHelper('kAssert');
     return `kAssert(${ctx.emit(args[0])})`;
   });
   pyLib.register('assert', [Types.bool, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kAssert');
+    ctx.requireHelper('kAssert');
     return `kAssert(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
 
   // Fail
   pyLib.register('fail', [Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kFail');
+    ctx.requireHelper('kFail');
     return `kFail(${ctx.emit(args[0])})`;
   });
 
   // assertFails - expects function to throw
   pyLib.register('assertFails', [Types.fn], (args, ctx) => {
-    ctx.requireHelper?.('kAssertFails');
+    ctx.requireHelper('kAssertFails');
     const emitted = ctx.emit(args[0]);
     // If arg is already a lambda, pass it directly; otherwise wrap in lambda to defer
     if (args[0].type === 'lambda') {
@@ -158,37 +158,37 @@ export function createPythonBinding(): StdLib<string> {
     pyLib.register('round', [t, Types.int], helperCall('kRoundTo'));
   }
   pyLib.register('floor', [Types.float], (args, ctx) => {
-    ctx.requireHelper?.('_import_math');
+    ctx.requireHelper('_import_math');
     return `math.floor(${ctx.emit(args[0])})`;
   });
   pyLib.register('floor', [Types.int], (args, ctx) => {
-    ctx.requireHelper?.('_import_math');
+    ctx.requireHelper('_import_math');
     return `math.floor(${ctx.emit(args[0])})`;
   });
   pyLib.register('ceil', [Types.float], (args, ctx) => {
-    ctx.requireHelper?.('_import_math');
+    ctx.requireHelper('_import_math');
     return `math.ceil(${ctx.emit(args[0])})`;
   });
   pyLib.register('ceil', [Types.int], (args, ctx) => {
-    ctx.requireHelper?.('_import_math');
+    ctx.requireHelper('_import_math');
     return `math.ceil(${ctx.emit(args[0])})`;
   });
 
   // Equality/comparison with helpers for complex types
   pyLib.register('eq', [Types.array, Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `kEq(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('neq', [Types.array, Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `not kEq(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('eq', [Types.object, Types.object], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `kEq(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('neq', [Types.object, Types.object], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `not kEq(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
 
@@ -199,7 +199,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
 
   // Type introspection
   pyLib.register('typeOf', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kTypeOf');
+    ctx.requireHelper('kTypeOf');
     return `kTypeOf(${ctx.emit(args[0])})`;
   });
 
@@ -227,7 +227,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('contains', [Types.string, Types.string], (args, ctx) =>
     `(${ctx.emit(args[1])} in ${ctx.emit(args[0])})`);
   pyLib.register('indexOf', [Types.string, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kIndexOf');
+    ctx.requireHelper('kIndexOf');
     return `kIndexOf(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('replace', [Types.string, Types.string, Types.string], (args, ctx) =>
@@ -235,7 +235,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('replaceAll', [Types.string, Types.string, Types.string], (args, ctx) =>
     `${ctx.emit(args[0])}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   pyLib.register('split', [Types.string, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kSplit');
+    ctx.requireHelper('kSplit');
     return `kSplit(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('substring', [Types.string, Types.int, Types.int], (args, ctx) =>
@@ -244,25 +244,25 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     `${ctx.emit(args[0])}[${ctx.emit(args[1])}:${ctx.emit(args[2])}]`);
   pyLib.register('concat', [Types.string, Types.string], simpleBinaryOp('+'));
   pyLib.register('padStart', [Types.string, Types.int, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kPad');
+    ctx.requireHelper('kPad');
     return `kPad(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, True)`;
   });
   pyLib.register('padEnd', [Types.string, Types.int, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kPad');
+    ctx.requireHelper('kPad');
     return `kPad(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, False)`;
   });
 
   // Array functions
   pyLib.register('first', [Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kFirst');
+    ctx.requireHelper('kFirst');
     return `kFirst(${ctx.emit(args[0])})`;
   });
   pyLib.register('last', [Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kLast');
+    ctx.requireHelper('kLast');
     return `kLast(${ctx.emit(args[0])})`;
   });
   pyLib.register('at', [Types.array, Types.int], (args, ctx) => {
-    ctx.requireHelper?.('kAt');
+    ctx.requireHelper('kAt');
     return `kAt(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('min', [Types.array], (args, ctx) =>
@@ -280,8 +280,8 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('avg', [Types.array], (args, ctx) =>
     `(lambda a: None if not a else sum(a) / len(a))(${ctx.emit(args[0])})`);
   pyLib.register('sum', [Types.array, Types.any], (args, ctx) => {
-    ctx.requireHelper?.('_import_functools');
-    ctx.requireHelper?.('kAdd');
+    ctx.requireHelper('_import_functools');
+    ctx.requireHelper('kAdd');
     return `functools.reduce(kAdd, ${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('reverse', [Types.array], (args, ctx) =>
@@ -291,7 +291,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   // String implementation so the three sit together.
   pyLib.register('reverse', [Types.any], (args, ctx) => `${ctx.emit(args[0])}[::-1]`);
   pyLib.register('unique', [Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     const arr = ctx.emit(args[0]);
     return `(lambda a: [x for i, x in enumerate(a) if not any(kEq(x, a[j]) for j in range(i))])(${arr})`;
   });
@@ -310,7 +310,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('filter', [Types.array, Types.fn], (args, ctx) =>
     `list(filter(${ctx.emit(args[1])}, ${ctx.emit(args[0])}))`);
   pyLib.register('reduce', [Types.array, Types.any, Types.fn], (args, ctx) => {
-    ctx.requireHelper?.('_import_functools');
+    ctx.requireHelper('_import_functools');
     return `functools.reduce(${ctx.emit(args[2])}, ${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('any', [Types.array, Types.fn], (args, ctx) =>
@@ -326,46 +326,46 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('merge', [Types.object, Types.object], (args, ctx) =>
     `({**${ctx.emit(args[0])}, **${ctx.emit(args[1])}})`);
   pyLib.register('deepMerge', [Types.object, Types.object], (args, ctx) => {
-    ctx.requireHelper?.('kDeepMerge');
+    ctx.requireHelper('kDeepMerge');
     return `kDeepMerge(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
 
   // Fetch
   pyLib.register('fetch', [Types.any, Types.fn], (args, ctx) => {
-    ctx.requireHelper?.('kFetch');
+    ctx.requireHelper('kFetch');
     return `kFetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('fetch', [Types.any, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kFetch');
+    ctx.requireHelper('kFetch');
     return `kFetch(${ctx.emit(args[0])}, [${ctx.emit(args[1])}])`;
   });
   pyLib.register('fetch', [Types.any, Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kFetch');
+    ctx.requireHelper('kFetch');
     return `kFetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('fetch', [Types.any, Types.object], (args, ctx) => {
-    ctx.requireHelper?.('kFetchObject');
+    ctx.requireHelper('kFetchObject');
     return `kFetchObject(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
 
   // Patch
   pyLib.register('patch', [Types.any, Types.any, Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kPatch');
+    ctx.requireHelper('kPatch');
     return `kPatch(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`;
   });
 
   // Temporal nullary functions
   pyLib.register('today', [], (_args, ctx) => {
-    ctx.requireHelper?.('_elo_dt_helpers');
+    ctx.requireHelper('_elo_dt_helpers');
     return `_elo_dt(_dt.datetime.now().year, _dt.datetime.now().month, _dt.datetime.now().day)`;
   });
   pyLib.register('now', [], (_args, _ctx) => `_dt.datetime.now()`);
   pyLib.register('bot', [], (_args, ctx) => {
-    ctx.requireHelper?.('_elo_dt_helpers');
+    ctx.requireHelper('_elo_dt_helpers');
     return `_elo_dt(1, 1, 1)`;
   });
   pyLib.register('eot', [], (_args, ctx) => {
-    ctx.requireHelper?.('_elo_dt_helpers');
+    ctx.requireHelper('_elo_dt_helpers');
     return `_elo_dt(9999, 12, 31, 23, 59, 59)`;
   });
 
@@ -390,14 +390,14 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
 
   for (const fn of periodBoundaries) {
     pyLib.register(fn, [Types.datetime], (args, ctx) => {
-      ctx.requireHelper?.('_elo_dt_helpers');
+      ctx.requireHelper('_elo_dt_helpers');
       return `_elo_${fn}(${ctx.emit(args[0])})`;
     });
   }
   for (const [fn, snakeFn] of Object.entries(camelToSnakeMap)) {
     for (const t of [Types.date, Types.datetime]) {
       pyLib.register(fn, [t], (args, ctx) => {
-        ctx.requireHelper?.('_elo_dt_helpers');
+        ctx.requireHelper('_elo_dt_helpers');
         return `_elo_${snakeFn}(${ctx.emit(args[0])})`;
       });
     }
@@ -430,25 +430,25 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('String', [Types.int], (args, ctx) => `str(${ctx.emit(args[0])})`);
   pyLib.register('String', [Types.float], (args, ctx) => `str(${ctx.emit(args[0])})`);
   pyLib.register('String', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kString');
+    ctx.requireHelper('kString');
     return `kString(${ctx.emit(args[0])})`;
   });
   pyLib.register('Bool', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kBool');
+    ctx.requireHelper('kBool');
     return `kBool(${ctx.emit(args[0])})`;
   });
   pyLib.register('Data', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kData');
+    ctx.requireHelper('kData');
     return `kData(${ctx.emit(args[0])})`;
   });
   pyLib.register('Date', [Types.date], identity());
   pyLib.register('Date', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kParseDate');
+    ctx.requireHelper('kParseDate');
     return `kParseDate(${ctx.emit(args[0])})`;
   });
   pyLib.register('Datetime', [Types.datetime], identity());
   pyLib.register('Datetime', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kParseDatetime');
+    ctx.requireHelper('kParseDatetime');
     return `kParseDatetime(${ctx.emit(args[0])})`;
   });
   pyLib.register('Duration', [Types.duration], identity());
@@ -457,7 +457,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   // Interval - construct from object with start/end properties
   pyLib.register('Interval', [Types.interval], identity());
   pyLib.register('Interval', [Types.object], (args, ctx) => {
-    ctx.requireHelper?.('_EloInterval');
+    ctx.requireHelper('_EloInterval');
     const obj = args[0];
     if (obj.type === 'object_literal') {
       const startProp = obj.properties.find(p => p.key === 'start');
@@ -470,7 +470,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     return `EloInterval(${v}["start"], ${v}["end"])`;
   });
   pyLib.register('Interval', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('_EloInterval');
+    ctx.requireHelper('_EloInterval');
     const v = ctx.emit(args[0]);
     return `EloInterval(${v}["start"], ${v}["end"])`;
   });
@@ -481,30 +481,30 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
 
   // Interval arithmetic
   pyLib.register('union', [Types.interval, Types.interval], (args, ctx) => {
-    ctx.requireHelper?.('_EloInterval');
+    ctx.requireHelper('_EloInterval');
     const a = ctx.emit(args[0]);
     const b = ctx.emit(args[1]);
     return `EloInterval(min(${a}.start, ${b}.start), max(${a}.end, ${b}.end))`;
   });
   pyLib.register('intersection', [Types.interval, Types.interval], (args, ctx) => {
-    ctx.requireHelper?.('kIntersection');
+    ctx.requireHelper('kIntersection');
     return `kIntersection(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
 
   // Duration(Interval) - get the length of an interval
   pyLib.register('Duration', [Types.interval], (args, ctx) => {
-    ctx.requireHelper?.('_elo_duration');
+    ctx.requireHelper('_elo_duration');
     const v = ctx.emit(args[0]);
     return `EloDuration.from_timedelta(${v}.end - ${v}.start)`;
   });
 
   // Temporal equality - use kEq for datetime/duration comparisons
   pyLib.register('eq', [Types.datetime, Types.datetime], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `kEq(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('neq', [Types.datetime, Types.datetime], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `not kEq(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('eq', [Types.duration, Types.duration], (args, ctx) => `(${ctx.emit(args[0])} == ${ctx.emit(args[1])})`);
@@ -520,7 +520,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
 
   // Extract - pattern matching with mustache-style templates
   pyLib.register('extract', [Types.string, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('_import_re');
+    ctx.requireHelper('_import_re');
     const template = parseExtractTemplate((args[1] as { value: string }).value);
     const pattern = buildExtractPattern(template);
     // Escape single quotes for Python string
@@ -552,7 +552,7 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('pos', [Types.any], identity());
   pyLib.register('eq', [Types.any, Types.any], helperCall('kEq'));
   pyLib.register('neq', [Types.any, Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `not kEq(${args.map(a => ctx.emit(a)).join(', ')})`;
   });
   pyLib.register('lt', [Types.any, Types.any], (args, ctx) => `(${ctx.emit(args[0])} < ${ctx.emit(args[1])})`);

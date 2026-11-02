@@ -17,8 +17,8 @@ import { parseExtractTemplate, buildExtractPattern } from '../extract';
  */
 function parserUnwrap(parserName: string): FunctionEmitter<string> {
   return (args, ctx) => {
-    ctx.requireHelper?.(parserName);
-    ctx.requireHelper?.('pUnwrap');
+    ctx.requireHelper(parserName);
+    ctx.requireHelper('pUnwrap');
     const emittedArg = ctx.emit(args[0]);
     return `pUnwrap(${parserName}(${emittedArg}, ''))`;
   };
@@ -122,11 +122,11 @@ export function createJavaScriptBinding(): StdLib<string> {
 
   // String multiplication (repeat), length-bounded to prevent OOM
   jsLib.register('mul', [Types.string, Types.int], (args, ctx) => {
-    ctx.requireHelper?.('kRepeat');
+    ctx.requireHelper('kRepeat');
     return `kRepeat(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   jsLib.register('mul', [Types.int, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kRepeat');
+    ctx.requireHelper('kRepeat');
     return `kRepeat(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
   });
 
@@ -284,7 +284,7 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('avg', [Types.array], (args, ctx) =>
     `(a => a.length === 0 ? null : a.reduce((x, y) => x + y, 0) / a.length)(${ctx.emit(args[0])})`);
   jsLib.register('sum', [Types.array, Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kAdd');
+    ctx.requireHelper('kAdd');
     return `${ctx.emit(args[0])}.reduce(kAdd, ${ctx.emit(args[1])})`;
   });
 
@@ -304,7 +304,7 @@ export function createJavaScriptBinding(): StdLib<string> {
       `(${ctx.emit(args[0])}.find(${ctx.emit(args[1])}) ?? null)`);
     jsLib.register('sortBy', [t, Types.fn], (args, ctx) => {
       if (args[1].type === 'datapath') {
-        ctx.requireHelper?.('kFetch');
+        ctx.requireHelper('kFetch');
         return `[...${ctx.emit(args[0])}].sort((a, b) => { const ka = kFetch(a, ${ctx.emit(args[1])}), kb = kFetch(b, ${ctx.emit(args[1])}); return ka < kb ? -1 : ka > kb ? 1 : 0; })`;
       }
       return `((f, a) => [...a].sort((x, y) => { const ka = f(x), kb = f(y); return ka < kb ? -1 : ka > kb ? 1 : 0; }))(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
@@ -376,11 +376,11 @@ export function createJavaScriptBinding(): StdLib<string> {
     jsLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.replaceAll(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     jsLib.register('padStart', [t, Types.int, Types.string], (args, ctx) => {
-      ctx.requireHelper?.('kPad');
+      ctx.requireHelper('kPad');
       return `kPad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, true)`;
     });
     jsLib.register('padEnd', [t, Types.int, Types.string], (args, ctx) => {
-      ctx.requireHelper?.('kPad');
+      ctx.requireHelper('kPad');
       return `kPad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, false)`;
     });
   }
@@ -445,11 +445,11 @@ export function createJavaScriptBinding(): StdLib<string> {
 
   // Unary operators for unknown types
   jsLib.register('neg', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kNeg');
+    ctx.requireHelper('kNeg');
     return `kNeg(${ctx.emit(args[0])})`;
   });
   jsLib.register('pos', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('kPos');
+    ctx.requireHelper('kPos');
     return `kPos(${ctx.emit(args[0])})`;
   });
   jsLib.register('not', [Types.any], (args, ctx) => {
@@ -464,14 +464,14 @@ export function createJavaScriptBinding(): StdLib<string> {
   // Null handling
   jsLib.register('isNull', [Types.any], helperCall('kIsNull'));
 jsLib.register('isNotNull', [Types.any], (args, ctx) => {
-  ctx.requireHelper?.('kIsNull');
+  ctx.requireHelper('kIsNull');
   return `!kIsNull(${ctx.emit(args[0])})`;
 });
 
   // Data path navigation
   jsLib.register('fetch', [Types.any, Types.fn], helperCall('kFetch'));
   jsLib.register('fetch', [Types.any, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('kFetch');
+    ctx.requireHelper('kFetch');
     const data = ctx.emit(args[0]);
     const key = ctx.emit(args[1]);
     return `kFetch(${data}, [${key}])`;
@@ -554,7 +554,7 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
     return `Interval.fromDateTimes(DateTime.min(${a}.start, ${b}.start), DateTime.max(${a}.end, ${b}.end))`;
   });
   jsLib.register('intersection', [Types.interval, Types.interval], (args, ctx) => {
-    ctx.requireHelper?.('kIntersection');
+    ctx.requireHelper('kIntersection');
     return `kIntersection(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
 
@@ -584,7 +584,7 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
   jsLib.register('reverse', [Types.array], (args, ctx) =>
     `[...${ctx.emit(args[0])}].reverse()`);
   jsLib.register('unique', [Types.array], (args, ctx) => {
-    ctx.requireHelper?.('kEq');
+    ctx.requireHelper('kEq');
     return `${ctx.emit(args[0])}.reduce((acc, x) => acc.some(y => kEq(x, y)) ? acc : [...acc, x], [])`;
   });
   jsLib.register('flat', [Types.array], (args, ctx) =>

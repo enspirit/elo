@@ -129,11 +129,11 @@ export function createRubyBinding(): StdLib<string> {
 
   // String repetition, length-bounded to prevent OOM (handles both operand orders)
   rubyLib.register('mul', [Types.string, Types.int], (args, ctx) => {
-    ctx.requireHelper?.('k_str_mul');
+    ctx.requireHelper('k_str_mul');
     return `k_str_mul(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   rubyLib.register('mul', [Types.int, Types.string], (args, ctx) => {
-    ctx.requireHelper?.('k_str_mul');
+    ctx.requireHelper('k_str_mul');
     return `k_str_mul(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`;
   });
 
@@ -334,11 +334,11 @@ export function createRubyBinding(): StdLib<string> {
     rubyLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.gsub(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
     rubyLib.register('padStart', [t, Types.int, Types.string], (args, ctx) => {
-      ctx.requireHelper?.('k_pad');
+      ctx.requireHelper('k_pad');
       return `k_pad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, true)`;
     });
     rubyLib.register('padEnd', [t, Types.int, Types.string], (args, ctx) => {
-      ctx.requireHelper?.('k_pad');
+      ctx.requireHelper('k_pad');
       return `k_pad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, false)`;
     });
   }
@@ -425,7 +425,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     return `(->(d, ps) { f = ${rubyFetchLambda}; ps.transform_values { |p| f.call(d, p) } }).call(${data}, ${paths})`;
   });
   rubyLib.register('patch', [Types.any, Types.fn, Types.any], (args, ctx) => {
-    ctx.requireHelper?.('k_patch');
+    ctx.requireHelper('k_patch');
     const data = ctx.emit(args[0]);
     const path = ctx.emit(args[1]);
     const value = ctx.emit(args[2]);
@@ -439,7 +439,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     return `(${a}).merge(${b})`;
   });
   rubyLib.register('deepMerge', [Types.any, Types.any], (args, ctx) => {
-    ctx.requireHelper?.('k_deep_merge');
+    ctx.requireHelper('k_deep_merge');
     const a = ctx.emit(args[0]);
     const b = ctx.emit(args[1]);
     return `k_deep_merge(${a}, ${b})`;
@@ -551,7 +551,7 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     return `([${a}.first, ${b}.first].min..[${a}.last, ${b}.last].max)`;
   });
   rubyLib.register('intersection', [Types.interval, Types.interval], (args, ctx) => {
-    ctx.requireHelper?.('k_intersection');
+    ctx.requireHelper('k_intersection');
     return `k_intersection(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
 
@@ -581,15 +581,15 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   rubyLib.register('String', [Types.bool], rubyMethod('to_s'));
   rubyLib.register('String', [Types.null], rubyMethod('to_s'));
   rubyLib.register('String', [Types.array], (args, ctx) => {
-    ctx.requireHelper?.('k_string');
+    ctx.requireHelper('k_string');
     return `k_string(${ctx.emit(args[0])})`;
   });
   rubyLib.register('String', [Types.object], (args, ctx) => {
-    ctx.requireHelper?.('k_string');
+    ctx.requireHelper('k_string');
     return `k_string(${ctx.emit(args[0])})`;
   });
   rubyLib.register('String', [Types.any], (args, ctx) => {
-    ctx.requireHelper?.('k_string');
+    ctx.requireHelper('k_string');
     return `k_string(${ctx.emit(args[0])})`;
   });
 

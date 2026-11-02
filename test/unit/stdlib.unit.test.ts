@@ -12,6 +12,7 @@ import {
   unaryMethod,
   fnCall,
   EmitContext,
+  NO_HELPERS,
 } from '../../src/stdlib';
 import { Types } from '../../src/types';
 import { IRExpr, irInt, irFloat, irVariable, irDuration } from '../../src/ir';
@@ -99,6 +100,7 @@ describe('StdLib', () => {
     return {
       emit,
       emitWithParens: (ir, _op, _side) => emit(ir),
+      requireHelper: NO_HELPERS,
     };
   }
 
@@ -306,6 +308,7 @@ describe('simpleBinaryOp', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: (ir: IRExpr) => (ir as { value: number }).value.toString(),
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irInt(1), irInt(2)];
@@ -320,6 +323,7 @@ describe('simpleBinaryOp', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: (ir: IRExpr) => (ir as { value: number }).value.toString(),
+      requireHelper: NO_HELPERS,
     };
 
     for (const op of ops) {
@@ -335,6 +339,7 @@ describe('binaryOp', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: (ir: IRExpr) => (ir as { value: number }).value.toString(),
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irInt(1), irInt(2)];
@@ -361,6 +366,7 @@ describe('binaryOp', () => {
         }
         return (ir as { value: number }).value.toString();
       },
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irInt(1), irInt(2)];
@@ -384,6 +390,7 @@ describe('unaryOp', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { name: string }).name,
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irVariable('x')];
@@ -400,6 +407,7 @@ describe('unaryOp', () => {
     const ctx = {
       emit: () => '1 + 2',
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irInt(0)];
@@ -417,6 +425,7 @@ describe('methodCall', () => {
         return 'duration';
       },
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irVariable('date', Types.date), irDuration('P1D')];
@@ -431,6 +440,7 @@ describe('nullary', () => {
     const ctx = {
       emit: () => '',
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     assert.strictEqual(emitter([], ctx), 'CURRENT_DATE');
@@ -443,11 +453,13 @@ describe('nullary', () => {
     const stringCtx: EmitContext<string> = {
       emit: () => '',
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const numberCtx: EmitContext<number> = {
       emit: () => 0,
       emitWithParens: () => 0,
+      requireHelper: NO_HELPERS,
     };
 
     assert.strictEqual(stringEmitter([], stringCtx), "DateTime.now().startOf('day')");
@@ -461,6 +473,7 @@ describe('unaryMethod', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { name: string }).name,
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irVariable('date', Types.date)];
@@ -475,6 +488,7 @@ describe('fnCall', () => {
     const ctx = {
       emit: () => '',
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     assert.strictEqual(emitter([], ctx), 'NOW()');
@@ -485,6 +499,7 @@ describe('fnCall', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irInt(-5)];
@@ -497,6 +512,7 @@ describe('fnCall', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irInt(2), irInt(3)];
@@ -509,6 +525,7 @@ describe('fnCall', () => {
     const ctx = {
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: () => '',
+      requireHelper: NO_HELPERS,
     };
 
     const args: IRExpr[] = [irInt(2), irInt(8)];

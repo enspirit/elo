@@ -169,7 +169,7 @@ const jsLib = createJavaScriptBinding();
  * added later is positioned by the same construction. The position is there
  * only when the parse recorded one.
  */
-function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+function emitJS(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
   try {
     return emitJSNode(ir, requiredHelpers, options);
   } catch (error) {
@@ -177,7 +177,7 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
   }
 }
 
-function emitJSNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+function emitJSNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
   const ctx: EmitContext<string> = {
     emit: (child) => emitJS(child, requiredHelpers, options),
     emitWithParens: (child, parentOp, side) => {
@@ -187,7 +187,7 @@ function emitJSNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOpt
       }
       return emitted;
     },
-    requireHelper: requiredHelpers ? (name) => requiredHelpers.add(name) : undefined,
+    requireHelper: (name) => requiredHelpers.add(name),
   };
 
   switch (ir.type) {
@@ -305,7 +305,7 @@ function emitJSNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOpt
     case 'typedef': {
       // Generate a parser function per type and bind it
       // Wrap it so calling TypeName(value) auto-unwraps the result
-      ctx.requireHelper?.('pUnwrap');
+      ctx.requireHelper('pUnwrap');
       // One declaration per definition in a single scope, so a long prelude
       // costs one closure rather than one per type
       const decls = ir.definitions.map(definition => {
@@ -321,13 +321,13 @@ function emitJSNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOpt
     case 'guard': {
       const body = ctx.emit(ir.body);
       // If stripGuards is enabled, just emit the body
-      if (options?.stripGuards) {
+      if (options.stripGuards) {
         return body;
       }
       // Generate guard checks that throw on failure. The error says which kind
       // of assertion it was and what it was called, so a host does not have to
       // read that back out of the message.
-      ctx.requireHelper?.('pRaise');
+      ctx.requireHelper('pRaise');
       const guardChecks = ir.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
@@ -366,7 +366,7 @@ function emitTypeExprParser(
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
-        ctx.requireHelper?.(parserName);
+        ctx.requireHelper(parserName);
         return parserName;
       }
       // Check if it's a user-defined type (uppercase identifier not in built-ins)
@@ -380,8 +380,8 @@ function emitTypeExprParser(
 
     case 'type_schema': {
       // Object schema: generate inline parser
-      ctx.requireHelper?.('pOk');
-      ctx.requireHelper?.('pFail');
+      ctx.requireHelper('pOk');
+      ctx.requireHelper('pFail');
       const propParsers = typeExpr.properties.map(prop => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
         return { key: assertSafeIdentifier(prop.key, 'type_schema property key'), parser: propParser, optional: prop.optional };
@@ -414,15 +414,15 @@ function emitTypeExprParser(
         extrasCheck = `const _ks = ${knownKeysSet}; const _ep = ${extrasParser}; for (const _k in v) { if (!_ks.includes(_k)) { const _re = _ep(v[_k], p + '.' + _k); if (!_re.success) return pFail(p, null, [_re]); _o[_k] = _re.value; } }`;
       }
 
-      ctx.requireHelper?.('pMiss');
+      ctx.requireHelper('pMiss');
       return `(v, p) => { if (typeof v !== 'object' || v === null) return pMiss(p, 'expected object, got ' + (v === null ? 'Null' : typeof v), v); const _o = {}; ${propChecks} ${extrasCheck} return pOk(_o, p); }`;
     }
 
     case 'subtype_constraint': {
       // Subtype constraint: Int(i | i > 0) or Int(i | positive: i > 0, even: i % 2 == 0)
       // First parse with base type, then check all constraints
-      ctx.requireHelper?.('pOk');
-      ctx.requireHelper?.('pFail');
+      ctx.requireHelper('pOk');
+      ctx.requireHelper('pFail');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
@@ -443,19 +443,19 @@ function emitTypeExprParser(
     case 'array_type': {
       // Array type: [Int]
       // Parse each element with the element type
-      ctx.requireHelper?.('pOk');
-      ctx.requireHelper?.('pFail');
+      ctx.requireHelper('pOk');
+      ctx.requireHelper('pFail');
       const elemParser = emitTypeExprParser(typeExpr.elementType, ctx);
 
       // Store element parser in variable to handle inline functions (like object schemas)
-      ctx.requireHelper?.('pMiss');
+      ctx.requireHelper('pMiss');
       return `(v, p) => { if (!Array.isArray(v)) return pMiss(p, 'expected array, got ' + (v === null ? 'Null' : typeof v), v); const _el = ${elemParser}; const _a = []; for (let _i = 0; _i < v.length; _i++) { const _r = _el(v[_i], p + '.' + _i); if (!_r.success) return pFail(p, null, [_r]); _a.push(_r.value); } return pOk(_a, p); }`;
     }
 
     case 'union_type': {
       // Union type: Int|String
       // Try each type in order, return first successful parse (PEG-style)
-      ctx.requireHelper?.('pFail');
+      ctx.requireHelper('pFail');
       const parsers = typeExpr.types.map(t => emitTypeExprParser(t, ctx));
 
       // Generate tries: call each parser directly in order

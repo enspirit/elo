@@ -78,9 +78,19 @@ export function typeGeneralizations(argTypes: EloType[]): EloType[][] {
 export interface EmitContext<T> {
   emit: (ir: IRExpr) => T;
   emitWithParens: (ir: IRExpr, parentOp: string, side: 'left' | 'right') => T;
-  /** Track a required helper function (e.g., 'kAdd', 'kSub') */
-  requireHelper?: (name: string) => void;
+  /**
+   * Track a required helper function (e.g., 'kAdd', 'kSub').
+   *
+   * Required, because an emitter that names a helper needs that helper: there
+   * is no caller that wants the name dropped and the call emitted anyway. A
+   * target with no helpers to collect passes a sink — SQL does, since its
+   * prelude is installed in the database rather than emitted.
+   */
+  requireHelper: (name: string) => void;
 }
+
+/** The `requireHelper` of a target that has no helpers to collect. */
+export const NO_HELPERS: (name: string) => void = () => {};
 
 /**
  * A function implementation that emits code for a specific signature
@@ -309,7 +319,7 @@ export function fnCall(fnName: string): FunctionEmitter<string> {
  */
 export function helperCall(helperName: string): FunctionEmitter<string> {
   return (args, ctx) => {
-    ctx.requireHelper?.(helperName);
+    ctx.requireHelper(helperName);
     const emittedArgs = args.map(a => ctx.emit(a)).join(', ');
     return `${helperName}(${emittedArgs})`;
   };

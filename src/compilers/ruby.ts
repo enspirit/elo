@@ -185,7 +185,7 @@ function escapeRubyDQ(s: string): string {
  * added later is positioned by the same construction. The position is there
  * only when the parse recorded one.
  */
-function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+function emitRuby(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
   try {
     return emitRubyNode(ir, requiredHelpers, options);
   } catch (error) {
@@ -193,7 +193,7 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
   }
 }
 
-function emitRubyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions): string {
+function emitRubyNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptions): string {
   const ctx: EmitContext<string> = {
     emit: (child) => emitRuby(child, requiredHelpers, options),
     emitWithParens: (child, parentOp, side) => {
@@ -203,7 +203,7 @@ function emitRubyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitO
       }
       return emitted;
     },
-    requireHelper: requiredHelpers ? (name) => requiredHelpers.add(name) : undefined,
+    requireHelper: (name) => requiredHelpers.add(name),
   };
 
   switch (ir.type) {
@@ -316,7 +316,7 @@ function emitRubyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitO
 
     case 'typedef': {
       // Generate a parser lambda per type and bind it
-      ctx.requireHelper?.('p_unwrap');
+      ctx.requireHelper('p_unwrap');
       // One assignment per definition in a single sequence, so a long prelude
       // costs one level of parentheses rather than one per type
       const decls = ir.definitions.map(definition => {
@@ -332,7 +332,7 @@ function emitRubyNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitO
     case 'guard': {
       const body = ctx.emit(ir.body);
       // If stripGuards is enabled, just emit the body
-      if (options?.stripGuards) {
+      if (options.stripGuards) {
         return body;
       }
       // Generate guard checks that raise on failure
@@ -385,7 +385,7 @@ function emitTypeExprParser(
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
-        ctx.requireHelper?.(parserName);
+        ctx.requireHelper(parserName);
         return `method(:${parserName})`;
       }
       // Check if it's a user-defined type (uppercase identifier not in built-ins)
@@ -400,8 +400,8 @@ function emitTypeExprParser(
     case 'type_schema': {
       // Object schema: generate inline parser lambda
       // Use unique variable names to avoid Ruby closure issues with nested schemas
-      ctx.requireHelper?.('p_ok');
-      ctx.requireHelper?.('p_fail');
+      ctx.requireHelper('p_ok');
+      ctx.requireHelper('p_fail');
       const suffix = nextVarSuffix();
       const oVar = `_o${suffix}`;
       const propParsers = typeExpr.properties.map(prop => {
@@ -445,8 +445,8 @@ function emitTypeExprParser(
     case 'subtype_constraint': {
       // Subtype constraint: Int(i | i > 0) or Int(i | positive: i > 0, even: i % 2 == 0)
       // First parse with base type, then check all constraints
-      ctx.requireHelper?.('p_ok');
-      ctx.requireHelper?.('p_fail');
+      ctx.requireHelper('p_ok');
+      ctx.requireHelper('p_fail');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
@@ -467,8 +467,8 @@ function emitTypeExprParser(
     case 'array_type': {
       // Array type: [Int]
       // Parse each element with the element type
-      ctx.requireHelper?.('p_ok');
-      ctx.requireHelper?.('p_fail');
+      ctx.requireHelper('p_ok');
+      ctx.requireHelper('p_fail');
       const elemParser = emitTypeExprParser(typeExpr.elementType, ctx);
 
       return `->(v, p) { return p_fail(p, 'expected array, got ' + (v.nil? ? 'Null' : v.class.to_s)) unless v.is_a?(Array); _el = ${elemParser}; _a = []; v.each_with_index { |_e, _i| _r = _el.call(_e, p + '.' + _i.to_s); return p_fail(p, nil, [_r]) unless _r[:success]; _a << _r[:value] }; p_ok(_a, p) }`;
@@ -477,7 +477,7 @@ function emitTypeExprParser(
     case 'union_type': {
       // Union type: Int|String
       // Try each type in order, return first successful parse (PEG-style)
-      ctx.requireHelper?.('p_fail');
+      ctx.requireHelper('p_fail');
       const parsers = typeExpr.types.map(t => emitTypeExprParser(t, ctx));
 
       // Generate tries: call each parser directly in order
