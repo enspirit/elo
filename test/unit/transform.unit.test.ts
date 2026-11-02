@@ -906,7 +906,7 @@ describe('transform - depth limits', () => {
       typeExpr = arrayType(typeExpr);
     }
     assert.throws(
-      () => transform(typeDef('T', typeExpr, literal(1)), new Map(), new Set(), { maxDepth: 5 }),
+      () => transform(typeDef([{ name: 'T', typeExpr }], literal(1)), new Map(), new Set(), { maxDepth: 5 }),
       /Maximum transform depth exceeded \(5\)/
     );
   });
@@ -916,7 +916,7 @@ describe('transform - depth limits', () => {
     for (let i = 0; i < 3; i++) {
       typeExpr = arrayType(typeExpr);
     }
-    const ir = transform(typeDef('T', typeExpr, literal(1)), new Map(), new Set(), { maxDepth: 10 });
+    const ir = transform(typeDef([{ name: 'T', typeExpr }], literal(1)), new Map(), new Set(), { maxDepth: 10 });
     assert.strictEqual(ir.type, 'typedef');
   });
 });
@@ -949,26 +949,28 @@ describe('transform - array multiplication is rejected (security)', () => {
 describe('transform - type definitions', () => {
   it('transforms typedef with built-in type selector Int', () => {
     // let T = Int in 42
-    const ir = transform(typeDef('T', typeRef('Int'), literal(42)));
+    const ir = transform(typeDef([{ name: 'T', typeExpr: typeRef('Int') }], literal(42)));
     assert.strictEqual(ir.type, 'typedef');
     if (ir.type === 'typedef') {
-      assert.strictEqual(ir.name, 'T');
-      assert.strictEqual(ir.typeExpr.kind, 'type_ref');
-      if (ir.typeExpr.kind === 'type_ref') {
-        assert.strictEqual(ir.typeExpr.name, 'Int');
+      assert.strictEqual(ir.definitions[0].name, 'T');
+      const typeExpr = ir.definitions[0].typeExpr;
+      assert.strictEqual(typeExpr.kind, 'type_ref');
+      if (typeExpr.kind === 'type_ref') {
+        assert.strictEqual(typeExpr.name, 'Int');
       }
     }
   });
 
   it('transforms typedef with built-in type selector Null', () => {
     // let T = Null in null
-    const ir = transform(typeDef('T', typeRef('Null'), literal(null as any)));
+    const ir = transform(typeDef([{ name: 'T', typeExpr: typeRef('Null') }], literal(null as any)));
     assert.strictEqual(ir.type, 'typedef');
     if (ir.type === 'typedef') {
-      assert.strictEqual(ir.name, 'T');
-      assert.strictEqual(ir.typeExpr.kind, 'type_ref');
-      if (ir.typeExpr.kind === 'type_ref') {
-        assert.strictEqual(ir.typeExpr.name, 'Null');
+      assert.strictEqual(ir.definitions[0].name, 'T');
+      const typeExpr = ir.definitions[0].typeExpr;
+      assert.strictEqual(typeExpr.kind, 'type_ref');
+      if (typeExpr.kind === 'type_ref') {
+        assert.strictEqual(typeExpr.name, 'Null');
       }
     }
   });
@@ -977,12 +979,13 @@ describe('transform - type definitions', () => {
     // All built-in types should work: Any, Null, String, Int, Float, Bool, Boolean, Date, Datetime
     const builtinTypes = ['Any', 'Null', 'String', 'Int', 'Float', 'Bool', 'Boolean', 'Date', 'Datetime'];
     for (const typeName of builtinTypes) {
-      const ir = transform(typeDef('T', typeRef(typeName), literal(42)));
+      const ir = transform(typeDef([{ name: 'T', typeExpr: typeRef(typeName) }], literal(42)));
       assert.strictEqual(ir.type, 'typedef');
       if (ir.type === 'typedef') {
-        assert.strictEqual(ir.typeExpr.kind, 'type_ref');
-        if (ir.typeExpr.kind === 'type_ref') {
-          assert.strictEqual(ir.typeExpr.name, typeName);
+        const typeExpr = ir.definitions[0].typeExpr;
+        assert.strictEqual(typeExpr.kind, 'type_ref');
+        if (typeExpr.kind === 'type_ref') {
+          assert.strictEqual(typeExpr.name, typeName);
         }
       }
     }
@@ -991,7 +994,7 @@ describe('transform - type definitions', () => {
   it('rejects unknown type selector', () => {
     // let T = Foo in 42 should fail with "Unknown type selector"
     assert.throws(
-      () => transform(typeDef('T', typeRef('Foo'), literal(42))),
+      () => transform(typeDef([{ name: 'T', typeExpr: typeRef('Foo') }], literal(42))),
       /Unknown type selector: 'Foo'/
     );
   });
@@ -999,53 +1002,75 @@ describe('transform - type definitions', () => {
   it('rejects unknown type selector in union type', () => {
     // let T = Int|Foo in 42 should fail with "Unknown type selector"
     assert.throws(
-      () => transform(typeDef('T', unionType([typeRef('Int'), typeRef('Foo')]), literal(42))),
+      () => transform(typeDef([{ name: 'T', typeExpr: unionType([typeRef('Int'), typeRef('Foo')]) }], literal(42))),
       /Unknown type selector: 'Foo'/
     );
   });
 
-  it('allows user-defined type in nested typedef', () => {
+  it('allows a definition to refer to one before it', () => {
     // let A = String, B = A in body
-    // This parses as: typeDef('A', String, typeDef('B', A, body))
     const ir = transform(
-      typeDef('A', typeRef('String'),
-        typeDef('B', typeRef('A'), literal(42))
-      )
+      typeDef([
+        { name: 'A', typeExpr: typeRef('String') },
+        { name: 'B', typeExpr: typeRef('A') },
+      ], literal(42))
     );
     assert.strictEqual(ir.type, 'typedef');
     if (ir.type === 'typedef') {
-      assert.strictEqual(ir.name, 'A');
-      assert.strictEqual(ir.body.type, 'typedef');
-      if (ir.body.type === 'typedef') {
-        assert.strictEqual(ir.body.name, 'B');
-        assert.strictEqual(ir.body.typeExpr.kind, 'type_ref');
-        if (ir.body.typeExpr.kind === 'type_ref') {
-          assert.strictEqual(ir.body.typeExpr.name, 'A');
-        }
+      assert.deepStrictEqual(ir.definitions.map(d => d.name), ['A', 'B']);
+      const b = ir.definitions[1].typeExpr;
+      assert.strictEqual(b.kind, 'type_ref');
+      if (b.kind === 'type_ref') {
+        assert.strictEqual(b.name, 'A');
       }
     }
+  });
+
+  it('rejects a definition referring to one after it', () => {
+    // let B = A, A = String in body: A is not in scope where B is defined
+    assert.throws(
+      () => transform(
+        typeDef([
+          { name: 'B', typeExpr: typeRef('A') },
+          { name: 'A', typeExpr: typeRef('String') },
+        ], literal(42))
+      ),
+      /Unknown type selector: 'A'/
+    );
   });
 
   it('allows user-defined type in union with built-in types', () => {
     // let Foo = Bool, X = Int|Foo in body
     const ir = transform(
-      typeDef('Foo', typeRef('Bool'),
-        typeDef('X', unionType([typeRef('Int'), typeRef('Foo')]), literal(42))
-      )
+      typeDef([
+        { name: 'Foo', typeExpr: typeRef('Bool') },
+        { name: 'X', typeExpr: unionType([typeRef('Int'), typeRef('Foo')]) },
+      ], literal(42))
     );
     assert.strictEqual(ir.type, 'typedef');
     if (ir.type === 'typedef') {
-      assert.strictEqual(ir.body.type, 'typedef');
-      if (ir.body.type === 'typedef') {
-        assert.strictEqual(ir.body.typeExpr.kind, 'union_type');
-      }
+      assert.strictEqual(ir.definitions[1].typeExpr.kind, 'union_type');
+    }
+  });
+
+  it('does not count a definition as a level of nesting', () => {
+    // A file's prelude is as long as the file needs; the depth guard is there
+    // for deeply nested expressions, not for how many types are declared.
+    const definitions = Array.from({ length: 120 }, (_, i) => ({
+      name: `T${i}`,
+      typeExpr: typeRef('Int'),
+    }));
+    const ir = transform(typeDef(definitions, literal(42)), new Map(), new Set(), { maxDepth: 5 });
+    assert.strictEqual(ir.type, 'typedef');
+    if (ir.type === 'typedef') {
+      assert.strictEqual(ir.definitions.length, 120);
     }
   });
 
   it('rejects self-referential type in single typedef', () => {
     // let Foo = Foo in 42 should fail (Foo is not yet defined when its type expr is parsed)
     assert.throws(
-      () => transform(typeDef('Foo', typeRef('Foo'), literal(42))),
+      () => transform(typeDef([{ name: 'Foo', typeExpr: typeRef('Foo') }], literal(42))),
       /Unknown type selector: 'Foo'/
     );
   });

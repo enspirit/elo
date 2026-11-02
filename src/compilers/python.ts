@@ -277,13 +277,21 @@ function emitPy(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
     }
 
     case 'typedef': {
-      // Generate parser function for the type and bind it
-      const parserCode = emitTypeExprParser(ir.typeExpr, ctx);
+      // Generate a parser function per type and bind it
       ctx.requireHelper?.('pUnwrap');
-      const body = ctx.emit(ir.body);
       // Use walrus pattern: (_p_Name := parser, Name := lambda v: pUnwrap(_p_Name(v, '')), body)[-1]
-      const name = assertSafeIdentifier(ir.name, 'typedef name');
-      return `(_p_${name} := ${parserCode}, ${name} := lambda v: pUnwrap(_p_${name}(v, '')), ${body})[-1]`;
+      // All definitions go in one tuple, so a long prelude costs one level of
+      // nesting rather than one per type
+      const decls = ir.definitions.flatMap(definition => {
+        const parserCode = emitTypeExprParser(definition.typeExpr, ctx);
+        const name = assertSafeIdentifier(definition.name, 'typedef name');
+        return [
+          `_p_${name} := ${parserCode}`,
+          `${name} := lambda v: pUnwrap(_p_${name}(v, ''))`,
+        ];
+      });
+      const body = ctx.emit(ir.body);
+      return `(${[...decls, body].join(', ')})[-1]`;
     }
 
     case 'guard': {

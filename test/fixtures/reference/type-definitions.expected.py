@@ -39,10 +39,10 @@
 
 (lambda _: kAssert(kEq((_p_Open := pSchema([], "ignored", None), Open := lambda v: pUnwrap(_p_Open(v, '')), Open({"a": 1, "b": "two"}))[-1], {})))(None)
 
-(lambda _: kAssert(kEq((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), (_p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), B("42"))[-1])[-1], 42)))(None)
-(lambda _: kAssert(kEq((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), (_p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), A("hello"))[-1])[-1], "hello")))(None)
-(lambda _: kAssert(kEq((_p_Person := pSchema([("name", pString, False), ("age", pSubtype(pInt, [("constraint failed", lambda i: (i > 0))]), False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), (_p_Persons := pArray(_p_Person), Persons := lambda v: pUnwrap(_p_Persons(v, '')), Persons([{"name": "Bernard", "age": "18"}, {"name": "Louis", "age": "10"}]))[-1])[-1], [{"name": "Bernard", "age": 18}, {"name": "Louis", "age": 10}])))(None)
-(lambda _: kAssert(kEq((_p_Item := pSchema([("id", pInt, False)], "closed", None), Item := lambda v: pUnwrap(_p_Item(v, '')), (_p_Items := pArray(_p_Item), Items := lambda v: pUnwrap(_p_Items(v, '')), Items([{"id": "1"}, {"id": "2"}]))[-1])[-1], [{"id": 1}, {"id": 2}])))(None)
+(lambda _: kAssert(kEq((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), _p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), B("42"))[-1], 42)))(None)
+(lambda _: kAssert(kEq((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), _p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), A("hello"))[-1], "hello")))(None)
+(lambda _: kAssert(kEq((_p_Person := pSchema([("name", pString, False), ("age", pSubtype(pInt, [("constraint failed", lambda i: (i > 0))]), False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), _p_Persons := pArray(_p_Person), Persons := lambda v: pUnwrap(_p_Persons(v, '')), Persons([{"name": "Bernard", "age": "18"}, {"name": "Louis", "age": "10"}]))[-1], [{"name": "Bernard", "age": 18}, {"name": "Louis", "age": 10}])))(None)
+(lambda _: kAssert(kEq((_p_Item := pSchema([("id", pInt, False)], "closed", None), Item := lambda v: pUnwrap(_p_Item(v, '')), _p_Items := pArray(_p_Item), Items := lambda v: pUnwrap(_p_Items(v, '')), Items([{"id": "1"}, {"id": "2"}]))[-1], [{"id": 1}, {"id": 2}])))(None)
 
 (lambda _: kAssert((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (x := 5, x * 2)[-1])[-1] == 10))(None)
 (lambda _: kAssert((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (x := 5, y := 3, x + y)[-1])[-1] == 8))(None)

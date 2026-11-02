@@ -1252,36 +1252,33 @@ export class Parser {
    */
   private typeDefExpr(): Expr {
     const nameToken = this.here();
-    const typeName = this.currentToken.value;
-    this.eat('UPPER_IDENTIFIER');
-    this.eat('ASSIGN');
-    const typeExpr = this.typeExpr();
+    const definitions: TypeBinding[] = [];
 
-    // Check for additional bindings
-    if (this.currentToken.type === 'COMMA') {
+    // Collected in a loop rather than by recursing on the tail: a hundred type
+    // definitions are a hundred names, not a hundred levels of nesting.
+    for (;;) {
+      const name = this.currentToken.value;
+      this.eat('UPPER_IDENTIFIER');
+      this.eat('ASSIGN');
+      definitions.push({ name, typeExpr: this.typeExpr() });
+
+      if (this.currentToken.type !== 'COMMA') break;
       this.eat('COMMA');
       // Next binding could be another type def or a value binding
       // Use type assertion since eat() updates currentToken but TS doesn't track this
       const nextTokenType = this.currentToken.type as TokenType;
       // Allow trailing comma: check if next token is IN
-      if (nextTokenType === 'IN') {
-        this.eat('IN');
-        const body = this.expr();
-        return this.at(typeDef(typeName, typeExpr, body), nameToken);
-      } else if (nextTokenType === 'UPPER_IDENTIFIER') {
-        // Another type definition - recurse
-        const body = this.descend(() => this.typeDefExpr());
-        return this.at(typeDef(typeName, typeExpr, body), nameToken);
-      } else {
+      if (nextTokenType === 'IN') break;
+      if (nextTokenType !== 'UPPER_IDENTIFIER') {
         // Value binding - parse remaining as let bindings
         const body = this.parseLetBindingsAfterComma();
-        return this.at(typeDef(typeName, typeExpr, body), nameToken);
+        return this.at(typeDef(definitions, body), nameToken);
       }
     }
 
     this.eat('IN');
     const body = this.expr();
-    return this.at(typeDef(typeName, typeExpr, body), nameToken);
+    return this.at(typeDef(definitions, body), nameToken);
   }
 
   /**

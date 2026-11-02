@@ -626,8 +626,7 @@ describe('Parser - Let Expressions', () => {
     const ast = parse('let X = String in x |> X');
     assert.deepStrictEqual(ast, {
       type: 'typedef',
-      name: 'X',
-      typeExpr: { kind: 'type_ref', name: 'String' },
+      definitions: [{ name: 'X', typeExpr: { kind: 'type_ref', name: 'String' } }],
       body: {
         type: 'function_call',
         name: 'X',
@@ -636,35 +635,48 @@ describe('Parser - Let Expressions', () => {
     });
   });
 
-  it('should parse multiple type bindings (desugared to nested)', () => {
+  it('should parse multiple type bindings into one flat node', () => {
     const ast = parse('let A = String, B = Int in 1');
-    // Multiple type bindings are desugared to nested typedef expressions
+    // One node holds them all: N definitions are not N levels of nesting
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.name, 'A');
-      assert.deepStrictEqual(ast.typeExpr, { kind: 'type_ref', name: 'String' });
-      assert.strictEqual(ast.body.type, 'typedef');
-      if (ast.body.type === 'typedef') {
-        assert.strictEqual(ast.body.name, 'B');
-        assert.deepStrictEqual(ast.body.typeExpr, { kind: 'type_ref', name: 'Int' });
-        assert.deepStrictEqual(ast.body.body, { type: 'literal', value: 1 });
-      }
+      assert.deepStrictEqual(ast.definitions, [
+        { name: 'A', typeExpr: { kind: 'type_ref', name: 'String' } },
+        { name: 'B', typeExpr: { kind: 'type_ref', name: 'Int' } },
+      ]);
+      assert.deepStrictEqual(ast.body, { type: 'literal', value: 1 });
     }
+  });
+
+  it('should keep a hundred type bindings flat', () => {
+    const names = Array.from({ length: 120 }, (_, i) => `T${i}`);
+    const ast = parse(`let ${names.map(n => `${n} = Int`).join(', ')} in 1`);
+    assert.strictEqual(ast.type, 'typedef');
+    if (ast.type === 'typedef') {
+      assert.deepStrictEqual(ast.definitions.map(d => d.name), names);
+      assert.strictEqual(ast.body.type, 'literal');
+    }
+  });
+
+  it('should refuse the same type name twice in one let', () => {
+    assert.throws(() => parse('let T = Int, T = String in 1'), /Duplicate type definition 'T'/);
+  });
+
+  it('should refuse the same type name twice in a prelude', () => {
+    assert.throws(() => parse('T = Int\nT = String\n1'), /Duplicate type definition 'T'/);
   });
 
   it('should parse type binding referencing earlier type binding', () => {
     const ast = parse('let Person = { name: String }, Persons = [Person] in 1');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.name, 'Person');
-      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
-      assert.strictEqual(ast.body.type, 'typedef');
-      if (ast.body.type === 'typedef') {
-        assert.strictEqual(ast.body.name, 'Persons');
-        assert.strictEqual(ast.body.typeExpr.kind, 'array_type');
-        if (ast.body.typeExpr.kind === 'array_type') {
-          assert.deepStrictEqual(ast.body.typeExpr.elementType, { kind: 'type_ref', name: 'Person' });
-        }
+      assert.strictEqual(ast.definitions[0].name, 'Person');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_schema');
+      assert.strictEqual(ast.definitions[1].name, 'Persons');
+      const persons = ast.definitions[1].typeExpr;
+      assert.strictEqual(persons.kind, 'array_type');
+      if (persons.kind === 'array_type') {
+        assert.deepStrictEqual(persons.elementType, { kind: 'type_ref', name: 'Person' });
       }
     }
   });
@@ -674,8 +686,8 @@ describe('Parser - Let Expressions', () => {
     // Type binding first, then value binding
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.name, 'T');
-      assert.deepStrictEqual(ast.typeExpr, { kind: 'type_ref', name: 'String' });
+      assert.strictEqual(ast.definitions[0].name, 'T');
+      assert.deepStrictEqual(ast.definitions[0].typeExpr, { kind: 'type_ref', name: 'String' });
       // Body is a let expression with the value binding
       assert.strictEqual(ast.body.type, 'let');
       if (ast.body.type === 'let') {
@@ -690,7 +702,7 @@ describe('Parser - Let Expressions', () => {
     const ast = parse('let T = Int, x = 1, y = 2 in x + y');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.name, 'T');
+      assert.strictEqual(ast.definitions[0].name, 'T');
       assert.strictEqual(ast.body.type, 'let');
       if (ast.body.type === 'let') {
         assert.strictEqual(ast.body.bindings.length, 2);
@@ -1291,11 +1303,18 @@ describe('Parser - Recursion depth guards (security)', () => {
     assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
   });
 
-  it('bounds nested type definitions (let T0=.., T1=.., .. in 1)', () => {
+  it('does not bound how many types are defined (let T0=.., T1=.., .. in 1)', () => {
+    // A list of definitions is a list, not a nesting: the guard is there for
+    // deeply nested expressions, and a file may declare as many types as it
+    // likes. Two hundred of them used to be refused.
     const expr = 'let ' +
       Array.from({ length: 200 }, (_, i) => `T${i} = {p${i}: String}`).join(', ') +
       ' in 1';
-    assert.throws(() => parse(expr), /Maximum expression depth exceeded/);
+    const ast = parse(expr);
+    assert.strictEqual(ast.type, 'typedef');
+    if (ast.type === 'typedef') {
+      assert.strictEqual(ast.definitions.length, 200);
+    }
   });
 
   it('bounds nested type expressions (let T = [[[...Int...]]] in 1)', () => {
@@ -1485,11 +1504,11 @@ describe('Parser - Type Schema Optional Commas', () => {
     const ast = parse('let T = { name: String, age: Int } in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
-      if (ast.typeExpr.kind === 'type_schema') {
-        assert.strictEqual(ast.typeExpr.properties.length, 2);
-        assert.strictEqual(ast.typeExpr.properties[0].key, 'name');
-        assert.strictEqual(ast.typeExpr.properties[1].key, 'age');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_schema');
+      if (ast.definitions[0].typeExpr.kind === 'type_schema') {
+        assert.strictEqual(ast.definitions[0].typeExpr.properties.length, 2);
+        assert.strictEqual(ast.definitions[0].typeExpr.properties[0].key, 'name');
+        assert.strictEqual(ast.definitions[0].typeExpr.properties[1].key, 'age');
       }
     }
   });
@@ -1498,11 +1517,11 @@ describe('Parser - Type Schema Optional Commas', () => {
     const ast = parse('let T = { name: String age: Int } in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
-      if (ast.typeExpr.kind === 'type_schema') {
-        assert.strictEqual(ast.typeExpr.properties.length, 2);
-        assert.strictEqual(ast.typeExpr.properties[0].key, 'name');
-        assert.strictEqual(ast.typeExpr.properties[1].key, 'age');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_schema');
+      if (ast.definitions[0].typeExpr.kind === 'type_schema') {
+        assert.strictEqual(ast.definitions[0].typeExpr.properties.length, 2);
+        assert.strictEqual(ast.definitions[0].typeExpr.properties[0].key, 'name');
+        assert.strictEqual(ast.definitions[0].typeExpr.properties[1].key, 'age');
       }
     }
   });
@@ -1511,12 +1530,12 @@ describe('Parser - Type Schema Optional Commas', () => {
     const ast = parse('let T = { a: Int, b: String c: Bool } in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
-      if (ast.typeExpr.kind === 'type_schema') {
-        assert.strictEqual(ast.typeExpr.properties.length, 3);
-        assert.strictEqual(ast.typeExpr.properties[0].key, 'a');
-        assert.strictEqual(ast.typeExpr.properties[1].key, 'b');
-        assert.strictEqual(ast.typeExpr.properties[2].key, 'c');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_schema');
+      if (ast.definitions[0].typeExpr.kind === 'type_schema') {
+        assert.strictEqual(ast.definitions[0].typeExpr.properties.length, 3);
+        assert.strictEqual(ast.definitions[0].typeExpr.properties[0].key, 'a');
+        assert.strictEqual(ast.definitions[0].typeExpr.properties[1].key, 'b');
+        assert.strictEqual(ast.definitions[0].typeExpr.properties[2].key, 'c');
       }
     }
   });
@@ -1525,10 +1544,10 @@ describe('Parser - Type Schema Optional Commas', () => {
     const ast = parse('let T = { name: String ... } in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
-      if (ast.typeExpr.kind === 'type_schema') {
-        assert.strictEqual(ast.typeExpr.properties.length, 1);
-        assert.strictEqual(ast.typeExpr.extras, 'ignored');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_schema');
+      if (ast.definitions[0].typeExpr.kind === 'type_schema') {
+        assert.strictEqual(ast.definitions[0].typeExpr.properties.length, 1);
+        assert.strictEqual(ast.definitions[0].typeExpr.extras, 'ignored');
       }
     }
   });
@@ -1537,10 +1556,10 @@ describe('Parser - Type Schema Optional Commas', () => {
     const ast = parse('let T = { name: String ...: Int } in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
-      if (ast.typeExpr.kind === 'type_schema') {
-        assert.strictEqual(ast.typeExpr.properties.length, 1);
-        assert.strictEqual((ast.typeExpr.extras as any).kind, 'type_ref');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_schema');
+      if (ast.definitions[0].typeExpr.kind === 'type_schema') {
+        assert.strictEqual(ast.definitions[0].typeExpr.properties.length, 1);
+        assert.strictEqual((ast.definitions[0].typeExpr.extras as any).kind, 'type_ref');
       }
     }
   });
@@ -1551,12 +1570,12 @@ describe('Parser - Subtype Constraints with Labels', () => {
     const ast = parse('let T = Int(i | i > 0) in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
-      if (ast.typeExpr.kind === 'subtype_constraint') {
-        assert.strictEqual(ast.typeExpr.variable, 'i');
-        assert.strictEqual(ast.typeExpr.constraints.length, 1);
-        assert.strictEqual(ast.typeExpr.constraints[0].label, undefined);
-        assert.strictEqual(ast.typeExpr.constraints[0].condition.type, 'binary');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'subtype_constraint');
+      if (ast.definitions[0].typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.definitions[0].typeExpr.variable, 'i');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints.length, 1);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].label, undefined);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].condition.type, 'binary');
       }
     }
   });
@@ -1565,12 +1584,12 @@ describe('Parser - Subtype Constraints with Labels', () => {
     const ast = parse('let T = Int(i | positive: i > 0) in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
-      if (ast.typeExpr.kind === 'subtype_constraint') {
-        assert.strictEqual(ast.typeExpr.variable, 'i');
-        assert.strictEqual(ast.typeExpr.constraints.length, 1);
-        assert.strictEqual(ast.typeExpr.constraints[0].label, 'positive');
-        assert.strictEqual(ast.typeExpr.constraints[0].condition.type, 'binary');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'subtype_constraint');
+      if (ast.definitions[0].typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.definitions[0].typeExpr.variable, 'i');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints.length, 1);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].label, 'positive');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].condition.type, 'binary');
       }
     }
   });
@@ -1579,12 +1598,12 @@ describe('Parser - Subtype Constraints with Labels', () => {
     const ast = parse("let T = Int(i | 'must be positive': i > 0) in x |> T");
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
-      if (ast.typeExpr.kind === 'subtype_constraint') {
-        assert.strictEqual(ast.typeExpr.variable, 'i');
-        assert.strictEqual(ast.typeExpr.constraints.length, 1);
-        assert.strictEqual(ast.typeExpr.constraints[0].label, 'must be positive');
-        assert.strictEqual(ast.typeExpr.constraints[0].condition.type, 'binary');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'subtype_constraint');
+      if (ast.definitions[0].typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.definitions[0].typeExpr.variable, 'i');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints.length, 1);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].label, 'must be positive');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].condition.type, 'binary');
       }
     }
   });
@@ -1593,12 +1612,12 @@ describe('Parser - Subtype Constraints with Labels', () => {
     const ast = parse('let T = Int(i | positive: i > 0, even: i % 2 == 0) in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
-      if (ast.typeExpr.kind === 'subtype_constraint') {
-        assert.strictEqual(ast.typeExpr.variable, 'i');
-        assert.strictEqual(ast.typeExpr.constraints.length, 2);
-        assert.strictEqual(ast.typeExpr.constraints[0].label, 'positive');
-        assert.strictEqual(ast.typeExpr.constraints[1].label, 'even');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'subtype_constraint');
+      if (ast.definitions[0].typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.definitions[0].typeExpr.variable, 'i');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints.length, 2);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].label, 'positive');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[1].label, 'even');
       }
     }
   });
@@ -1607,12 +1626,12 @@ describe('Parser - Subtype Constraints with Labels', () => {
     const ast = parse('let T = Int(i | i > 0, even: i % 2 == 0) in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
-      if (ast.typeExpr.kind === 'subtype_constraint') {
-        assert.strictEqual(ast.typeExpr.variable, 'i');
-        assert.strictEqual(ast.typeExpr.constraints.length, 2);
-        assert.strictEqual(ast.typeExpr.constraints[0].label, undefined);
-        assert.strictEqual(ast.typeExpr.constraints[1].label, 'even');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'subtype_constraint');
+      if (ast.definitions[0].typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.definitions[0].typeExpr.variable, 'i');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints.length, 2);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].label, undefined);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[1].label, 'even');
       }
     }
   });
@@ -1621,11 +1640,11 @@ describe('Parser - Subtype Constraints with Labels', () => {
     const ast = parse("let T = Int(i | positive: i > 0, 'must be even': i % 2 == 0) in x |> T");
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
-      if (ast.typeExpr.kind === 'subtype_constraint') {
-        assert.strictEqual(ast.typeExpr.constraints.length, 2);
-        assert.strictEqual(ast.typeExpr.constraints[0].label, 'positive');
-        assert.strictEqual(ast.typeExpr.constraints[1].label, 'must be even');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'subtype_constraint');
+      if (ast.definitions[0].typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints.length, 2);
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[0].label, 'positive');
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints[1].label, 'must be even');
       }
     }
   });
@@ -1814,9 +1833,9 @@ describe('Parser - Trailing Commas', () => {
     const ast = parse('let T = { name: String, age: Int, } in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'type_schema');
-      if (ast.typeExpr.kind === 'type_schema') {
-        assert.strictEqual(ast.typeExpr.properties.length, 2);
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_schema');
+      if (ast.definitions[0].typeExpr.kind === 'type_schema') {
+        assert.strictEqual(ast.definitions[0].typeExpr.properties.length, 2);
       }
     }
   });
@@ -1863,9 +1882,9 @@ describe('Parser - Trailing Commas', () => {
     const ast = parse('let T = Int(i | i > 0, i < 100,) in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.typeExpr.kind, 'subtype_constraint');
-      if (ast.typeExpr.kind === 'subtype_constraint') {
-        assert.strictEqual(ast.typeExpr.constraints.length, 2);
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'subtype_constraint');
+      if (ast.definitions[0].typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(ast.definitions[0].typeExpr.constraints.length, 2);
       }
     }
   });
@@ -1874,8 +1893,8 @@ describe('Parser - Trailing Commas', () => {
     const ast = parse('let T = String, in x |> T');
     assert.strictEqual(ast.type, 'typedef');
     if (ast.type === 'typedef') {
-      assert.strictEqual(ast.name, 'T');
-      assert.strictEqual(ast.typeExpr.kind, 'type_ref');
+      assert.strictEqual(ast.definitions[0].name, 'T');
+      assert.strictEqual(ast.definitions[0].typeExpr.kind, 'type_ref');
     }
   });
 });

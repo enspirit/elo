@@ -291,13 +291,17 @@ function transformWithDepth(
       return irDataPath(expr.segments);
 
     case 'typedef': {
-      // Transform type definition
-      const irTypeExpr = transformTypeExprWithContext(expr.typeExpr, env, defining, nextDepth, ctx);
-      // Add type name to environment as a parser function type
+      // Transform the type definitions, each in scope for the ones after it,
+      // as the names were when one definition was one nested node
       const newEnv = new Map(env);
-      newEnv.set(expr.name, Types.fn);
+      const definitions = expr.definitions.map((definition) => {
+        const irTypeExpr = transformTypeExprWithContext(definition.typeExpr, newEnv, defining, nextDepth, ctx);
+        // Add type name to environment as a parser function type
+        newEnv.set(definition.name, Types.fn);
+        return { name: definition.name, typeExpr: irTypeExpr };
+      });
       const bodyIR = transformWithDepth(expr.body, newEnv, defining, nextDepth, ctx);
-      return irTypeDef(expr.name, irTypeExpr, bodyIR);
+      return irTypeDef(definitions, bodyIR);
     }
 
     case 'guard': {

@@ -426,15 +426,25 @@ export interface TypeSchemaProperty {
 }
 
 /**
- * Type definition: let Person = { name: String, age: Int }
- * Binds a type name (uppercase) to a type expression.
- * The body can use the type via pipe: data |> Person
+ * A type name bound to a type expression, outside of any expression.
+ *
+ * This is what a file's type prelude declares. It becomes a `TypeDef` node
+ * once there is a body to use it in — see `withTypeDefs`.
+ */
+export interface TypeBinding {
+  name: string;
+  typeExpr: TypeExpr;
+}
+
+/**
+ * Type definitions: let Person = { name: String, age: Int }, People = [Person] in body
+ * Binds type names (uppercase) to type expressions.
+ * The body can use a type via pipe: data |> Person
  */
 export interface TypeDef extends Located {
   type: 'typedef';
-  name: string;           // Uppercase identifier like 'Person'
-  typeExpr: TypeExpr;     // The type expression
-  body: Expr;             // The expression where this type is used
+  definitions: TypeBinding[];  // One or more, each in scope for the next
+  body: Expr;                  // The expression where these types are used
 }
 
 /**
@@ -453,34 +463,41 @@ export function typeSchema(properties: TypeSchemaProperty[], extras?: 'closed' |
 
 /**
  * Creates a type definition expression
+ *
+ * Kept flat, as `letExpr` is: nesting one node per definition made every
+ * definition count as one level of nesting, so a file was capped at a hundred
+ * type definitions by the transform depth guard — a limit meant for deeply
+ * nested expressions, not for how many types a file declares. Each definition
+ * is still in scope for the ones after it, and for the body.
  */
-export function typeDef(name: string, typeExpr: TypeExpr, body: Expr): TypeDef {
-  return { type: 'typedef', name, typeExpr, body };
+export function typeDef(definitions: TypeBinding[], body: Expr): TypeDef {
+  if (definitions.length === 0) {
+    throw new Error('Type definition must have at least one definition');
+  }
+
+  // The definitions share one scope now that they are flat, so a name defined
+  // twice is refused rather than silently resolved to one of the two — the
+  // targets do not even agree on which one that would be.
+  const seen = new Set<string>();
+  for (const definition of definitions) {
+    if (seen.has(definition.name)) {
+      throw new Error(`Duplicate type definition '${definition.name}'`);
+    }
+    seen.add(definition.name);
+  }
+
+  return { type: 'typedef', definitions, body };
 }
 
 /**
- * A type name bound to a type expression, outside of any expression.
+ * Scopes `body` under `bindings`, each in scope for the next.
  *
- * This is what a file's type prelude declares. It becomes a `TypeDef` node
- * once there is a body to use it in — see `withTypeDefs`.
- */
-export interface TypeBinding {
-  name: string;
-  typeExpr: TypeExpr;
-}
-
-/**
- * Scopes `body` under `bindings`, innermost last.
- *
- * `[A, B]` around `body` gives `typedef A in typedef B in body`, so B may
- * refer to A, exactly as `let A = …, B = … in body` does. A type prelude is
- * sugar for that let, and this is where the sugar is undone.
+ * `[A, B]` around `body` gives `let A = …, B = … in body`, so B may refer to
+ * A. A type prelude is sugar for that let, and this is where the sugar is
+ * undone.
  */
 export function withTypeDefs(bindings: TypeBinding[], body: Expr): Expr {
-  return bindings.reduceRight<Expr>(
-    (inner, binding) => typeDef(binding.name, binding.typeExpr, inner),
-    body
-  );
+  return bindings.length === 0 ? body : typeDef(bindings, body);
 }
 
 /**

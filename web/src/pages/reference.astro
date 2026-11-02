@@ -555,8 +555,9 @@ import Footer from '../components/Footer.astro';
   Age = Int(a | a >= 0),
   Person = &#123; name: String, age: Age &#125;
 in &#123; name: 'Alice', age: '30' &#125; |> Person</pre>
-          <p class="example-desc">Define multiple types and reference them by name.</p>
+          <p class="example-desc">Define multiple types and reference them by name. Each refers to the ones before it, and there is no limit on how many a file defines.</p>
         </div>
+        <p class="note"><strong>One definition per name.</strong> The same name twice in one <code>let</code> — or twice in a prelude — is refused. A nested <code>let</code> may still redefine a name for its own body.</p>
 
         <h3>Type Prelude</h3>
         <p>A <code>.elo</code> file may open with type definitions, before any expression. They scope every expression below them, so a schema is declared once for the file instead of once per expression. A file that defines types and nothing else is a valid file — it simply compiles to nothing.</p>

@@ -302,13 +302,18 @@ function emitRuby(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptio
     }
 
     case 'typedef': {
-      // Generate parser lambda for the type and bind it
-      const parserCode = emitTypeExprParser(ir.typeExpr, ctx);
+      // Generate a parser lambda per type and bind it
       ctx.requireHelper?.('p_unwrap');
+      // One assignment per definition in a single sequence, so a long prelude
+      // costs one level of parentheses rather than one per type
+      const decls = ir.definitions.map(definition => {
+        const parserCode = emitTypeExprParser(definition.typeExpr, ctx);
+        // The type name becomes a lambda that calls the parser and unwraps
+        const name = assertSafeIdentifier(definition.name, 'typedef name');
+        return `_p_${name} = ${parserCode}; ${name} = ->(v) { p_unwrap(_p_${name}.call(v, '')) }`;
+      }).join('; ');
       const body = ctx.emit(ir.body);
-      // The type name becomes a lambda that calls the parser and unwraps
-      const name = assertSafeIdentifier(ir.name, 'typedef name');
-      return `(_p_${name} = ${parserCode}; ${name} = ->(v) { p_unwrap(_p_${name}.call(v, '')) }; ${body})`;
+      return `(${decls}; ${body})`;
     }
 
     case 'guard': {

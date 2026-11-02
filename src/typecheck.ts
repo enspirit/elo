@@ -453,12 +453,16 @@ class Checker {
         return { kind: 'fn', result: ANY };
 
       case 'typedef': {
-        const declared = this.typeExprToCheckType(expr.typeExpr, env, types, next, expr.loc);
         const scope = new Map(env);
         const typeScope = new Map(types);
-        // A type name is callable as a coercion, and it names a structure.
-        scope.set(expr.name, { kind: 'fn', result: declared });
-        typeScope.set(expr.name, declared);
+        for (const definition of expr.definitions) {
+          // Each definition sees the ones before it, so `People = [Person]`
+          // resolves `Person`.
+          const declared = this.typeExprToCheckType(definition.typeExpr, scope, typeScope, next, expr.loc);
+          // A type name is callable as a coercion, and it names a structure.
+          scope.set(definition.name, { kind: 'fn', result: declared });
+          typeScope.set(definition.name, declared);
+        }
         return this.check(expr.body, scope, typeScope, next);
       }
 

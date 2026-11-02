@@ -221,7 +221,7 @@ describe('AST - withTypeDefs() helper', () => {
     assert.strictEqual(withTypeDefs([], body), body);
   });
 
-  it('nests the definitions so that a later one can see an earlier one', () => {
+  it('scopes the definitions in one node, in the order they were written', () => {
     const scoped = withTypeDefs(
       [
         { name: 'A', typeExpr: typeRef('Int') },
@@ -231,14 +231,40 @@ describe('AST - withTypeDefs() helper', () => {
     );
     assert.deepStrictEqual(scoped, {
       type: 'typedef',
-      name: 'A',
-      typeExpr: { kind: 'type_ref', name: 'Int' },
-      body: {
-        type: 'typedef',
-        name: 'B',
-        typeExpr: { kind: 'type_ref', name: 'A' },
-        body: { type: 'variable', name: 'x' }
-      }
+      definitions: [
+        { name: 'A', typeExpr: { kind: 'type_ref', name: 'Int' } },
+        { name: 'B', typeExpr: { kind: 'type_ref', name: 'A' } }
+      ],
+      body: { type: 'variable', name: 'x' }
     });
+  });
+
+  it('costs one level of nesting whatever the number of definitions', () => {
+    // A prelude collects the types a file shares, so its size must not count
+    // against the depth guards: a hundred definitions used to be refused.
+    const scoped = withTypeDefs(
+      Array.from({ length: 120 }, (_, i) => ({ name: `T${i}`, typeExpr: typeRef('Int') })),
+      variable('x')
+    );
+    assert.strictEqual(scoped.type, 'typedef');
+    if (scoped.type === 'typedef') {
+      assert.strictEqual(scoped.definitions.length, 120);
+      assert.deepStrictEqual(scoped.body, { type: 'variable', name: 'x' });
+    }
+  });
+
+  it('refuses two definitions of the same name', () => {
+    // One name, two types is meaningless, and the definitions share a scope in
+    // every target — on JS the emitted declaration would not even be legal.
+    assert.throws(
+      () => withTypeDefs(
+        [
+          { name: 'T', typeExpr: typeRef('Int') },
+          { name: 'T', typeExpr: typeRef('String') }
+        ],
+        variable('x')
+      ),
+      /Duplicate type definition 'T'/
+    );
   });
 });

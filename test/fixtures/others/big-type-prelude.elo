@@ -1,0 +1,26 @@
+# A file's prelude declares the types the file shares, so it is as long as the
+# file needs. Its size costs one level of nesting, not one per definition:
+# before that, a prelude of more than a hundred types was refused with
+# 'Maximum transform depth exceeded'.
+T001 = Int T002 = Int T003 = Int T004 = Int T005 = Int T006 = Int T007 = Int T008 = Int T009 = Int T010 = Int
+T011 = Int T012 = Int T013 = Int T014 = Int T015 = Int T016 = Int T017 = Int T018 = Int T019 = Int T020 = Int
+T021 = Int T022 = Int T023 = Int T024 = Int T025 = Int T026 = Int T027 = Int T028 = Int T029 = Int T030 = Int
+T031 = Int T032 = Int T033 = Int T034 = Int T035 = Int T036 = Int T037 = Int T038 = Int T039 = Int T040 = Int
+T041 = Int T042 = Int T043 = Int T044 = Int T045 = Int T046 = Int T047 = Int T048 = Int T049 = Int T050 = Int
+T051 = Int T052 = Int T053 = Int T054 = Int T055 = Int T056 = Int T057 = Int T058 = Int T059 = Int T060 = Int
+T061 = Int T062 = Int T063 = Int T064 = Int T065 = Int T066 = Int T067 = Int T068 = Int T069 = Int T070 = Int
+T071 = Int T072 = Int T073 = Int T074 = Int T075 = Int T076 = Int T077 = Int T078 = Int T079 = Int T080 = Int
+T081 = Int T082 = Int T083 = Int T084 = Int T085 = Int T086 = Int T087 = Int T088 = Int T089 = Int T090 = Int
+T091 = Int T092 = Int T093 = Int T094 = Int T095 = Int T096 = Int T097 = Int T098 = Int T099 = Int T100 = Int
+T101 = Int T102 = Int T103 = Int T104 = Int T105 = Int T106 = Int T107 = Int T108 = Int T109 = Int T110 = Int
+Id = Int(i | i > 0)
+Person = { name: String, id: Id }
+
+# Any of them is in scope, whatever its place in the prelude
+assert(('42' |> T001) == 42)
+assert(('7' |> T110) == 7)
+assert(('3' |> Id) == 3)
+assert(({ name: 'Alice', id: '7' } |> Person) == { name: 'Alice', id: 7 })
+assertFails(fn( ~> '0' |> Id ))
+# A let binds as many types as it likes, for the same reason
+assert((let A001 = Int, A002 = Int, A003 = Int, A004 = Int, A005 = Int, A006 = Int, A007 = Int, A008 = Int, A009 = Int, A010 = Int, A011 = Int, A012 = Int, A013 = Int, A014 = Int, A015 = Int, A016 = Int, A017 = Int, A018 = Int, A019 = Int, A020 = Int, A021 = Int, A022 = Int, A023 = Int, A024 = Int, A025 = Int, A026 = Int, A027 = Int, A028 = Int, A029 = Int, A030 = Int, A031 = Int, A032 = Int, A033 = Int, A034 = Int, A035 = Int, A036 = Int, A037 = Int, A038 = Int, A039 = Int, A040 = Int, A041 = Int, A042 = Int, A043 = Int, A044 = Int, A045 = Int, A046 = Int, A047 = Int, A048 = Int, A049 = Int, A050 = Int, A051 = Int, A052 = Int, A053 = Int, A054 = Int, A055 = Int, A056 = Int, A057 = Int, A058 = Int, A059 = Int, A060 = Int, A061 = Int, A062 = Int, A063 = Int, A064 = Int, A065 = Int, A066 = Int, A067 = Int, A068 = Int, A069 = Int, A070 = Int, A071 = Int, A072 = Int, A073 = Int, A074 = Int, A075 = Int, A076 = Int, A077 = Int, A078 = Int, A079 = Int, A080 = Int, A081 = Int, A082 = Int, A083 = Int, A084 = Int, A085 = Int, A086 = Int, A087 = Int, A088 = Int, A089 = Int, A090 = Int, A091 = Int, A092 = Int, A093 = Int, A094 = Int, A095 = Int, A096 = Int, A097 = Int, A098 = Int, A099 = Int, A100 = Int, A101 = Int, A102 = Int, A103 = Int, A104 = Int, A105 = Int, A106 = Int, A107 = Int, A108 = Int, A109 = Int, A110 = Int in ('5' |> A001) + ('6' |> A110)) == 11)

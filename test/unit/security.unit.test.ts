@@ -272,21 +272,21 @@ describe('Security - AST-API identifier injection (type nodes)', () => {
   // binder, so the only emit of the variable is its declaration site.
   function subtypeConstraintAst() {
     const ast: any = parse('let T = Int(i | 1 > 0) in T(5)');
-    ast.typeExpr.variable = PAYLOAD;
+    ast.definitions[0].typeExpr.variable = PAYLOAD;
     return ast;
   }
 
   // type-schema property key
   function schemaKeyAst() {
     const ast: any = parse('let T = {a: Int} in 1');
-    ast.typeExpr.properties[0].key = PAYLOAD;
+    ast.definitions[0].typeExpr.properties[0].key = PAYLOAD;
     return ast;
   }
 
   // typedef name — body does not reference T, so only the binding site emits it
   function typedefNameAst() {
     const ast: any = parse('let T = {a: Int} in 1');
-    ast.name = PAYLOAD;
+    ast.definitions[0].name = PAYLOAD;
     return ast;
   }
 

@@ -300,14 +300,19 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
     }
 
     case 'typedef': {
-      // Generate parser function for the type and bind it
+      // Generate a parser function per type and bind it
       // Wrap it so calling TypeName(value) auto-unwraps the result
-      const parserCode = emitTypeExprParser(ir.typeExpr, ctx);
       ctx.requireHelper?.('pUnwrap');
+      // One declaration per definition in a single scope, so a long prelude
+      // costs one closure rather than one per type
+      const decls = ir.definitions.map(definition => {
+        const parserCode = emitTypeExprParser(definition.typeExpr, ctx);
+        // The type name becomes a function that calls the parser and unwraps
+        const name = assertSafeIdentifier(definition.name, 'typedef name');
+        return `const _p_${name} = ${parserCode}; const ${name} = (v) => pUnwrap(_p_${name}(v, ''));`;
+      }).join(' ');
       const body = ctx.emit(ir.body);
-      // The type name becomes a function that calls the parser and unwraps
-      const name = assertSafeIdentifier(ir.name, 'typedef name');
-      return `(() => { const _p_${name} = ${parserCode}; const ${name} = (v) => pUnwrap(_p_${name}(v, '')); return ${body}; })()`;
+      return `(() => { ${decls} return ${body}; })()`;
     }
 
     case 'guard': {

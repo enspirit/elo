@@ -324,12 +324,22 @@ export interface IRTypeSchemaProperty {
 }
 
 /**
- * Type definition: let Person = { name: String, age: Int } in body
+ * A type name bound to the parser the name stands for.
+ */
+export interface IRTypeDefinition {
+  name: string;
+  typeExpr: IRTypeExpr;
+}
+
+/**
+ * Type definitions: let Person = { name: String, age: Int }, People = [Person] in body
+ *
+ * Flat, as `IRLet` is: the compilers emit one declaration per definition in a
+ * single scope, which is what the target languages want anyway.
  */
 export interface IRTypeDef {
   type: 'typedef';
-  name: string;
-  typeExpr: IRTypeExpr;
+  definitions: IRTypeDefinition[];
   body: IRExpr;
 }
 
@@ -470,8 +480,8 @@ export function irUnionType(types: IRTypeExpr[]): IRUnionType {
   return { kind: 'union_type', types };
 }
 
-export function irTypeDef(name: string, typeExpr: IRTypeExpr, body: IRExpr): IRTypeDef {
-  return { type: 'typedef', name, typeExpr, body };
+export function irTypeDef(definitions: IRTypeDefinition[], body: IRExpr): IRTypeDef {
+  return { type: 'typedef', definitions, body };
 }
 
 export function irGuard(constraints: IRConstraint[], body: IRExpr, guardType: 'guard' | 'check' = 'guard'): IRGuard {
@@ -593,9 +603,9 @@ export function usesInput(ir: IRExpr, boundVars: Set<string> = new Set()): boole
       return false;  // DataPath is a pure value, doesn't reference variables
 
     case 'typedef': {
-      // Type definitions add the type name to bound vars for the body
+      // Type definitions add the type names to bound vars for the body
       const newBound = new Set(boundVars);
-      newBound.add(ir.name);
+      ir.definitions.forEach(d => newBound.add(d.name));
       return usesInput(ir.body, newBound);
     }
 
