@@ -662,6 +662,22 @@ describe('Parser - Let Expressions', () => {
     assert.throws(() => parse('let T = Int, T = String in 1'), /Duplicate type definition 'T'/);
   });
 
+  it('should refuse the same value name twice in one let', () => {
+    assert.throws(() => parse('let x = 1, x = 2 in x'), /Duplicate binding 'x'/);
+  });
+
+  it('should refuse a value name rebound from its own value', () => {
+    assert.throws(() => parse('let x = 1, x = x + 1 in x'), /Duplicate binding 'x'/);
+  });
+
+  it('should refuse a repeated value name after a type definition', () => {
+    assert.throws(() => parse('let T = Int, x = 1, x = 2 in x'), /Duplicate binding 'x'/);
+  });
+
+  it('should still accept a name shadowed by a nested let', () => {
+    assert.doesNotThrow(() => parse('let x = 1 in let x = 2 in x'));
+  });
+
   it('should refuse the same type name twice in a prelude', () => {
     assert.throws(() => parse('T = Int\nT = String\n1'), /Duplicate type definition 'T'/);
   });

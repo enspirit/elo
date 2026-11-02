@@ -330,8 +330,9 @@ import Footer from '../components/Footer.astro';
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Multiple Bindings</div>
           <pre class="language-elo">let width = 5, height = 3 in width * height</pre>
-          <p class="example-desc">Bind multiple variables separated by commas.</p>
+          <p class="example-desc">Bind multiple variables separated by commas. Each one is in scope for the ones after it: <code>let w = 5, area = w * 2 in area</code>.</p>
         </div>
+        <p class="note"><strong>One binding per name.</strong> The same name twice in one <code>let</code> is refused, as it is for <a href="#data-schemas">type definitions</a>. A nested <code>let</code> may still shadow a name for its own body — <code>let x = 1 in let x = 2 in x</code> is <code>2</code>.</p>
       </section>
 
       <section class="doc-section" id="conditionals">

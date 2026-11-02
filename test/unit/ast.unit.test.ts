@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { literal, variable, binary, unary, typeRef, withTypeDefs } from '../../src/ast';
+import { literal, variable, binary, unary, typeRef, withTypeDefs, letExpr } from '../../src/ast';
 
 describe('AST - literal() helper', () => {
   it('should create numeric literal', () => {
@@ -265,6 +265,54 @@ describe('AST - withTypeDefs() helper', () => {
         variable('x')
       ),
       /Duplicate type definition 'T'/
+    );
+  });
+});
+
+describe('AST - letExpr() helper', () => {
+  it('keeps the bindings flat, in the order they were written', () => {
+    const node = letExpr(
+      [{ name: 'x', value: literal(1) }, { name: 'y', value: literal(2) }],
+      variable('x')
+    );
+    assert.deepStrictEqual(node, {
+      type: 'let',
+      bindings: [
+        { name: 'x', value: { type: 'literal', value: 1 } },
+        { name: 'y', value: { type: 'literal', value: 2 } }
+      ],
+      body: { type: 'variable', name: 'x' }
+    });
+  });
+
+  it('refuses at least one binding', () => {
+    assert.throws(() => letExpr([], variable('x')), /at least one binding/);
+  });
+
+  it('refuses two bindings of the same name', () => {
+    // The bindings share a scope, and the targets do not agree on what a
+    // repeated name means there — on JS the emitted code is not even legal.
+    assert.throws(
+      () => letExpr(
+        [{ name: 'x', value: literal(1) }, { name: 'x', value: literal(2) }],
+        variable('x')
+      ),
+      /Duplicate binding 'x'/
+    );
+  });
+
+  it('refuses a binding that rebinds a name from its own value', () => {
+    // `let x = 1, x = x + 1 in x` reads as a sequential rebinding, and that is
+    // what Ruby and Python emit — but the same program does not run on JS.
+    assert.throws(
+      () => letExpr(
+        [
+          { name: 'x', value: literal(1) },
+          { name: 'x', value: binary('+', variable('x'), literal(1)) }
+        ],
+        variable('x')
+      ),
+      /Duplicate binding 'x'/
     );
   });
 });

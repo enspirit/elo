@@ -244,14 +244,35 @@ export function memberAccess(object: Expr, property: string): MemberAccess {
 }
 
 /**
- * Creates a let expression, desugaring multiple bindings into nested let expressions.
- * `let a = 1, b = 2 in body` becomes `let a = 1 in let b = 2 in body`
- * This ensures that later bindings can reference earlier ones.
+ * Refuses a name bound twice in the same scope.
+ *
+ * `let` and its type form both keep their bindings flat, which puts them in
+ * one scope in the target too — and the targets disagree on what a repeated
+ * name means there: Ruby and Python rebind, while `const x` twice is not even
+ * legal JavaScript. Nesting is the unambiguous way to shadow a name, and it
+ * stays legal.
+ */
+function assertDistinctNames(names: string[], what: string): void {
+  const seen = new Set<string>();
+  for (const name of names) {
+    if (seen.has(name)) {
+      throw new Error(`Duplicate ${what} '${name}'`);
+    }
+    seen.add(name);
+  }
+}
+
+/**
+ * Creates a let expression: let a = 1, b = 2 in body
+ *
+ * The bindings are kept flat, and each is in scope for the ones after it.
  */
 export function letExpr(bindings: LetBinding[], body: Expr): LetExpr {
   if (bindings.length === 0) {
     throw new Error('Let expression must have at least one binding');
   }
+
+  assertDistinctNames(bindings.map((binding) => binding.name), 'binding');
 
   // Kept flat on purpose. Desugaring `let a = 1, b = 2, c = 3 in body` into
   // nested single-binding lets made every binding count as one level of
@@ -478,13 +499,7 @@ export function typeDef(definitions: TypeBinding[], body: Expr): TypeDef {
   // The definitions share one scope now that they are flat, so a name defined
   // twice is refused rather than silently resolved to one of the two — the
   // targets do not even agree on which one that would be.
-  const seen = new Set<string>();
-  for (const definition of definitions) {
-    if (seen.has(definition.name)) {
-      throw new Error(`Duplicate type definition '${definition.name}'`);
-    }
-    seen.add(definition.name);
-  }
+  assertDistinctNames(definitions.map((definition) => definition.name), 'type definition');
 
   return { type: 'typedef', definitions, body };
 }
