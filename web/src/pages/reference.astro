@@ -303,7 +303,7 @@ import Footer from '../components/Footer.astro';
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Multiple Parameters</div>
           <pre class="language-elo">fn( x, y ~> x + y )</pre>
-          <p class="example-desc">Lambdas can take multiple parameters.</p>
+          <p class="example-desc">Lambdas can take multiple parameters. Each one needs its own name — <code>fn( x, x ~> x )</code> is refused, as a <a href="#variables">repeated <code>let</code> binding</a> is.</p>
         </div>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Sugar Syntax</div>

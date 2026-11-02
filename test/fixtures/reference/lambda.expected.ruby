@@ -13,3 +13,6 @@
 ->(_) { (raise "Assertion failed" unless (double = ->(x) { x * 2 }; double.call(5)) == 10; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (add = ->(x, y) { x + y }; add.call(3, 4)) == 7; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (double = ->(x) { x * 2 }; double.call(2)) == 4; true) }.call(nil);
+
+->(_) { (raise "Assertion failed" unless (a = 1; f = ->(a) { a * 2 }; f.call(5) + a) == 11; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = 1; ->(a) { ->(b) { a + b } }.call(10).call(5)) == 15; true) }.call(nil);

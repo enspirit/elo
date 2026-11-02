@@ -934,6 +934,14 @@ describe('Parser - Lambda Expressions', () => {
     }
   });
 
+  it('should refuse two parameters of the same name', () => {
+    assert.throws(() => parse('fn( a, a ~> a )'), /Duplicate parameter 'a'/);
+  });
+
+  it('should still accept a parameter that shadows an outer binding', () => {
+    assert.doesNotThrow(() => parse('let a = 1 in fn( a ~> a )'));
+  });
+
   it('should parse lambda with three parameters', () => {
     const ast = parse('fn( a, b, c ~> a + b + c )');
     assert.strictEqual(ast.type, 'lambda');

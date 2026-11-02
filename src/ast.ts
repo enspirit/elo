@@ -294,6 +294,11 @@ export function ifExpr(condition: Expr, thenBranch: Expr, elseBranch: Expr): IfE
  * Creates a lambda expression: fn( params ~> body )
  */
 export function lambda(params: string[], body: Expr): Lambda {
+  // The parameters share the lambda's scope, and no target accepts a name
+  // twice in a parameter list — `(a, a) => a`, `->(a, a) { a }` and
+  // `lambda a, a: a` are all syntax errors.
+  assertDistinctNames(params, 'parameter');
+
   return { type: 'lambda', params, body };
 }
 

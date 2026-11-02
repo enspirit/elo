@@ -13,3 +13,6 @@
 (lambda _: kAssert(kEq((double := lambda x: kMul(x, 2), double(5))[-1], 10)))(None)
 (lambda _: kAssert(kEq((add := lambda x, y: kAdd(x, y), add(3, 4))[-1], 7)))(None)
 (lambda _: kAssert(kEq((double := lambda x: kMul(x, 2), double(2))[-1], 4)))(None)
+
+(lambda _: kAssert(kEq((a := 1, f := lambda a: kMul(a, 2), kAdd(f(5), a))[-1], 11)))(None)
+(lambda _: kAssert(kEq((a := 1, (lambda a: lambda b: kAdd(a, b))(10)(5))[-1], 15)))(None)

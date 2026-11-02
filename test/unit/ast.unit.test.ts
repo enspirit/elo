@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { literal, variable, binary, unary, typeRef, withTypeDefs, letExpr } from '../../src/ast';
+import { literal, variable, binary, unary, typeRef, withTypeDefs, letExpr, lambda } from '../../src/ast';
 
 describe('AST - literal() helper', () => {
   it('should create numeric literal', () => {
@@ -313,6 +313,33 @@ describe('AST - letExpr() helper', () => {
         variable('x')
       ),
       /Duplicate binding 'x'/
+    );
+  });
+});
+
+describe('AST - lambda() helper', () => {
+  it('keeps the parameters in the order they were written', () => {
+    assert.deepStrictEqual(lambda(['a', 'b'], variable('a')), {
+      type: 'lambda',
+      params: ['a', 'b'],
+      body: { type: 'variable', name: 'a' }
+    });
+  });
+
+  it('accepts a lambda without parameters', () => {
+    assert.deepStrictEqual(lambda([], literal(1)), {
+      type: 'lambda',
+      params: [],
+      body: { type: 'literal', value: 1 }
+    });
+  });
+
+  it('refuses two parameters of the same name', () => {
+    // `(a, a) => a` is not legal in any of the three targets that have
+    // lambdas, so the emitted code would not even parse.
+    assert.throws(
+      () => lambda(['a', 'a'], variable('a')),
+      /Duplicate parameter 'a'/
     );
   });
 });
