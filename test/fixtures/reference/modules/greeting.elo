@@ -1,0 +1,9 @@
+# A module that imports another module, to make an import transitive.
+import { double } from './reusable'
+
+let
+  greet_fn = fn( n ~> double(n) + 1 )
+in
+  {
+    greet: greet_fn
+  }

@@ -1,0 +1,30 @@
+# A module is a .elo file: its type prelude is what it exports as types, its
+# expression is what it exports as a value. Case decides which namespace a
+# name is imported into.
+import { Person, Age } from './modules/types'
+import { double, label } from './modules/reusable'
+import { greet } from './modules/greeting'
+import './modules/reusable' as r
+
+# The type prelude comes after the imports, and may use what they bring in
+People = [Person]
+
+# An imported type is used like any other: through the pipe operator
+assert(({ name: 'Alice', age: '30' } |> Person) == { name: 'Alice', age: 30 })
+assert(('30' |> Age) == 30)
+assertFails(fn( ~> '-1' |> Age ))
+# An imported type keeps the constraints of the types it is built on
+assertFails(fn( ~> { name: 'Alice', age: '-1' } |> Person ))
+# A type of the importer's own prelude can build on an imported one
+assert(([{ name: 'Bob', age: '7' }] |> People) == [{ name: 'Bob', age: 7 }])
+# An imported function is called by its own name
+assert(double(21) == 42)
+assert(label({ name: 'Alice' }) == 'Alice')
+# A module's own imports are its business: greet calls reusable's double
+assert(greet(2) == 5)
+# The same module reached through an alias gives the same value
+assert(r.double(21) == 42)
+assert(r.one == 1)
+# An imported name is in scope inside nested expressions and lambdas
+assert(map([1, 2], fn( x ~> double(x) )) == [2, 4])
+assert((let p = { name: 'Bob', age: '7' } |> Person in label(p)) == 'Bob')

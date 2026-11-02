@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { parse, splitTypePrelude } from '../../src/parser';
+import { parse, splitProgramHeader } from '../../src/parser';
 import { Expr } from '../../src/ast';
 
 describe('Parser - Numeric Literals', () => {
@@ -1960,9 +1960,9 @@ describe('Parser - Type prelude', () => {
   });
 });
 
-describe('splitTypePrelude', () => {
+describe('splitProgramHeader', () => {
   it('should lift the definitions off and keep every other line in place', () => {
-    const { typeDefs, body } = splitTypePrelude('Ints = [Int]\nassert(([1] |> Ints) == [1])\n');
+    const { typeDefs, body } = splitProgramHeader('Ints = [Int]\nassert(([1] |> Ints) == [1])\n');
     assert.strictEqual(typeDefs.length, 1);
     assert.strictEqual(typeDefs[0].name, 'Ints');
     assert.deepStrictEqual(typeDefs[0].typeExpr, { kind: 'array_type', elementType: { kind: 'type_ref', name: 'Int' } });
@@ -1971,19 +1971,83 @@ describe('splitTypePrelude', () => {
   });
 
   it('should report no definitions for a source without a type prelude', () => {
-    const { typeDefs, body } = splitTypePrelude('1 + 1');
+    const { typeDefs, body } = splitProgramHeader('1 + 1');
     assert.deepStrictEqual(typeDefs, []);
     assert.strictEqual(body, '1 + 1');
   });
 
   it('should accept a source that is nothing but definitions', () => {
-    const { typeDefs, body } = splitTypePrelude('Ints = [Int]\nStrings = [String]\n');
+    const { typeDefs, body } = splitProgramHeader('Ints = [Int]\nStrings = [String]\n');
     assert.deepStrictEqual(typeDefs.map(d => d.name), ['Ints', 'Strings']);
     assert.strictEqual(body.trim(), '');
   });
 
   it('should skip comments above and between definitions', () => {
-    const { typeDefs } = splitTypePrelude('# the input\nInts = [Int]\n# and out\nStrings = [String]\n1');
+    const { typeDefs } = splitProgramHeader('# the input\nInts = [Int]\n# and out\nStrings = [String]\n1');
     assert.deepStrictEqual(typeDefs.map(d => d.name), ['Ints', 'Strings']);
+  });
+
+  it('should read the import list, whatever the case of the names', () => {
+    const { imports } = splitProgramHeader("import { Person, double } from './m'\n1");
+    assert.deepStrictEqual(imports, [{ path: './m', names: ['Person', 'double'] }]);
+  });
+
+  it('should read the alias form', () => {
+    const { imports } = splitProgramHeader("import './m' as r\nr.one");
+    assert.deepStrictEqual(imports, [{ path: './m', names: [], alias: 'r' }]);
+  });
+
+  it('should read several imports, and the type prelude under them', () => {
+    const { imports, typeDefs, body } = splitProgramHeader(
+      "import { Person } from './types'\nimport './m' as r\nPeople = [Person]\nr.one"
+    );
+    assert.deepStrictEqual(imports.map(i => i.path), ['./types', './m']);
+    assert.deepStrictEqual(typeDefs.map(t => t.name), ['People']);
+    // The whole header becomes blanks, so every remaining line keeps its place.
+    assert.deepStrictEqual(body.split('\n').map(l => l.trim()), ['', '', '', 'r.one']);
+  });
+
+  it('should accept a source that is nothing but imports', () => {
+    const { imports, body } = splitProgramHeader("import './m' as r\n");
+    assert.strictEqual(imports.length, 1);
+    assert.strictEqual(body.trim(), '');
+  });
+
+  it('should refuse an import written after the type prelude', () => {
+    assert.throws(
+      () => splitProgramHeader("T = Int\nimport { x } from './m'\n1"),
+      /An import comes before the type definitions/
+    );
+  });
+
+  it('should refuse an import list that names nothing', () => {
+    assert.throws(() => splitProgramHeader("import { } from './m'\n1"), /at least one/);
+  });
+
+  it('should refuse an import without a path', () => {
+    assert.throws(() => splitProgramHeader("import { x } from 1\n1"), /module path after 'from'/);
+    assert.throws(() => splitProgramHeader("import { x }\n1"), /Expected 'from'/);
+    assert.throws(() => splitProgramHeader("import x from './m'\n1"), /'\{' or a module path/);
+    assert.throws(() => splitProgramHeader("import './m'\n1"), /Expected 'as'/);
+    assert.throws(() => splitProgramHeader("import './m' as R\n1"), /lowercase name after 'as'/);
+  });
+
+  it("leaves 'from' and 'as' usable as ordinary names", () => {
+    // They are keywords only inside an import, so a program that was using
+    // them as names still means what it meant.
+    assert.deepStrictEqual(splitProgramHeader('let from = 2, as = 3 in from * as').imports, []);
+  });
+});
+
+describe('parse - imports', () => {
+  it('refuses an import, having no way to read a module', () => {
+    assert.throws(() => parse("import { x } from './m'\nx"), /needs a module loader/);
+  });
+
+  it('refuses an import written after the type prelude', () => {
+    assert.throws(
+      () => parse("T = Int\nimport { x } from './m'\n1"),
+      /An import comes before the type definitions/
+    );
   });
 });

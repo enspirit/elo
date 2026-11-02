@@ -78,7 +78,8 @@ import Footer from '../components/Footer.astro';
         <h3>At compile time</h3>
         <ul>
           <li><strong>It always finishes.</strong> No expression — however deeply nested or malformed — makes the compiler hang or overflow its stack.</li>
-          <li><strong>It can't be turned against the compiler.</strong> Compiling an expression never executes attacker code <em>inside the compiler process</em>: no <code>eval</code>, no input-driven module loading, no attacker-controlled method firing during compilation.</li>
+          <li><strong>It can't be turned against the compiler.</strong> Compiling an expression never executes attacker code <em>inside the compiler process</em>: no <code>eval</code>, no loading of host code, no attacker-controlled method firing during compilation.</li>
+          <li><strong>An import reads a file, and only reads it.</strong> An <code>import</code> is the one capability compilation has: the compiler reads the <code>.elo</code> file the expression names, parses it as Elo and inlines it. Nothing in it runs at compile time. The loader is an argument, not a built-in — a host that compiles expressions it does not trust gives none, and an import is then refused. The playground and the <code>parse()</code> API do exactly that; <code>eloc</code> and <code>elo</code> read the filesystem, as the tools of whoever runs them.</li>
           <li><strong>It never crashes uncontrollably.</strong> Bad input yields a typed Elo error, not an uncaught native exception.</li>
           <li><strong>It emits only what you wrote.</strong> No value threaded through the compiler — a name, a key, a literal — can break out of its slot and inject code into the output. This holds whether the expression came from source text or from an AST handed to the compiler API.</li>
         </ul>
@@ -113,6 +114,16 @@ import Footer from '../components/Footer.astro';
           never claim it does. <strong>Run compiled Elo the way you would run any untrusted computation: in an
           isolated context, under a memory ceiling and a wall-clock timeout.</strong> See
           <a href="/running-safely">Running Elo safely</a> for copy-paste reference sandboxes for every target.
+        </p>
+
+        <h3>Compile untrusted expressions without a filesystem</h3>
+        <p>
+          An <code>import</code> names a file, and the file is read when the expression is
+          <em>compiled</em>. So an expression you do not trust must not be compiled by something
+          holding a filesystem: use <code>loadProgram</code> with no module loader, or with one of
+          your own that serves only the modules you mean to offer, and any other import is refused
+          with an error. Do not shell out to <code>eloc</code> on an expression a stranger wrote —
+          that is a compiler with your whole filesystem in reach.
         </p>
 
         <h3>Pass data, not host objects</h3>

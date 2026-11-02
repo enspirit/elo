@@ -28,6 +28,7 @@ Elo currently has the following components :
 * AST types and factory (`src/ast.ts`)
 * Type system (`src/types.ts`)
 * Intermediate Representation with type inference (`src/ir.ts`, `src/transform.ts`)
+* Import resolution, by inlining (`src/modules.ts`, filesystem part in `src/node-loader.ts`)
 * Standard library abstraction for type-based dispatch (`src/stdlib.ts`)
 * One compiler per target language (`src/compilers/*.ts`)
 * A binary command (`bin/eloc` and `src/cli.ts`)
@@ -61,8 +62,13 @@ testing to be effective.
 
 A fixture is therefore compiled with `eloc --lines`, which reads one expression per line so that
 one line of source gives one line of emitted code. That is a **test convention only**: an ordinary
-`.elo` file is one program — an optional type prelude, then one expression whose newlines mean
-nothing. Do not write a multi-line expression in a fixture; put it in an integration test instead.
+`.elo` file is one program — optional imports, an optional type prelude, then one expression whose
+newlines mean nothing. Do not write a multi-line expression in a fixture; put it in an integration
+test instead.
+
+A `.elo` file under a `modules/` directory is a module a fixture imports, not a fixture: the
+corpus-wide rules (an assert on every line, an expected file per target) are not about it, and its
+code is covered inlined into the fixture that imports it.
 
 ### Red first
 

@@ -2,9 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { join, relative, dirname, basename } from 'path';
-import { parse, splitTypePrelude } from '../../src/parser';
-import { withTypeDefs } from '../../src/ast';
-import type { TypeBinding } from '../../src/ast';
+import { parse } from '../../src/parser';
+import { loadProgram, scopeProgram } from '../../src/modules';
+import type { LoadedProgram } from '../../src/modules';
+import { nodeLoader } from '../../src/node-loader';
 import { compileToJavaScript } from '../../src/compilers/javascript';
 import { compileToRuby } from '../../src/compilers/ruby';
 import { compileToSQL } from '../../src/compilers/sql';
@@ -33,6 +34,15 @@ const TEST_DIR = join(__dirname, '../../../test/fixtures');
 /**
  * Recursively find all .elo files in directory and subdirectories
  */
+/**
+ * A `.elo` file under a `modules/` directory is a module a fixture imports,
+ * not a fixture: it holds the types and the value its importer brings in, and
+ * none of the corpus-wide rules — an assert on every line, an expected file
+ * per target — are about it. Its code is still covered, inlined into the
+ * fixture that imports it.
+ */
+const MODULES_DIR = 'modules';
+
 function findEloFiles(dir: string): string[] {
   const files: string[] = [];
   const entries = readdirSync(dir);
@@ -42,6 +52,7 @@ function findEloFiles(dir: string): string[] {
     const stat = statSync(fullPath);
 
     if (stat.isDirectory()) {
+      if (entry === MODULES_DIR) continue;
       files.push(...findEloFiles(fullPath));
     } else if (entry.endsWith('.elo')) {
       files.push(fullPath);
@@ -54,8 +65,8 @@ function findEloFiles(dir: string): string[] {
 interface TestSuite {
   name: string;
   elo: string[];
-  /** The fixture's type prelude, which scopes every one of its lines. */
-  typeDefs: TypeBinding[];
+  /** What the fixture's header declares, which scopes every one of its lines. */
+  scope: LoadedProgram;
   expectedJS: string[] | null;
   expectedRuby: string[] | null;
   expectedSQL: string[] | null;
@@ -93,10 +104,11 @@ function loadTestSuites(): TestSuite[] {
     const pythonPath = join(dir, `${baseName}.expected.py`);
 
     const eloContent = readFileSync(eloPath, 'utf-8');
-    // A fixture may open with type definitions, which eloc lifts off the top
-    // and applies to every line below. Read them the same way here, so the
-    // expected emission is the one eloc produced.
-    const { typeDefs, body } = splitTypePrelude(eloContent);
+    // A fixture may open with imports and type definitions, which eloc lifts
+    // off the top and applies to every line below. Read them the same way
+    // here, so the expected emission is the one eloc produced.
+    const scope = loadProgram(eloContent, { loader: nodeLoader(), file: eloPath });
+    const body = scope.body;
     // Remove trailing newline before splitting to match generated fixture line counts
     const elo = body.replace(/\n$/, '').split('\n');
     const expectedJS = tryReadFile(jsPath);
@@ -107,7 +119,7 @@ function loadTestSuites(): TestSuite[] {
     suites.push({
       name,
       elo,
-      typeDefs,
+      scope,
       expectedJS,
       expectedRuby,
       expectedSQL,
@@ -176,7 +188,7 @@ for (const suite of testSuites) {
       const lineNum = i + 1;
 
       it(`should compile line ${lineNum}: ${expr}`, () => {
-        const ast = withTypeDefs(suite.typeDefs, parse(expr));
+        const ast = scopeProgram(suite.scope, parse(expr));
 
         // Test JavaScript compilation (if expected file exists)
         // Fixtures are generated with --execute, so we use { execute: true }

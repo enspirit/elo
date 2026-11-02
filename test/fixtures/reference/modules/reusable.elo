@@ -1,0 +1,13 @@
+# A module imported by imports.elo. Its expression is what it exports as a
+# value: each property is a name an importer may bring in.
+Doubled = Int(i | i % 2 == 0)
+
+let
+  double_fn = fn( x ~> x * 2 ),
+  label_fn = fn( p ~> p.name )
+in
+  {
+    double: double_fn,
+    label: label_fn,
+    one: 1
+  }

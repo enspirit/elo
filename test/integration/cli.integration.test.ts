@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync, mkdtempSync } from 'fs';
+import { writeFileSync, unlinkSync, mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -323,6 +323,179 @@ Person = {
       assert.strictEqual(result.exitCode, 1);
       assert.match(result.stderr, /^2:3: error: No signature of upper/m);
     });
+  });
+});
+
+describe('CLI - Imports', () => {
+  /**
+   * Writes a whole import graph to a temporary directory and runs against its
+   * `main.elo`. The paths in a module are relative to the file that wrote
+   * them, so the graph has to live on a filesystem to be exercised at all.
+   */
+  function withModules(files: Record<string, string>, run: (main: string) => void): void {
+    const dir = mkdtempSync(join(tmpdir(), 'elo-imports-'));
+    for (const [name, content] of Object.entries(files)) {
+      writeFileSync(join(dir, name), content);
+    }
+    try {
+      run(join(dir, 'main.elo'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const TYPES = `Age = Int(a | a >= 0)
+Person = {
+  name: String,
+  age: Age
+}
+`;
+
+  const REUSABLE = `let
+  double_fn = fn( x ~> x * 2 )
+in
+  {
+    double: double_fn,
+    one: 1
+  }
+`;
+
+  it('imports a type and uses it like any other', () => {
+    withModules({
+      'types.elo': TYPES,
+      'main.elo': "import { Person } from './types'\n{ name: 'Alice', age: '30' } |> Person\n",
+    }, main => {
+      assert.strictEqual(elo(main), '{"name":"Alice","age":30}');
+    });
+  });
+
+  it('imports a function by name, and the same module through an alias', () => {
+    withModules({
+      'reusable.elo': REUSABLE,
+      'main.elo': "import { double } from './reusable'\nimport './reusable' as r\n[double(21), r.double(1), r.one]\n",
+    }, main => {
+      assert.strictEqual(elo(main), '[42,2,1]');
+    });
+  });
+
+  it('binds a module imported twice once', () => {
+    withModules({
+      'reusable.elo': REUSABLE,
+      'main.elo': "import { double, one } from './reusable'\nimport './reusable' as r\ndouble(one)\n",
+    }, main => {
+      const code = eloc(main);
+      assert.strictEqual(code.match(/double_fn = /g)?.length, 1, code);
+      assert.strictEqual(elo(main), '2');
+    });
+  });
+
+  it("resolves a module's own imports against the module, not the program", () => {
+    withModules({
+      'reusable.elo': REUSABLE,
+      'greeting.elo': "import { double } from './reusable'\nlet greet_fn = fn( n ~> double(n) + 1 ) in { greet: greet_fn }\n",
+      'main.elo': "import { greet } from './greeting'\ngreet(2)\n",
+    }, main => {
+      assert.strictEqual(elo(main), '5');
+    });
+  });
+
+  it('declares the file type prelude after the imports, and may build on them', () => {
+    withModules({
+      'types.elo': TYPES,
+      'main.elo': "import { Person } from './types'\nPeople = [Person]\n[{ name: 'Bob', age: '7' }] |> People\n",
+    }, main => {
+      assert.strictEqual(elo(main), '[{"name":"Bob","age":7}]');
+    });
+  });
+
+  it('scopes every line of a --lines source under the imports', () => {
+    withModules({
+      'reusable.elo': REUSABLE,
+      'main.elo': "import { double } from './reusable'\nassert(double(1) == 2)\nassert(double(2) == 4)\n",
+    }, main => {
+      assert.strictEqual(elo(`${main} --lines`), 'true\ntrue');
+    });
+  });
+
+  it('keeps an imported type from leaking the names it is built on', () => {
+    withModules({
+      'types.elo': TYPES,
+      'main.elo': "import { Person } from './types'\n'30' |> Age\n",
+    }, main => {
+      const result = elocWithError(main);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /Age/);
+    });
+  });
+
+  it('reports a type error inside a module against the module file', () => {
+    withModules({
+      'broken.elo': "let f = fn( x ~> x + ('a' - 2) ) in { f: f }\n",
+      'main.elo': "import { f } from './broken'\nf(1)\n",
+    }, main => {
+      const result = elocWithError(`${main} --typecheck`);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /broken\.elo:1:/);
+      assert.match(result.stderr, /operator-type-mismatch/);
+    });
+  });
+
+  it('refuses a module that is not there, naming where it looked', () => {
+    withModules({ 'main.elo': "import { x } from './nope'\n1\n" }, main => {
+      const result = elocWithError(main);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /nope\.elo/);
+    });
+  });
+
+  it('refuses a cycle, naming the chain', () => {
+    withModules({
+      'a.elo': "import { b } from './b'\n{ a: b }\n",
+      'main.elo': "import { a } from './a'\na\n",
+      'b.elo': "import { a } from './main'\n{ b: a }\n",
+    }, main => {
+      const result = elocWithError(main);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /Import cycle: .*main\.elo -> .*a\.elo -> .*b\.elo -> .*main\.elo/);
+    });
+  });
+
+  it('refuses a bare path, keeping that spelling free', () => {
+    withModules({ 'main.elo': "import { x } from 'types'\n1\n" }, main => {
+      const result = elocWithError(main);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /relative/);
+    });
+  });
+
+  it('refuses a value import from a module that has no expression', () => {
+    withModules({
+      'types.elo': TYPES,
+      'main.elo': "import { person } from './types'\nperson\n",
+    }, main => {
+      const result = elocWithError(main);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /no expression, so it exports no value/);
+    });
+  });
+
+  it('refuses an import written after the type prelude', () => {
+    withModules({
+      'types.elo': TYPES,
+      'main.elo': "T = Int\nimport { Person } from './types'\n1\n",
+    }, main => {
+      const result = elocWithError(main);
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /An import comes before the type definitions/);
+    });
+  });
+
+  it('resolves a path given with -e against the working directory', () => {
+    assert.strictEqual(
+      elo(`-e "import { Person } from './test/fixtures/reference/modules/types'
+{ name: 'Alice', age: '30' } |> Person"`),
+      '{"name":"Alice","age":30}'
+    );
   });
 });
 

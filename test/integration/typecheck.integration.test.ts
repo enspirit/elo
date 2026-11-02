@@ -2,9 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
-import { parse, splitTypePrelude } from '../../src/parser';
-import { withTypeDefs } from '../../src/ast';
-import type { TypeBinding } from '../../src/ast';
+import { parse } from '../../src/parser';
+import { loadProgram, scopeProgram } from '../../src/modules';
+import type { LoadedProgram } from '../../src/modules';
+import { nodeLoader } from '../../src/node-loader';
 import { typecheck, typecheckWithType } from '../../src/typecheck';
 import { transform } from '../../src/transform';
 import { inferType } from '../../src/ir';
@@ -32,11 +33,21 @@ import { compileToPython } from '../../src/compilers/python';
 
 const TEST_DIR = join(__dirname, '../../../test/fixtures');
 
+/**
+ * A `.elo` file under a `modules/` directory is a module a fixture imports,
+ * not a fixture: it holds the types and the value its importer brings in, and
+ * none of the corpus-wide rules — an assert on every line, an expected file
+ * per target — are about it. Its code is still covered, inlined into the
+ * fixture that imports it.
+ */
+const MODULES_DIR = 'modules';
+
 function findEloFiles(dir: string): string[] {
   const files: string[] = [];
   for (const entry of readdirSync(dir)) {
     const fullPath = join(dir, entry);
     if (statSync(fullPath).isDirectory()) {
+      if (entry === MODULES_DIR) continue;
       files.push(...findEloFiles(fullPath));
     } else if (entry.endsWith('.elo')) {
       files.push(fullPath);
@@ -49,24 +60,27 @@ interface FixtureLine {
   fixture: string;
   line: number;
   source: string;
-  /** The fixture's type prelude, which scopes every one of its lines. */
-  typeDefs: TypeBinding[];
+  /** What the fixture's header declares, which scopes every one of its lines. */
+  scope: LoadedProgram;
 }
 
-/** A fixture line, parsed under the type definitions of its file. */
+/** A fixture line, parsed under what its file's header declares. */
 function astOf(entry: FixtureLine) {
-  return withTypeDefs(entry.typeDefs, parse(entry.source));
+  return scopeProgram(entry.scope, parse(entry.source));
 }
 
 function loadFixtureLines(): FixtureLine[] {
   const lines: FixtureLine[] = [];
   for (const eloPath of findEloFiles(TEST_DIR)) {
     const fixture = relative(TEST_DIR, eloPath).replace('.elo', '');
-    const { typeDefs, body } = splitTypePrelude(readFileSync(eloPath, 'utf-8').replace(/\n$/, ''));
-    body.split('\n').forEach((raw, index) => {
+    const scope = loadProgram(readFileSync(eloPath, 'utf-8').replace(/\n$/, ''), {
+      loader: nodeLoader(),
+      file: eloPath,
+    });
+    scope.body.split('\n').forEach((raw, index) => {
       const source = raw.trim();
       if (!source || source.startsWith('#')) return;
-      lines.push({ fixture, line: index + 1, source, typeDefs });
+      lines.push({ fixture, line: index + 1, source, scope });
     });
   }
   return lines;

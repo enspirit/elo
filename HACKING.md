@@ -59,6 +59,8 @@ src/
   types.ts       # Type system
   ir.ts          # Intermediate representation
   transform.ts   # AST to IR with type inference
+  modules.ts     # Imports: a header becomes type defs and let bindings
+  node-loader.ts # Finding and reading modules on a filesystem
   stdlib.ts      # Standard library abstraction
   compilers/     # Target language code generators
     javascript.ts

@@ -111,6 +111,17 @@ interface TransformContext {
   renames: Map<string, string[]>;
   /** Emitted names in scope, each mapped to the Elo name it stands for. */
   inScope: Map<string, string>;
+  /**
+   * Emitted names bound to a field read — `let f = r.double in …`.
+   *
+   * A field read is opaque to inference, so such a name is typed `any`, and
+   * calling it would otherwise look like a call to a stdlib function nobody
+   * defined. A function stored in data may be applied — `r.double(2)` already
+   * is — so one reached through a binding may be too. The set is kept narrow
+   * on purpose: applying an arbitrary `any` would let a lambda parameter be
+   * applied to itself, which is how Elo's termination guarantee breaks.
+   */
+  fieldBound: Set<string>;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -130,6 +141,7 @@ export function transform(
     types: options.types,
     renames: new Map(),
     inScope: new Map(),
+    fieldBound: new Set(),
   };
   return transformWithDepth(expr, env, defining, 0, ctx);
 }
@@ -195,6 +207,7 @@ function closeBindings(opened: Array<[string, string]>, ctx: TransformContext): 
     const [name, emitted] = opened[i];
     ctx.renames.get(name)?.pop();
     ctx.inScope.delete(emitted);
+    ctx.fieldBound.delete(emitted);
   }
 }
 
@@ -694,10 +707,18 @@ function transformFunctionCall(
 
   // Check if the name is a variable holding a lambda
   const varType = env.get(name);
+  const emitted = emittedName(name, ctx);
   if (varType && varType.kind === 'fn') {
     // Lambda application: emit irApply
-    const fnVar = irVariable(emittedName(name, ctx), varType);
+    const fnVar = irVariable(emitted, varType);
     return irApply(fnVar, argsIR, argTypes, Types.any);
+  }
+
+  // A name bound to a field read — what `import { double } from './m'` is —
+  // holds whatever the data holds, and the data may hold a function. Calling
+  // it is the same application as calling the field directly.
+  if (varType && ctx.fieldBound.has(emitted)) {
+    return irApply(irVariable(emitted, varType), argsIR, argTypes, Types.any);
   }
 
   // stdlib function call
@@ -736,6 +757,10 @@ function transformLet(
 
     const valueIR = transformWithDepth(binding.value, newEnv, newDefining, depth, ctx);
     const valueType = inferType(valueIR);
+    // A field read is opaque, so remember that this name may hold a function.
+    if (valueIR.type === 'member_access' || valueIR.type === 'datapath') {
+      ctx.fieldBound.add(emitted);
+    }
     newEnv.set(binding.name, valueType);
     openBinding(binding.name, emitted, ctx);
     opened.push([binding.name, emitted]);

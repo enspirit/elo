@@ -21,3 +21,7 @@ assert((let f = fn( x ~> x + 1 ) in let f = fn( x ~> f(x) * 2 ) in f(1)) == 4)
 assert((let g = fn( x ~> let x = x + 1 in x ) in g(1)) == 2)
 assert((let f = fn( x ~> let f = fn( y ~> y * 3 ) in f(x) ) in f(2)) == 6)
 assert((let x = fn( q ~> let x = q + 1 in x ) in x(1) + x(2)) == 5)
+# A function stored in data is applied through a field read, or through a name bound to one
+assert({ f: fn( x ~> x * 2 ) }.f(4) == 8)
+assert((let fs = { f: fn( x ~> x * 2 ) } in let f = fs.f in f(4)) == 8)
+assert((let fs = { f: fn( x, y ~> x - y ) } in let f = fs.f in f(3, 1)) == 2)

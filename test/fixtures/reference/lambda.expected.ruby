@@ -21,3 +21,7 @@
 ->(_) { (raise "Assertion failed" unless (g = ->(x) { (x__2 = x + 1; x__2) }; g.call(1)) == 2; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(x) { (f__2 = ->(y) { y * 3 }; f__2.call(x)) }; f.call(2)) == 6; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (x = ->(q) { (x__2 = q + 1; x__2) }; x.call(1) + x.call(2)) == 5; true) }.call(nil);
+
+->(_) { (raise "Assertion failed" unless {f: ->(x) { x * 2 }}[:f].call(4) == 8; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (fs = {f: ->(x) { x * 2 }}; f = fs[:f]; f.call(4)) == 8; true) }.call(nil);
+->(_) { def k_sub(l, r); if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time)); return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds end; l - r; end; (raise "Assertion failed" unless (fs = {f: ->(x, y) { k_sub(x, y) }}; f = fs[:f]; f.call(3, 1)) == 2; true) }.call(nil);

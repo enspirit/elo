@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
-import { splitTypePrelude } from '../../src/parser';
+import { splitProgramHeader } from '../../src/parser';
 
 /**
  * Fixture validation tests.
@@ -21,6 +21,15 @@ const EXEMPT_FILES = ['fail.elo'];
 /**
  * Recursively find all .elo files in directory and subdirectories
  */
+/**
+ * A `.elo` file under a `modules/` directory is a module a fixture imports,
+ * not a fixture: it holds the types and the value its importer brings in, and
+ * none of the corpus-wide rules — an assert on every line, an expected file
+ * per target — are about it. Its code is still covered, inlined into the
+ * fixture that imports it.
+ */
+const MODULES_DIR = 'modules';
+
 function findEloFiles(dir: string): string[] {
   const files: string[] = [];
   const entries = readdirSync(dir);
@@ -30,6 +39,7 @@ function findEloFiles(dir: string): string[] {
     const stat = statSync(fullPath);
 
     if (stat.isDirectory()) {
+      if (entry === MODULES_DIR) continue;
       files.push(...findEloFiles(fullPath));
     } else if (entry.endsWith('.elo')) {
       files.push(fullPath);
@@ -52,10 +62,10 @@ describe('Fixture validation', () => {
 
     it(`${displayName} should have assert() on every line`, () => {
       const content = readFileSync(filePath, 'utf-8');
-      // A type prelude declares types rather than asserting anything, so the
-      // requirement is on what follows it. splitTypePrelude blanks the prelude out
-      // and keeps every other line where it was.
-      const lines = splitTypePrelude(content).body.split('\n');
+      // A header declares imports and types rather than asserting anything, so
+      // the requirement is on what follows it. splitProgramHeader blanks the
+      // header out and keeps every other line where it was.
+      const lines = splitProgramHeader(content).body.split('\n');
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();

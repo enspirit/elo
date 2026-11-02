@@ -15,6 +15,13 @@ export type Expr = Literal | NullLiteral | StringLiteral | Variable | BinaryOp |
 export interface SourceLocation {
   line: number;
   column: number;
+  /**
+   * Which source the line and column are in, when that is not the program's
+   * own. An import inlines a module, so a node of the resulting tree may come
+   * from any file of the import graph, and a diagnostic that only said
+   * `3:5` would point at the wrong text.
+   */
+  file?: string;
 }
 
 /**
@@ -252,7 +259,7 @@ export function memberAccess(object: Expr, property: string): MemberAccess {
  * legal JavaScript. Nesting is the unambiguous way to shadow a name, and it
  * stays legal.
  */
-function assertDistinctNames(names: string[], what: string): void {
+export function assertDistinctNames(names: string[], what: string): void {
   const seen = new Set<string>();
   for (const name of names) {
     if (seen.has(name)) {
@@ -463,6 +470,30 @@ export interface TypeBinding {
 }
 
 /**
+ * One import of a program's header.
+ *
+ * Either a list of names — `import { Person, double } from './m'` — or an
+ * alias for the module's value — `import './m' as r`. Never both: the two
+ * forms reach different halves of a module, and an import that did both would
+ * have to say which name belongs to which half.
+ *
+ * Like `TypeBinding`, this is not an `Expr`. An import is resolved before the
+ * tree exists — see `src/modules.ts`, which turns it into the type definitions
+ * and let bindings it stands for.
+ */
+export interface ImportDecl extends Located {
+  /** The module path, as written. */
+  path: string;
+  /**
+   * The names to import, uppercase ones naming types and lowercase ones
+   * values. Empty for the alias form.
+   */
+  names: string[];
+  /** The name the module's value is bound to, for the alias form. */
+  alias?: string;
+}
+
+/**
  * Type definitions: let Person = { name: String, age: Int }, People = [Person] in body
  * Binds type names (uppercase) to type expressions.
  * The body can use a type via pipe: data |> Person
@@ -518,6 +549,16 @@ export function typeDef(definitions: TypeBinding[], body: Expr): TypeDef {
  */
 export function withTypeDefs(bindings: TypeBinding[], body: Expr): Expr {
   return bindings.length === 0 ? body : typeDef(bindings, body);
+}
+
+/**
+ * Scopes `body` under `bindings`, as `let … in body` does.
+ *
+ * The value half of `withTypeDefs`, and for the same reason: an import gives a
+ * list of bindings that may be empty, and an empty `let` is not a thing.
+ */
+export function withLetBindings(bindings: LetBinding[], body: Expr): Expr {
+  return bindings.length === 0 ? body : letExpr(bindings, body);
 }
 
 /**

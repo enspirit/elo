@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
 import { DateTime, Duration, Interval } from 'luxon';
-import { parse, splitTypePrelude } from '../../src/parser';
-import { withTypeDefs } from '../../src/ast';
-import type { TypeBinding } from '../../src/ast';
+import { parse } from '../../src/parser';
+import { loadProgram, scopeProgram } from '../../src/modules';
+import type { LoadedProgram } from '../../src/modules';
+import { nodeLoader } from '../../src/node-loader';
 import { typecheckWithAnnotations } from '../../src/typecheck';
 import { compileToJavaScript } from '../../src/compilers/javascript';
 import { compileToRuby } from '../../src/compilers/ruby';
@@ -42,33 +43,44 @@ const FIXTURES = join(__dirname, '../../../test/fixtures');
  */
 const NOT_EXECUTABLE = ['member-access', 'variables', 'fail'];
 
+/**
+ * A `.elo` file under a `modules/` directory is a module a fixture imports,
+ * not a fixture: it holds the types and the value its importer brings in, and
+ * none of the corpus-wide rules — an assert on every line, an expected file
+ * per target — are about it. Its code is still covered, inlined into the
+ * fixture that imports it.
+ */
+const MODULES_DIR = 'modules';
+
 function findEloFiles(dir: string): string[] {
   const files: string[] = [];
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
-    if (statSync(full).isDirectory()) files.push(...findEloFiles(full));
+    if (statSync(full).isDirectory()) {
+      if (entry !== MODULES_DIR) files.push(...findEloFiles(full));
+    }
     else if (entry.endsWith('.elo')) files.push(full);
   }
   return files.sort();
 }
 
 /**
- * A fixture read the way eloc reads it: its type prelude, then its expression
- * lines with their 1-based line numbers.
+ * A fixture read the way eloc reads it: what its header declares, then its
+ * expression lines with their 1-based line numbers.
  */
 function programOf(path: string): {
-  typeDefs: TypeBinding[];
+  scope: LoadedProgram;
   expressions: Array<{ line: number; source: string }>;
 } {
-  const { typeDefs, body } = splitTypePrelude(readFileSync(path, 'utf-8'));
-  const expressions = body
+  const scope = loadProgram(readFileSync(path, 'utf-8'), { loader: nodeLoader(), file: path });
+  const expressions = scope.body
     .split('\n')
     .map((source, i) => ({ line: i + 1, source }))
     .filter(({ source }) => {
       const trimmed = source.trim();
       return trimmed !== '' && !trimmed.startsWith('#');
     });
-  return { typeDefs, expressions };
+  return { scope, expressions };
 }
 
 /** What the fixture runners do: run the expression with a null input. */
@@ -95,10 +107,10 @@ describe('--optimize is equivalent, not merely smaller', () => {
     const executable = !NOT_EXECUTABLE.some(skip => name.split(/[/\\]/).pop()!.startsWith(skip));
 
     it(`${name} compiles and behaves the same with the checker's types`, () => {
-      const { typeDefs, expressions } = programOf(path);
+      const { scope, expressions } = programOf(path);
       for (const { line, source } of expressions) {
         const where = `${name}:${line}`;
-        const ast = withTypeDefs(typeDefs, parse(source));
+        const ast = scopeProgram(scope, parse(source));
         const { types } = typecheckWithAnnotations(ast);
 
         for (const [target, compileTo] of Object.entries(TARGETS)) {
@@ -115,7 +127,7 @@ describe('--optimize is equivalent, not merely smaller', () => {
         }
 
         // SQL has its own transform options, so it is compiled separately.
-        const sqlAst = withTypeDefs(typeDefs, parse(source));
+        const sqlAst = scopeProgram(scope, parse(source));
         const { types: sqlTypes } = typecheckWithAnnotations(sqlAst, {
           allowUndefinedVariables: true,
         });

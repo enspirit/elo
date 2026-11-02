@@ -21,3 +21,7 @@
 (lambda _: kAssert(kEq((g := lambda x: (x__2 := kAdd(x, 1), x__2)[-1], g(1))[-1], 2)))(None)
 (lambda _: kAssert(kEq((f := lambda x: (f__2 := lambda y: kMul(y, 3), f__2(x))[-1], f(2))[-1], 6)))(None)
 (lambda _: kAssert(kEq((x := lambda q: (x__2 := kAdd(q, 1), x__2)[-1], kAdd(x(1), x(2)))[-1], 5)))(None)
+
+(lambda _: kAssert(kEq({"f": lambda x: kMul(x, 2)}.get("f")(4), 8)))(None)
+(lambda _: kAssert(kEq((fs := {"f": lambda x: kMul(x, 2)}, f := fs.get("f"), f(4))[-1], 8)))(None)
+(lambda _: kAssert(kEq((fs := {"f": lambda x, y: kSub(x, y)}, f := fs.get("f"), f(3, 1))[-1], 2)))(None)

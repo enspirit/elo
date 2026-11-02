@@ -50,6 +50,7 @@ See also the Related work section below.
 - **Type selectors**: `Int()`, `Float()`, `Bool()`, `String()`, `Null()`, `Date()`, `Datetime()`, `Duration()`, `Interval()`, `Data()` for parsing and converting values
 - **Type definitions**: Finitio-like schema validation with `let Person = { name: String, age: Int } in data |> Person`. Schema field types are `Int`, `Float`, `Bool`, `String`, `Null`, `Date`, `Datetime`, `Duration`, `Data`, and `.` for any value
 - **Type prelude**: a `.elo` file may open with type definitions — `Person = { name: String, age: Int }` on their own lines — which scope the expression that follows. A file of definitions only is a valid file
+- **Imports**: a `.elo` file may open with imports — `import { Person, double } from './shared'` and `import './shared' as s` — which bring in the types and the value another file declares. Resolved at compile time, so the emitted code stays self-contained
 - **Lambdas**: `fn(x ~> x * 2)` or `x ~> x * 2` (sugar) for anonymous functions
 - **Guards**: `guard condition in body` for runtime validation with `check` for postconditions
 - **Input variable**: `_` for accessing external data passed to expressions
@@ -185,8 +186,8 @@ Options:
 
 ### A file is one program
 
-A `.elo` file holds **one program**: an optional type prelude, then one
-expression. Newlines inside that expression mean nothing, so a schema
+A `.elo` file holds **one program**: optional imports, an optional type
+prelude, then one expression. Newlines inside that expression mean nothing, so a schema
 or a `let` may be laid out over as many lines as it needs. A file that declares
 types and no expression is valid too, and compiles to nothing.
 
@@ -195,6 +196,62 @@ every line of source gives one line of emitted code. That is what the test
 fixtures are written in, where each line is a self-contained `assert(...)`;
 `scripts/regenerate-fixtures.sh` and the acceptance runners pass it. A source
 holding two expressions without `--lines` is a parse error that says so.
+
+### Imports
+
+A program may open with imports, before its type prelude:
+
+```elo
+import { Person, Age } from './types'
+import { double } from './reusable'
+import './reusable' as r
+
+People = [Person]
+
+{ name: 'Alice', age: '30' } |> Person
+```
+
+A module is an ordinary `.elo` file, so there is nothing new to write in one:
+its **type prelude** is what it exports as types, and its **expression** is
+what it exports as a value.
+
+```elo
+# types.elo — exports the types Age and Person, and no value
+Age = Int(a | a >= 0)
+Person = { name: String, age: Age }
+```
+
+```elo
+# reusable.elo — exports the names double and one
+let double_fn = fn( x ~> x * 2 )
+in { double: double_fn, one: 1 }
+```
+
+**Case decides** what a name in an import list means, as it does everywhere
+else in Elo: `Person` comes from the module's type prelude, `double` from a
+property of its value. `import './m' as r` binds the module's value alone,
+reached by ordinary member access (`r.double(1)`); it does not bring the
+module's types in, which is what the named form is for.
+
+A path is relative to the file that imported it (`./types`, `../shared/types`),
+with `.elo` added. A bare `'types'` is refused, to keep that spelling free for
+a future package. Cycles are refused, naming the chain.
+
+Imports are resolved **at compile time, by inlining**: the emitted code is one
+self-contained expression, as it is without them. So there is nothing to
+deploy alongside it, and nothing is read at runtime — but a module's code
+appears once per program that imports it.
+
+An import is the one thing in Elo that makes the **compiler** read a file, so a
+host that compiles sources it does not trust must not hand it a filesystem:
+`loadProgram` takes the loader as an argument and refuses an import when there
+is none, which is what the playground and the programmatic `parse()` do. `eloc`
+and `elo` do read the filesystem, as the tools of whoever runs them.
+
+Imports inherit the portability of what they bring in, and nothing more: an
+imported type is a type definition and an imported function is a lambda, so a
+program that imports either compiles to JavaScript, Ruby and Python, and the
+SQL target refuses it exactly as it refuses the construct written inline.
 
 ### The prelude
 

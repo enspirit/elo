@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { transform, TypeEnv } from '../../src/transform';
 import { parse } from '../../src/parser';
+import { compileToJavaScript } from '../../src/compilers/javascript';
 import {
   literal,
   stringLiteral,
@@ -1208,6 +1209,63 @@ describe('transform - extract validation', () => {
         stringLiteral('hello')
       ])),
       /extract\(\) requires exactly 2 arguments/
+    );
+  });
+});
+
+describe('transform - calling a function stored in data', () => {
+  /**
+   * `r.double(2)` has always been allowed: a function stored in data may be
+   * applied. A name bound to that same field read is the same function, so
+   * calling it is the same application — which is what makes
+   * `import { double } from './m'` callable, since an import binds the name to
+   * a field of the module's value.
+   */
+  it('applies a name bound to a field read', () => {
+    const ir = transform(parse('let f = o.g in f(1)'), new Map([['o', Types.object]]));
+    assert.strictEqual(ir.type, 'let');
+    const body = ir.type === 'let' ? ir.body : ir;
+    assert.strictEqual(body.type, 'apply');
+    assert.strictEqual(body.type === 'apply' && body.fn.type, 'variable');
+  });
+
+  it('applies a name bound to a path into the input', () => {
+    const ir = transform(parse('let f = _.g in f(1)'));
+    const body = ir.type === 'let' ? ir.body : ir;
+    assert.strictEqual(body.type, 'apply');
+  });
+
+  /**
+   * Everything else stays a call to a stdlib function nobody defined, which
+   * every compiler then refuses. The narrowness is the point: a lambda
+   * parameter is typed `any` too, and applying one to itself is the
+   * Y-combinator shape that would break Elo's termination guarantee.
+   */
+  it('leaves a call on a lambda parameter a call, which could not terminate', () => {
+    const ir = transform(parse('let g = fn( f ~> f(f) ) in g(1)'));
+    const lambda = ir.type === 'let' ? ir.bindings[0].value : ir;
+    assert.strictEqual(lambda.type === 'lambda' && lambda.body.type, 'call');
+  });
+
+  it('leaves a call on a name bound to something that is not a field a call', () => {
+    const ir = transform(parse('let f = 1 in f(1)'));
+    assert.strictEqual(ir.type === 'let' && ir.body.type, 'call');
+  });
+
+  it('forgets the name once its binding is out of scope', () => {
+    // `+` on operands it cannot type is itself a call, so the second operand
+    // is its second argument: a call to `f`, not an application of it.
+    const ir = transform(parse('(let f = o.g in f(1)) + f(2)'), new Map([['o', Types.object]]));
+    assert.strictEqual(ir.type, 'call');
+    const outside = ir.type === 'call' ? ir.args[1] : ir;
+    assert.strictEqual(outside.type, 'call');
+    assert.strictEqual(outside.type === 'call' && outside.fn, 'f');
+  });
+
+  it('is refused by the compiler when the name is not a function', () => {
+    assert.throws(
+      () => compileToJavaScript(parse('let f = 1 in f(1)')),
+      /Unknown function f/
     );
   });
 });

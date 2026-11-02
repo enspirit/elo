@@ -20,6 +20,7 @@ const url = (path: string) => `${base}${path}`;
         <a href="#chapter-7" data-learn-progress-target="tocLink"><span class="toc-check"></span>7. Input Data</a>
         <a href="#chapter-8" data-learn-progress-target="tocLink"><span class="toc-check"></span>8. Data Validation</a>
         <a href="#chapter-9" data-learn-progress-target="tocLink"><span class="toc-check"></span>9. Guards</a>
+        <a href="#chapter-10" data-learn-progress-target="tocLink"><span class="toc-check"></span>10. Working Across Files</a>
         <span class="toc-section">Exercises</span>
         <a href="#ex-greeting" data-exercises-target="tocLink"><span class="toc-check"></span>Build a Greeting</a>
         <a href="#ex-product" data-exercises-target="tocLink"><span class="toc-check"></span>Product Total</a>
@@ -545,7 +546,9 @@ Person = &#123; name: String, age: Age &#125;
         </div>
         <p>
           This <em>type prelude</em> is sugar for the <code>let … in</code> above, and it scopes
-          every expression in the file. A file that defines types and nothing else is valid too.
+          every expression in the file. A file that defines types and nothing else is valid
+          too — and worth having, because another file can
+          <a href="#chapter-10">import</a> it.
         </p>
 
         <p class="lesson-tip">
@@ -631,6 +634,80 @@ in
         </p>
         <p class="lesson-exercise">
           <a href="#ex-guard">Practice: Guard Input</a>
+        </p>
+      </section>
+
+      <section class="lesson" id="chapter-10" data-learn-progress-target="lesson">
+        <div class="lesson-header">
+          <h2>10. Working Across Files</h2>
+          <button class="lesson-toggle" data-action="click->learn-progress#toggle" data-lesson="chapter-10" data-learn-progress-target="toggleBtn">
+            <span class="toggle-check"></span><span class="toggle-text">Mark as complete</span>
+          </button>
+        </div>
+        <p>
+          Everything so far fits in one expression. Once you have several — a schema your
+          forms share, a calculation two reports need — you want to write it once and use it
+          from several files. That is what <em>imports</em> are for.
+        </p>
+        <p class="lesson-tip">
+          <strong>Not in the playground:</strong> an import names a file, and the playground has
+          none. Try this chapter with <code>eloc</code> or <code>elo</code> on your own files.
+        </p>
+
+        <h3>A Module is Just a File</h3>
+        <p>
+          There is nothing new to write in the file you import. A module is an ordinary
+          <code>.elo</code> file: its <a href="#chapter-8">type prelude</a> is what it exports
+          as types, and its expression is what it exports as a value.
+        </p>
+        <pre class="language-elo" data-needs-files># types.elo — exports the types Age and Person, and no value
+Age = Int(a | a >= 0)
+Person = &#123; name: String, age: Age &#125;</pre>
+        <pre class="language-elo" data-needs-files># reusable.elo — exports the names double and one
+let double_fn = fn( x ~> x * 2 )
+in &#123; double: double_fn, one: 1 &#125;</pre>
+
+        <h3>Importing Types and Logic</h3>
+        <p>A file may open with imports, before its type prelude:</p>
+        <pre class="language-elo" data-needs-files>import &#123; Person, Age &#125; from './types'
+import &#123; double &#125; from './reusable'
+
+&#123; name: 'Alice', age: '30' &#125; |> Person</pre>
+        <p>
+          <strong>Case decides</strong> what an imported name means, as it does everywhere else
+          in Elo: <code>Person</code> and <code>Age</code> come from the module's type prelude,
+          <code>double</code> from a property of its value. An imported type is used like any
+          other — <code>_ |> Person</code> — and an imported function is called by its own name,
+          <code>double(21)</code>.
+        </p>
+
+        <h3>Importing a Whole Module</h3>
+        <p>
+          The other form binds the module's value under one name, reached by member access:
+        </p>
+        <pre class="language-elo" data-needs-files>import './reusable' as r
+
+r.double(21) + r.one</pre>
+        <p>
+          It brings in the value only, not the module's types — those always come through the
+          named form, which may name the same file on another line.
+        </p>
+
+        <h3>What Happens When You Compile</h3>
+        <p>
+          A path is relative to the file that wrote it — <code>./types</code>,
+          <code>../shared/types</code> — with <code>.elo</code> added.
+        </p>
+        <p>
+          Imports are resolved <strong>when you compile</strong>, by inlining what they bring
+          in. So the emitted code is one self-contained expression, exactly as it is without
+          them: there is nothing to deploy beside it, and nothing is read when it runs. The
+          trade is size — a module's code appears in every program that imports it.
+        </p>
+        <p class="lesson-tip">
+          <strong>Keep modules small and honest:</strong> a module that only declares types
+          costs nothing at runtime, and one that exports functions is as portable as the
+          functions themselves — lambdas compile to JavaScript, Ruby and Python, not to SQL.
         </p>
       </section>
 

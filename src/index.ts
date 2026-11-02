@@ -27,6 +27,8 @@ export type { CheckType, Diagnostic, DiagnosticCode, TypecheckOptions, TypeAnnot
 export { JS_HELPERS } from './runtime';
 export { getPrelude, isPreludePrependable } from './preludes';
 export type { Target as PreludeTarget } from './preludes';
+export { loadProgram, scopeProgram, hasNoExpression } from './modules';
+export type { ModuleLoader, LoadOptions, LoadedProgram } from './modules';
 export { toEloCode } from './serialize';
 export { parseCSV, toCSV } from './csv';
 export type { FormatAdapter, FormatRegistry } from './formats';

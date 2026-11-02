@@ -25,6 +25,8 @@ import Footer from '../components/Footer.astro';
         <a href="#data-paths">Data Paths</a>
         <a href="#data-schemas">Data Schemas</a>
         <a href="#data-formats">Data Formats</a>
+        <span class="toc-section">Files</span>
+        <a href="#imports">Imports</a>
         <span class="toc-section">Robustness</span>
         <a href="#assertions">Assertions</a>
         <a href="#guards">Guards</a>
@@ -661,6 +663,91 @@ elo -e "&#123;name: 'test'&#125;" -o elo</code></pre>
         <p>The format system is pluggable. You can provide custom adapters for formats like XLSX using libraries such as PapaParse or SheetJS. See the <code>FormatAdapter</code> interface in <code>src/formats.ts</code>.</p>
       </section>
 
+      <section class="doc-section" id="imports">
+        <h2>Imports</h2>
+        <p>
+          An import brings in the types and the value another <code>.elo</code>
+          file declares. It is written at the top of a program, before its
+          <a href="#data-schemas">type prelude</a>.
+        </p>
+        <p class="note">
+          <strong>Note:</strong> there is nothing special about an imported
+          file. A module is an ordinary program: its type prelude is what it
+          exports as types, and its expression is what it exports as a value.
+          A module that declares types and no expression exports no value.
+        </p>
+
+        <h3>A module</h3>
+        <div class="example">
+          <div class="example-header">types.elo</div>
+          <pre class="language-elo" data-needs-files>Age = Int(a | a >= 0)
+Person = &#123; name: String, age: Age &#125;</pre>
+          <p class="example-desc">Exports the types <code>Age</code> and <code>Person</code>, and no value.</p>
+        </div>
+        <div class="example">
+          <div class="example-header">reusable.elo</div>
+          <pre class="language-elo" data-needs-files>let double_fn = fn( x ~> x * 2 )
+in &#123; double: double_fn, one: 1 &#125;</pre>
+          <p class="example-desc">Exports the names <code>double</code> and <code>one</code>: its value is an object, and each property is a name an importer may bring in.</p>
+        </div>
+
+        <h3>Importing them</h3>
+        <div class="example">
+          <div class="example-header">main.elo</div>
+          <pre class="language-elo" data-needs-files>import &#123; Person, Age &#125; from './types'
+import &#123; double &#125; from './reusable'
+import './reusable' as r
+
+People = [Person]
+
+&#123; name: 'Alice', age: double(15) &#125; |> Person</pre>
+          <p class="example-desc">The type prelude comes after the imports and may build on them. <code>double</code> is called by its own name; <code>r.double(15)</code> is the same function through the alias.</p>
+        </div>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Form</th><th>Brings in</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>import &#123; Name &#125; from 'path'</code></td>
+              <td>An uppercase name is a type of the module's prelude; a lowercase one is a property of its value, called by its own name</td>
+            </tr>
+            <tr>
+              <td><code>import 'path' as name</code></td>
+              <td>The module's value, reached by member access. Not its types — those come through the named form</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          <code>import</code>, <code>from</code> and <code>as</code> are
+          keywords only in an import, so a program using one as a name still
+          means what it meant. An import written after the type prelude is
+          refused: it declares what the whole source may use, so it comes first.
+        </p>
+        <p>
+          A path is relative to the file that wrote it — <code>./types</code>,
+          <code>../shared/types</code> — with <code>.elo</code> added. A bare
+          <code>'types'</code> is refused, to keep that spelling free for a
+          future package. Cycles are refused, naming the chain.
+        </p>
+        <p>
+          An imported type is <strong>expanded</strong>: the module's own type
+          names are substituted into it, so you get that one type and nothing
+          else of the module's becomes visible. A module's value is bound
+          <strong>once</strong> per program, however many names come from it,
+          and its <code>_</code> is the importing program's input.
+        </p>
+        <p class="note">
+          Imports are resolved <strong>at compile time, by inlining</strong>:
+          the emitted code is one self-contained expression, so there is nothing
+          to deploy beside it and nothing is read at runtime — but a module's
+          code appears once per program that imports it. An import inherits the
+          portability of what it brings in: an imported type is a type
+          definition and an imported function is a lambda, so the SQL target
+          refuses either exactly as it refuses the construct written inline.
+        </p>
+      </section>
+
       <section class="doc-section" id="assertions">
         <h2>Assertions</h2>
         <p>Use <code>assert()</code> to validate conditions at runtime.</p>
@@ -1030,7 +1117,8 @@ eloc --typecheck -e "'hello' - 5"</pre>
 
         <h3>A file is one program</h3>
         <p>
-          A <code>.elo</code> file holds one program: an optional
+          A <code>.elo</code> file holds one program: optional
+          <a href="#imports">imports</a>, an optional
           <a href="#data-schemas">type prelude</a>, then one expression.
           Newlines inside that expression mean nothing, so a schema or a
           <code>let</code> may be laid out over as many lines as it needs. A
@@ -1043,7 +1131,6 @@ eloc --typecheck -e "'hello' - 5"</pre>
           code. A source holding two expressions without it is a parse error
           that says so.
         </p>
-
         <h3>The prelude</h3>
         <p>
           Compiled Elo needs a small runtime in its target, and

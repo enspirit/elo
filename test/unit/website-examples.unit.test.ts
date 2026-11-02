@@ -210,6 +210,13 @@ function extractAstroExamples(content: string, source: string): Example[] {
     // marks those: they are still highlighted, but not run.
     if (attributes.includes('data-invalid')) continue;
 
+    // An example that only means something as one file among several — an
+    // import, or the module it imports. There are no files to resolve it
+    // against here, and the playground has none either, which is why these
+    // examples are not offered to it. Imports are covered for real by
+    // test/fixtures/reference/imports.elo, on every target.
+    if (attributes.includes('data-needs-files')) continue;
+
     // Calculate line number
     const beforeMatch = content.slice(0, matchIndex);
     const line = (beforeMatch.match(/\n/g) || []).length + 1;

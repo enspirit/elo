@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'fs';
-import { parse, splitTypePrelude, TRAILING_INPUT } from './parser';
-import { withTypeDefs } from './ast';
-import type { TypeBinding } from './ast';
+import { parse, TRAILING_INPUT } from './parser';
+import { loadProgram, scopeProgram, hasNoExpression } from './modules';
+import type { LoadedProgram } from './modules';
+import { nodeLoader } from './node-loader';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { DateTime, Duration, Interval } from 'luxon';
 import { defaultFormats, getFormat, FormatRegistry } from './formats';
@@ -207,11 +208,11 @@ function parseInputData(inputData: string, format: InputFormat | undefined, form
 }
 
 /**
- * Compile and evaluate a single Elo expression, under the type definitions of
- * the file's type prelude, if any.
+ * Compile and evaluate a single Elo expression, under what the file's header
+ * declares — its imports and its type prelude, if any.
  */
-function evaluate(source: string, inputValue: unknown, typeDefs: TypeBinding[] = []): unknown {
-  const ast = withTypeDefs(typeDefs, parse(source));
+function evaluate(source: string, inputValue: unknown, scope?: LoadedProgram): unknown {
+  const ast = scopeProgram(scope, parse(source));
   const result = compileToJavaScriptWithMeta(ast);
 
   // Create function with luxon DateTime, Duration, and Interval in scope
@@ -223,19 +224,7 @@ function evaluate(source: string, inputValue: unknown, typeDefs: TypeBinding[] =
 }
 
 /**
- * True when a source carries no expression at all: every line is blank or a
- * comment. Applied to the whole source, not to its first line — a multi-line
- * expression passed with -e may perfectly well open with a comment.
- */
-function isBlankSource(source: string): boolean {
-  return source.split('\n').every(line => {
-    const trimmed = line.trim();
-    return trimmed === '' || trimmed.startsWith('#');
-  });
-}
-
-/**
- * The expressions to evaluate, out of what follows a source's type prelude.
+ * The expressions to evaluate, out of what follows a source's header.
  *
  * One program by default: the source is a single expression whose newlines
  * mean nothing, and a source with nothing under its prelude holds none. With
@@ -243,7 +232,7 @@ function isBlankSource(source: string): boolean {
  */
 function readProgram(body: string, lines?: boolean): string[] {
   if (!lines) {
-    return isBlankSource(body) ? [] : [body];
+    return hasNoExpression(body) ? [] : [body];
   }
   return body.split('\n').map(line => {
     const trimmed = line.trim();
@@ -284,15 +273,19 @@ function main() {
     process.exit(1);
   }
 
-  // The source is one program: a type prelude, then one expression whose
-  // newlines mean nothing. A program that declares types and nothing else
-  // evaluates to nothing.
-  let typeDefs: TypeBinding[] = [];
+  // The source is one program: a header — its imports, then its type prelude —
+  // and one expression whose newlines mean nothing. A program that declares
+  // types and nothing else evaluates to nothing. A module path is resolved
+  // against the file that imported it; with -e or stdin, against the working
+  // directory.
+  let scope: LoadedProgram | undefined;
   let sources: string[];
   try {
-    const program = splitTypePrelude(source);
-    typeDefs = program.typeDefs;
-    sources = readProgram(program.body, options.lines);
+    scope = loadProgram(source, {
+      loader: nodeLoader(),
+      file: options.inputFile && options.inputFile !== '-' ? options.inputFile : undefined,
+    });
+    sources = readProgram(scope.body, options.lines);
   } catch (error) {
     console.error(`Error: ${error}`);
     process.exit(1);
@@ -323,12 +316,12 @@ function main() {
     const trimmed = source.trim();
 
     // Skip blank lines and comment-only sources
-    if (isBlankSource(source)) {
+    if (hasNoExpression(source)) {
       continue;
     }
 
     try {
-      const result = evaluate(trimmed, inputValue, typeDefs);
+      const result = evaluate(trimmed, inputValue, scope);
       outputs.push(outputAdapter.serialize(result));
     } catch (error) {
       // A whole program's errors carry their own line and column; a line read

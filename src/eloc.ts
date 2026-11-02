@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync } from 'fs';
-import { parse, parseTypeExpr, splitTypePrelude, TRAILING_INPUT } from './parser';
-import { withTypeDefs } from './ast';
-import type { TypeBinding, TypeExpr } from './ast';
+import { parse, parseTypeExpr, TRAILING_INPUT } from './parser';
+import { loadProgram, scopeProgram, hasNoExpression } from './modules';
+import type { LoadedProgram } from './modules';
+import { nodeLoader } from './node-loader';
+import type { TypeExpr } from './ast';
 import { compileToRubyWithMeta } from './compilers/ruby';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
@@ -238,15 +240,15 @@ interface CompileOptions {
   ast?: Expr;
   /** The checker's types, keyed on the nodes of `ast`. */
   types?: TypeAnnotations;
-  /** The type definitions of the file's type prelude, which scope every line. */
-  typeDefs?: TypeBinding[];
+  /** What the file's header declares — its imports and type prelude — which scopes every line. */
+  scope?: LoadedProgram;
 }
 
 function compile(source: string, target: Target, options: CompileOptions = {}): string {
   const { includePrelude = false, execute = false, stripGuards = false, types } = options;
   // Reuse the checker's tree when there is one: the annotations are keyed on
   // node identity, so a second parse would produce a map that matches nothing.
-  const ast = options.ast ?? withTypeDefs(options.typeDefs ?? [], parse(source));
+  const ast = options.ast ?? scopeProgram(options.scope, parse(source));
 
   let code: string;
   switch (target) {
@@ -287,19 +289,7 @@ function compile(source: string, target: Target, options: CompileOptions = {}): 
 }
 
 /**
- * True when a source carries no expression at all: every line is blank or a
- * comment. Applied to the whole source, not to its first line — a multi-line
- * expression passed with -e may perfectly well open with a comment.
- */
-function isBlankSource(source: string): boolean {
-  return source.split('\n').every(line => {
-    const trimmed = line.trim();
-    return trimmed === '' || trimmed.startsWith('#');
-  });
-}
-
-/**
- * The expressions to compile, out of what follows a source's type prelude.
+ * The expressions to compile, out of what follows a source's header.
  *
  * One program by default: the source is a single expression whose newlines
  * mean nothing, and a source with nothing under its prelude holds none. With
@@ -309,7 +299,7 @@ function isBlankSource(source: string): boolean {
  */
 function readProgram(body: string, lines?: boolean): string[] {
   if (!lines) {
-    return isBlankSource(body) ? [] : [body];
+    return hasNoExpression(body) ? [] : [body];
   }
   // Keep every line, blanking the ones that carry no expression, so that the
   // emitted code keeps the line numbering of the source.
@@ -384,16 +374,23 @@ function main() {
     process.exit(1);
   }
 
-  // The source is one program: a type prelude, then one expression whose
-  // newlines mean nothing. The definitions are lifted off the top so that the
-  // expression can be read on its own, and so that a program which declares
-  // types and nothing else is accepted and compiles to nothing.
-  let typeDefs: TypeBinding[] = [];
+  // The source is one program: a header — its imports, then its type prelude —
+  // and one expression whose newlines mean nothing. The header is lifted off
+  // the top and resolved, so that the expression can be read on its own, and so
+  // that a program which declares types and nothing else is accepted and
+  // compiles to nothing. A module path is resolved against the file that
+  // imported it; with -e or stdin, against the working directory.
+  let scope: LoadedProgram | undefined;
   let sources: string[];
   try {
-    const program = splitTypePrelude(source);
-    typeDefs = program.typeDefs;
-    sources = readProgram(program.body, options.lines);
+    scope = loadProgram(source, {
+      loader: nodeLoader(),
+      file: options.inputFile && options.inputFile !== '-' ? options.inputFile : undefined,
+      // An inlined module keeps the locations of its own file, so a diagnostic
+      // about it says which file its line and column are in.
+      locations: options.typecheck,
+    });
+    sources = readProgram(scope.body, options.lines);
   } catch (error) {
     console.error(`Compilation error: ${error}`);
     process.exit(1);
@@ -404,7 +401,7 @@ function main() {
   let typeErrorsFound = false;
   let checked: CheckedSource[] = [];
   if (options.typecheck) {
-    const result = reportTypeDiagnostics(sources, options, typeDefs);
+    const result = reportTypeDiagnostics(sources, options, scope);
     typeErrorsFound = result.found;
     checked = result.checked;
   }
@@ -416,14 +413,14 @@ function main() {
       try {
         const trimmed = source.trim();
         // Skip blank lines and comment-only sources
-        if (isBlankSource(source)) {
+        if (hasNoExpression(source)) {
           return '';
         }
         return compile(trimmed, options.target, {
           includePrelude: index === 0 && options.prelude,
           execute: options.execute,
           stripGuards: options.stripGuards,
-          typeDefs,
+          scope,
           // The annotations are keyed on AST node identity, so they only mean
           // anything against the tree the checker walked.
           ...(options.optimize ? checked[index] : {}),
@@ -482,7 +479,7 @@ interface CheckedSource {
 function reportTypeDiagnostics(
   sources: string[],
   options: Options,
-  typeDefs: TypeBinding[] = []
+  scope?: LoadedProgram
 ): { found: boolean; checked: CheckedSource[] } {
   // A bare name is a column reference in SQL, so undefined variables are
   // legitimate there and the checker must not be stricter than the compiler.
@@ -503,14 +500,14 @@ function reportTypeDiagnostics(
   const checked: CheckedSource[] = sources.map(() => ({}));
 
   sources.forEach((source, index) => {
-    if (isBlankSource(source)) return;
+    if (hasNoExpression(source)) return;
     let diagnostics;
     try {
       // Locations are opt-in at parse time, and this is exactly what they are
       // for: a diagnostic the author can act on points at a column.
       // Not trimmed: the lexer skips leading whitespace itself, and keeping it
       // means the reported column matches the column in the file.
-      const ast = withTypeDefs(typeDefs, parse(source, { locations: true }));
+      const ast = scopeProgram(scope, parse(source, { locations: true }));
       const result = typecheckWithAnnotations(ast, {
         allowUndefinedVariables,
         strict: options.strict,
@@ -526,10 +523,13 @@ function reportTypeDiagnostics(
     for (const diagnostic of diagnostics) {
       found = true;
       // A single -e expression is always line 1, so its own line number adds
-      // nothing; a file's lines are numbered from the source.
+      // nothing; a file's lines are numbered from the source. A diagnostic
+      // that names a file came from an imported module and already carries the
+      // line it means — renumbering it would point into the wrong file.
+      const renumber = multiLine && diagnostic.loc && !diagnostic.loc.file;
       const formatted = formatDiagnostic(
-        multiLine && diagnostic.loc
-          ? { ...diagnostic, loc: { ...diagnostic.loc, line: index + 1 } }
+        renumber
+          ? { ...diagnostic, loc: { ...diagnostic.loc!, line: index + 1 } }
           : diagnostic
       );
       console.error(multiLine && !diagnostic.loc ? `${index + 1}: ${formatted}` : formatted);

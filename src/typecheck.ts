@@ -107,10 +107,13 @@ export interface Diagnostic {
 
 /**
  * Render a diagnostic for a human: `3:11: error: … [code]`, with the position
- * dropped when the AST carried none.
+ * dropped when the AST carried none, and prefixed with the file when the node
+ * came from an imported module rather than from the program itself.
  */
 export function formatDiagnostic(diagnostic: Diagnostic): string {
-  const where = diagnostic.loc ? `${diagnostic.loc.line}:${diagnostic.loc.column}: ` : '';
+  const { loc } = diagnostic;
+  const file = loc?.file ? `${loc.file}:` : '';
+  const where = loc ? `${file}${loc.line}:${loc.column}: ` : '';
   return `${where}${diagnostic.severity}: ${diagnostic.message} [${diagnostic.code}]`;
 }
 

@@ -1,4 +1,4 @@
-import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr, TypeBinding, withTypeDefs } from './ast';
+import { Expr, literal, nullLiteral, stringLiteral, variable, binary, unary, dateLiteral, dateTimeLiteral, durationLiteral, temporalKeyword, functionCall, memberAccess, letExpr, ifExpr, lambda, LetBinding, objectLiteral, ObjectProperty, arrayLiteral, alternative, apply, dataPath, TypeExpr, TypeSchemaProperty, typeRef, typeSchema, typeDef, subtypeConstraint, arrayType, unionType, Constraint, guardExpr, TypeBinding, withTypeDefs, ImportDecl, Located } from './ast';
 
 /**
  * Token types
@@ -489,7 +489,9 @@ class Lexer {
  * Recursive descent parser for expressions
  *
  * Grammar:
- *   program     -> typePrelude expr
+ *   program     -> imports typePrelude expr
+ *   imports     -> ('import' '{' name (',' name)* '}' 'from' STRING
+ *                 | 'import' STRING 'as' IDENTIFIER)*     // file-level imports
  *   typePrelude -> (UPPER_IDENTIFIER '=' typeExpr ','?)*  // file-level type definitions
  *   expr        -> pipe
  *   pipe        -> logical_or ('|>' IDENTIFIER call?)*  // lowest precedence, left-assoc, parens optional
@@ -528,6 +530,14 @@ export interface ParserOptions {
    * a problem is — the type checker does.
    */
   locations?: boolean;
+  /**
+   * Which source this is, recorded on every location.
+   *
+   * Only meaningful with `locations`. The module loader passes the path of
+   * each module it reads, so a diagnostic about an inlined node says which
+   * file its line and column are in.
+   */
+  file?: string;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -563,12 +573,14 @@ export class Parser {
   private depth: number = 0;
   private maxDepth: number;
   private locations: boolean;
+  private file?: string;
 
   constructor(input: string, options: ParserOptions = {}) {
     this.lexer = new Lexer(input);
     this.currentToken = this.lexer.nextToken();
     this.maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
     this.locations = options.locations ?? false;
+    this.file = options.file;
   }
 
   /**
@@ -576,9 +588,9 @@ export class Parser {
    * were asked for. Returns the node either way, so call sites read as
    * `this.at(binary(...), opToken)` whether or not the feature is on.
    */
-  private at<T extends Expr>(node: T, token: Token): T {
+  private at<T extends Located>(node: T, token: Token): T {
     if (this.locations) {
-      node.loc = { line: token.line, column: token.column };
+      node.loc = { line: token.line, column: token.column, ...(this.file ? { file: this.file } : {}) };
     }
     return node;
   }
@@ -628,7 +640,8 @@ export class Parser {
   }
 
   private formatLocation(token: Token): string {
-    return `line ${token.line}, column ${token.column}`;
+    const where = `line ${token.line}, column ${token.column}`;
+    return this.file ? `${where} of ${this.file}` : where;
   }
 
   private eat(tokenType: TokenType): void {
@@ -1924,6 +1937,124 @@ export class Parser {
   }
 
   /**
+   * Parse the import header: the imports a source may open with.
+   *
+   *   imports -> import*
+   *   import  -> 'import' '{' name (',' name)* '}' 'from' STRING
+   *            | 'import' STRING 'as' IDENTIFIER
+   *
+   * `import`, `from` and `as` are contextual, not reserved: they are ordinary
+   * identifiers to the lexer and are only read as keywords here, at the top of
+   * a source. So a program that uses one as a variable name still means what it
+   * meant. The cost is that `import` followed by something else is a parse
+   * error rather than a variable reference, which is the better failure: a
+   * source opening on `import` is an import in every case that matters.
+   */
+  private importHeader(): ImportDecl[] {
+    const imports: ImportDecl[] = [];
+
+    while (this.currentToken.type === 'IDENTIFIER' && this.currentToken.value === 'import') {
+      const keyword = this.currentToken;
+      this.eat('IDENTIFIER');
+      imports.push(this.at(this.importDecl(), keyword));
+    }
+
+    return imports;
+  }
+
+  /**
+   * Parse one import, the `import` keyword already eaten.
+   */
+  private importDecl(): ImportDecl {
+    // import './m' as r
+    if ((this.currentToken as Token).type === 'STRING') {
+      const path = this.currentToken.value;
+      this.eat('STRING');
+      this.eatContextualKeyword('as', `import '${path}'`);
+      if ((this.currentToken as Token).type !== 'IDENTIFIER') {
+        throw new Error(
+          `Expected a lowercase name after 'as' but got ${this.currentToken.type} at ${this.formatLocation(this.currentToken)}`
+        );
+      }
+      const alias = this.currentToken.value;
+      this.eat('IDENTIFIER');
+      return { path, names: [], alias };
+    }
+
+    // import { Person, double } from './m'
+    if ((this.currentToken as Token).type !== 'LBRACE') {
+      throw new Error(
+        `Expected '{' or a module path after 'import' but got ${this.currentToken.type} at ${this.formatLocation(this.currentToken)}`
+      );
+    }
+    this.eat('LBRACE');
+
+    const names: string[] = [];
+    while ((this.currentToken as Token).type !== 'RBRACE') {
+      const token = this.currentToken as Token;
+      if (token.type !== 'IDENTIFIER' && token.type !== 'UPPER_IDENTIFIER') {
+        throw new Error(
+          `Expected a name to import but got ${token.type} at ${this.formatLocation(token)}`
+        );
+      }
+      names.push(token.value);
+      this.eat(token.type);
+      if ((this.currentToken as Token).type === 'COMMA') {
+        this.eat('COMMA');
+      } else {
+        break;
+      }
+    }
+    this.eat('RBRACE');
+
+    if (names.length === 0) {
+      throw new Error(
+        `An import names at least one thing to import at ${this.formatLocation(this.currentToken)}`
+      );
+    }
+
+    this.eatContextualKeyword('from', 'an import list');
+    if ((this.currentToken as Token).type !== 'STRING') {
+      throw new Error(
+        `Expected a module path after 'from' but got ${this.currentToken.type} at ${this.formatLocation(this.currentToken)}`
+      );
+    }
+    const path = this.currentToken.value;
+    this.eat('STRING');
+    return { path, names };
+  }
+
+  /**
+   * Refuse an import written after the header.
+   *
+   * An import declares what the whole source may use, so it comes first. Said
+   * here rather than left to the expression grammar, which would otherwise
+   * report the `{` of an import list as a stray expression.
+   */
+  private refuseLateImport(): void {
+    const token = this.currentToken;
+    if (token.type === 'IDENTIFIER' && token.value === 'import') {
+      throw new Error(
+        `An import comes before the type definitions and the expression, at ${this.formatLocation(token)}`
+      );
+    }
+  }
+
+  /**
+   * Eat a word that is a keyword only here — `from` and `as`, which the lexer
+   * hands over as plain identifiers.
+   */
+  private eatContextualKeyword(word: string, after: string): void {
+    const token = this.currentToken as Token;
+    if (token.type !== 'IDENTIFIER' || token.value !== word) {
+      throw new Error(
+        `Expected '${word}' after ${after} but got ${token.type} at ${this.formatLocation(token)}`
+      );
+    }
+    this.eat('IDENTIFIER');
+  }
+
+  /**
    * Parse the type prelude: the type definitions a source may open with.
    *
    *   typePrelude -> (UPPER_IDENTIFIER '=' typeExpr ','?)*
@@ -1961,7 +2092,14 @@ export class Parser {
   }
 
   parse(): Expr {
+    const imports = this.importHeader();
+    if (imports.length > 0) {
+      throw new Error(
+        `Cannot import '${imports[0].path}': reading a module needs a module loader, and this host reads one source`
+      );
+    }
     const prelude = this.typePrelude();
+    this.refuseLateImport();
     if (prelude.length > 0 && this.currentToken.type === 'EOF') {
       throw new Error(
         `Expected an expression after the type definitions at ${this.formatLocation(this.currentToken)}`
@@ -1980,14 +2118,18 @@ export class Parser {
   }
 
   /**
-   * Parse the type prelude alone, and say where the rest of the source starts.
+   * Parse the header alone — the imports, then the type definitions — and say
+   * where the rest of the source starts.
    *
-   * A file holds one expression per line, so its prelude has to be lifted off
-   * the top before the lines below it can be read — see `splitTypePrelude`.
+   * The header declares what a whole source may use, so it has to be lifted
+   * off the top before the expression under it can be read — and before each
+   * line can be read on its own, in `--lines` mode. See `splitProgramHeader`.
    */
-  parseTypePrelude(): { typeDefs: TypeBinding[]; offset: number } {
+  parseProgramHeader(): { imports: ImportDecl[]; typeDefs: TypeBinding[]; offset: number } {
+    const imports = this.importHeader();
     const typeDefs = this.typePrelude();
-    return { typeDefs, offset: this.currentToken.position };
+    this.refuseLateImport();
+    return { imports, typeDefs, offset: this.currentToken.position };
   }
 
   /**
@@ -2011,32 +2153,35 @@ export function parse(input: string, options: ParserOptions = {}): Expr {
 }
 
 /**
- * A source split into its type prelude and what follows it.
+ * A source split into its header and what follows it.
  */
-export interface TypePreludeSplit {
-  /** The type definitions the source opens with, in order. */
+export interface ProgramHeaderSplit {
+  /** The imports the source opens with, in order. */
+  imports: ImportDecl[];
+  /** The type definitions that follow them, in order. */
   typeDefs: TypeBinding[];
   /**
-   * What follows the prelude, with the prelude region replaced by whitespace
+   * What follows the header, with the header region replaced by whitespace
    * so that every remaining line keeps its line and column numbers.
    */
   body: string;
 }
 
 /**
- * Lift the type prelude off the top of a source.
+ * Lift the header — the imports, then the type prelude — off the top of a
+ * source.
  *
- * A `.elo` file holds one expression per line, while its prelude is file-wide
- * and may span several lines. Reading the two apart is what lets a host scope
- * every line of a file under the types the file declares. A source with no
- * prelude comes back with no type definitions and a body that still parses the
- * same.
+ * The header declares what the whole source may use, while the source under it
+ * is one expression (or, by test convention, one per line). Reading the two
+ * apart is what lets a host scope the body under what the header declares. A
+ * source with no header comes back with nothing declared and a body that still
+ * parses the same.
  */
-export function splitTypePrelude(source: string, options: ParserOptions = {}): TypePreludeSplit {
+export function splitProgramHeader(source: string, options: ParserOptions = {}): ProgramHeaderSplit {
   const parser = new Parser(source, options);
-  const { typeDefs, offset } = parser.parseTypePrelude();
+  const { imports, typeDefs, offset } = parser.parseProgramHeader();
   const blanked = source.slice(0, offset).replace(/[^\n]/g, ' ');
-  return { typeDefs, body: blanked + source.slice(offset) };
+  return { imports, typeDefs, body: blanked + source.slice(offset) };
 }
 
 /**

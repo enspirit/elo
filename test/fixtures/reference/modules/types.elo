@@ -1,0 +1,7 @@
+# A module imported by imports.elo. Its type prelude is what it exports as
+# types; it has no expression, so it exports no value.
+Age = Int(a | a >= 0)
+Person = {
+  name: String,
+  age: Age
+}

@@ -2,6 +2,10 @@
 
 # Regenerate expected fixture files for Elo compiler tests
 #
+# A .elo under a modules/ directory is a module a fixture imports, not a
+# fixture: it has no expected output of its own, and its code is covered
+# inlined into the fixture that imports it.
+#
 # Fixtures are compiled with --lines: a fixture is a list of one-line
 # assertions, and the runners need one line of emitted code per line of source
 # so they can be compared and executed line-wise. That is a test convention —
@@ -16,6 +20,7 @@
 set -e
 
 FIXTURES_DIR="test/fixtures"
+MODULES_DIR="modules"
 ELOC="./bin/eloc"
 TARGETS=""
 FIXTURE_ARGS=()
@@ -57,7 +62,7 @@ ELO_FILES=()
 if [ ${#FIXTURE_ARGS[@]} -eq 0 ]; then
     while IFS= read -r -d '' f; do
         ELO_FILES+=("$f")
-    done < <(find "$FIXTURES_DIR" -name '*.elo' -print0 | sort -z)
+    done < <(find "$FIXTURES_DIR" -name "$MODULES_DIR" -type d -prune -o -name '*.elo' -print0 | sort -z)
 else
     for arg in "${FIXTURE_ARGS[@]}"; do
         # Try exact path first, then search recursively
@@ -68,7 +73,7 @@ else
         else
             while IFS= read -r -d '' f; do
                 ELO_FILES+=("$f")
-            done < <(find "$FIXTURES_DIR" -name "${arg}.elo" -print0 | sort -z)
+            done < <(find "$FIXTURES_DIR" -name "$MODULES_DIR" -type d -prune -o -name "${arg}.elo" -print0 | sort -z)
         fi
     done
 fi
