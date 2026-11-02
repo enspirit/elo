@@ -43,4 +43,13 @@ fi
 
 echo ""
 
+# Failure structure across targets. Not fixture-driven: a fixture assertion
+# cannot see a failure's kind, because Elo cannot either.
+echo "Failure Structure Tests:"
+if ! "$SCRIPTS_DIR/test-failures.sh"; then
+    EXIT_CODE=1
+fi
+
+echo ""
+
 exit ${EXIT_CODE:-0}

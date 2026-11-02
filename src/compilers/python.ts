@@ -312,14 +312,17 @@ function emitPyNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOptio
       if (options.stripGuards) {
         return body;
       }
-      // Generate guard checks using kAssert helper
-      ctx.requireHelper('kAssert');
+      // Generate guard checks that raise on failure. The error says which kind
+      // of assertion it was and what it was called, so a host does not have to
+      // read that back out of the message.
+      ctx.requireHelper('pAssert');
       const guardChecks = ir.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
           : `${ir.guardType} failed`;
-        return `kAssert(${conditionCode}, ${JSON.stringify(errorMsg)})`;
+        const label = c.label ? JSON.stringify(c.label) : 'None';
+        return `pAssert(${conditionCode}, ${JSON.stringify(ir.guardType)}, ${label}, ${JSON.stringify(errorMsg)})`;
       });
       // Chain with tuple: (check1, check2, body)[-1]
       return `(${[...guardChecks, body].join(', ')})[-1]`;
@@ -391,12 +394,15 @@ function emitTypeExprParser(
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
+      // A constraint is its own kind of failure, and carries the label it was
+      // written under.
       const checks = typeExpr.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `constraint '${c.label}' failed`)
           : 'constraint failed';
-        return `(${JSON.stringify(errorMsg)}, lambda ${varName}: ${conditionCode})`;
+        const label = c.label ? JSON.stringify(c.label) : 'None';
+        return `(${JSON.stringify(errorMsg)}, ${label}, lambda ${varName}: ${conditionCode})`;
       });
 
       return `pSubtype(${baseParser}, [${checks.join(', ')}])`;

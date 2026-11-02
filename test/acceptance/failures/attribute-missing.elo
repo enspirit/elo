@@ -1,0 +1,2 @@
+Rec = { a: Int }
+{} |> Rec

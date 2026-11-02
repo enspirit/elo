@@ -1,0 +1,3 @@
+Pos = Int(i | positive: i > 0)
+Rec = { a: Pos }
+{ a: 0 } |> Rec

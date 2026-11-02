@@ -75,15 +75,18 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   // Parser helpers depend on pOk/pFail
   pAny: ['pOk'],
   pNull: ['pOk', 'pFail'],
-  pString: ['pOk', 'pMiss'],
-  pInt: ['pOk', 'pMiss'],
-  pBool: ['pOk', 'pMiss'],
-  pDatetime: ['pOk', 'pMiss'],
-  pFloat: ['pOk', 'pMiss'],
-  pDate: ['pOk', 'pMiss'],
-  pDuration: ['pOk', 'pMiss'],
+  pString: ['pOk', 'pFail'],
+  pInt: ['pOk', 'pFail'],
+  pBool: ['pOk', 'pFail'],
+  pDatetime: ['pOk', 'pFail'],
+  pFloat: ['pOk', 'pFail'],
+  pDate: ['pOk', 'pFail'],
+  pDuration: ['pOk', 'pFail'],
   pData: ['pOk', 'pFail'],
-  pMiss: ['pFail'],
+  pSchema: ['pOk', 'pFail'],
+  pArray: ['pOk', 'pFail'],
+  pUnion: ['pFail'],
+  pSubtype: ['pFail'],
 };
 
 export const JS_HELPERS: Record<string, string> = {
@@ -298,9 +301,6 @@ export const JS_HELPERS: Record<string, string> = {
   // leaves them alone.
   pOk: `function pOk(v, p) { return { success: true, path: p, message: '', value: v, cause: [] }; }`,
   pFail: `function pFail(p, m, c, k, l) { return { success: false, path: p, message: m || '', value: null, cause: c || [], kind: k || 'schema', label: l }; }`,
-  // A type mismatch, where nothing arriving at all is its own kind of event:
-  // `undefined` is an absent attribute, as against a null that was written.
-  pMiss: `function pMiss(p, m, v) { return pFail(p, m, [], v === undefined ? 'missing' : 'schema'); }`,
   pAny: `function pAny(v, p) { return pOk(v, p); }`,
   pNull: `function pNull(v, p) {
   if (v === null || v === undefined) return pOk(null, p);
@@ -308,42 +308,99 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   pString: `function pString(v, p) {
   if (typeof v === 'string') return pOk(v, p);
-  return pMiss(p, 'expected String, got ' + (v === null ? 'Null' : typeof v), v);
+  return pFail(p, 'expected String, got ' + (v === null ? 'Null' : typeof v));
 }`,
   pInt: `function pInt(v, p) {
   if (typeof v === 'number' && Number.isInteger(v)) return pOk(v, p);
   if (typeof v === 'string') { const n = parseInt(v, 10); if (!isNaN(n)) return pOk(n, p); }
-  return pMiss(p, 'expected Int, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
+  return pFail(p, 'expected Int, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pBool: `function pBool(v, p) {
   if (typeof v === 'boolean') return pOk(v, p);
   if (v === 'true') return pOk(true, p);
   if (v === 'false') return pOk(false, p);
-  return pMiss(p, 'expected Bool, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
+  return pFail(p, 'expected Bool, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pDatetime: `function pDatetime(v, p) {
   if (DateTime.isDateTime(v)) return pOk(v, p);
   if (typeof v === 'string') { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d, p); }
-  return pMiss(p, 'expected Datetime, got ' + (v === null ? 'Null' : typeof v === 'string' ? 'invalid datetime ' + JSON.stringify(v) : typeof v), v);
+  return pFail(p, 'expected Datetime, got ' + (v === null ? 'Null' : typeof v === 'string' ? 'invalid datetime ' + JSON.stringify(v) : typeof v));
 }`,
   pFloat: `function pFloat(v, p) {
   if (typeof v === 'number') return pOk(v, p);
   if (typeof v === 'string') { const n = parseFloat(v); if (!isNaN(n)) return pOk(n, p); }
-  return pMiss(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
+  return pFail(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pDate: `function pDate(v, p) {
   if (DateTime.isDateTime(v)) return pOk(v.startOf('day'), p);
   if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d.startOf('day'), p); }
-  return pMiss(p, 'expected Date (YYYY-MM-DD), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
+  return pFail(p, 'expected Date (YYYY-MM-DD), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pDuration: `function pDuration(v, p) {
   if (Duration.isDuration(v)) return pOk(v, p);
   if (typeof v === 'string') { const d = Duration.fromISO(v); if (d.isValid) return pOk(d, p); }
-  return pMiss(p, 'expected Duration (ISO 8601), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v), v);
+  return pFail(p, 'expected Duration (ISO 8601), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pData: `function pData(v, p) {
   if (typeof v === 'string') { try { return pOk(JSON.parse(v), p); } catch { return pFail(p, 'invalid JSON: ' + JSON.stringify(v)); } }
   return pOk(v, p);
+}`,
+  pSchema: `function pSchema(props, extrasMode, extrasParser) {
+  const known = props.map(pr => pr[0]);
+  return (v, p) => {
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) return pFail(p, 'expected object, got ' + (v === null ? 'Null' : typeof v));
+    const o = {};
+    for (const [key, parser, optional] of props) {
+      if (optional && v[key] == null) continue;
+      const r = parser(v[key], p + '.' + key);
+      if (!r.success) return pFail(p, null, [Object.prototype.hasOwnProperty.call(v, key) ? r : { ...r, kind: 'missing' }]);
+      o[key] = r.value;
+    }
+    if (extrasMode === 'closed') {
+      for (const k in v) if (!known.includes(k)) return pFail(p + '.' + k, 'unexpected attribute');
+    } else if (extrasMode === 'typed' && extrasParser) {
+      for (const k in v) {
+        if (known.includes(k)) continue;
+        const re = extrasParser(v[k], p + '.' + k);
+        if (!re.success) return pFail(p, null, [re]);
+        o[k] = re.value;
+      }
+    }
+    return pOk(o, p);
+  };
+}`,
+  pArray: `function pArray(elemParser) {
+  return (v, p) => {
+    if (!Array.isArray(v)) return pFail(p, 'expected array, got ' + (v === null ? 'Null' : typeof v));
+    const a = [];
+    for (let i = 0; i < v.length; i++) {
+      const r = elemParser(v[i], p + '.' + i);
+      if (!r.success) return pFail(p, null, [r]);
+      a.push(r.value);
+    }
+    return pOk(a, p);
+  };
+}`,
+  pUnion: `function pUnion(parsers) {
+  return (v, p) => {
+    const causes = [];
+    for (const up of parsers) {
+      const r = up(v, p);
+      if (r.success) return r;
+      causes.push(r);
+    }
+    return pFail(p, 'no union alternative matched', causes);
+  };
+}`,
+  pSubtype: `function pSubtype(baseParser, checks) {
+  return (v, p) => {
+    const r = baseParser(v, p);
+    if (!r.success) return r;
+    for (const [message, label, fn] of checks) {
+      if (!fn(r.value)) return pFail(p, message, [], 'constraint', label);
+    }
+    return r;
+  };
 }`,
   // The message is for a human and is not promised to anyone; `kind`, `path`
   // and `label` are the host's, and carry what it used to read out of the prose.
@@ -388,6 +445,12 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   p_date: ['p_ok', 'p_fail'],
   p_duration: ['p_ok', 'p_fail'],
   p_data: ['p_ok', 'p_fail'],
+  p_schema: ['p_ok', 'p_fail'],
+  p_array: ['p_ok', 'p_fail'],
+  p_union: ['p_fail'],
+  p_subtype: ['p_fail'],
+  p_unwrap: ['p_err'],
+  p_raise: ['p_err'],
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
@@ -458,7 +521,81 @@ end`,
   s >= e ? (s..s) : (s..e)
 end`,
   p_ok: `def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end`,
-  p_fail: `def p_fail(p, m = nil, c = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [] } end`,
+  p_fail: `def p_fail(p, m = nil, c = nil, k = nil, l = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [], kind: k || 'schema', label: l } end`,
+  /* A failure carrying what a host branches on. Ruby cannot open a class here
+     — these helpers are defined inside the lambda the expression compiles to,
+     and `class` is not allowed in a body — so the readers are attached to the
+     instance. */
+  p_err: `def p_err(m, k, pa, l)
+  e = StandardError.new(m)
+  e.define_singleton_method(:kind) { k }
+  e.define_singleton_method(:path) { pa }
+  e.define_singleton_method(:label) { l }
+  e
+end`,
+  p_schema: `def p_schema(props, extras_mode, extras_parser = nil)
+  known = props.map { |pr| pr[0] }
+  lambda do |v, p|
+    return p_fail(p, "expected object, got #{v.nil? ? 'Null' : v.class}") unless v.is_a?(Hash)
+    o = {}
+    props.each do |key, parser, optional|
+      next if optional && v[key].nil?
+      r = parser.call(v[key], "#{p}.#{key}")
+      return p_fail(p, nil, [v.key?(key) ? r : r.merge(kind: 'missing')]) unless r[:success]
+      o[key] = r[:value]
+    end
+    if extras_mode == 'closed'
+      v.each_key do |k|
+        return p_fail("#{p}.#{k}", 'unexpected attribute') unless known.include?(k)
+      end
+    elsif extras_mode == 'typed' && !extras_parser.nil?
+      v.each_key do |k|
+        next if known.include?(k)
+        re = extras_parser.call(v[k], "#{p}.#{k}")
+        return p_fail(p, nil, [re]) unless re[:success]
+        o[k] = re[:value]
+      end
+    end
+    p_ok(o, p)
+  end
+end`,
+  p_array: `def p_array(elem_parser)
+  lambda do |v, p|
+    return p_fail(p, "expected array, got #{v.nil? ? 'Null' : v.class}") unless v.is_a?(Array)
+    a = []
+    v.each_with_index do |e, i|
+      r = elem_parser.call(e, "#{p}.#{i}")
+      return p_fail(p, nil, [r]) unless r[:success]
+      a << r[:value]
+    end
+    p_ok(a, p)
+  end
+end`,
+  p_union: `def p_union(parsers)
+  lambda do |v, p|
+    causes = []
+    parsers.each do |up|
+      r = up.call(v, p)
+      return r if r[:success]
+      causes << r
+    end
+    p_fail(p, 'no union alternative matched', causes)
+  end
+end`,
+  p_subtype: `def p_subtype(base_parser, checks)
+  lambda do |v, p|
+    r = base_parser.call(v, p)
+    return r unless r[:success]
+    val = r[:value]
+    checks.each do |message, label, fn|
+      return p_fail(p, message, [], 'constraint', label) unless fn.call(val)
+    end
+    r
+  end
+end`,
+  p_raise: `def p_raise(k, l, m)
+  raise p_err(m, k, nil, l)
+end`,
   p_any: `def p_any(v, p) p_ok(v, p) end`,
   p_null: `def p_null(v, p)
   return p_ok(nil, p) if v.nil?
@@ -518,7 +655,7 @@ end`,
     e
   }
   err = find_error.call(r)
-  raise "#{err[:path] || '.'}: #{err[:message] || 'type error'}"
+  raise p_err("#{err[:path] || '.'}: #{err[:message] || 'type error'}", err[:kind] || 'schema', err[:path] || '.', err[:label])
 end`,
   k_string: `def k_string(v)
   return 'null' if v.nil?
@@ -583,6 +720,8 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   pArray: ['pOk', 'pFail'],
   pUnion: ['pFail'],
   pSubtype: ['pOk', 'pFail'],
+  pUnwrap: ['EloFailure'],
+  pAssert: ['EloFailure'],
 };
 
 export const PY_HELPERS: Record<string, string> = {
@@ -869,8 +1008,8 @@ def _elo_end_of_year(dt):
   // Parser helpers - return Result: { "success": bool, "path": str, "message": str, "value": any, "cause": list }
   pOk: `def pOk(v, p):
     return {"success": True, "path": p, "message": "", "value": v, "cause": []}`,
-  pFail: `def pFail(p, m=None, c=None):
-    return {"success": False, "path": p, "message": m or "", "value": None, "cause": c or []}`,
+  pFail: `def pFail(p, m=None, c=None, k=None, l=None):
+    return {"success": False, "path": p, "message": m or "", "value": None, "cause": c or [], "kind": k or "schema", "label": l}`,
   pUnwrap: `def pUnwrap(r):
     if r["success"]: return r["value"]
     def find_error(e):
@@ -878,7 +1017,27 @@ def _elo_end_of_year(dt):
         if e.get("cause") and len(e["cause"]) > 0: return find_error(e["cause"][0])
         return e
     err = find_error(r)
-    raise Exception((err.get("path") or ".") + ": " + (err.get("message") or "type error"))`,
+    raise EloFailure(
+        (err.get("path") or ".") + ": " + (err.get("message") or "type error"),
+        err.get("kind") or "schema",
+        err.get("path") or ".",
+        err.get("label"),
+    )`,
+  // A failure carrying what a host branches on: the message is prose and is
+  // not promised to anyone, `kind`, `path` and `label` are the interface.
+  EloFailure: `class EloFailure(Exception):
+    def __init__(self, message, kind=None, path=None, label=None):
+        super().__init__(message)
+        self.kind = kind
+        self.path = path
+        self.label = label`,
+  // A guard or a check: no path, since it is about the expression it guards
+  // rather than about a place in the input.
+  // A guard or a check, as an expression: Python has no `raise` in one, so the
+  // condition is tested by a call that answers True or raises.
+  pAssert: `def pAssert(cond, k, l, m):
+    if not cond: raise EloFailure(m, k, None, l)
+    return True`,
   pAny: `def pAny(v, p):
     return pOk(v, p)`,
   pNull: `def pNull(v, p):
@@ -940,7 +1099,11 @@ def _elo_end_of_year(dt):
             if optional and val is None:
                 continue
             r = prop_parser(val, p + "." + key)
-            if not r["success"]: return pFail(p, None, [r])
+            if not r["success"]:
+                # A key that never arrived is a different event from one that
+                # arrived and was refused, and only the schema can tell them
+                # apart: a dict answers None for both.
+                return pFail(p, None, [r if key in v else dict(r, kind="missing")])
             o[key] = r["value"]
         if extras_mode == "closed":
             for k in v:
@@ -977,8 +1140,8 @@ def _elo_end_of_year(dt):
         r = base_parser(v, p)
         if not r["success"]: return r
         val = r["value"]
-        for label, check in checks:
-            if not check(val): return pFail(p, label)
+        for message, label, check in checks:
+            if not check(val): return pFail(p, message, [], "constraint", label)
         return r
     return parser`,
 };

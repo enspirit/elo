@@ -526,9 +526,12 @@ try {
 
 `kind` and `label` come from the construct that refused the value, so they are
 stable. `message` is for a human and its wording is not: reading a category out
-of it is how rewording a diagnostic silently breaks a host. Ruby and Python
-raise their own errors from their own preludes, and do not carry these fields
-yet.
+of it is how rewording a diagnostic silently breaks a host.
+
+Ruby and Python report the same three, from their own preludes: Ruby raises a
+`StandardError` answering `kind`, `path` and `label`, and Python an
+`EloFailure` with those attributes. SQL has none of this — it refuses type
+definitions and guards outright, so it has no such failure to report.
 
 ### Compiling a source that imports
 

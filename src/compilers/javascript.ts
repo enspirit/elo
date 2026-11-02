@@ -379,89 +379,55 @@ function emitTypeExprParser(
     }
 
     case 'type_schema': {
-      // Object schema: generate inline parser
-      ctx.requireHelper('pOk');
-      ctx.requireHelper('pFail');
-      const propParsers = typeExpr.properties.map(prop => {
+      ctx.requireHelper('pSchema');
+      const props = typeExpr.properties.map(prop => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
-        return { key: assertSafeIdentifier(prop.key, 'type_schema property key'), parser: propParser, optional: prop.optional };
+        const key = assertSafeIdentifier(prop.key, 'type_schema property key');
+        return `[${JSON.stringify(key)}, ${propParser}, ${prop.optional ? 'true' : 'false'}]`;
       });
-      const knownKeys = propParsers.map(p => p.key);
 
-      // Generate object parser - wrap parser in parens to handle inline functions
-      const propChecks = propParsers.map(({ key, parser, optional }) => {
-        if (optional) {
-          // Optional: if value is null/undefined, skip attribute; otherwise parse
-          return `if (v.${key} != null) { const _r_${key} = (${parser})(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, null, [_r_${key}]); _o.${key} = _r_${key}.value; }`;
-        }
-        // Required: parse and fail if not successful
-        return `const _r_${key} = (${parser})(v.${key}, p + '.${key}'); if (!_r_${key}.success) return pFail(p, null, [_r_${key}]); _o.${key} = _r_${key}.value;`;
-      }).join(' ');
-
-      // Handle extras based on the extras mode
-      let extrasCheck: string;
+      let extrasMode: string;
+      let extrasParser = 'null';
       if (typeExpr.extras === undefined || typeExpr.extras === 'closed') {
-        // Closed: fail if any extra keys exist
-        const knownKeysSet = JSON.stringify(knownKeys);
-        extrasCheck = `const _ks = ${knownKeysSet}; for (const _k in v) { if (!_ks.includes(_k)) return pFail(p + '.' + _k, 'unexpected attribute'); }`;
+        extrasMode = "'closed'";
       } else if (typeExpr.extras === 'ignored') {
-        // Ignored: no check, extras are silently ignored
-        extrasCheck = '';
+        extrasMode = "'ignored'";
       } else {
-        // Typed extras: parse each extra key with the given type
-        const extrasParser = emitTypeExprParser(typeExpr.extras, ctx);
-        const knownKeysSet = JSON.stringify(knownKeys);
-        extrasCheck = `const _ks = ${knownKeysSet}; const _ep = ${extrasParser}; for (const _k in v) { if (!_ks.includes(_k)) { const _re = _ep(v[_k], p + '.' + _k); if (!_re.success) return pFail(p, null, [_re]); _o[_k] = _re.value; } }`;
+        extrasMode = "'typed'";
+        extrasParser = emitTypeExprParser(typeExpr.extras, ctx);
       }
 
-      ctx.requireHelper('pMiss');
-      return `(v, p) => { if (typeof v !== 'object' || v === null) return pMiss(p, 'expected object, got ' + (v === null ? 'Null' : typeof v), v); const _o = {}; ${propChecks} ${extrasCheck} return pOk(_o, p); }`;
+      return `pSchema([${props.join(', ')}], ${extrasMode}, ${extrasParser})`;
     }
 
     case 'subtype_constraint': {
-      // Subtype constraint: Int(i | i > 0) or Int(i | positive: i > 0, even: i % 2 == 0)
-      // First parse with base type, then check all constraints
-      ctx.requireHelper('pOk');
-      ctx.requireHelper('pFail');
+      ctx.requireHelper('pSubtype');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
-      // Generate constraint checks. A constraint is its own kind of failure,
-      // and carries the label it was written under.
-      const constraintChecks = typeExpr.constraints.map(c => {
+      // A constraint is its own kind of failure, and carries the label it was
+      // written under.
+      const checks = typeExpr.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `constraint '${c.label}' failed`)
           : 'constraint failed';
         const label = c.label ? JSON.stringify(c.label) : 'null';
-        return `if (!(${conditionCode})) return pFail(p, ${JSON.stringify(errorMsg)}, [], 'constraint', ${label});`;
-      }).join(' ');
+        return `[${JSON.stringify(errorMsg)}, ${label}, (${varName}) => ${conditionCode}]`;
+      });
 
-      return `(v, p) => { const _r = ${baseParser}(v, p); if (!_r.success) return _r; const ${varName} = _r.value; ${constraintChecks} return _r; }`;
+      return `pSubtype(${baseParser}, [${checks.join(', ')}])`;
     }
 
     case 'array_type': {
-      // Array type: [Int]
-      // Parse each element with the element type
-      ctx.requireHelper('pOk');
-      ctx.requireHelper('pFail');
-      const elemParser = emitTypeExprParser(typeExpr.elementType, ctx);
-
-      // Store element parser in variable to handle inline functions (like object schemas)
-      ctx.requireHelper('pMiss');
-      return `(v, p) => { if (!Array.isArray(v)) return pMiss(p, 'expected array, got ' + (v === null ? 'Null' : typeof v), v); const _el = ${elemParser}; const _a = []; for (let _i = 0; _i < v.length; _i++) { const _r = _el(v[_i], p + '.' + _i); if (!_r.success) return pFail(p, null, [_r]); _a.push(_r.value); } return pOk(_a, p); }`;
+      ctx.requireHelper('pArray');
+      return `pArray(${emitTypeExprParser(typeExpr.elementType, ctx)})`;
     }
 
     case 'union_type': {
-      // Union type: Int|String
-      // Try each type in order, return first successful parse (PEG-style)
-      ctx.requireHelper('pFail');
+      ctx.requireHelper('pUnion');
       const parsers = typeExpr.types.map(t => emitTypeExprParser(t, ctx));
-
-      // Generate tries: call each parser directly in order
-      const tries = parsers.map(p => `_r = (${p})(v, p); if (_r.success) return _r; _causes.push(_r);`).join(' ');
-
-      return `(v, p) => { let _r; const _causes = []; ${tries} return pFail(p, 'no union alternative matched', _causes); }`;
+      return `pUnion([${parsers.join(', ')}])`;
     }
   }
 }

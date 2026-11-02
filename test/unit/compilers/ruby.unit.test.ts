@@ -98,20 +98,22 @@ describe('Ruby Compiler - String Literals', () => {
 });
 
 describe('Ruby Compiler - Subtype Constraint Label Escaping', () => {
-  // The subtype-constraint branch embeds the (user-controllable) label into a
-  // Ruby double-quoted string via `p_fail(p, "...")`. Without escaping, a label
-  // like '#{`id`}' would trigger interpolation and shell execution when the
-  // constraint fails at runtime. These regression tests pin the escape behavior.
+  // The subtype-constraint branch embeds the (user-controllable) label into
+  // Ruby double-quoted strings, in the check `p_subtype` is handed. Without
+  // escaping, a label like '#{`id`}' would trigger interpolation and shell
+  // execution when the constraint fails at runtime. These regression tests pin
+  // the escape behavior.
   //
-  // We inspect the p_fail(...) call emitted inside the constraint parser, not
-  // the whole program (which legitimately contains `#{...}` inside built-in
-  // runtime helpers).
+  // We inspect the check emitted inside the constraint parser, not the whole
+  // program (which legitimately contains `#{...}` inside built-in runtime
+  // helpers). A check is `["<message>", "<label>", ->(i) { … }]`, and *both*
+  // strings carry the label, so both are checked.
 
   function extractConstraintErrorArg(out: string): string {
-    // Find: ...return p_fail(p, "<ARG>") unless (...)
-    const m = out.match(/return p_fail\(p, "((?:[^"\\]|\\.)*)"\) unless/);
-    assert.ok(m, `could not find constraint p_fail(...) in: ${out}`);
-    return m![1];
+    // Find: p_subtype(<base>, [["<message>", "<label>", ->(…) { … }], …])
+    const m = out.match(/p_subtype\([^[]*\[\["((?:[^"\\]|\\.)*)", ("(?:[^"\\]|\\.)*"|nil),/);
+    assert.ok(m, `could not find constraint check in: ${out}`);
+    return `${m![1]} ${m![2]}`;
   }
 
   it('should escape `#{...}` in a string-labeled constraint', () => {

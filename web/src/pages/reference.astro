@@ -1067,9 +1067,15 @@ try &#123;
           <code>kind</code> and <code>label</code> come from the construct that
           refused the value, so they are stable. <code>message</code> is for a
           human and its wording is not: reading a category out of it is how
-          rewording a diagnostic silently breaks a host. Ruby and Python raise
-          their own errors from their own preludes, and do not carry these
-          fields yet.
+          rewording a diagnostic silently breaks a host.
+        </p>
+        <p class="note">
+          Ruby and Python report the same three, from their own preludes: Ruby
+          raises a <code>StandardError</code> answering <code>kind</code>,
+          <code>path</code> and <code>label</code>, and Python an
+          <code>EloFailure</code> with those attributes. SQL has none of this —
+          it refuses type definitions and guards outright, so it has no such
+          failure to report.
         </p>
         <h3>A source that imports</h3>
         <p>

@@ -154,8 +154,6 @@ interface EmitOptions {
  * Emit Ruby with helper tracking
  */
 function emitRubyWithHelpers(ir: IRExpr, options: EmitOptions): EmitResult {
-  // Reset counter for deterministic output
-  typeParserVarCounter = 0;
   const requiredHelpers = new Set<string>();
   const code = emitRuby(ir, requiredHelpers, options);
   return { code, requiredHelpers };
@@ -335,29 +333,21 @@ function emitRubyNode(ir: IRExpr, requiredHelpers: Set<string>, options: EmitOpt
       if (options.stripGuards) {
         return body;
       }
-      // Generate guard checks that raise on failure
+      // Generate guard checks that raise on failure. The error says which kind
+      // of assertion it was and what it was called, so a host does not have to
+      // read that back out of the message.
+      ctx.requireHelper('p_raise');
       const guardChecks = ir.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `${ir.guardType} '${c.label}' failed`)
           : `${ir.guardType} failed`;
-        return `raise "${escapeRubyDQ(errorMsg)}" unless ${conditionCode}`;
+        const label = c.label ? `"${escapeRubyDQ(c.label)}"` : 'nil';
+        return `p_raise('${ir.guardType}', ${label}, "${escapeRubyDQ(errorMsg)}") unless ${conditionCode}`;
       }).join('; ');
       return `(${guardChecks}; ${body})`;
     }
   }
-}
-
-/**
- * Counter for generating unique variable names in nested type parsers
- */
-let typeParserVarCounter = 0;
-
-/**
- * Get a unique variable suffix for type parser variables
- */
-function nextVarSuffix(): string {
-  return `_${typeParserVarCounter++}`;
 }
 
 /**
@@ -398,92 +388,56 @@ function emitTypeExprParser(
     }
 
     case 'type_schema': {
-      // Object schema: generate inline parser lambda
-      // Use unique variable names to avoid Ruby closure issues with nested schemas
-      ctx.requireHelper('p_ok');
-      ctx.requireHelper('p_fail');
-      const suffix = nextVarSuffix();
-      const oVar = `_o${suffix}`;
-      const propParsers = typeExpr.properties.map(prop => {
+      ctx.requireHelper('p_schema');
+      const props = typeExpr.properties.map(prop => {
         const propParser = emitTypeExprParser(prop.typeExpr, ctx);
-        return { key: assertSafeIdentifier(prop.key, 'type_schema property key'), parser: propParser, optional: prop.optional };
+        const key = assertSafeIdentifier(prop.key, 'type_schema property key');
+        return `[:${key}, ${propParser}, ${prop.optional ? 'true' : 'false'}]`;
       });
-      const knownKeys = propParsers.map(p => p.key);
 
-      // Generate object parser with unique variable names
-      const propChecks = propParsers.map(({ key, parser, optional }) => {
-        const rVar = `_r_${key}${suffix}`;
-        if (optional) {
-          // Optional: if value is null/undefined, skip attribute; otherwise parse
-          return `unless v[:${key}].nil?; ${rVar} = (${parser}).call(v[:${key}], p + '.${key}'); return p_fail(p, nil, [${rVar}]) unless ${rVar}[:success]; ${oVar}[:${key}] = ${rVar}[:value]; end`;
-        }
-        // Required: parse and fail if not successful
-        return `${rVar} = (${parser}).call(v[:${key}], p + '.${key}'); return p_fail(p, nil, [${rVar}]) unless ${rVar}[:success]; ${oVar}[:${key}] = ${rVar}[:value]`;
-      }).join('; ');
-
-      // Handle extras based on the extras mode
-      let extrasCheck: string;
-      const knownKeysArr = knownKeys.map(k => `:${k}`).join(', ');
-      const ksVar = `_ks${suffix}`;
+      let extrasMode: string;
+      let extrasParser = 'nil';
       if (typeExpr.extras === undefined || typeExpr.extras === 'closed') {
-        // Closed: fail if any extra keys exist
-        extrasCheck = `${ksVar} = [${knownKeysArr}]; v.each_key { |_k| return p_fail(p + '.' + _k.to_s, 'unexpected attribute') unless ${ksVar}.include?(_k) }`;
+        extrasMode = "'closed'";
       } else if (typeExpr.extras === 'ignored') {
-        // Ignored: no check, extras are silently ignored
-        extrasCheck = '';
+        extrasMode = "'ignored'";
       } else {
-        // Typed extras: parse each extra key with the given type
-        const extrasParser = emitTypeExprParser(typeExpr.extras, ctx);
-        const epVar = `_ep${suffix}`;
-        const reVar = `_re${suffix}`;
-        extrasCheck = `${ksVar} = [${knownKeysArr}]; ${epVar} = ${extrasParser}; v.each_key { |_k| unless ${ksVar}.include?(_k); ${reVar} = ${epVar}.call(v[_k], p + '.' + _k.to_s); return p_fail(p, nil, [${reVar}]) unless ${reVar}[:success]; ${oVar}[_k] = ${reVar}[:value]; end }`;
+        extrasMode = "'typed'";
+        extrasParser = emitTypeExprParser(typeExpr.extras, ctx);
       }
 
-      return `->(v, p) { return p_fail(p, 'expected object, got ' + (v.nil? ? 'Null' : v.class.to_s)) unless v.is_a?(Hash); ${oVar} = {}; ${propChecks}; ${extrasCheck}; p_ok(${oVar}, p) }`;
+      return `p_schema([${props.join(', ')}], ${extrasMode}, ${extrasParser})`;
     }
 
     case 'subtype_constraint': {
-      // Subtype constraint: Int(i | i > 0) or Int(i | positive: i > 0, even: i % 2 == 0)
-      // First parse with base type, then check all constraints
-      ctx.requireHelper('p_ok');
-      ctx.requireHelper('p_fail');
+      ctx.requireHelper('p_subtype');
       const baseParser = emitTypeExprParser(typeExpr.baseType, ctx);
       const varName = assertSafeIdentifier(typeExpr.variable, 'subtype_constraint variable');
 
-      // Generate constraint checks
-      const constraintChecks = typeExpr.constraints.map(c => {
+      // A constraint is its own kind of failure, and carries the label it was
+      // written under. The message is escaped for a double-quoted Ruby string:
+      // a user-written label must not trigger `#{...}` interpolation.
+      const checks = typeExpr.constraints.map(c => {
         const conditionCode = ctx.emit(c.condition);
         const errorMsg = c.label
           ? (c.label.includes(' ') ? c.label : `constraint '${c.label}' failed`)
           : 'constraint failed';
-        // Escape for safe embedding in a Ruby double-quoted string: user-controlled
-        // labels (e.g. `Int(i | 'any text': ...)`) must not trigger `#{...}` interpolation.
-        return `return p_fail(p, "${escapeRubyDQ(errorMsg)}") unless (${conditionCode});`;
-      }).join(' ');
+        const label = c.label ? `"${escapeRubyDQ(c.label)}"` : 'nil';
+        return `["${escapeRubyDQ(errorMsg)}", ${label}, ->(${varName}) { ${conditionCode} }]`;
+      });
 
-      return `->(v, p) { _r = (${baseParser}).call(v, p); return _r unless _r[:success]; ${varName} = _r[:value]; ${constraintChecks} _r }`;
+      return `p_subtype(${baseParser}, [${checks.join(', ')}])`;
     }
 
     case 'array_type': {
-      // Array type: [Int]
-      // Parse each element with the element type
-      ctx.requireHelper('p_ok');
-      ctx.requireHelper('p_fail');
-      const elemParser = emitTypeExprParser(typeExpr.elementType, ctx);
-
-      return `->(v, p) { return p_fail(p, 'expected array, got ' + (v.nil? ? 'Null' : v.class.to_s)) unless v.is_a?(Array); _el = ${elemParser}; _a = []; v.each_with_index { |_e, _i| _r = _el.call(_e, p + '.' + _i.to_s); return p_fail(p, nil, [_r]) unless _r[:success]; _a << _r[:value] }; p_ok(_a, p) }`;
+      ctx.requireHelper('p_array');
+      return `p_array(${emitTypeExprParser(typeExpr.elementType, ctx)})`;
     }
 
     case 'union_type': {
-      // Union type: Int|String
-      // Try each type in order, return first successful parse (PEG-style)
-      ctx.requireHelper('p_fail');
+      ctx.requireHelper('p_union');
       const parsers = typeExpr.types.map(t => emitTypeExprParser(t, ctx));
-
-      // Generate tries: call each parser directly in order
-      const tries = parsers.map(p => `_r = (${p}).call(v, p); return _r if _r[:success]; _causes << _r`).join('; ');
-
-      return `->(v, p) { _causes = []; ${tries}; p_fail(p, 'no union alternative matched', _causes) }`;
+      return `p_union([${parsers.join(', ')}])`;
     }
   }
 }
