@@ -239,25 +239,15 @@ function emitJSNode(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOpt
     }
 
     case 'let': {
-      // Collect consecutive let bindings, but stop if we encounter shadowing
+      // Collect consecutive let bindings into one scope. A binding that
+      // shadows another cannot arrive here: the transform emits it under a
+      // name of its own, so `let x = 1 in let x = x + 1 in x` reaches this
+      // point as `x` and `x__2`.
       const allBindings: Array<{ name: string; value: string }> = [];
-      const seenNames = new Set<string>();
       let current: IRExpr = ir;
 
       while (current.type === 'let') {
-        let hasShadowing = false;
         for (const b of current.bindings) {
-          if (seenNames.has(b.name)) {
-            hasShadowing = true;
-            break;
-          }
-        }
-        if (hasShadowing) {
-          // Stop flattening - emit nested IIFE for proper scoping
-          break;
-        }
-        for (const b of current.bindings) {
-          seenNames.add(b.name);
           allBindings.push({ name: b.name, value: ctx.emit(b.value) });
         }
         current = current.body;

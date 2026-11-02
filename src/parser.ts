@@ -1913,14 +1913,6 @@ export class Parser {
   }
 
   /**
-   * Check if current token is a NUMBER that starts with a dot (e.g., ".0")
-   * This happens when the lexer treats ".0" as a decimal number
-   */
-  private isDecimalNumberToken(): boolean {
-    return this.currentToken.type === 'NUMBER' && this.currentToken.value.startsWith('.');
-  }
-
-  /**
    * Parse path segments from a NUMBER token.
    * A NUMBER token like "0.1" in datapath context should become segments [0, 1].
    * Returns the array of integer segments, or null if not a valid NUMBER.
@@ -1935,23 +1927,6 @@ export class Parser {
     // Split on decimal points to get individual integer segments
     const parts = tokenValue.split('.');
     return parts.filter(p => p.length > 0).map(p => parseInt(p, 10));
-  }
-
-  /**
-   * Parse a single path segment: IDENTIFIER or integer NUMBER
-   * Returns null if current token is not a valid segment.
-   */
-  private parsePathSegment(): string | number | null {
-    if (this.currentToken.type === 'IDENTIFIER') {
-      const value = this.currentToken.value;
-      this.eat('IDENTIFIER');
-      return value;
-    } else if (this.currentToken.type === 'NUMBER') {
-      const value = parseInt(this.currentToken.value, 10);
-      this.eat('NUMBER');
-      return value;
-    }
-    return null;
   }
 
   private expr(): Expr {
