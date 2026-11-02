@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { compileToSQL } from '../../../src/compilers/sql';
 import { literal, stringLiteral, variable, binary, unary, letExpr } from '../../../src/ast';
+import { parse } from '../../../src/parser';
 
 describe('SQL Compiler - Literals', () => {
   it('should compile numeric literals', () => {
@@ -348,5 +349,58 @@ describe('SQL Compiler - Let Expressions', () => {
       binary('*', variable('x'), literal(3))
     );
     assert.strictEqual(compileToSQL(ast), '(SELECT x * 3 FROM (SELECT 1 + 2 AS x) AS _let)');
+  });
+});
+
+/**
+ * A PostgreSQL array is more restrictive than an Elo list in two ways, and
+ * both are refused rather than emitted.
+ *
+ * Elo's List is heterogeneous and nests freely, which JavaScript, Ruby and
+ * Python all represent directly. A SQL array carries one element type and
+ * nests only rectangularly, so `[1, 'two']` and `[[1], [2, 3]]` have no
+ * representation at all — PostgreSQL rejects both, and the author should hear
+ * it from the compiler rather than from psql.
+ */
+describe('SQL Compiler - lists SQL cannot represent', () => {
+  const sql = (source: string) => compileToSQL(parse(source));
+
+  it('refuses a list whose elements have different types', () => {
+    assert.throws(() => sql("[1, 'two']"), /single element type/);
+    assert.throws(() => sql('[1, true]'), /single element type/);
+    assert.throws(() => sql("[1, 'two', true, null]"), /single element type/);
+  });
+
+  it('names the types it found, so the author can see which element is odd', () => {
+    assert.throws(() => sql("[1, 'two']"), /Int and String/);
+  });
+
+  it('accepts the mixes PostgreSQL unifies exactly', () => {
+    // An Elo List of numbers is a numeric[], and Date next to Datetime is a
+    // timestamp[]. Refusing those would be stricter than PostgreSQL for no
+    // reason.
+    assert.strictEqual(sql('[1, 1.5]'), 'ARRAY[1, 1.5]');
+    assert.strictEqual(sql('[D2024-01-01, D2024-01-01T10:00:00Z]'),
+      "ARRAY[DATE '2024-01-01', TIMESTAMP '2024-01-01 10:00:00']");
+  });
+
+  it('accepts a null alongside anything, which is a hole and not a type', () => {
+    assert.strictEqual(sql('[1, null, 3]'), 'ARRAY[1, NULL, 3]');
+  });
+
+  it('refuses a list of lists of different lengths', () => {
+    assert.throws(() => sql('[[1], [2, 3]]'), /rectangular/);
+    assert.throws(() => sql('[[], [1, 2]]'), /rectangular/);
+  });
+
+  it('accepts a rectangular list of lists, which is a 2-D array', () => {
+    assert.strictEqual(sql('[[1, 2], [3, 4]]'), 'ARRAY[ARRAY[1, 2], ARRAY[3, 4]]');
+  });
+
+  it('still flattens a ragged list, because flat() never builds it', () => {
+    // flat() concatenates the parts, so the nested array is never constructed
+    // and the restriction does not apply.
+    assert.strictEqual(sql('flat([[1], [2, 3]])'), '(ARRAY[1] || ARRAY[2, 3])');
+    assert.strictEqual(sql('flat([[], [1, 2]])'), "('{}'::integer[] || ARRAY[1, 2])");
   });
 });

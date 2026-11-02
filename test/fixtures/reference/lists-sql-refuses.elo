@@ -1,0 +1,29 @@
+# Lists SQL has no representation for, and the other three targets do.
+#
+# Elo's List is heterogeneous and nests freely. A PostgreSQL array carries a
+# single element type and nests only rectangularly, so these two shapes cannot
+# be compiled to SQL at all — the compiler refuses them with a message naming
+# what it found, rather than emitting an array psql rejects. That is the
+# restriction Elo accepts in exchange for being portable, and it is why this
+# fixture has no .expected.sql.
+#
+# Everything below is ordinary Elo on JavaScript, Ruby and Python.
+
+# Elements of more than one type
+assert(typeOf([1, 'two', true, null]) == 'List')
+assert(length([1, 'two', true, null]) == 4)
+assert(at([1, 'two'], 0) == 1)
+assert(at([1, 'two'], 1) == 'two')
+assert([1, 'two'] == [1, 'two'])
+assert(contains([1, 'two'], 'two') == true)
+
+# Lists of lists of different lengths
+assert([[1], [2, 3]] == [[1], [2, 3]])
+assert(length([[1], [2, 3]]) == 2)
+assert(at([[1], [2, 3]], 1) == [2, 3])
+assert([[], [1, 2]] == [[], [1, 2]])
+
+# What SQL does accept, asserted here too so the line between them is visible
+assert([1, 1.5] == [1, 1.5])
+assert([[1, 2], [3, 4]] == [[1, 2], [3, 4]])
+assert([1, null, 3] == [1, null, 3])

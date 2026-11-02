@@ -251,6 +251,19 @@ import Footer from '../components/Footer.astro';
           <p class="example-desc">Lists can contain other lists.</p>
         </div>
         <p class="note"><strong>Note:</strong> Lists look like JavaScript arrays but Elo uses relational terminology. In SQL, they compile to PostgreSQL <code>ARRAY[...]</code> syntax.</p>
+        <p class="note"><strong>SQL:</strong> a PostgreSQL array carries one
+        element type and nests only rectangularly, so the two lists above —
+        <code>[1, 'two', true, null]</code> and a nesting of uneven lengths
+        like <code>[[1], [2, 3]]</code> — have no array to compile to. They run
+        on JavaScript, Ruby and Python; the SQL compiler refuses them with a
+        message naming what it found, rather than emitting something
+        PostgreSQL rejects. <code>[1, 1.5]</code> and
+        <code>[D2024-01-01, NOW]</code> are fine, because PostgreSQL unifies
+        numbers and temporals exactly, and so is
+        <code>flat([[1], [2, 3]])</code>, which concatenates the parts instead
+        of building the nested list. For data that genuinely mixes types,
+        <a href="#data">Data</a> carries it as <code>jsonb</code>, which has no
+        such restriction.</p>
       </section>
 
       <section class="doc-section" id="lambdas">

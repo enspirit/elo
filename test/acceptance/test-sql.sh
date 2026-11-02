@@ -70,9 +70,6 @@ should_skip() {
 # that starts passing is reported as a failure, so the list cannot go stale,
 # and it must shrink to empty.
 KNOWN_INVALID=(
-    # 0187 - a list whose elements have different types has no homogeneous
-    # PostgreSQL array: ARRAY types integer and boolean cannot be matched
-    "reference/arrays"
 )
 
 is_known_invalid() {

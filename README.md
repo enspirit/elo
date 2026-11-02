@@ -52,10 +52,21 @@ See also the Related work section below.
   - DateTimes: `D2024-01-15T10:30:00Z`
   - Durations: `P1D`, `PT1H30M`, `P1Y2M3D` (ISO8601)
   - Objects: `{name: 'Alice', age: 30}`
-  - Arrays: `[1, 2, 3]`, `['a', 'b']`, `[1, 'mixed', true, null]`
+  - Arrays: `[1, 2, 3]`, `['a', 'b']`, `[1, 'mixed', true, null]` (mixed and ragged-nested lists do not compile to SQL — see below)
   - DataPaths: `.x.y.z`, `.items.0.name` (for navigating data structures)
 - **Data functions**: `fetch(data, .path)` for safe access, `fetch(data, {x: .a, y: .b})` and `fetch(data, [.a, .b])` for multi-path extraction, `patch(data, .path, value)` for immutable updates, `merge(a, b)` and `deepMerge(a, b)` for merging objects
 - **Parentheses** for grouping
+- **Portability limits**: lambdas, higher-order list functions and `Data`
+  schemas compile to JavaScript, Ruby and Python only. A **list whose elements
+  have different types**, and a **list of lists of different lengths**, compile
+  to the other three but not to SQL: a PostgreSQL array carries one element
+  type and nests only rectangularly, so `[1, 'two']` and `[[1], [2, 3]]` have
+  no array to compile to. The SQL compiler says so rather than emitting
+  something PostgreSQL rejects. `[1, 1.5]` and `[D2024-01-01, NOW]` are fine —
+  PostgreSQL unifies numbers and temporals exactly — and `flat([[1], [2, 3]])`
+  is fine too, because it concatenates the parts instead of building the nested
+  list. For data that genuinely mixes types, `Data` carries it as `jsonb`,
+  which has no such restriction.
 - **Multi-target compilation**:
   - Ruby (using `**` for power, `&&`/`||`/`!` for boolean logic, `Date.parse()`, `DateTime.parse()`, `ActiveSupport::Duration.parse()`)
   - JavaScript (using `Math.pow()` for power, `&&`/`||`/`!` for boolean logic, `new Date()`, `Duration.parse()`)

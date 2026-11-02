@@ -1,5 +1,5 @@
 import { Expr } from '../ast';
-import { IRExpr, IRCall, inferType, usesInput } from '../ir';
+import { IRExpr, IRCall, IRArrayLiteral, inferType, usesInput } from '../ir';
 import { transform } from '../transform';
 import { Types, TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
@@ -74,6 +74,75 @@ function needsParens(child: IRExpr, parentOp: string, side: 'left' | 'right'): b
   }
 
   return false;
+}
+
+/**
+ * The families of Elo type PostgreSQL will put in one array.
+ *
+ * An array carries a single element type, and the constructor coerces its
+ * elements to it. Two numbers give a `numeric[]` and a Date next to a Datetime
+ * gives a `timestamp[]`, both exactly; anything else mixed is rejected by
+ * PostgreSQL itself — `ARRAY[1, 'two']` is "invalid input syntax for type
+ * integer". Null is absent on purpose: it is a hole, not a type.
+ */
+const PG_ARRAY_FAMILY: Partial<Record<string, string>> = {
+  int: 'number', float: 'number',
+  date: 'temporal', datetime: 'temporal',
+  string: 'string', bool: 'bool', duration: 'duration',
+  object: 'object', array: 'array', interval: 'interval', fn: 'fn',
+};
+
+/** `int` -> `Int`, for an error message the author reads. */
+function typeLabel(kind: string): string {
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+/**
+ * Refuse a list SQL cannot hold, rather than emitting an array PostgreSQL will
+ * reject.
+ *
+ * Elo's List is heterogeneous and nests freely, which the other three targets
+ * represent directly. A SQL array does neither, so these two shapes have no
+ * SQL at all — and saying so here is the restriction Elo accepts in exchange
+ * for being portable.
+ */
+function assertRepresentableList(elements: IRExpr[]): void {
+  const families = new Map<string, string>();
+  for (const element of elements) {
+    const kind = inferType(element).kind;
+    // An unknown element could be anything, so there is nothing to object to;
+    // if it turns out to clash, PostgreSQL says so at plan time.
+    if (kind === 'null' || kind === 'any') continue;
+    const family = PG_ARRAY_FAMILY[kind];
+    if (family) families.set(family, typeLabel(kind));
+  }
+  if (families.size > 1) {
+    const found = [...families.values()].sort().join(' and ');
+    throw new Error(
+      `A list mixing ${found} cannot be compiled to SQL: a PostgreSQL array ` +
+      `carries a single element type. Use a list of one type, or carry the ` +
+      `value as Data — jsonb has no such restriction.`
+    );
+  }
+
+  // A list of lists is a *two-dimensional* array on PostgreSQL, and those are
+  // rectangular: `ARRAY[ARRAY[1], ARRAY[2, 3]]` is rejected as
+  // "multidimensional arrays must have array expressions with matching
+  // dimensions". Only provable where every part is written in place; `flat()`
+  // is exempt because it concatenates the parts instead of building the nest.
+  const inner = elements.filter(e => e.type === 'array_literal');
+  if (inner.length === elements.length && inner.length > 1) {
+    const lengths = new Set(inner.map(e => (e as IRArrayLiteral).elements.length));
+    if (lengths.size > 1) {
+      throw new Error(
+        `A list of lists must be rectangular to compile to SQL, and this one ` +
+        `mixes lengths ${[...lengths].sort((a, b) => a - b).join(' and ')}: ` +
+        `PostgreSQL has no array of arrays, only multi-dimensional arrays, ` +
+        `which require every part to be the same length. flat() works on a ` +
+        `ragged list because it concatenates the parts.`
+      );
+    }
+  }
 }
 
 // Create the SQL standard library binding
@@ -182,6 +251,7 @@ function emitSQL(ir: IRExpr): string {
       if (ir.elements.length === 0) {
         return `'{}'::${PG_TYPE[ir.elementType.kind] ?? 'text'}[]`;
       }
+      assertRepresentableList(ir.elements);
       const elements = ir.elements.map(e => emitSQL(e)).join(', ');
       return `ARRAY[${elements}]`;
     }

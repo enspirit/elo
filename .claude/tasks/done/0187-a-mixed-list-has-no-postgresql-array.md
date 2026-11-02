@@ -87,3 +87,51 @@ can: a nested list that is merely *held* has to exist as a value.
 Both restrictions have the same two answers — reject, or make a list `jsonb` —
 and they should be answered together, which is why this is recorded here rather
 than in a second task.
+
+## Addendum: what was done
+
+Decision: **(1), fail loudly.** Both restrictions, since 0185 showed they are
+one rule — a PostgreSQL array carries one element type *and* nests only
+rectangularly.
+
+Red first with the unit tests in `test/unit/compilers/sql.unit.test.ts`:
+3 of 7 failed, because the compiler emitted the array instead of refusing it.
+
+`assertRepresentableList` in the SQL compiler refuses two shapes, each with a
+message naming what it found and what to do instead:
+
+```
+$ eloc -t sql -e "[1, 'two']"
+A list mixing Int and String cannot be compiled to SQL: a PostgreSQL array
+carries a single element type. Use a list of one type, or carry the value as
+Data — jsonb has no such restriction.
+
+$ eloc -t sql -e "[[1], [2, 3]]"
+A list of lists must be rectangular to compile to SQL, and this one mixes
+lengths 1 and 2: PostgreSQL has no array of arrays, only multi-dimensional
+arrays, which require every part to be the same length. flat() works on a
+ragged list because it concatenates the parts.
+```
+
+What it does **not** refuse matters as much, and is asserted:
+
+- `[1, 1.5]` and `[D2024-01-01, NOW]`. PostgreSQL unifies these exactly —
+  `numeric[]` and `timestamp[]` — so refusing them would be stricter than
+  PostgreSQL for no reason. `PG_ARRAY_FAMILY` groups the kinds it unifies
+  rather than comparing Elo kinds for equality.
+- `[1, null, 3]`. Null is a hole, not a type.
+- An element of unknown type. There is nothing to object to, and if it does
+  clash PostgreSQL says so at plan time.
+- `flat([[1], [2, 3]])`, which never builds the nested array.
+
+`reference/arrays.elo` lost its mixed-list line to a new fixture with no
+`.expected.sql` — `reference/lists-sql-refuses.elo`, 13 assertions on the three
+targets that do represent these lists, including the cases SQL *does* accept so
+the line between them is visible in one place. `reference/arrays` is out of
+quarantine, and **`KNOWN_INVALID` is now empty**: the SQL acceptance suite skips
+only the three fixtures that need an input.
+
+Documented in README under a new "Portability limits" bullet — which also
+gathers the lambda and `Data`-schema limits that were only mentioned in passing
+— and on the website's Reference page under Lists, next to the two examples that
+are now SQL-unsupported.
