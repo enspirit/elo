@@ -979,6 +979,9 @@ eloc -e "2 + 3 * 4" -t python
 # Include runtime prelude
 eloc -e "NOW + PT2H" -t ruby -p
 
+# Emit a target's prelude on its own
+eloc --prelude-only -t ruby
+
 # Report type errors before compiling
 eloc --typecheck -e "'hello' - 5"</pre>
         <table class="type-table">
@@ -986,7 +989,8 @@ eloc --typecheck -e "'hello' - 5"</pre>
           <tbody>
             <tr><td><code>-e, --expression</code></td><td>Expression to compile</td></tr>
             <tr><td><code>-t, --target</code></td><td>Target: <code>js</code>, <code>ruby</code>, <code>python</code>, <code>sql</code></td></tr>
-            <tr><td><code>-p, --prelude</code></td><td>Include runtime imports</td></tr>
+            <tr><td><code>-p, --prelude</code></td><td>Include runtime imports (not for <code>sql</code>)</td></tr>
+            <tr><td><code>--prelude-only</code></td><td>Emit only the prelude</td></tr>
             <tr><td><code>--strip-guards</code></td><td>Remove guard/check assertions</td></tr>
             <tr><td><code>--typecheck</code></td><td>Report type errors, exit non-zero if any</td></tr>
             <tr><td><code>--strict</code></td><td>Also report what the checker cannot type</td></tr>
@@ -995,6 +999,30 @@ eloc --typecheck -e "'hello' - 5"</pre>
             <tr><td><code>-f, --file</code></td><td>Output to file</td></tr>
           </tbody>
         </table>
+
+        <h3>The prelude</h3>
+        <p>
+          Compiled Elo needs a small runtime in its target, and
+          <code>--prelude-only</code> emits it. For <code>js</code>,
+          <code>ruby</code> and <code>python</code> it is prepended to the
+          expression — that is what <code>-p</code> does.
+        </p>
+        <p class="note">
+          <strong>SQL is the exception.</strong> The emitted SQL is a pure
+          expression, and an expression has nowhere to define a function, so
+          SQL's prelude — the <code>elo_*</code> helpers the compiler calls for
+          type selectors and <code>Data</code> operations — is a set of
+          <code>CREATE OR REPLACE FUNCTION</code> statements that must be
+          installed in the database <strong>once, before</strong> any compiled
+          Elo runs there:
+        </p>
+        <pre class="language-shell">eloc --prelude-only -t sql | psql "$DATABASE_URL"</pre>
+        <p>
+          Every definition is <code>CREATE OR REPLACE</code>, so re-running it
+          is idempotent — on each deploy is a fine place for it.
+          <code>eloc -p -t sql</code> refuses rather than emit statements no
+          host can run as an expression.
+        </p>
       </section>
 
 

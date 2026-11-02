@@ -25,7 +25,7 @@ export {
 } from './typecheck';
 export type { CheckType, Diagnostic, DiagnosticCode, TypecheckOptions, TypeAnnotations } from './typecheck';
 export { JS_HELPERS } from './runtime';
-export { getPrelude } from './preludes';
+export { getPrelude, isPreludePrependable } from './preludes';
 export type { Target as PreludeTarget } from './preludes';
 export { toEloCode } from './serialize';
 export { parseCSV, toCSV } from './csv';

@@ -100,6 +100,13 @@ import Footer from '../components/Footer.astro';
           and a capped <code>work_mem</code> for memory, and pass inputs as <strong>bound parameters</strong>
           (<code>$1</code>, …) — never spliced into the SQL text.
         </p>
+        <p>
+          One deployment step comes first: unlike the other three targets, SQL's prelude cannot be prepended to
+          the expression, so install it in the database once — <code>eloc --prelude-only -t sql | psql
+          "$DATABASE_URL"</code>. It is <code>CREATE OR REPLACE</code> throughout, so re-running it on each
+          deploy is safe. The role that <em>runs</em> expressions needs only <code>EXECUTE</code> on those
+          functions, not the right to create them.
+        </p>
         <p>Reference: <code>contrib/sandboxes/postgres/</code>.</p>
       </section>
 

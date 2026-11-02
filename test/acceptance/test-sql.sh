@@ -109,19 +109,33 @@ fi
 # The SQL target has a prelude too — elo_int, elo_data, elo_patch and the rest
 # of the runtime helpers — and unlike the other three targets it cannot be
 # prepended to the expression, because a pure SQL expression has nowhere to
-# define a function. docker-compose installs it by mounting docker/init.sql as
-# an entrypoint script, so a database created any other way has none: CI's
-# postgres service, or a developer's own instance. Seven fixtures use a type
-# selector or a Data operation and fail without it, which went unnoticed for as
-# long as this script ignored psql's errors.
+# define a function. It is installed in the database instead, the same way a
+# host deploying Elo to PostgreSQL has to.
 #
-# Every definition in the file is CREATE OR REPLACE, so applying it on every
-# run is idempotent and costs one connection.
-INIT_SQL="$(cd "$(dirname "$0")/../.." && pwd)/docker/init.sql"
-if [ -f "$INIT_SQL" ]; then
-    if ! psql_run -f "$INIT_SQL" >/dev/null 2>&1; then
-        echo "✗ could not install the SQL runtime helpers from $INIT_SQL"
-        psql_run -f "$INIT_SQL" >/dev/null || true
+# Every definition is CREATE OR REPLACE, so applying it on every run is
+# idempotent and costs one connection.
+if ! $ELOC --prelude-only -t sql | psql_run >/dev/null 2>&1; then
+    echo "✗ could not install the SQL prelude (eloc --prelude-only -t sql)"
+    $ELOC --prelude-only -t sql | psql_run >/dev/null || true
+    exit 1
+fi
+
+# The sandbox recipe hosts are told to use — contrib/sandboxes/postgres/example.sql
+# — wraps every evaluation in SET LOCAL statements, and those have to leave the
+# prelude's helpers reachable. The recipe used to recommend `search_path = ''`,
+# under which every type selector fails with "function elo_int does not exist":
+# the compiler emits unqualified calls. Replay the recipe's own SET LOCALs around
+# an expression that calls a helper, so a change to them cannot silently break
+# the documented deployment. SET LOCAL ROLE is dropped: the restricted role is
+# the host's to create, and search_path is what this asserts.
+SANDBOX_SQL="$(cd "$(dirname "$0")/../.." && pwd)/contrib/sandboxes/postgres/example.sql"
+if [ -f "$SANDBOX_SQL" ]; then
+    settings=$(grep -E '^[[:space:]]*SET LOCAL' "$SANDBOX_SQL" | grep -v 'SET LOCAL ROLE')
+    probe=$(printf 'BEGIN;\n%s\nSELECT elo_int(%s);\nCOMMIT;\n' "$settings" "'42'")
+    if ! echo "$probe" | psql_run >/dev/null 2>&1; then
+        echo "✗ the documented PostgreSQL sandbox recipe cannot reach the prelude"
+        echo "  ($SANDBOX_SQL)"
+        echo "$probe" | psql_run || true
         exit 1
     fi
 fi

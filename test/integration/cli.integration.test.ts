@@ -138,10 +138,22 @@ describe('CLI - Prelude inclusion', () => {
     // Note: elo helpers are now embedded in the expression as needed, not in prelude
   });
 
-  it('should include minimal SQL prelude', () => {
-    const result = eloc('-e "TODAY" -t sql -p');
-    assert.ok(result.includes('No prelude needed'));
-    assert.ok(result.includes('CURRENT_DATE'));
+  // The SQL target has a prelude — the elo_* PL/pgSQL helpers the compiler
+  // calls — but it cannot be prepended to the expression: a pure SQL
+  // expression has nowhere to define a function. It is installed in the
+  // database once instead, so `--prelude-only` serves it and `-p` refuses.
+  it('should emit the SQL runtime helpers with --prelude-only', () => {
+    const result = eloc('--prelude-only -t sql');
+    assert.ok(result.includes('CREATE OR REPLACE FUNCTION elo_int('));
+    assert.ok(result.includes('CREATE OR REPLACE FUNCTION elo_patch('));
+    assert.ok(result.includes('eloc --prelude-only -t sql'),
+      'the prelude says how to install it');
+  });
+
+  it('should refuse -p for SQL and point at --prelude-only', () => {
+    const result = elocWithError('-e "TODAY" -t sql -p');
+    assert.notEqual(result.exitCode, 0, '-p with -t sql must exit non-zero');
+    assert.ok(result.stderr.includes('--prelude-only'), result.stderr);
   });
 });
 

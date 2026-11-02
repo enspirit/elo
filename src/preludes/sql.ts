@@ -1,5 +1,30 @@
--- Elo SQL runtime helper functions
+/**
+ * SQL prelude: the PL/pgSQL runtime helpers the SQL compiler calls.
+ *
+ * This is the one difference from the other three targets. The JavaScript,
+ * Ruby and Python preludes are *prepended to the compiled expression*; this
+ * one cannot be, because a pure SQL expression has nowhere to define a
+ * function. It has to be installed in the database once, which makes it a
+ * deployment step for the host:
+ *
+ *     eloc --prelude-only -t sql | psql "$DATABASE_URL"
+ *
+ * `src/bindings/sql.ts` is the only place calls to these helpers are emitted;
+ * `test/unit/sql-prelude-consistency.unit.test.ts` keeps the two in step.
+ *
+ * String.raw is required: the definitions contain backslash escapes (`\d` in
+ * regexes, `'\\'` in elo_string) that a plain template literal would eat.
+ */
+export const sqlPrelude = String.raw`-- Elo SQL runtime helper functions
 -- These functions support type coercion and error handling
+--
+-- Unlike the JavaScript, Ruby and Python preludes, this one is NOT prepended
+-- to the compiled expression: a pure SQL expression cannot define a function.
+-- Install it in the database once, before running any compiled Elo:
+--
+--   eloc --prelude-only -t sql | psql "$DATABASE_URL"
+--
+-- Every definition is CREATE OR REPLACE, so re-running it is idempotent.
 
 -- Error handling: throw an exception with the given message
 CREATE OR REPLACE FUNCTION elo_fail(msg TEXT) RETURNS VOID AS $$
@@ -252,3 +277,4 @@ BEGIN
   RETURN result;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+`;

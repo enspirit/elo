@@ -7,7 +7,7 @@ import { compileToRubyWithMeta } from './compilers/ruby';
 import { compileToJavaScriptWithMeta } from './compilers/javascript';
 import { compileToSQLWithMeta } from './compilers/sql';
 import { compileToPythonWithMeta } from './compilers/python';
-import { getPrelude, Target as PreludeTarget } from './preludes';
+import { getPrelude, isPreludePrependable, Target as PreludeTarget } from './preludes';
 import { typecheckWithAnnotations, formatDiagnostic, TypeAnnotations } from './typecheck';
 import type { Expr } from './ast';
 
@@ -161,7 +161,10 @@ Options:
   -t, --target <lang>       Target language: ruby, js (default), sql, python
   -x, --execute             Output self-executing code (calls function with null/nil)
   -p, --prelude             Include necessary library imports/requires
-  --prelude-only            Output only the prelude (no expression needed)
+                            (not for sql: install its prelude in the database)
+  --prelude-only            Output only the prelude (no expression needed).
+                            For sql, the runtime helpers to install once:
+                            eloc --prelude-only -t sql | psql "$DATABASE_URL"
   --strip-guards            Strip guard/check assertions from output
   --typecheck               Report static type errors to stderr, and exit
                             non-zero if any were found
@@ -256,7 +259,9 @@ function compile(source: string, target: Target, options: CompileOptions = {}): 
     }
   }
 
-  if (includePrelude) {
+  // SQL's prelude is installed in the database, never prepended; `main`
+  // refuses `-p` for it, so this stays a prepend-only path.
+  if (includePrelude && isPreludePrependable(toPreludeTarget(target))) {
     const preludeContent = getPrelude(toPreludeTarget(target));
     if (preludeContent) {
       code = `${preludeContent}\n\n${code}`;
@@ -293,6 +298,21 @@ function main() {
     const prelude = getPrelude(toPreludeTarget(options.target));
     console.log(prelude);
     return;
+  }
+
+  // `-p` means "prepend the prelude", which SQL cannot do: its prelude is a
+  // set of CREATE OR REPLACE FUNCTION statements, and a pure SQL expression
+  // has nowhere to define a function. Prepending them would emit something no
+  // host can run, so say what to do instead rather than emit it.
+  if (options.prelude && !isPreludePrependable(toPreludeTarget(options.target))) {
+    console.error(
+      "eloc: -t sql has no prependable prelude: its runtime helpers are " +
+      "CREATE OR REPLACE FUNCTION statements that a SQL expression cannot " +
+      "define.\n" +
+      "Install them in the database once, then compile without -p:\n" +
+      "  eloc --prelude-only -t sql | psql \"$DATABASE_URL\""
+    );
+    process.exit(1);
   }
 
   // Get the source expression(s)

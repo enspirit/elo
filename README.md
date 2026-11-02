@@ -154,6 +154,9 @@ The compiler translates Elo expressions to Ruby, JavaScript, or SQL:
 # Output only the prelude (useful for bundling)
 ./bin/eloc --prelude-only -t js
 
+# SQL's prelude is installed in the database once, not prepended (see below)
+./bin/eloc --prelude-only -t sql | psql "$DATABASE_URL"
+
 # Compile from file (each line is compiled separately)
 ./bin/eloc input.elo -t ruby
 
@@ -172,8 +175,33 @@ cat input.elo | ./bin/eloc - -t ruby
 Options:
 - `-e, --expression <expr>` - Expression to compile
 - `-t, --target <lang>` - Target language: `ruby`, `js` (default), `python`, `sql`
-- `-p, --prelude` - Include necessary library imports/requires
+- `-p, --prelude` - Include necessary library imports/requires (not for `sql`)
 - `--prelude-only` - Output only the prelude (no expression needed)
+
+### The prelude
+
+Compiled Elo needs a small runtime in its target. `--prelude-only` emits it,
+and every target has one:
+
+| Target | Prelude | How it is used |
+| --- | --- | --- |
+| `js` | `require('luxon')` | prepended to the expression (`-p`) |
+| `ruby` | `require 'date'`, `active_support` | prepended to the expression (`-p`) |
+| `python` | imports and helper functions | prepended to the expression (`-p`) |
+| `sql` | `elo_*` PL/pgSQL functions | **installed in the database once** |
+
+SQL is the exception, and it matters for deployment: the emitted SQL is a pure
+expression, and an expression has nowhere to define a function. So the SQL
+prelude is a set of `CREATE OR REPLACE FUNCTION` statements that must be
+applied to the database **before** any compiled Elo runs there:
+
+```bash
+./bin/eloc --prelude-only -t sql | psql "$DATABASE_URL"
+```
+
+Every definition is `CREATE OR REPLACE`, so re-running it is idempotent — on
+each deploy is a fine place for it. `eloc -p -t sql` refuses rather than emit
+statements no host can run as an expression.
 - `--typecheck` - Report static type errors to stderr, exit non-zero if any
 - `--strict` - Also report anything the checker cannot type (implies `--typecheck`)
 - `--input-type <type>` - Declare the type of `_` (implies `--typecheck`)

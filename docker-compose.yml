@@ -1,5 +1,15 @@
 services:
-  # PostgreSQL for SQL acceptance tests
+  # PostgreSQL for SQL acceptance tests.
+  #
+  # The database starts empty of Elo's runtime helpers. They are the SQL
+  # prelude, and the compiler is their only source:
+  #
+  #   ./bin/eloc --prelude-only -t sql | psql -h localhost -U elo -d elo
+  #
+  # `npm run test:acceptance` does this itself before running the fixtures, so
+  # only a hand-written psql session needs the command above. It used to be a
+  # second copy of the definitions mounted as an entrypoint script, which no
+  # host compiling Elo to SQL could obtain.
   postgres:
     image: postgres:16-alpine
     container_name: elo-postgres
@@ -9,8 +19,6 @@ services:
       POSTGRES_DB: elo
     ports:
       - "5432:5432"
-    volumes:
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U elo"]
       interval: 5s

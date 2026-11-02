@@ -13,6 +13,7 @@ import {
   compileToSQL,
   compileToPython,
   getPrelude,
+  isPreludePrependable,
   defaultFormats,
   getFormat
 } from '@enspirit/elo';
@@ -478,13 +479,23 @@ export default class PlaygroundController extends Controller {
       // Check if this compilation is still current (race condition handling)
       if (version !== this.compileVersion) return;
 
-      // Build final output with optional prelude
+      // Build final output with optional prelude. SQL's prelude is a set of
+      // CREATE OR REPLACE FUNCTION statements installed in the database once,
+      // not prepended to the expression — same rule as `eloc -p`, which
+      // refuses for SQL. Showing where it goes beats pasting it here.
       let finalOutput = formattedOutput;
       if (includePrelude) {
         const preludeTarget: PreludeTarget = language as PreludeTarget;
-        const prelude = getPrelude(preludeTarget);
-        if (prelude) {
-          finalOutput = `${prelude}\n\n${formattedOutput}`;
+        if (!isPreludePrependable(preludeTarget)) {
+          finalOutput =
+            `-- The SQL prelude is installed in the database, not prepended:\n` +
+            `--   eloc --prelude-only -t sql | psql "$DATABASE_URL"\n\n` +
+            formattedOutput;
+        } else {
+          const prelude = getPrelude(preludeTarget);
+          if (prelude) {
+            finalOutput = `${prelude}\n\n${formattedOutput}`;
+          }
         }
       }
 
