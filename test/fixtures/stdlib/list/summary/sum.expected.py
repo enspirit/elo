@@ -5,3 +5,13 @@
 (lambda _: kAssert(kEq(functools.reduce(kAdd, [], ""), "")))(None)
 (lambda _: kAssert(kEq(functools.reduce(kAdd, [1, 2, 3], 10), 16)))(None)
 (lambda _: kAssert(kEq(functools.reduce(kAdd, [EloDuration.from_iso("P1D"), EloDuration.from_iso("P2D")], EloDuration.from_iso("P0D")), EloDuration.from_iso("P3D"))))(None)
+
+
+
+
+(lambda _: kAssert(kEq(functools.reduce(kAdd, [1.5, 2.5], 1.0), 5.0)))(None)
+(lambda _: kAssert(kEq(functools.reduce(kAdd, [], 1.0), 1.0)))(None)
+(lambda _: kAssert(kEq(functools.reduce(kAdd, [], 10), 10)))(None)
+(lambda _: kAssert(kEq(functools.reduce(kAdd, [EloDuration.from_iso("P1D")], EloDuration.from_iso("P1D")), EloDuration.from_iso("P2D"))))(None)
+(lambda _: kAssert(kEq(functools.reduce(kAdd, [], EloDuration.from_iso("P1D")), EloDuration.from_iso("P1D"))))(None)
+(lambda _: kAssert(kEq(functools.reduce(kAdd, ["a"], "x"), "xa")))(None)

@@ -70,9 +70,6 @@ should_skip() {
 # that starts passing is reported as a failure, so the list cannot go stale,
 # and it must shrink to empty.
 KNOWN_INVALID=(
-    # 0186 - `sum(xs, init)` folds with COALESCE(..., 0) whatever the init's
-    # type is: COALESCE types interval and integer cannot be matched
-    "stdlib/list/summary/sum"
     # 0187 - a list whose elements have different types has no homogeneous
     # PostgreSQL array: ARRAY types integer and boolean cannot be matched
     "reference/arrays"

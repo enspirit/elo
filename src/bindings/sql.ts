@@ -5,7 +5,7 @@
  */
 
 import { IRExpr, IRArrayLiteral, inferType } from '../ir';
-import { Types, EloType } from '../types';
+import { Types, EloType, typeEquals } from '../types';
 import { StdLib, EmitContext, nullary, fnCall } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
@@ -529,12 +529,18 @@ export function createSQLBinding(): StdLib<string> {
     `(SELECT AVG(v) FROM UNNEST(${arrayArg(args[0], ctx, Types.float)}) AS v)`);
   sqlLib.register('sum', [Types.array, Types.any], (args, ctx) => {
     const initType = inferType(args[1]);
-    const arr = ctx.emit(args[0]);
     const init = ctx.emit(args[1]);
-    if (initType === Types.string) {
-      return `(${init} || COALESCE((SELECT STRING_AGG(v, '') FROM UNNEST(${arr}) AS v), ''))`;
-    }
-    return `(${init} + COALESCE((SELECT SUM(v) FROM UNNEST(${arr}) AS v), 0))`;
+    const arr = arrayArg(args[0], ctx, initType);
+    // COALESCE outside the fold, not inside it. Folding against a literal zero
+    // meant the init had to be numeric for the two to match —
+    // `sum([P1D, P2D], P0D)` could not put an interval next to an integer.
+    // Aggregating zero rows is null, which makes the whole fold null, which
+    // COALESCE answers with the init: the identity of the fold, already the
+    // right type by construction.
+    const fold = typeEquals(initType, Types.string)
+      ? `${init} || (SELECT STRING_AGG(v, '') FROM UNNEST(${arr}) AS v)`
+      : `${init} + (SELECT SUM(v) FROM UNNEST(${arr}) AS v)`;
+    return `COALESCE(${fold}, ${init})`;
   });
   sqlLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(COALESCE(CARDINALITY(${arrayArg(args[0], ctx)}), 0) = 0)`);

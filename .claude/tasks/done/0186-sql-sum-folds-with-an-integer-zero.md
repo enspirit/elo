@@ -59,3 +59,27 @@ COALESCE('' || (SELECT STRING_AGG(v, '') FROM UNNEST('{}'::text[]) v), '')      
 (`assert(sum([P1D, P2D], P0D) == P3D)`) is the failing line. Add an assertion
 for a Float init and a Date-free non-numeric one too, since the current corpus
 only covers Int and String inits on the paths that worked.
+
+## Addendum: what was done
+
+Red first by lifting the entry out of `KNOWN_INVALID`: 1 assertion. The
+assertions the task asked for — a Float init, a Duration init, and an init with
+an empty list — bring that to **5 red of 13 on SQL**, green on the other three
+targets.
+
+The fix is the one the task describes: COALESCE outside the fold rather than
+inside it.
+
+```sql
+COALESCE(<init> + (SELECT SUM(v) FROM UNNEST(<xs>) v), <init>)
+```
+
+Aggregating zero rows is null, which makes the whole fold null, which COALESCE
+answers with the init — the identity of the fold, already the right type by
+construction. The String case is the same shape with `||` and `STRING_AGG`.
+
+The identity comparison the task flagged alongside — `initType === Types.string`
+against the shared constant — is now `typeEquals`, which is what the rest of
+the codebase uses. The array argument also goes through `arrayArg` with the
+init's type as its demand, so `sum([], P1D)` gives the empty list an `interval`
+element rather than the default `text`.

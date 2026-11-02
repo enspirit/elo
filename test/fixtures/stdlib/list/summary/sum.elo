@@ -5,3 +5,13 @@ assert(sum(['a', 'b'], '') == 'ab')
 assert(sum([], '') == '')
 assert(sum([1, 2, 3], 10) == 16)
 assert(sum([P1D, P2D], P0D) == P3D)
+
+# The init is the identity of the fold, so it is also the type of the result.
+# Folding against a literal zero instead made every non-numeric init fail to
+# match it on SQL.
+assert(sum([1.5, 2.5], 1.0) == 5.0)
+assert(sum([], 1.0) == 1.0)
+assert(sum([], 10) == 10)
+assert(sum([P1D], P1D) == P2D)
+assert(sum([], P1D) == P1D)
+assert(sum(['a'], 'x') == 'xa')
