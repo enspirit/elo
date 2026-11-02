@@ -106,6 +106,26 @@ if ! psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1" >/dev/null 2>
     exit 0
 fi
 
+# The SQL target has a prelude too — elo_int, elo_data, elo_patch and the rest
+# of the runtime helpers — and unlike the other three targets it cannot be
+# prepended to the expression, because a pure SQL expression has nowhere to
+# define a function. docker-compose installs it by mounting docker/init.sql as
+# an entrypoint script, so a database created any other way has none: CI's
+# postgres service, or a developer's own instance. Seven fixtures use a type
+# selector or a Data operation and fail without it, which went unnoticed for as
+# long as this script ignored psql's errors.
+#
+# Every definition in the file is CREATE OR REPLACE, so applying it on every
+# run is idempotent and costs one connection.
+INIT_SQL="$(cd "$(dirname "$0")/../.." && pwd)/docker/init.sql"
+if [ -f "$INIT_SQL" ]; then
+    if ! psql_run -f "$INIT_SQL" >/dev/null 2>&1; then
+        echo "✗ could not install the SQL runtime helpers from $INIT_SQL"
+        psql_run -f "$INIT_SQL" >/dev/null || true
+        exit 1
+    fi
+fi
+
 # Find all .expected.sql files recursively
 while IFS= read -r -d '' file; do
     if should_skip "$file"; then
