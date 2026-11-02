@@ -1,0 +1,46 @@
+# Reading a field off an object and using it as the type it holds.
+#
+# Elo's Object is `jsonb` on PostgreSQL, and `jsonb->>'k'` is **text** whatever
+# the stored value is. So `{ budget: 1500 }.budget` emitted the text `'1500'`
+# and `… = 1500` had no operator at all — "operator does not exist: text =
+# integer". Arithmetic and ordering were just as broken, and silently: nothing
+# in the corpus compared a field against anything but a string.
+#
+# The field read cannot say what type it produced, so the type comes from the
+# operation using it. Every line below is the same program on the other three
+# targets, where a field read is simply the value.
+
+# Equality, against each type a field can hold
+assert({a: 1}.a == 1)
+assert({a: 1}.a != 2)
+assert({a: 1.5}.a == 1.5)
+assert({a: 1.0}.a == 1)
+assert({a: true}.a == true)
+assert({a: false}.a != true)
+assert({a: 'x'}.a == 'x')
+assert({a: D2024-01-15}.a == D2024-01-15)
+assert({a: D2024-01-15T10:30:00Z}.a == D2024-01-15T10:30:00Z)
+
+# Arithmetic, where comparing as text would have been wrong rather than absent
+assert({a: 1}.a + 1 == 2)
+assert({a: 7}.a - 2 == 5)
+assert({a: 3}.a * 3 == 9)
+assert({a: 10}.a / 4 == 2.5)
+assert({a: 1, b: 2}.a + {a: 1, b: 2}.b == 3)
+
+# Ordering, which text would get wrong rather than reject: '10' < '9'
+assert({a: 10}.a > 9)
+assert({a: 10}.a >= 10)
+assert({a: 10}.a < 11)
+assert({a: 1, b: 2}.a < {a: 1, b: 2}.b)
+
+# A string field still composes with the string functions. Not `length`: that
+# name has a List and a String implementation on SQL and no way to choose
+# between them for an unknown type — the ambiguity pinned in 0176.
+assert(upper({a: 'x'}.a) == 'X')
+assert(trim({a: ' x '}.a) == 'x')
+
+# Through a let, and through the `|` default
+assert((let o = {n: 10} in o.n) == 10)
+assert((let o = {n: 10} in o.n + 5) == 15)
+assert((let o = { x: '12' } in Int(o.x | 0)) == 12)

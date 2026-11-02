@@ -3,7 +3,7 @@ import { IRExpr, IRCall, inferType, usesInput } from '../ir';
 import { transform } from '../transform';
 import { Types, TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
-import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE } from '../bindings/sql';
+import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE, pgTypeOf, jsonFieldPgType } from '../bindings/sql';
 import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
@@ -190,9 +190,17 @@ function emitSQL(ir: IRExpr): string {
 
       // Use JSON access for object types
       if (objectType.kind === 'object') {
-        return `${objectExpr}->>'${prop}'`;
+        const read = `${objectExpr}->>'${prop}'`;
+        // `->>` is text whatever the field holds. When the type checker told
+        // us what it holds (`--optimize`), say so here and the value composes
+        // like any other; otherwise it stays text and the operation using it
+        // supplies the type — see readsJsonField.
+        const pg = jsonFieldPgType(ir.inferredType);
+        return pg ? `(${read})::${pg}` : read;
       }
 
+      // The input is a *row* on SQL, not a document: `_.person.age` is a field
+      // reference, which is what a host passing a record expects.
       return `${objectExpr}.${prop}`;
     }
 
@@ -227,8 +235,25 @@ function emitSQL(ir: IRExpr): string {
       throw new Error('Lambda invocation is not supported in SQL target');
 
     case 'alternative': {
-      // Compile to COALESCE - returns first non-NULL value
-      const alts = ir.alternatives.map(emitSQL).join(', ');
+      // Compile to COALESCE - returns first non-NULL value.
+      //
+      // COALESCE needs one type for all its arguments where Elo does not:
+      // `tuple.x | 0` is a String with an Int default, and a json field read
+      // is text, so PostgreSQL refuses to match them. The alternative's value
+      // is the first one's, so that is the type the rest are brought to.
+      const target = pgTypeOf(ir.alternatives[0]);
+      const conflict = target !== null &&
+        ir.alternatives.some(alt => {
+          const type = pgTypeOf(alt);
+          return type !== null && type !== target;
+        });
+      const alts = ir.alternatives
+        .map(alt => {
+          const emitted = emitSQL(alt);
+          if (!conflict || pgTypeOf(alt) === target) return emitted;
+          return `(${emitted})::${target}`;
+        })
+        .join(', ');
       return `COALESCE(${alts})`;
     }
 

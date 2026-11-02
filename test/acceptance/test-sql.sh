@@ -76,11 +76,6 @@ KNOWN_INVALID=(
     # 0187 - a list whose elements have different types has no homogeneous
     # PostgreSQL array: ARRAY types integer and boolean cannot be matched
     "reference/arrays"
-    # 0182 - member access emits ->>, which is text, so every comparison against
-    # a non-text literal fails: operator does not exist: text = integer
-    "others/trailing-commas"
-    "reference/objects"
-    "reference/alternative"
     # 0183 - `(1 == 1) == true` emits the chained `1 = 1 = TRUE`
     "reference/equality"
     # 0184 - a jsonb result compared against an Elo literal: invalid input syntax

@@ -40,6 +40,18 @@ export const PG_TYPE: Partial<Record<string, string>> = {
   duration: 'interval',
 };
 
+/**
+ * The PostgreSQL type to read a json field as, given what it holds.
+ *
+ * A number in `jsonb` is a `numeric`: json draws no line between 1 and 1.0, so
+ * neither can the read. Reading an Int field as `integer` would also make
+ * `{ a: 10 }.a / 4` truncate, which is not what Elo's `/` means.
+ */
+export function jsonFieldPgType(type: EloType): string | undefined {
+  if (type.kind === 'int' || type.kind === 'float') return 'numeric';
+  return PG_TYPE[type.kind];
+}
+
 /** `[]` written in place, which is the only list with no element to type it. */
 function isEmptyList(ir: IRExpr): boolean {
   return ir.type === 'array_literal' && ir.elements.length === 0;
@@ -84,6 +96,103 @@ function aggregatedArray(ir: IRExpr, aggregate: string, input: string): string {
 }
 
 /**
+ * Whether an expression is a field read off `jsonb`.
+ *
+ * Elo's `Object` is `jsonb` on PostgreSQL, and `jsonb->>'k'` is **text**
+ * whatever the stored value is. So `{ budget: 1500 }.budget` emits the text
+ * `'1500'`, and `… = 1500` has no operator at all — "operator does not exist:
+ * text = integer". The read cannot say what type it produced, so the type has
+ * to come from whatever the value is being used with.
+ *
+ * `let` and `if` are transparent: their value is their body's, and the fixture
+ * `(let obj = { x: 10 } in obj.x) == 10` is exactly that case.
+ */
+export function readsJsonField(ir: IRExpr): boolean {
+  switch (ir.type) {
+    case 'member_access':
+      // A read whose type the checker supplied is already cast, so it needs
+      // nothing from its context.
+      return inferType(ir.object).kind === 'object' && ir.inferredType.kind === 'any';
+    case 'let':
+    case 'typedef':
+    case 'guard':
+      return readsJsonField(ir.body);
+    case 'if':
+      return readsJsonField(ir.then);
+    default:
+      return false;
+  }
+}
+
+/**
+ * The PostgreSQL type to bring a json field read to, so it can sit next to
+ * `ir`.
+ *
+ * Numbers go to `numeric` rather than through text: `{ a: 1.0 }.a == 1` is
+ * true in Elo, where `'1.0' = '1'` is not, and `'10' < '9'` is not an
+ * ordering. `null` means the text the read already is: either the other side
+ * is a string, or it is another field read and the two are comparable as they
+ * stand.
+ */
+/**
+ * What an operator itself says about its operands, for when both of them are
+ * untyped field reads and neither can tell the other anything.
+ *
+ * Only the operators whose reading is unambiguous are here. `=` and `<>`
+ * compare two reads as text, which is right for every value whose json form is
+ * canonical, and `||` is text by definition — so they are absent rather than
+ * guessed at.
+ */
+const OPERATOR_DEMAND: Partial<Record<string, string>> = {
+  '+': 'numeric', '-': 'numeric', '*': 'numeric', '/': 'numeric', '%': 'numeric',
+  '<': 'numeric', '>': 'numeric', '<=': 'numeric', '>=': 'numeric',
+  'AND': 'boolean', 'OR': 'boolean',
+};
+
+function demandedPgType(sibling: IRExpr, op: string): string | null {
+  if (readsJsonField(sibling)) return OPERATOR_DEMAND[op] ?? null;
+  switch (inferType(sibling).kind) {
+    case 'int':
+    case 'float':
+      return 'numeric';
+    case 'bool':
+      return 'boolean';
+    case 'date':
+      return 'date';
+    case 'datetime':
+      return 'timestamp';
+    case 'duration':
+      return 'interval';
+    default:
+      return null;
+  }
+}
+
+/**
+ * The PostgreSQL type an emitted expression has, where the compiler knows it.
+ *
+ * For the one place SQL needs several expressions to agree on a type and Elo
+ * does not: COALESCE, which is how `a | b` compiles. `null` means "let
+ * PostgreSQL decide" — a parameter or a subquery it will unify on its own —
+ * and only two *known* and different types are a conflict worth casting away.
+ */
+export function pgTypeOf(ir: IRExpr): string | null {
+  if (readsJsonField(ir)) return 'text';
+  switch (ir.type) {
+    case 'let':
+    case 'typedef':
+    case 'guard':
+      return pgTypeOf(ir.body);
+    case 'if':
+      return pgTypeOf(ir.then);
+    case 'member_access':
+      return jsonFieldPgType(ir.inferredType) ?? null;
+    default:
+      return PG_TYPE[inferType(ir).kind] ?? null;
+  }
+}
+
+/**
  * `=` and `<>`, with the one case PostgreSQL cannot express directly:
  * comparing against `[]`.
  *
@@ -112,10 +221,28 @@ function sqlComparison(op: '=' | '<>'): (args: IRExpr[], ctx: EmitContext<string
  */
 function sqlBinaryOp(op: string): (args: IRExpr[], ctx: EmitContext<string>) => string {
   return (args, ctx) => {
-    const left = ctx.emitWithParens(args[0], op, 'left');
-    const right = ctx.emitWithParens(args[1], op, 'right');
+    const left = operandOf(args[0], args[1], op, 'left', ctx);
+    const right = operandOf(args[1], args[0], op, 'right', ctx);
     return `${left} ${op} ${right}`;
   };
+}
+
+/**
+ * One operand of a binary operator, with a json field read cast to the type
+ * the other operand has. Applies to arithmetic and ordering as much as to
+ * equality: `{ a: 1 }.a + 1` and `{ a: 1 }.a > 0` were just as broken.
+ */
+function operandOf(
+  ir: IRExpr,
+  sibling: IRExpr,
+  op: string,
+  side: 'left' | 'right',
+  ctx: EmitContext<string>
+): string {
+  const emitted = ctx.emitWithParens(ir, op, side);
+  if (!readsJsonField(ir)) return emitted;
+  const demand = demandedPgType(sibling, op);
+  return demand ? `(${emitted})::${demand}` : emitted;
 }
 
 /**
