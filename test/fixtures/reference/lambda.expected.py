@@ -16,3 +16,8 @@
 
 (lambda _: kAssert(kEq((a := 1, f := lambda a: kMul(a, 2), kAdd(f(5), a))[-1], 11)))(None)
 (lambda _: kAssert(kEq((a := 1, (lambda a: lambda b: kAdd(a, b))(10)(5))[-1], 15)))(None)
+
+(lambda _: kAssert(kEq((f := lambda x: kAdd(x, 1), f__2 := lambda x: kMul(f(x), 2), f__2(1))[-1], 4)))(None)
+(lambda _: kAssert(kEq((g := lambda x: (x__2 := kAdd(x, 1), x__2)[-1], g(1))[-1], 2)))(None)
+(lambda _: kAssert(kEq((f := lambda x: (f__2 := lambda y: kMul(y, 3), f__2(x))[-1], f(2))[-1], 6)))(None)
+(lambda _: kAssert(kEq((x := lambda q: (x__2 := kAdd(q, 1), x__2)[-1], kAdd(x(1), x(2)))[-1], 5)))(None)

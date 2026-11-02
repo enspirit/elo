@@ -16,3 +16,8 @@ assert((let double = fn( x ~> x * 2 ) in double(2)) == 4)
 # A parameter may carry a name an outer binding already uses: one name per scope
 assert((let a = 1, f = fn( a ~> a * 2 ) in f(5) + a) == 11)
 assert((let a = 1 in fn( a ~> fn( b ~> a + b ) )(10)(5)) == 15)
+# A lambda bound to a shadowing name calls the one it shadows, not itself
+assert((let f = fn( x ~> x + 1 ) in let f = fn( x ~> f(x) * 2 ) in f(1)) == 4)
+assert((let g = fn( x ~> let x = x + 1 in x ) in g(1)) == 2)
+assert((let f = fn( x ~> let f = fn( y ~> y * 3 ) in f(x) ) in f(2)) == 6)
+assert((let x = fn( q ~> let x = q + 1 in x ) in x(1) + x(2)) == 5)

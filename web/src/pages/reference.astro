@@ -333,6 +333,13 @@ import Footer from '../components/Footer.astro';
           <p class="example-desc">Bind multiple variables separated by commas. Each one is in scope for the ones after it: <code>let w = 5, area = w * 2 in area</code>.</p>
         </div>
         <p class="note"><strong>One binding per name.</strong> The same name twice in one <code>let</code> is refused, as it is for <a href="#data-schemas">type definitions</a>. A nested <code>let</code> may still shadow a name for its own body — <code>let x = 1 in let x = 2 in x</code> is <code>2</code>.</p>
+        <p>
+          A binding that shadows another may build on it: the value of a
+          binding is read in the scope <em>around</em> it, so
+          <code>let x = 1 in let x = x + 1 in x</code> is <code>2</code>. What
+          it shadows is untouched once the inner scope closes —
+          <code>let x = 1 in (let x = x + 1 in x) + x</code> is <code>3</code>.
+        </p>
       </section>
 
       <section class="doc-section" id="conditionals">

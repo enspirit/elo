@@ -123,3 +123,5 @@
 (lambda _: kAssert(kEq((_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": 42}))[-1].get("d"), 42)))(None)
 
 (lambda _: kAssertFails(lambda : (_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "{oops"}))[-1]))(None)
+
+(lambda _: kAssert(kEq((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (_p_T__2 := pArray(_p_T), T__2 := lambda v: pUnwrap(_p_T__2(v, '')), T__2(["1"]))[-1])[-1], [1])))(None)

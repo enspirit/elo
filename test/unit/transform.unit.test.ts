@@ -778,6 +778,99 @@ describe('transform - let expressions', () => {
   });
 });
 
+describe('transform - shadowing', () => {
+  // A binding that shadows another is emitted under a name of its own. The
+  // targets share one scope between the two otherwise, and each gets it wrong
+  // in its own way: JavaScript reads the name it is declaring, Ruby and Python
+  // overwrite the outer binding for good.
+
+  it('renames a binding that shadows another, and not the one it shadows', () => {
+    const ir = transform(parse('let x = 1 in let x = x + 1 in x'));
+    assert.strictEqual(ir.type, 'let');
+    if (ir.type !== 'let') return;
+    assert.strictEqual(ir.bindings[0].name, 'x');
+    assert.strictEqual(ir.body.type, 'let');
+    if (ir.body.type !== 'let') return;
+    assert.strictEqual(ir.body.bindings[0].name, 'x__2');
+    // The value reads what the binding shadows, under its own name
+    const value = ir.body.bindings[0].value;
+    assert.strictEqual(value.type, 'call');
+    if (value.type === 'call') {
+      assert.deepStrictEqual(value.args[0], { type: 'variable', name: 'x', inferredType: Types.int });
+    }
+    // And the body reads the shadowing binding
+    assert.deepStrictEqual(ir.body.body, { type: 'variable', name: 'x__2', inferredType: Types.int });
+  });
+
+  it('leaves a name alone when there is nothing to shadow', () => {
+    // Sibling scopes are not nested, so both may answer to `x`
+    const ir = transform(parse('(let x = 1 in x) + (let x = 2 in x)'));
+    assert.strictEqual(ir.type, 'call');
+    if (ir.type !== 'call') return;
+    for (const arg of ir.args) {
+      assert.strictEqual(arg.type, 'let');
+      if (arg.type === 'let') assert.strictEqual(arg.bindings[0].name, 'x');
+    }
+  });
+
+  it('keeps a shadowing parameter name, since a parameter has its own scope', () => {
+    const ir = transform(parse('let x = 1 in fn( x ~> x )'));
+    assert.strictEqual(ir.type, 'let');
+    if (ir.type !== 'let') return;
+    assert.strictEqual(ir.body.type, 'lambda');
+    if (ir.body.type === 'lambda') {
+      assert.deepStrictEqual(ir.body.params.map(p => p.name), ['x']);
+      assert.deepStrictEqual(ir.body.body, { type: 'variable', name: 'x', inferredType: Types.any });
+    }
+  });
+
+  it('renames a binding that shadows one still being defined', () => {
+    // The inner `x` is inside the value of the outer one, which Ruby and
+    // Python would overwrite — the lambda would stop being callable.
+    const ir = transform(parse('let x = fn( q ~> let x = q + 1 in x ) in x(1)'));
+    assert.strictEqual(ir.type, 'let');
+    if (ir.type !== 'let') return;
+    assert.strictEqual(ir.bindings[0].name, 'x');
+    const lambda = ir.bindings[0].value;
+    assert.strictEqual(lambda.type, 'lambda');
+    if (lambda.type === 'lambda') {
+      assert.strictEqual(lambda.body.type, 'let');
+      if (lambda.body.type === 'let') {
+        assert.strictEqual(lambda.body.bindings[0].name, 'x__2');
+      }
+    }
+  });
+
+  it('lets a lambda bound to a shadowing name call the one it shadows', () => {
+    // Resolving the name first is what tells this from a recursive call
+    assert.doesNotThrow(() =>
+      transform(parse('let f = fn( x ~> x + 1 ) in let f = fn( x ~> f(x) * 2 ) in f(1)')));
+  });
+
+  it('still refuses a lambda that calls itself', () => {
+    assert.throws(
+      () => transform(parse('let f = fn( x ~> f(x) ) in f(1)')),
+      /cannot call itself/
+    );
+  });
+
+  it('renames a constraint variable that shadows a binding', () => {
+    // Ruby assigns the constraint variable inside the parser lambda, which
+    // captures the enclosing locals, so `i` must not be the same name twice.
+    const ir = transform(parse('let i = 100 in let T = Int(i | i > 0) in i'));
+    assert.strictEqual(ir.type, 'let');
+    if (ir.type !== 'let') return;
+    assert.strictEqual(ir.body.type, 'typedef');
+    if (ir.body.type === 'typedef') {
+      const typeExpr = ir.body.definitions[0].typeExpr;
+      assert.strictEqual(typeExpr.kind, 'subtype_constraint');
+      if (typeExpr.kind === 'subtype_constraint') {
+        assert.strictEqual(typeExpr.variable, 'i__2');
+      }
+    }
+  });
+});
+
 describe('transform - complex expressions', () => {
   it('transforms nested arithmetic', () => {
     // (1 + 2) * 3

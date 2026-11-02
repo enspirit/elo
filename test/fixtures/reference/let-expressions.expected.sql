@@ -5,5 +5,11 @@ CASE WHEN (SELECT (SELECT x * y FROM (SELECT 3 AS y) AS _let) FROM (SELECT 2 AS 
 CASE WHEN (SELECT (SELECT a + b FROM (SELECT 20 AS b) AS _let) FROM (SELECT 10 AS a) AS _let) = 30 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (SELECT (SELECT b FROM (SELECT a * 2 AS b) AS _let) FROM (SELECT 5 AS a) AS _let) = 10 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (SELECT (SELECT (SELECT z FROM (SELECT y + 1 AS z) AS _let) FROM (SELECT x + 1 AS y) AS _let) FROM (SELECT 2 AS x) AS _let) = 4 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (SELECT (SELECT x FROM (SELECT 2 AS x) AS _let) FROM (SELECT 1 AS x) AS _let) = 2 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (SELECT x + (SELECT x FROM (SELECT 5 AS x) AS _let) FROM (SELECT 10 AS x) AS _let) = 15 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT x__2 FROM (SELECT 2 AS x__2) AS _let) FROM (SELECT 1 AS x) AS _let) = 2 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT x + (SELECT x__2 FROM (SELECT 5 AS x__2) AS _let) FROM (SELECT 10 AS x) AS _let) = 15 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+
+CASE WHEN (SELECT (SELECT x__2 FROM (SELECT x + 1 AS x__2) AS _let) FROM (SELECT 1 AS x) AS _let) = 2 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT x__2 FROM (SELECT 5 AS x__2) AS _let) + x FROM (SELECT 10 AS x) AS _let) = 15 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT (SELECT y FROM (SELECT x__2 AS y) AS _let) FROM (SELECT x * 2 AS x__2) AS _let) FROM (SELECT 1 AS x) AS _let) = 2 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT x__2 FROM (SELECT x + 1 AS x__2) AS _let) + x FROM (SELECT 1 AS x) AS _let) = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT a FROM (SELECT (SELECT a__2 FROM (SELECT 1 AS a__2) AS _let) + 1 AS a) AS _let) = 2 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

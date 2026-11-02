@@ -96,6 +96,21 @@ interface TransformContext {
   maxDepth: number;
   allowUndefinedVariables: boolean;
   types?: TypeAnnotations;
+  /**
+   * The name each bound Elo name is emitted under, innermost binding last.
+   *
+   * A local bound inside the scope of the same name is emitted under a fresh
+   * one — `x__2` for the inner `x` of `let x = 1 in let x = x + 1 in x`.
+   * Without that, every target got shadowing wrong in its own way: a
+   * JavaScript `const x = x + 1` reads the `x` it is declaring, a Ruby or
+   * Python assignment overwrites the outer binding for the rest of the
+   * expression, a type definition cannot build on the one it shadows, and a
+   * lambda bound to a shadowing name looked like a call to itself. One name
+   * stands for one thing, in every target.
+   */
+  renames: Map<string, string[]>;
+  /** Emitted names in scope, each mapped to the Elo name it stands for. */
+  inScope: Map<string, string>;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -113,8 +128,74 @@ export function transform(
     maxDepth: options.maxDepth ?? DEFAULT_MAX_DEPTH,
     allowUndefinedVariables: options.allowUndefinedVariables ?? false,
     types: options.types,
+    renames: new Map(),
+    inScope: new Map(),
   };
   return transformWithDepth(expr, env, defining, 0, ctx);
+}
+
+/**
+ * The name a bound Elo name is emitted under, where the walk currently is.
+ */
+function emittedName(name: string, ctx: TransformContext): string {
+  const stack = ctx.renames.get(name);
+  return stack === undefined || stack.length === 0 ? name : stack[stack.length - 1];
+}
+
+/** A name of the `x__2` family that nothing in scope answers to. */
+function unusedName(name: string, env: TypeEnv, ctx: TransformContext): string {
+  for (let suffix = 2; ; suffix++) {
+    const candidate = `${name}__${suffix}`;
+    if (!env.has(candidate) && !ctx.inScope.has(candidate)) return candidate;
+  }
+}
+
+/**
+ * What to emit for a local — a `let` binding or a type definition.
+ *
+ * A local shares its scope with what surrounds it in all four targets, so one
+ * that shadows is emitted under a fresh name. `_` counts as taken: it is the
+ * input, and it is in scope everywhere.
+ *
+ * Opening the binding is the caller's business, because when it happens is the
+ * whole point: a local's value is walked *before* the local comes into scope.
+ */
+function localName(name: string, env: TypeEnv, ctx: TransformContext): string {
+  const taken = name === '_' || env.has(name) || ctx.inScope.has(name);
+  return taken ? unusedName(name, env, ctx) : name;
+}
+
+/**
+ * What to emit for a lambda parameter.
+ *
+ * A parameter opens a scope of its own in every target, so it keeps its name
+ * even when it shadows one: nothing inside it can name what it shadows
+ * anyway. It needs a fresh name only where its name already stands for
+ * something else, which is to say for a name this transform generated.
+ */
+function paramName(name: string, env: TypeEnv, ctx: TransformContext): string {
+  const standsFor = ctx.inScope.get(name);
+  return standsFor !== undefined && standsFor !== name ? unusedName(name, env, ctx) : name;
+}
+
+/** Puts `emitted` in scope as the emission of `name`, until closeBindings. */
+function openBinding(name: string, emitted: string, ctx: TransformContext): void {
+  const stack = ctx.renames.get(name);
+  if (stack === undefined) {
+    ctx.renames.set(name, [emitted]);
+  } else {
+    stack.push(emitted);
+  }
+  ctx.inScope.set(emitted, name);
+}
+
+/** Closes what `openBinding` opened, innermost first. */
+function closeBindings(opened: Array<[string, string]>, ctx: TransformContext): void {
+  for (let i = opened.length - 1; i >= 0; i--) {
+    const [name, emitted] = opened[i];
+    ctx.renames.get(name)?.pop();
+    ctx.inScope.delete(emitted);
+  }
 }
 
 /**
@@ -173,7 +254,7 @@ function transformWithDepth(
       // A lambda parameter is registered as `any`, and so is a value bound to
       // a coercion through a declared type, so this is where the checker's
       // answer buys the most.
-      return irVariable(expr.name, checkedType(expr, ctx, env.get(expr.name) ?? Types.any));
+      return irVariable(emittedName(expr.name, ctx), checkedType(expr, ctx, env.get(expr.name) ?? Types.any));
 
     case 'binary':
       return transformBinaryOp(expr.operator, expr.left, expr.right, env, defining, nextDepth, ctx);
@@ -294,13 +375,23 @@ function transformWithDepth(
       // Transform the type definitions, each in scope for the ones after it,
       // as the names were when one definition was one nested node
       const newEnv = new Map(env);
+      const opened: Array<[string, string]> = [];
       const definitions = expr.definitions.map((definition) => {
+        const emitted = localName(definition.name, newEnv, ctx);
+        // Taken from here on, as a let binding's name is, so that nothing
+        // inside the type expression reuses it
+        ctx.inScope.set(emitted, definition.name);
+        // The type expression is walked before the name it defines comes into
+        // scope, so `let T = Int in let T = [T] in …` builds on the outer T.
         const irTypeExpr = transformTypeExprWithContext(definition.typeExpr, newEnv, defining, nextDepth, ctx);
         // Add type name to environment as a parser function type
         newEnv.set(definition.name, Types.fn);
-        return { name: definition.name, typeExpr: irTypeExpr };
+        openBinding(definition.name, emitted, ctx);
+        opened.push([definition.name, emitted]);
+        return { name: emitted, typeExpr: irTypeExpr };
       });
       const bodyIR = transformWithDepth(expr.body, newEnv, defining, nextDepth, ctx);
+      closeBindings(opened, ctx);
       return irTypeDef(definitions, bodyIR);
     }
 
@@ -360,6 +451,9 @@ function transformTypeExprWithContext(
         if (!envType || envType.kind !== 'fn') {
           throw new Error(`Unknown type selector: '${name}'`);
         }
+        // A user type is a binding, so it answers to the name it was emitted
+        // under; a built-in selector is not and keeps its own.
+        return irTypeRef(emittedName(name, ctx));
       }
       return irTypeRef(name);
     }
@@ -383,14 +477,20 @@ function transformTypeExprWithContext(
     case 'subtype_constraint': {
       // Transform the base type
       const baseTypeIR = transformTypeExprWithContext(typeExpr.baseType, env, defining, nextDepth, ctx);
-      // Transform each constraint with the variable in scope
+      // Transform each constraint with the variable in scope. The variable is
+      // a local, not a parameter: Ruby assigns it inside the parser lambda,
+      // which captures the enclosing locals, so `let i = 100 in let T = Int(i
+      // | i > 0) in …` would leave `i` holding the value the type checked.
       const constraintEnv = new Map(env);
+      const emitted = localName(typeExpr.variable, constraintEnv, ctx);
       constraintEnv.set(typeExpr.variable, Types.any);
+      openBinding(typeExpr.variable, emitted, ctx);
       const constraintsIR = typeExpr.constraints.map(c => ({
         label: c.label,
         condition: transformWithDepth(c.condition, constraintEnv, defining, nextDepth, ctx)
       }));
-      return irSubtypeConstraint(baseTypeIR, typeExpr.variable, constraintsIR);
+      closeBindings([[typeExpr.variable, emitted]], ctx);
+      return irSubtypeConstraint(baseTypeIR, emitted, constraintsIR);
     }
 
     case 'array_type':
@@ -557,8 +657,9 @@ function transformFunctionCall(
   depth: number,
   ctx: TransformContext
 ): IRExpr {
-  // Check for recursive call
-  if (defining.has(name)) {
+  // Check for recursive call. The name is resolved first: a lambda bound to a
+  // name that shadows another lambda calls the one it shadows, not itself.
+  if (defining.has(emittedName(name, ctx))) {
     throw new Error(`Recursive function calls are not allowed: '${name}' cannot call itself`);
   }
 
@@ -595,7 +696,7 @@ function transformFunctionCall(
   const varType = env.get(name);
   if (varType && varType.kind === 'fn') {
     // Lambda application: emit irApply
-    const fnVar = irVariable(name, varType);
+    const fnVar = irVariable(emittedName(name, ctx), varType);
     return irApply(fnVar, argsIR, argTypes, Types.any);
   }
 
@@ -617,19 +718,32 @@ function transformLet(
 ): IRExpr {
   // Build a new environment with the bindings
   const newEnv = new Map(env);
+  const opened: Array<[string, string]> = [];
   const irBindings = bindings.map((binding) => {
+    // What the binding is emitted as is settled before its value is walked,
+    // so that the value can be told from the binding it is bound to — but the
+    // binding only comes into scope after it, so `let x = 1 in let x = x + 1
+    // in x` reads the outer `x` in the value, as the language means it.
+    const emitted = localName(binding.name, newEnv, ctx);
+    // The name is taken from here on, even though the binding is not visible
+    // yet: a binding *inside* the value must not reuse it, or it would
+    // overwrite this one — Ruby and Python have no scope of their own for it.
+    ctx.inScope.set(emitted, binding.name);
     // If the value is a lambda, add the binding name to the defining set
     // to detect recursive calls within the lambda body
     const isLambda = binding.value.type === 'lambda';
-    const newDefining = isLambda ? new Set([...defining, binding.name]) : defining;
+    const newDefining = isLambda ? new Set([...defining, emitted]) : defining;
 
     const valueIR = transformWithDepth(binding.value, newEnv, newDefining, depth, ctx);
     const valueType = inferType(valueIR);
     newEnv.set(binding.name, valueType);
-    return { name: binding.name, value: valueIR };
+    openBinding(binding.name, emitted, ctx);
+    opened.push([binding.name, emitted]);
+    return { name: emitted, value: valueIR };
   });
 
   const bodyIR = transformWithDepth(body, newEnv, defining, depth, ctx);
+  closeBindings(opened, ctx);
   return irLet(irBindings, bodyIR);
 }
 
@@ -646,12 +760,17 @@ function transformLambda(
 ): IRExpr {
   // Build a new environment with params as 'any' type
   const newEnv = new Map(env);
+  const opened: Array<[string, string]> = [];
   const irParams = params.map((name) => {
+    const emitted = paramName(name, newEnv, ctx);
     newEnv.set(name, Types.any);
-    return { name, inferredType: Types.any };
+    openBinding(name, emitted, ctx);
+    opened.push([name, emitted]);
+    return { name: emitted, inferredType: Types.any };
   });
 
   const bodyIR = transformWithDepth(body, newEnv, defining, depth, ctx);
+  closeBindings(opened, ctx);
   const resultType = inferType(bodyIR);
   return irLambda(irParams, bodyIR, resultType);
 }

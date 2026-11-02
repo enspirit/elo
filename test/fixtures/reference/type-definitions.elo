@@ -123,3 +123,5 @@ assert((let T = { d: Data } in { d: '{"a": 1}' } |> T).d == { a: 1 })
 assert((let T = { d: Data } in { d: 42 } |> T).d == 42)
 # Invalid JSON in a Data field is rejected
 assertFails(fn( ~> let T = { d: Data } in { d: '{oops' } |> T ))
+# A type definition that shadows another may build on it
+assert((let T = Int in let T = [T] in ['1'] |> T) == [1])

@@ -5,5 +5,11 @@
 (lambda _: kAssert((a := 10, b := 20, a + b)[-1] == 30))(None)
 (lambda _: kAssert((a := 5, b := a * 2, b)[-1] == 10))(None)
 (lambda _: kAssert((x := 2, y := x + 1, z := y + 1, z)[-1] == 4))(None)
-(lambda _: kAssert((x := 1, x := 2, x)[-1] == 2))(None)
-(lambda _: kAssert((x := 10, x + (x := 5, x)[-1])[-1] == 15))(None)
+(lambda _: kAssert((x := 1, x__2 := 2, x__2)[-1] == 2))(None)
+(lambda _: kAssert((x := 10, x + (x__2 := 5, x__2)[-1])[-1] == 15))(None)
+
+(lambda _: kAssert((x := 1, x__2 := x + 1, x__2)[-1] == 2))(None)
+(lambda _: kAssert((x := 10, (x__2 := 5, x__2)[-1] + x)[-1] == 15))(None)
+(lambda _: kAssert((x := 1, x__2 := x * 2, y := x__2, y)[-1] == 2))(None)
+(lambda _: kAssert((x := 1, (x__2 := x + 1, x__2)[-1] + x)[-1] == 3))(None)
+(lambda _: kAssert((a := (a__2 := 1, a__2)[-1] + 1, a)[-1] == 2))(None)

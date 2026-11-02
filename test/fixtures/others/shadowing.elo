@@ -1,0 +1,13 @@
+# A binding that shadows another is emitted under a name of its own, so that no
+# target has one name standing for two things. These assertions pin the corners
+# of that renaming: a program is free to use the names it generates.
+assert((let x = 1 in let x = x + 1 in let x__2 = 100 in x + x__2) == 102)
+assert((let x = 1 in let x = 2 in map([1], fn( x__2 ~> x__2 + x ))) == [3])
+assert((let x = 1 in let x = x + 1 in let x = x + 1 in x) == 3)
+assert(((let x = 1 in let x = x + 1 in x) + (let x = 5 in x)) == 7)
+# A lambda parameter keeps its name: it has a scope of its own in every target
+assert((let x = 1 in map([10], fn( x ~> x * 2 )) == [20] and x == 1))
+assert((let _ = 1 in _) == 1)
+# A type definition may build on the one it shadows, or on a constraint variable
+assert((let T = Int in let T = [T] in ['1', '2'] |> T) == [1, 2])
+assert((let i = 100 in let T = Int(i | i > 0) in ('5' |> T) + i) == 105)
