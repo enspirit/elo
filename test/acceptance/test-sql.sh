@@ -70,26 +70,12 @@ should_skip() {
 # that starts passing is reported as a failure, so the list cannot go stale,
 # and it must shrink to empty.
 KNOWN_INVALID=(
-    # 0181 - `[]` emits a bare ARRAY[]: cannot determine type of empty array
-    "reference/arrays"
-    # first/last assert `isNull(first([]))`, which is the only line left failing
-    # in them; the subscript itself is covered by reference/list-literal-subscript
-    "stdlib/list/access/first"
-    "stdlib/list/access/last"
-    "stdlib/list/arithmetic/concat"
-    "stdlib/list/predicates/contains"
-    "stdlib/list/predicates/isEmpty"
-    "stdlib/list/summary/avg"
-    "stdlib/list/summary/count"
-    "stdlib/list/summary/join"
-    "stdlib/list/summary/length"
-    "stdlib/list/summary/max"
-    "stdlib/list/summary/min"
+    # 0186 - `sum(xs, init)` folds with COALESCE(..., 0) whatever the init's
+    # type is: COALESCE types interval and integer cannot be matched
     "stdlib/list/summary/sum"
-    "stdlib/list/transform/reverse"
-    "stdlib/list/transform/sort"
-    "stdlib/list/transform/unique"
-    "stdlib/string/transform/split"
+    # 0187 - a list whose elements have different types has no homogeneous
+    # PostgreSQL array: ARRAY types integer and boolean cannot be matched
+    "reference/arrays"
     # 0182 - member access emits ->>, which is text, so every comparison against
     # a non-text literal fails: operator does not exist: text = integer
     "others/trailing-commas"

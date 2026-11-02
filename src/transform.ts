@@ -40,6 +40,7 @@ import {
   irUnionType,
   irGuard,
   inferType,
+  commonElementType,
 } from './ir';
 import { TypeExpr } from './ast';
 import { EloType, Types, TypeKind, TypeAnnotations } from './types';
@@ -233,8 +234,10 @@ function transformWithDepth(
         }))
       );
 
-    case 'array':
-      return irArray(expr.elements.map((el) => recurse(el)));
+    case 'array': {
+      const elements = expr.elements.map((el) => recurse(el));
+      return irArray(elements, commonElementType(elements));
+    }
 
     case 'alternative':
       return transformAlternative(expr.alternatives, env, defining, nextDepth, ctx);

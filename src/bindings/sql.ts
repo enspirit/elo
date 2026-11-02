@@ -4,8 +4,8 @@
  * This module defines how Elo IR functions are emitted as PostgreSQL SQL code.
  */
 
-import { IRExpr, inferType } from '../ir';
-import { Types } from '../types';
+import { IRExpr, IRArrayLiteral, inferType } from '../ir';
+import { Types, EloType } from '../types';
 import { StdLib, EmitContext, nullary, fnCall } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
@@ -24,6 +24,87 @@ export const SQL_OP_MAP: Record<string, string> = {
 export function isNativeBinaryOp(ir: IRExpr): boolean {
   if (ir.type !== 'call') return false;
   return SQL_OP_MAP[ir.fn] !== undefined && ir.argTypes.length === 2;
+}
+
+/**
+ * The PostgreSQL type an Elo type lands on, for the one thing that needs to
+ * name it: an array's element type.
+ */
+export const PG_TYPE: Partial<Record<string, string>> = {
+  int: 'integer',
+  float: 'double precision',
+  bool: 'boolean',
+  string: 'text',
+  date: 'date',
+  datetime: 'timestamp',
+  duration: 'interval',
+};
+
+/** `[]` written in place, which is the only list with no element to type it. */
+function isEmptyList(ir: IRExpr): boolean {
+  return ir.type === 'array_literal' && ir.elements.length === 0;
+}
+
+/**
+ * Emit an array argument, giving an empty list the element type its context
+ * needs.
+ *
+ * `[]` is a list of nothing in Elo and PostgreSQL has no such value: a bare
+ * `ARRAY[]` is rejected with "cannot determine type of empty array", and the
+ * untyped `'{}'` literal only resolves next to a typed sibling — as an
+ * argument to a polymorphic function (`CARDINALITY`, `UNNEST`, `ANY`) it fails
+ * the same way. So the element type comes from the list itself when it has
+ * one, and otherwise from `demand`: what the operation about to consume it
+ * requires. `text` where the operation does not care, since every list
+ * function that *does* care says so.
+ */
+function arrayArg(
+  ir: IRExpr,
+  ctx: EmitContext<string>,
+  demand: EloType = Types.string
+): string {
+  if (!isEmptyList(ir)) return ctx.emit(ir);
+  const element = (ir as IRArrayLiteral).elementType.kind === 'any'
+    ? demand
+    : (ir as IRArrayLiteral).elementType;
+  return `'{}'::${PG_TYPE[element.kind] ?? 'text'}[]`;
+}
+
+/**
+ * Aggregating zero rows yields NULL, not an empty array, so every emitter
+ * built on ARRAY_AGG answers NULL for an empty list where Elo says `[]`.
+ * Falling back to the input is both the right value and the right type: when
+ * the aggregate is NULL the input *was* the empty list.
+ */
+function aggregatedArray(ir: IRExpr, aggregate: string, input: string): string {
+  // A list written in place with elements in it cannot aggregate to nothing,
+  // so the common case keeps the shorter emission.
+  if (ir.type === 'array_literal' && ir.elements.length > 0) return aggregate;
+  return `COALESCE(${aggregate}, ${input})`;
+}
+
+/**
+ * `=` and `<>`, with the one case PostgreSQL cannot express directly:
+ * comparing against `[]`.
+ *
+ * An empty list has no element type to cast to, and the other operand's is not
+ * always knowable — but the comparison does not need it. `xs == []` means "xs
+ * is an empty list", which CARDINALITY answers whatever the elements are. The
+ * null check is there because `null == []` is false in Elo, while
+ * `CARDINALITY(NULL)` is null rather than a count.
+ */
+function sqlComparison(op: '=' | '<>'): (args: IRExpr[], ctx: EmitContext<string>) => string {
+  return (args, ctx) => {
+    const emptyLeft = isEmptyList(args[0]);
+    const emptyRight = isEmptyList(args[1]);
+    if (emptyLeft && emptyRight) return op === '=' ? 'TRUE' : 'FALSE';
+    if (emptyLeft || emptyRight) {
+      const other = ctx.emit(emptyLeft ? args[1] : args[0]);
+      const isEmpty = `(${other} IS NOT NULL AND CARDINALITY(${other}) = 0)`;
+      return op === '=' ? isEmpty : `(NOT ${isEmpty})`;
+    }
+    return sqlBinaryOp(op)(args, ctx);
+  };
 }
 
 /**
@@ -107,8 +188,18 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('mul', [Types.int, Types.string], (args, ctx) =>
     `REPEAT(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`);
 
-  // List concatenation uses || in PostgreSQL (array concatenation)
-  sqlLib.register('add', [Types.array, Types.array], sqlBinaryOp('||'));
+  // List concatenation uses || in PostgreSQL (array concatenation). Appending
+  // `[]` is the identity, which spares PostgreSQL an element type an empty
+  // list cannot give it; with both sides empty there is nothing to borrow
+  // from, so the default cast applies.
+  sqlLib.register('add', [Types.array, Types.array], (args, ctx) => {
+    const emptyLeft = isEmptyList(args[0]);
+    const emptyRight = isEmptyList(args[1]);
+    if (emptyLeft && emptyRight) return arrayArg(args[0], ctx);
+    if (emptyLeft) return ctx.emitWithParens(args[1], '||', 'right');
+    if (emptyRight) return ctx.emitWithParens(args[0], '||', 'left');
+    return sqlBinaryOp('||')(args, ctx);
+  });
 
   // SQL uses native operators for all types - type generalization handles all combinations
   sqlLib.register('add', [Types.any, Types.any], sqlBinaryOp('+'));
@@ -166,8 +257,8 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('gt', [Types.any, Types.any], sqlBinaryOp('>'));
   sqlLib.register('lte', [Types.any, Types.any], sqlBinaryOp('<='));
   sqlLib.register('gte', [Types.any, Types.any], sqlBinaryOp('>='));
-  sqlLib.register('eq', [Types.any, Types.any], sqlBinaryOp('='));
-  sqlLib.register('neq', [Types.any, Types.any], sqlBinaryOp('<>'));
+  sqlLib.register('eq', [Types.any, Types.any], sqlComparison('='));
+  sqlLib.register('neq', [Types.any, Types.any], sqlComparison('<>'));
 
   // Logical operators
   sqlLib.register('and', [Types.any, Types.any], sqlBinaryOp('AND'));
@@ -210,9 +301,9 @@ export function createSQLBinding(): StdLib<string> {
 
   // Array functions
   sqlLib.register('length', [Types.array], (args, ctx) =>
-    `COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0)`);
+    `COALESCE(CARDINALITY(${arrayArg(args[0], ctx)}), 0)`);
   sqlLib.register('count', [Types.array], (args, ctx) =>
-    `COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0)`);
+    `COALESCE(CARDINALITY(${arrayArg(args[0], ctx)}), 0)`);
   // PostgreSQL only subscripts a parenthesised expression: `ARRAY[1, 2][1]` is
   // a syntax error where `(ARRAY[1, 2])[1]` is 1. A column reference parses
   // either way, which is why every list literal indexed in place used to emit
@@ -220,21 +311,21 @@ export function createSQLBinding(): StdLib<string> {
   // shortest rule to keep.
   const subscript = (receiver: string, index: string) => `(${receiver})[${index}]`;
   sqlLib.register('at', [Types.array, Types.int], (args, ctx) =>
-    subscript(ctx.emit(args[0]), `${ctx.emit(args[1])} + 1`));
+    subscript(arrayArg(args[0], ctx), `${ctx.emit(args[1])} + 1`));
   sqlLib.register('first', [Types.array], (args, ctx) =>
-    subscript(ctx.emit(args[0]), '1'));
+    subscript(arrayArg(args[0], ctx), '1'));
   sqlLib.register('last', [Types.array], (args, ctx) =>
-    subscript(ctx.emit(args[0]), `CARDINALITY(${ctx.emit(args[0])})`));
+    subscript(arrayArg(args[0], ctx), `CARDINALITY(${arrayArg(args[0], ctx)})`));
   sqlLib.register('min', [Types.array], (args, ctx) =>
-    `(SELECT MIN(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
+    `(SELECT MIN(v) FROM UNNEST(${arrayArg(args[0], ctx)}) AS v)`);
   sqlLib.register('max', [Types.array], (args, ctx) =>
-    `(SELECT MAX(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
+    `(SELECT MAX(v) FROM UNNEST(${arrayArg(args[0], ctx)}) AS v)`);
   sqlLib.register('min', [Types.any, Types.any], fnCall('LEAST'));
   sqlLib.register('max', [Types.any, Types.any], fnCall('GREATEST'));
   sqlLib.register('sum', [Types.array], (args, ctx) =>
-    `COALESCE((SELECT SUM(v) FROM UNNEST(${ctx.emit(args[0])}) AS v), 0)`);
+    `COALESCE((SELECT SUM(v) FROM UNNEST(${arrayArg(args[0], ctx, Types.float)}) AS v), 0)`);
   sqlLib.register('avg', [Types.array], (args, ctx) =>
-    `(SELECT AVG(v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
+    `(SELECT AVG(v) FROM UNNEST(${arrayArg(args[0], ctx, Types.float)}) AS v)`);
   sqlLib.register('sum', [Types.array, Types.any], (args, ctx) => {
     const initType = inferType(args[1]);
     const arr = ctx.emit(args[0]);
@@ -245,11 +336,15 @@ export function createSQLBinding(): StdLib<string> {
     return `(${init} + COALESCE((SELECT SUM(v) FROM UNNEST(${arr}) AS v), 0))`;
   });
   sqlLib.register('isEmpty', [Types.array], (args, ctx) =>
-    `(COALESCE(CARDINALITY(${ctx.emit(args[0])}), 0) = 0)`);
+    `(COALESCE(CARDINALITY(${arrayArg(args[0], ctx)}), 0) = 0)`);
+  // `= ANY` compares the needle against the elements, so an empty list has to
+  // take its element type from the needle or the comparison has no operator.
   sqlLib.register('contains', [Types.array, Types.any], (args, ctx) =>
-    `(${ctx.emit(args[1])} = ANY(${ctx.emit(args[0])}))`);
-  sqlLib.register('sort', [Types.array], (args, ctx) =>
-    `(SELECT ARRAY_AGG(v ORDER BY v) FROM UNNEST(${ctx.emit(args[0])}) AS v)`);
+    `(${ctx.emit(args[1])} = ANY(${arrayArg(args[0], ctx, inferType(args[1]))}))`);
+  sqlLib.register('sort', [Types.array], (args, ctx) => {
+    const arr = arrayArg(args[0], ctx);
+    return aggregatedArray(args[0], `(SELECT ARRAY_AGG(v ORDER BY v) FROM UNNEST(${arr}) AS v)`, arr);
+  });
 
   // String functions
   sqlLib.register('length', [Types.string], (args, ctx) => `LENGTH(${ctx.emit(args[0])})`);
@@ -539,19 +634,27 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
   // List manipulation functions
   // PostgreSQL doesn't have built-in array_reverse, use subquery with ordinality
   sqlLib.register('reverse', [Types.array], (args, ctx) => {
-    const arr = ctx.emit(args[0]);
-    return `(SELECT ARRAY_AGG(elem ORDER BY ord DESC) FROM UNNEST(${arr}) WITH ORDINALITY AS t(elem, ord))`;
+    const arr = arrayArg(args[0], ctx);
+    return aggregatedArray(
+      args[0],
+      `(SELECT ARRAY_AGG(elem ORDER BY ord DESC) FROM UNNEST(${arr}) WITH ORDINALITY AS t(elem, ord))`,
+      arr
+    );
   });
   sqlLib.register('unique', [Types.array], (args, ctx) => {
-    const arr = ctx.emit(args[0]);
-    return `(SELECT ARRAY_AGG(v ORDER BY ord) FROM (SELECT DISTINCT ON (v) v, ord FROM UNNEST(${arr}) WITH ORDINALITY AS t(v, ord) ORDER BY v, ord) sub)`;
+    const arr = arrayArg(args[0], ctx);
+    return aggregatedArray(
+      args[0],
+      `(SELECT ARRAY_AGG(v ORDER BY ord) FROM (SELECT DISTINCT ON (v) v, ord FROM UNNEST(${arr}) WITH ORDINALITY AS t(v, ord) ORDER BY v, ord) sub)`,
+      arr
+    );
   });
   sqlLib.register('flat', [Types.array], (args, ctx) =>
     `(SELECT ARRAY_AGG(elem) FROM UNNEST(${ctx.emit(args[0])}) AS sub, UNNEST(sub) AS elem)`);
 
   // Join list elements with separator
   sqlLib.register('join', [Types.array, Types.string], (args, ctx) =>
-    `array_to_string(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+    `array_to_string(${arrayArg(args[0], ctx)}, ${ctx.emit(args[1])})`);
 
   // Split string into list
   sqlLib.register('split', [Types.string, Types.string], (args, ctx) =>

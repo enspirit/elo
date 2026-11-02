@@ -122,6 +122,15 @@ export interface IRObjectLiteral {
 export interface IRArrayLiteral {
   type: 'array_literal';
   elements: IRExpr[];
+  /**
+   * What the elements have in common, or `any` when they have nothing in
+   * common and when there are none.
+   *
+   * `inferType` says `array` for every list, which is all three dynamic
+   * targets need. PostgreSQL arrays carry an element type, and it has to come
+   * from somewhere for `[]`, which has no element to read it off.
+   */
+  elementType: EloType;
 }
 
 /**
@@ -376,8 +385,29 @@ export function irObject(properties: IRObjectProperty[]): IRObjectLiteral {
   return { type: 'object_literal', properties };
 }
 
-export function irArray(elements: IRExpr[]): IRArrayLiteral {
-  return { type: 'array_literal', elements };
+export function irArray(
+  elements: IRExpr[],
+  elementType: EloType = Types.any
+): IRArrayLiteral {
+  return { type: 'array_literal', elements, elementType };
+}
+
+/**
+ * What a list's elements have in common.
+ *
+ * `null` elements are ignored rather than widening the answer: `[1, null]` is
+ * a list of Int that happens to have a hole, and every target represents it
+ * that way. Anything else mixed gives `any`.
+ */
+export function commonElementType(elements: IRExpr[]): EloType {
+  let common: EloType | undefined;
+  for (const element of elements) {
+    const type = inferType(element);
+    if (type.kind === 'null') continue;
+    if (!common) common = type;
+    else if (common.kind !== type.kind) return Types.any;
+  }
+  return common ?? Types.any;
 }
 
 export function irVariable(name: string, inferredType: EloType = Types.any): IRVariable {

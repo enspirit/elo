@@ -31,7 +31,7 @@ CASE WHEN CASE WHEN TIMESTAMP '2024-01-15 10:00:00' - TIMESTAMP '2024-01-15 09:0
 CASE WHEN ARRAY[1, 2, 3] = ARRAY[1, 2, 3] THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN ARRAY[1, 2] <> ARRAY[1, 2, 3] THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN ARRAY[1, 2, 3] <> ARRAY[1, 2, 4] THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN ARRAY[] = ARRAY[] THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN ARRAY['a', 'b'] = ARRAY['a', 'b'] THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN jsonb_build_object('name', 'Alice') = jsonb_build_object('name', 'Alice') THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN jsonb_build_object('a', 1, 'b', 2) = jsonb_build_object('a', 1, 'b', 2) THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

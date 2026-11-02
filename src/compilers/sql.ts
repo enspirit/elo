@@ -3,7 +3,7 @@ import { IRExpr, IRCall, inferType, usesInput } from '../ir';
 import { transform } from '../transform';
 import { Types, TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
-import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP } from '../bindings/sql';
+import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE } from '../bindings/sql';
 import { assertNumericLiteral, formatFloatLiteral, assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 
 /**
@@ -164,6 +164,14 @@ function emitSQL(ir: IRExpr): string {
     }
 
     case 'array_literal': {
+      // PostgreSQL rejects `ARRAY[]`: an array constructor takes its element
+      // type from its elements, and there are none. The typed empty-array
+      // literal is the way to write it, with the element type the list
+      // carries. Reached where nothing else supplies one — `typeOf([])` — so
+      // the fallback only has to be *an* array.
+      if (ir.elements.length === 0) {
+        return `'{}'::${PG_TYPE[ir.elementType.kind] ?? 'text'}[]`;
+      }
       const elements = ir.elements.map(e => emitSQL(e)).join(', ');
       return `ARRAY[${elements}]`;
     }

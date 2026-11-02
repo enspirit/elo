@@ -1,0 +1,61 @@
+# `sum(xs, init)` folds with an integer zero whatever the init's type is
+
+> Found while fixing 0181: it is the one line left failing in
+> `stdlib/list/summary/sum` once the empty list is typed.
+
+## The bug
+
+`src/bindings/sql.ts`:
+
+```ts
+sqlLib.register('sum', [Types.array, Types.any], (args, ctx) => {
+  const initType = inferType(args[1]);
+  ...
+  if (initType === Types.string) {
+    return `(${init} || COALESCE((SELECT STRING_AGG(v, '') FROM UNNEST(${arr}) AS v), ''))`;
+  }
+  return `(${init} + COALESCE((SELECT SUM(v) FROM UNNEST(${arr}) AS v), 0))`;
+});
+```
+
+The fallback's `COALESCE(..., 0)` hardcodes an integer zero, so the init's type
+has to be numeric for it to compose:
+
+```
+$ eloc -t sql -e "sum([P1D, P2D], P0D)"
+(INTERVAL 'P0D' + COALESCE((SELECT SUM(v) FROM UNNEST(ARRAY[INTERVAL 'P1D', INTERVAL 'P2D']) AS v), 0))
+ERROR:  COALESCE types interval and integer cannot be matched
+```
+
+A second, smaller thing in the same four lines: `initType === Types.string`
+compares `EloType` objects by **identity**. It works only because `inferType`
+hands back the shared `Types.string` constant; `typeEquals` is what the rest of
+the codebase uses, and the identity check is a trap waiting for any emitter
+that builds a type rather than reusing the constant.
+
+## The fix, and why it types
+
+Move the COALESCE outside the fold, so the fallback is the init itself rather
+than a literal that has to match it:
+
+```sql
+COALESCE(<init> + (SELECT SUM(v) FROM UNNEST(<xs>) v), <init>)
+```
+
+Summing zero rows is NULL, which makes the whole addition NULL, which COALESCE
+answers with the init — the identity of the fold, already the right type by
+construction. Same shape for the string case with `||` and `STRING_AGG`.
+Verified against the container:
+
+```
+COALESCE(INTERVAL 'P0D' + (SELECT SUM(v) FROM UNNEST(ARRAY[INTERVAL 'P1D', INTERVAL 'P2D']) v), INTERVAL 'P0D') = INTERVAL 'P3D'   -> t
+COALESCE('' || (SELECT STRING_AGG(v, '') FROM UNNEST('{}'::text[]) v), '')                                       = ''              -> t
+```
+
+## Test
+
+`stdlib/list/summary/sum` is quarantined under `0186` in `KNOWN_INVALID` in
+`test/acceptance/test-sql.sh`; lifting the entry is the red test, and L7
+(`assert(sum([P1D, P2D], P0D) == P3D)`) is the failing line. Add an assertion
+for a Float init and a Date-free non-numeric one too, since the current corpus
+only covers Int and String inits on the paths that worked.
