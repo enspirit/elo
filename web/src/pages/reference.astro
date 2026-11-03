@@ -752,6 +752,16 @@ People = [Person]
           future package. Cycles are refused, naming the chain.
         </p>
         <p>
+          <strong>A name the module does not export is refused</strong>, naming
+          the module and the line the import is written on — for a value as
+          well as for a type, so a typo is not something you meet as a
+          <code>null</code> later. A module whose expression is an object
+          literal has its exports written down, which is how a module is
+          normally written. One whose expression is anything else
+          (<code>_ |&gt; T</code>, an <code>if</code>, a member read) has keys
+          that only exist at run time, so any name is accepted from it.
+        </p>
+        <p>
           An imported type is <strong>expanded</strong>: the module's own type
           names are substituted into it, so you get that one type and nothing
           else of the module's becomes visible. A module's value is bound

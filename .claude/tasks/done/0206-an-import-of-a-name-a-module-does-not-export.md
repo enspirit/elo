@@ -79,3 +79,46 @@ type system for data, which Elo deliberately is not.
 - A module whose expression is not an object literal accepts any name — the
   conservative half, and the one that keeps this from over-refusing.
 - The refusal names a position, as every compile-time refusal now does (0203).
+
+## Implemented
+
+`exportedNames(value)` in `src/modules.ts` walks past the `let` and `typedef`
+wrappers `scopeProgram` puts on a module's expression and returns the keys of
+the object literal underneath, or `undefined` when the expression is anything
+else. `assertExported` refuses a name a known set does not have, with the
+message the task asked for:
+
+```
+'reusable.elo' defines no name 'nope', imported from './reusable' at line 2, column 1 of main.elo
+```
+
+The conservative half is what the task specified and is asserted: a module
+ending in `_ |> T`, an `if` or a member read accepts any name, because its keys
+only exist at run time. Refusing only what is provably absent is what keeps
+this from becoming a static type system for data.
+
+### The position came for free, for all five refusals
+
+The task asked for a position on this refusal. It turned out none of the import
+refusals had one — the type half did not either, so "the two namespaces
+disagree about the same mistake" was true of the position as well as of the
+check. One `locate(error, decl.loc)` around the body of the per-declaration
+loop positions all of them at the line the author wrote, and a refusal raised
+*inside* a module keeps the position it already has, since `locate` lets the
+innermost frame win.
+
+### Red first
+
+Three new assertions in `modules.unit.test.ts` red, two green:
+
+- red: a name the object literal does not have; the same through a type prelude
+  and a `let`; the refusal on the second of two imports
+- green already: the names the module does define still bind; a module whose
+  expression is not an object literal accepts any name
+
+No fixture, and no emission change: a program that is refused has nothing to
+emit, so this lives in the unit tests. The corpus is unaffected —
+`reference/imports.elo` imports only names its modules define.
+
+Documented in the README and the website reference next to the cycle refusal,
+since it changes what an import accepts.

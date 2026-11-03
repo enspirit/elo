@@ -169,6 +169,51 @@ describe('loadProgram - importing values', () => {
     );
   });
 
+  it('refuses a name a module whose value is an object literal does not define', () => {
+    assert.throws(
+      () => loadProgram("import { nope } from './reusable'\nnope", {
+        loader: mapLoader({ 'reusable.elo': REUSABLE }),
+      }),
+      /'reusable\.elo' defines no name 'nope', imported from '\.\/reusable'/
+    );
+  });
+
+  it('still brings in the names that module does define', () => {
+    const program = loadProgram("import { double, one } from './reusable'\ndouble(one)", {
+      loader: mapLoader({ 'reusable.elo': REUSABLE }),
+    });
+    assert.deepStrictEqual(program.bindings.map(b => b.name), ['_module_0', 'double', 'one']);
+  });
+
+  it('sees through a type prelude and a let to the object literal', () => {
+    assert.throws(
+      () => loadProgram("import { nope } from './m'\nnope", {
+        loader: mapLoader({ 'm.elo': 'T = Int\nlet a = 1 in { one: a |> T }' }),
+      }),
+      /defines no name 'nope'/
+    );
+  });
+
+  // The conservative half, and the one that keeps this from becoming a static
+  // type system for data: a value whose keys are not written down is any name's.
+  it('accepts any name from a module whose value is not an object literal', () => {
+    const program = loadProgram("import { nope } from './m'\nnope", {
+      loader: mapLoader({ 'm.elo': 'let T = { a: Int } in _ |> T' }),
+    });
+    assert.deepStrictEqual(program.bindings.map(b => b.name), ['_module_0', 'nope']);
+  });
+
+  it('refuses the name where the import is written', () => {
+    assert.throws(
+      () => loadProgram("import { double } from './reusable'\nimport { nope } from './reusable'\nnope", {
+        loader: mapLoader({ 'reusable.elo': REUSABLE }),
+        locations: true,
+        file: 'main.elo',
+      }),
+      /defines no name 'nope'/
+    );
+  });
+
   it('refuses a value import from a module that has no expression', () => {
     assert.throws(
       () => loadProgram("import { age } from './types'\nage", {

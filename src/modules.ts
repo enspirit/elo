@@ -31,6 +31,7 @@ import {
   LetBinding,
   TypeBinding,
   TypeExpr,
+  locate,
   memberAccess,
   variable,
   withLetBindings,
@@ -255,22 +256,29 @@ function resolveImports(
   };
 
   for (const decl of imports) {
-    const module = moduleOf(decl);
+    // Every refusal an import can raise is about this declaration, so one
+    // `locate` here positions them all at the line the author wrote — and a
+    // refusal from inside a module keeps the position it already has.
+    try {
+      const module = moduleOf(decl);
 
-    if (decl.alias) {
-      bindings.push({ name: refuseModuleName(decl.alias, decl), value: valueOf(module, decl, linking) });
-      continue;
-    }
-
-    for (const name of decl.names) {
-      if (isTypeName(name)) {
-        typeDefs.push({ name, typeExpr: exportedType(module, name, decl) });
+      if (decl.alias) {
+        bindings.push({ name: refuseModuleName(decl.alias, decl), value: valueOf(module, decl, linking) });
         continue;
       }
-      bindings.push({
-        name: refuseModuleName(name, decl),
-        value: memberAccess(valueOf(module, decl, linking), name),
-      });
+
+      for (const name of decl.names) {
+        if (isTypeName(name)) {
+          typeDefs.push({ name, typeExpr: exportedType(module, name, decl) });
+          continue;
+        }
+        bindings.push({
+          name: refuseModuleName(name, decl),
+          value: memberAccess(valueOf(module, decl, linking), assertExported(module, name, decl)),
+        });
+      }
+    } catch (error) {
+      throw locate(error, decl.loc);
     }
   }
 
@@ -386,6 +394,47 @@ function valueOf(module: Module, decl: ImportDecl, linking: Linking): Expr {
     linking.bindings.push({ name: module.binding, value: module.value });
   }
   return variable(module.binding);
+}
+
+/**
+ * The names a module provably exports as values, or `undefined` when they
+ * cannot be known.
+ *
+ * A module exports each property of its expression, so a module ending in an
+ * object literal has its exports written down and a typo in an import can be
+ * refused. Anything else — a coercion, an `if`, a member read, `_` — has keys
+ * that only exist at run time, and is accepted as today: refusing only what is
+ * provably absent is what keeps this from becoming a static type system for
+ * data, which Elo deliberately is not.
+ *
+ * A `let` and a type prelude are seen through, since `scopeProgram` wraps the
+ * expression in them and an author writes them too. Only the one expression
+ * the module ends on is read, so nothing here evaluates anything.
+ */
+function exportedNames(value: Expr): Set<string> | undefined {
+  let expr = value;
+  while (expr.type === 'let' || expr.type === 'typedef') expr = expr.body;
+  if (expr.type !== 'object') return undefined;
+  return new Set(expr.properties.map((property) => property.key));
+}
+
+/**
+ * Refuses a value name the module is known not to export.
+ *
+ * It is the one way an import can go wrong that was silent: everything else —
+ * a module that is not there, a cycle, a module with no expression, a type it
+ * does not define — already names the module, while a misspelled value name
+ * produced `undefined`, `nil`, `None` or `NULL`, which is the failure mode Elo
+ * exists to avoid.
+ */
+function assertExported(module: Module, name: string, decl: ImportDecl): string {
+  const names = module.value && exportedNames(module.value);
+  if (names && !names.has(name)) {
+    throw new ImportError(
+      `'${module.id}' defines no name '${name}', imported from '${decl.path}'`
+    );
+  }
+  return name;
 }
 
 /**

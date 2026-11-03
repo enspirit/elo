@@ -254,6 +254,13 @@ A path is relative to the file that imported it (`./types`, `../shared/types`),
 with `.elo` added. A bare `'types'` is refused, to keep that spelling free for
 a future package. Cycles are refused, naming the chain.
 
+**A name the module does not export is refused**, naming the module and the
+line the import is written on — for a value as well as for a type, so a typo
+is not something you meet as a `null` later. A module whose expression is an
+object literal has its exports written down, which is how every module above
+is written. One whose expression is anything else (`_ |> T`, an `if`, a member
+read) has keys that only exist at run time, so any name is accepted from it.
+
 Imports are resolved **at compile time, by inlining**: the emitted code is one
 self-contained expression, as it is without them. So there is nothing to
 deploy alongside it, and nothing is read at runtime. A module appears **once**
