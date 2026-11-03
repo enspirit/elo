@@ -193,8 +193,13 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
       return `Duration.fromISO(${JSON.stringify(ir.value)})`;
 
     case 'object_literal': {
+      // `__proto__: v` as a bare (or quoted) key runs the [[Prototype]] setter
+      // instead of defining a data property, so a computed key is used for it.
       const props = ir.properties
-        .map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${ctx.emit(p.value)}`)
+        .map(p => {
+          const k = assertSafeIdentifier(p.key, 'object_literal key');
+          return k === '__proto__' ? `['__proto__']: ${ctx.emit(p.value)}` : `${k}: ${ctx.emit(p.value)}`;
+        })
         .join(', ');
       // Wrap in parens to avoid parsing ambiguity with blocks
       return `({${props}})`;
