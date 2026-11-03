@@ -521,7 +521,9 @@ export function inferType(ir: IRExpr): EloType {
       // The shape is right here, so an object written in place knows it. What
       // a read off it produces then comes from the type rather than from
       // whatever the read sits next to.
-      return objectOf(new Map(ir.properties.map(p => [p.key, inferType(p.value)])));
+      return objectOf(
+        ir.properties.map(p => ({ key: p.key, type: inferType(p.value), optional: false }))
+      );
     case 'array_literal':
       return ir.elementType.kind === 'any' ? Types.array : arrayOf(ir.elementType);
     case 'variable':

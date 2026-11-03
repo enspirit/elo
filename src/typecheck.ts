@@ -28,12 +28,15 @@
  *    those would fire on nearly every program, so a call with an unknown
  *    argument type is accepted in silence.
  *
- *  - **It is more precise than the compiler, and keeps that to itself.** The
- *    checker carries a structural lattice (`checktypes.ts`) that understands
- *    schemas, element types and unions, and projects down to the compiler's
- *    flat `EloType` on every signature lookup. This is what makes the
- *    idiomatic `let X = { … } in _ |> X` form checkable without adding a
- *    single concept to the language or to the compiler.
+ *  - **It is more precise than the compiler, and the difference is what it
+ *    knows rather than what it can say.** There is one type — `EloType`, which
+ *    carries schemas, element types and unions — so the checker no longer
+ *    carries a lattice of its own and no longer has to project down to a
+ *    poorer one. It is more precise because it follows a declaration through
+ *    `let X = { … } in _ |> X` and the transform does not, not because it has
+ *    somewhere richer to write the answer down. That also means handing the
+ *    answer over loses nothing: `typecheckWithAnnotations` gives the transform
+ *    the type it actually inferred.
  *
  * Why no inference algorithm: Elo has no type variables, no recursion
  * (`transform.ts` rejects it) and no parametric polymorphism, and its only
@@ -43,26 +46,27 @@
  */
 
 import { Constraint, Expr, Lambda, SourceLocation, TypeExpr } from './ast';
-import { EloType, Types, TypeAnnotations, typeEquals } from './types';
-import { eloTypeDefs } from './typedefs';
-import { formatSignature } from './stdlib';
-import { parseExtractTemplate } from './extract';
 import {
-  ANY,
-  BOOL,
-  CheckType,
-  SchemaExtras,
+  EloType,
+  Extras,
   SchemaProp,
-  describe,
-  equals,
+  TypeAnnotations,
+  Types,
+  arrayOf,
+  describeType,
+  fnOf,
   isNullable,
   isUnknown,
   join,
   nullable,
-  prim,
-  project,
+  objectOf,
+  propertyType,
   stripNull,
-} from './checktypes';
+  structurallyEquals,
+} from './types';
+import { eloTypeDefs } from './typedefs';
+import { formatSignature } from './stdlib';
+import { parseExtractTemplate } from './extract';
 
 /**
  * What kind of problem a diagnostic reports.
@@ -167,10 +171,10 @@ const DEFAULT_MAX_DEPTH = 100;
 const MAX_UNION_COMBINATIONS = 32;
 
 /** Variable name to type. */
-type TypeEnv = Map<string, CheckType>;
+type TypeEnv = Map<string, EloType>;
 
 /** Type name to the structure it stands for. */
-type TypeNameEnv = Map<string, CheckType>;
+type TypeNameEnv = Map<string, EloType>;
 
 /**
  * Access paths a null check has established something about, keyed by their
@@ -193,15 +197,14 @@ export function typecheck(expr: Expr, options: TypecheckOptions = {}): Diagnosti
 }
 
 /**
- * Check an expression and return its type (projected onto the compiler's
- * lattice) alongside the diagnostics.
+ * Check an expression and return its type alongside the diagnostics.
  */
 export function typecheckWithType(
   expr: Expr,
   options: TypecheckOptions = {}
 ): { type: EloType; diagnostics: Diagnostic[] } {
   const { type, diagnostics } = new Checker(options).run(expr);
-  return { type: project(type), diagnostics };
+  return { type, diagnostics };
 }
 
 /**
@@ -224,15 +227,16 @@ export function typecheckWithAnnotations(
 }
 
 /**
- * Check an expression and return the checker's own structural type, which is
- * richer than anything `EloType` can say. Exposed for hosts that want to know
- * the shape of a result, and for the tests.
+ * The same as `typecheckWithType`, which it now is: there is one type, so
+ * there is no poorer version of the answer to return instead.
+ *
+ * @deprecated call `typecheckWithType`
  */
 export function typecheckStructural(
   expr: Expr,
   options: TypecheckOptions = {}
-): { type: CheckType; diagnostics: Diagnostic[] } {
-  return new Checker(options).run(expr);
+): { type: EloType; diagnostics: Diagnostic[] } {
+  return typecheckWithType(expr, options);
 }
 
 class Checker {
@@ -257,7 +261,7 @@ class Checker {
     this.inputType = options.inputType;
   }
 
-  run(expr: Expr): { type: CheckType; diagnostics: Diagnostic[]; types: TypeAnnotations } {
+  run(expr: Expr): { type: EloType; diagnostics: Diagnostic[]; types: TypeAnnotations } {
     const env: TypeEnv = new Map();
     if (this.inputType) {
       env.set('_', this.typeExprToCheckType(this.inputType, env, new Map(), 0));
@@ -291,14 +295,15 @@ class Checker {
    * emitting from the wrong one of two types is the failure mode this feature
    * has to not have.
    */
-  private check(expr: Expr, env: TypeEnv, types: TypeNameEnv, depth: number): CheckType {
+  private check(expr: Expr, env: TypeEnv, types: TypeNameEnv, depth: number): EloType {
     const type = this.checkNode(expr, env, types, depth);
-    const projected = project(type);
     if (!this.annotations.has(expr)) {
-      this.annotations.set(expr, projected);
+      this.annotations.set(expr, type);
     } else {
       const seen = this.annotations.get(expr);
-      if (seen && !typeEquals(seen, projected)) this.annotations.set(expr, null);
+      // Compared all the way down: kind-equality would call two different
+      // schemas the same and leave the entry unpoisoned.
+      if (seen && !structurallyEquals(seen, type)) this.annotations.set(expr, null);
     }
     return type;
   }
@@ -307,39 +312,39 @@ class Checker {
    * Always returns a type: on failure that type is `any`, which stops one
    * mistake from cascading into a diagnostic at every enclosing node.
    */
-  private checkNode(expr: Expr, env: TypeEnv, types: TypeNameEnv, depth: number): CheckType {
+  private checkNode(expr: Expr, env: TypeEnv, types: TypeNameEnv, depth: number): EloType {
     if (depth > this.maxDepth) {
       this.report('nesting-too-deep', `Maximum expression depth exceeded (${this.maxDepth})`, expr.loc);
-      return ANY;
+      return Types.any;
     }
     const next = depth + 1;
 
     switch (expr.type) {
       case 'literal':
-        if (typeof expr.value === 'boolean') return BOOL;
+        if (typeof expr.value === 'boolean') return Types.bool;
         // `1.0` and `1` are the same JavaScript number; only the parser's
         // marker distinguishes them.
-        return Number.isInteger(expr.value) && !expr.isFloat ? prim(Types.int) : prim(Types.float);
+        return Number.isInteger(expr.value) && !expr.isFloat ? Types.int : Types.float;
 
       case 'string':
-        return prim(Types.string);
+        return Types.string;
 
       case 'null':
-        return prim(Types.null);
+        return Types.null;
 
       case 'date':
-        return prim(Types.date);
+        return Types.date;
 
       case 'datetime':
-        return prim(Types.datetime);
+        return Types.datetime;
 
       case 'duration':
-        return prim(Types.duration);
+        return Types.duration;
 
       case 'variable': {
         // An undefined variable is the transform's error to raise (it refuses
         // them to keep host globals out of reach); the checker only types it.
-        const type = env.get(expr.name) ?? ANY;
+        const type = env.get(expr.name) ?? Types.any;
         return this.narrowed.has(expr.name) ? stripNull(type) : type;
       }
 
@@ -347,18 +352,18 @@ class Checker {
         const left = this.check(expr.left, env, types, next);
         const right = this.check(expr.right, env, types, next);
         const fn = BINARY_OPS[expr.operator];
-        if (!fn) return ANY;
+        if (!fn) return Types.any;
         // The transform rejects `*` on a list outright, whatever the other
         // operand is (repeating a list is an unbounded allocation). Mirror it,
         // or the checker would pass a program no compiler accepts.
-        if (fn === 'mul' && [left, right].some((t) => project(t).kind === 'array')) {
+        if (fn === 'mul' && [left, right].some((t) => t.kind === 'array')) {
           this.report(
             'not-allowed',
             `Array multiplication is not supported: '*' requires numeric ` +
             `operands (or String * Number).`,
             expr.loc
           );
-          return ANY;
+          return Types.any;
         }
         return this.resolve(fn, [left, right], 'operator-type-mismatch', expr.loc, expr.operator);
       }
@@ -366,12 +371,12 @@ class Checker {
       case 'unary': {
         const operand = this.check(expr.operand, env, types, next);
         const fn = UNARY_OPS[expr.operator];
-        if (!fn) return ANY;
+        if (!fn) return Types.any;
         return this.resolve(fn, [operand], 'operator-type-mismatch', expr.loc, expr.operator);
       }
 
       case 'temporal_keyword':
-        return TEMPORAL_KEYWORD_TYPES[expr.keyword] ?? ANY;
+        return TEMPORAL_KEYWORD_TYPES[expr.keyword] ?? Types.any;
 
       case 'function_call':
         return this.checkCall(expr.name, expr.args, expr.loc, env, types, next);
@@ -379,7 +384,7 @@ class Checker {
       case 'apply':
         this.check(expr.fn, env, types, next);
         for (const arg of expr.args) this.check(arg, env, types, next);
-        return ANY;
+        return Types.any;
 
       case 'member_access': {
         const object = this.check(expr.object, env, types, next);
@@ -430,12 +435,12 @@ class Checker {
           type: this.check(prop.value, env, types, next),
           optional: false,
         }));
-        return { kind: 'schema', props, extras: ANY };
+        return objectOf(props, Types.any);
       }
 
       case 'array': {
         const elements = expr.elements.map((element) => this.check(element, env, types, next));
-        return { kind: 'array', element: join(elements) };
+        return arrayOf(join(elements));
       }
 
       case 'alternative': {
@@ -447,13 +452,13 @@ class Checker {
           .map(stripNull);
         // If the first alternative is opaque the result is opaque; otherwise
         // the first known type wins, as the transform has it.
-        if (isUnknown(alternatives[0])) return ANY;
-        return alternatives.find((t) => !isUnknown(t)) ?? ANY;
+        if (isUnknown(alternatives[0])) return Types.any;
+        return alternatives.find((t) => !isUnknown(t)) ?? Types.any;
       }
 
       case 'datapath':
         // A datapath is a function from data to a value of unknown type.
-        return { kind: 'fn', result: ANY };
+        return fnOf(Types.any);
 
       case 'typedef': {
         const scope = new Map(env);
@@ -463,7 +468,7 @@ class Checker {
           // resolves `Person`.
           const declared = this.typeExprToCheckType(definition.typeExpr, scope, typeScope, next, expr.loc);
           // A type name is callable as a coercion, and it names a structure.
-          scope.set(definition.name, { kind: 'fn', result: declared });
+          scope.set(definition.name, fnOf(declared));
           typeScope.set(definition.name, declared);
         }
         return this.check(expr.body, scope, typeScope, next);
@@ -495,7 +500,7 @@ class Checker {
     env: TypeEnv,
     types: TypeNameEnv,
     depth: number
-  ): CheckType {
+  ): EloType {
     const bound = env.get(name);
 
     // `_ |> Order` parses to Order(_). The runtime validates and coerces
@@ -510,7 +515,7 @@ class Checker {
     // A let-bound lambda: its result is whatever its body produced.
     if (bound && bound.kind === 'fn') {
       for (const arg of args) this.check(arg, env, types, depth);
-      return bound.result;
+      return bound.result ?? Types.any;
     }
 
     // `extract` is validated structurally by the transform, not by its
@@ -536,7 +541,7 @@ class Checker {
     // A stdlib call. Lambda arguments get their parameters typed from the
     // arguments to the left, which is how `map(xs, fn(x ~> …))` learns what
     // `x` is.
-    const argTypes: CheckType[] = [];
+    const argTypes: EloType[] = [];
     for (const arg of args) {
       if (arg.type === 'lambda') {
         const params = lambdaParamTypes(name, argTypes, arg.params.length);
@@ -558,17 +563,17 @@ class Checker {
    */
   private checkLambda(
     lambda: Lambda,
-    paramTypes: CheckType[],
+    paramTypes: EloType[],
     env: TypeEnv,
     types: TypeNameEnv,
     depth: number
-  ): CheckType {
+  ): EloType {
     const scope = new Map(env);
     lambda.params.forEach((param, index) => {
-      scope.set(param, paramTypes[index] ?? ANY);
+      scope.set(param, paramTypes[index] ?? Types.any);
     });
     const result = this.check(lambda.body, scope, types, depth + 1);
-    return { kind: 'fn', result };
+    return fnOf(result);
   }
 
   /**
@@ -581,68 +586,59 @@ class Checker {
    * undeclared field fails silently at runtime — `undefined` in JavaScript,
    * `nil` in Ruby, `NULL` in SQL — rather than raising.
    */
-  private fieldOf(object: CheckType, property: string, loc?: SourceLocation): CheckType {
-    switch (object.kind) {
-      case 'any':
-        this.reportUnresolved(
-          `'.${property}' reads a field of a value of unknown type`,
-          loc
-        );
-        return ANY;
-
-      case 'schema': {
-        const prop = object.props.find((p) => p.key === property);
-        if (prop) {
-          // `:?` is the author's own statement that the field may be absent,
-          // so an optional field is `T|Null` and using it as a T is reported.
-          // A null check or an `|` fallback rules the null out.
-          return prop.optional ? nullable(prop.type) : prop.type;
-        }
-        if (object.extras === 'closed' || object.extras === 'ignored') {
-          const declared = object.props.map((p) => p.key);
-          const known = declared.length > 0 ? ` Declared: ${declared.join(', ')}.` : '';
-          const why =
-            object.extras === 'ignored'
-              ? 'extra attributes are allowed in but stripped from the coerced value'
-              : 'the schema is closed';
-          this.report(
-            'unknown-field',
-            `'${property}' is not a field of ${describe(object)}: ${why}.${known}`,
-            loc
-          );
-          return ANY;
-        }
-        return object.extras;
-      }
-
-      case 'union': {
-        // Readable only if every member can be read.
-        const fields = object.members.map((member) => this.fieldOf(member, property, loc));
-        return join(fields);
-      }
-
-      case 'array':
-        // `xs.0` reaches an element; the transform allows member access on a
-        // list and the index is not known statically.
-        return ANY;
-
-      case 'fn':
-      case 'primitive': {
-        const kind = project(object).kind;
-        // The transform permits member access on data only (`any`, `object`,
-        // `array`); on anything else it is an error there too — but it only
-        // knows the type when it is written literally. Having followed a
-        // declaration, the checker knows it far more often.
-        if (kind === 'object' || kind === 'array' || kind === 'any') return ANY;
-        this.report(
-          'invalid-member-access',
-          `'.${property}' is not available on ${describe(object)}. ` +
-          `Use a stdlib function instead (for example 'start(interval)', not 'interval.start').`,
-          loc
-        );
-        return ANY;
-      }
+  private fieldOf(object: EloType, property: string, loc?: SourceLocation): EloType {
+    // A union is readable only if every member can be read.
+    if (object.members !== undefined) {
+      return join(object.members.map((member) => this.fieldOf(member, property, loc)));
     }
+
+    if (isUnknown(object)) {
+      this.reportUnresolved(`'.${property}' reads a field of a value of unknown type`, loc);
+      return Types.any;
+    }
+
+    if (object.kind === 'object') {
+      // An object of unknown shape says nothing about its fields, which is
+      // what `Object` on its own is.
+      if (object.props === undefined) return Types.any;
+
+      // `propertyType` answers what a read produces — including the `T|Null`
+      // of an optional field, which is the author's own statement that it may
+      // be absent, and the type of a typed extra.
+      const declared = object.props.find((p) => p.key === property);
+      if (declared || (object.extras !== undefined && typeof object.extras !== 'string')) {
+        return propertyType(object, property);
+      }
+
+      const names = object.props.map((p) => p.key);
+      const known = names.length > 0 ? ` Declared: ${names.join(', ')}.` : '';
+      const why =
+        object.extras === 'ignored'
+          ? 'extra attributes are allowed in but stripped from the coerced value'
+          : 'the schema is closed';
+      this.report(
+        'unknown-field',
+        `'${property}' is not a field of ${describeType(object)}: ${why}.${known}`,
+        loc
+      );
+      return Types.any;
+    }
+
+    // `xs.0` reaches an element; the transform allows member access on a list
+    // and the index is not known statically.
+    if (object.kind === 'array') return Types.any;
+
+    // The transform permits member access on data only (`any`, `object`,
+    // `array`); on anything else it is an error there too — but it only knows
+    // the type when it is written literally. Having followed a declaration,
+    // the checker knows it far more often.
+    this.report(
+      'invalid-member-access',
+      `'.${property}' is not available on ${describeType(object)}. ` +
+      `Use a stdlib function instead (for example 'start(interval)', not 'interval.start').`,
+      loc
+    );
+    return Types.any;
   }
 
   /**
@@ -655,19 +651,19 @@ class Checker {
    */
   private resolve(
     name: string,
-    argTypes: CheckType[],
+    argTypes: EloType[],
     code: DiagnosticCode,
     loc?: SourceLocation,
     operator?: string
-  ): CheckType {
+  ): EloType {
     const known = eloTypeDefs.signaturesOf(name);
     if (known.length === 0) {
       this.report(
         'unknown-function',
-        `Unknown function ${formatSignature(name, argTypes.map(project))}`,
+        `Unknown function ${formatSignature(name, argTypes)}`,
         loc
       );
-      return ANY;
+      return Types.any;
     }
 
     const sameArity = known.filter((sig) => sig.length === argTypes.length);
@@ -678,16 +674,16 @@ class Checker {
         `${name} takes ${arities} argument(s), got ${argTypes.length}`,
         loc
       );
-      return ANY;
+      return Types.any;
     }
 
     // A union argument must work for every member it could be: that is what
     // makes `{ x: Int|String }` safe to use rather than merely permitted.
     const combinations = expandUnions(argTypes);
     if (combinations) {
-      const results: CheckType[] = [];
+      const results: EloType[] = [];
       for (const combination of combinations) {
-        const flat = combination.map(project);
+        const flat = combination;
         if (!eloTypeDefs.has(name, flat)) {
           if (flat.some((t) => t.kind === 'any')) {
             // The table has no signature for this name on an unknown argument,
@@ -696,10 +692,10 @@ class Checker {
             // accepts anything — isNull, typeOf, assert all declare `any`
             // signatures and resolve above.
             this.reportUnresolved(
-              `${name} needs a known argument type, got ${argTypes.map(describe).join(', ')}`,
+              `${name} needs a known argument type, got ${argTypes.map(describeType).join(', ')}`,
               loc
             );
-            results.push(ANY);
+            results.push(Types.any);
             continue;
           }
           const where = operator ? `operator '${operator}'` : name;
@@ -709,36 +705,35 @@ class Checker {
           // null handling, and that is what to say. A definitely-null argument
           // (a `null` literal) is an ordinary type mismatch, so it is reported
           // as one.
-          if (combination.some(isNullable) && argTypes.some((t) => t.kind === 'union' && isNullable(t))) {
+          if (combination.some(isNullable) && argTypes.some((t) => t.members !== undefined && isNullable(t))) {
             this.report(
               'nullable-misuse',
               `${where} does not accept a value that may be null ` +
-              `(${argTypes.map(describe).join(', ')}). ` +
+              `(${argTypes.map(describeType).join(', ')}). ` +
               `Handle the null first: 'x | fallback', or guard with isNotNull(x).`,
               loc
             );
-            return ANY;
+            return Types.any;
           }
 
           this.report(
             code,
             `No signature of ${where} accepts ${formatSignature(name, flat)}` +
-            (combination.length === argTypes.length && argTypes.some((t) => t.kind === 'union')
-              ? ` (from ${argTypes.map(describe).join(', ')})`
+            (combination.length === argTypes.length && argTypes.some((t) => t.members !== undefined)
+              ? ` (from ${argTypes.map(describeType).join(', ')})`
               : '') +
             `. Known: ${sameArity.map((sig) => formatSignature(name, sig)).join(', ')}`,
             loc
           );
-          return ANY;
+          return Types.any;
         }
-        results.push(prim(eloTypeDefs.lookup(name, flat)));
+        results.push(eloTypeDefs.lookup(name, flat));
       }
       return join(results);
     }
 
     // Too many combinations to be worth exploring: fall back to the flat types.
-    const flat = argTypes.map(project);
-    return prim(eloTypeDefs.lookup(name, flat));
+    return eloTypeDefs.lookup(name, argTypes);
   }
 
   /**
@@ -755,10 +750,10 @@ class Checker {
     enclosing?: SourceLocation
   ): void {
     const type = this.check(expr, env, types, depth);
-    if (isUnknown(type) || project(type).kind === 'bool') return;
+    if (isUnknown(type) || type.kind === 'bool') return;
     this.report(
       'non-bool-condition',
-      `${context} condition must be Bool, got ${describe(type)}`,
+      `${context} condition must be Bool, got ${describeType(type)}`,
       // Point at the condition when it carries a position, otherwise at the
       // `if`/`guard` keyword that introduced it.
       expr.loc ?? enclosing
@@ -775,13 +770,13 @@ class Checker {
     types: TypeNameEnv,
     depth: number,
     loc?: SourceLocation
-  ): CheckType {
+  ): EloType {
     // Type expressions nest in parallel to value expressions, and a schema can
     // be nested arbitrarily deep. Count each level against the same guard so a
     // hostile declaration raises rather than overflowing the host stack.
     if (depth > this.maxDepth) {
       this.report('nesting-too-deep', `Maximum expression depth exceeded (${this.maxDepth})`, loc);
-      return ANY;
+      return Types.any;
     }
     const next = depth + 1;
 
@@ -794,7 +789,7 @@ class Checker {
         // The transform raises here; the checker records it and carries on so
         // the rest of the expression is still checked.
         this.report('unknown-type', `Unknown type selector: '${typeExpr.name}'`, loc);
-        return ANY;
+        return Types.any;
       }
 
       case 'type_schema': {
@@ -803,7 +798,7 @@ class Checker {
           type: this.typeExprToCheckType(prop.typeExpr, env, types, next, loc),
           optional: prop.optional ?? false,
         }));
-        let extras: SchemaExtras;
+        let extras: Extras;
         if (typeExpr.extras === undefined || typeExpr.extras === 'closed') {
           extras = 'closed';
         } else if (typeExpr.extras === 'ignored') {
@@ -811,7 +806,7 @@ class Checker {
         } else {
           extras = this.typeExprToCheckType(typeExpr.extras, env, types, next, loc);
         }
-        return { kind: 'schema', props, extras };
+        return objectOf(props, extras);
       }
 
       case 'subtype_constraint': {
@@ -942,17 +937,17 @@ function collectNonNullPaths(condition: Expr, positive: boolean, into: Set<strin
  * Every combination of union members across the argument list, or null when
  * there are too many to explore.
  */
-function expandUnions(argTypes: CheckType[]): CheckType[][] | null {
+function expandUnions(argTypes: EloType[]): EloType[][] | null {
   let total = 1;
   for (const type of argTypes) {
-    if (type.kind === 'union') total *= type.members.length;
+    if (type.members !== undefined) total *= type.members.length;
     if (total > MAX_UNION_COMBINATIONS) return null;
   }
 
-  let combinations: CheckType[][] = [[]];
+  let combinations: EloType[][] = [[]];
   for (const type of argTypes) {
-    const options = type.kind === 'union' ? type.members : [type];
-    const grown: CheckType[][] = [];
+    const options = type.members ?? [type];
+    const grown: EloType[][] = [];
     for (const combination of combinations) {
       for (const option of options) grown.push([...combination, option]);
     }
@@ -967,9 +962,9 @@ function expandUnions(argTypes: CheckType[]): CheckType[][] | null {
  * `map([1, 2], fn(x ~> …))` can say that `x` is an Int, which is what closes
  * the "lambda parameters are always `any`" hole for the common case.
  */
-function lambdaParamTypes(name: string, earlier: CheckType[], arity: number): CheckType[] {
-  const elementOf = (type: CheckType | undefined): CheckType =>
-    type && type.kind === 'array' ? type.element : ANY;
+function lambdaParamTypes(name: string, earlier: EloType[], arity: number): EloType[] {
+  const elementOf = (type: EloType | undefined): EloType =>
+    type && type.kind === 'array' && type.element ? type.element : Types.any;
 
   switch (name) {
     case 'map':
@@ -983,10 +978,10 @@ function lambdaParamTypes(name: string, earlier: CheckType[], arity: number): Ch
 
     case 'reduce':
       // (list, seed, fn(accumulator, element ~> …))
-      return [earlier[1] ?? ANY, elementOf(earlier[0])];
+      return [earlier[1] ?? Types.any, elementOf(earlier[0])];
 
     default:
-      return new Array(arity).fill(ANY);
+      return new Array(arity).fill(Types.any);
   }
 }
 
@@ -997,10 +992,13 @@ function lambdaParamTypes(name: string, earlier: CheckType[], arity: number): Ch
  * — it may only add precision, never contradict. A unit test asserts exactly
  * that, which is what keeps this from becoming a second, divergent type table.
  */
-function refineListResult(name: string, argTypes: CheckType[], resolved: CheckType): CheckType {
+function refineListResult(name: string, argTypes: EloType[], resolved: EloType): EloType {
   const list = argTypes[0];
   if (!list || list.kind !== 'array') return resolved;
-  if (project(resolved).kind !== 'array' && project(resolved).kind !== 'any') return resolved;
+  if (resolved.kind !== 'array' && resolved.kind !== 'any') return resolved;
+  // A list of unknown element type refines to nothing.
+  const element = list.element;
+  if (element === undefined) return resolved;
 
   switch (name) {
     // The list comes back with its element type intact.
@@ -1018,20 +1016,20 @@ function refineListResult(name: string, argTypes: CheckType[], resolved: CheckTy
     case 'max':
     case 'sum':
     case 'find':
-      return argTypes.length === 1 || name === 'find' ? list.element : resolved;
+      return argTypes.length === 1 || name === 'find' ? element : resolved;
 
     case 'at':
-      return list.element;
+      return element;
 
     // The lambda decides the element type of the result.
     case 'map': {
       const fn = argTypes[1];
-      return fn && fn.kind === 'fn' ? { kind: 'array', element: fn.result } : resolved;
+      return fn && fn.kind === 'fn' ? arrayOf(fn.result ?? Types.any) : resolved;
     }
 
     // One level of nesting comes off.
     case 'flat':
-      return list.element.kind === 'array' ? list.element : resolved;
+      return element.kind === 'array' ? element : resolved;
 
     default:
       return resolved;
@@ -1069,23 +1067,23 @@ const UNARY_OPS: Record<string, string> = {
  * Temporal keyword to its type. TOMORROW and YESTERDAY are date arithmetic, so
  * they stay Dates; the period boundaries are instants, so they are Datetimes.
  */
-const TEMPORAL_KEYWORD_TYPES: Record<string, CheckType> = {
-  TODAY: prim(Types.date),
-  TOMORROW: prim(Types.date),
-  YESTERDAY: prim(Types.date),
-  NOW: prim(Types.datetime),
-  SOD: prim(Types.datetime),
-  EOD: prim(Types.datetime),
-  SOW: prim(Types.datetime),
-  EOW: prim(Types.datetime),
-  SOM: prim(Types.datetime),
-  EOM: prim(Types.datetime),
-  SOQ: prim(Types.datetime),
-  EOQ: prim(Types.datetime),
-  SOY: prim(Types.datetime),
-  EOY: prim(Types.datetime),
-  BOT: prim(Types.datetime),
-  EOT: prim(Types.datetime),
+const TEMPORAL_KEYWORD_TYPES: Record<string, EloType> = {
+  TODAY: Types.date,
+  TOMORROW: Types.date,
+  YESTERDAY: Types.date,
+  NOW: Types.datetime,
+  SOD: Types.datetime,
+  EOD: Types.datetime,
+  SOW: Types.datetime,
+  EOW: Types.datetime,
+  SOM: Types.datetime,
+  EOM: Types.datetime,
+  SOQ: Types.datetime,
+  EOQ: Types.datetime,
+  SOY: Types.datetime,
+  EOY: Types.datetime,
+  BOT: Types.datetime,
+  EOT: Types.datetime,
 };
 
 /**
@@ -1098,20 +1096,20 @@ const TEMPORAL_KEYWORD_TYPES: Record<string, CheckType> = {
  * type, because no target has a parser for it (done/0173). A name admitted
  * here without one compiles to a reference that does not exist.
  */
-const BUILTIN_TYPE_REFS: Record<string, CheckType> = {
-  Any: ANY,
-  Null: prim(Types.null),
-  String: prim(Types.string),
-  Int: prim(Types.int),
-  Float: prim(Types.float),
-  Bool: prim(Types.bool),
-  Boolean: prim(Types.bool),
-  Date: prim(Types.date),
-  Datetime: prim(Types.datetime),
-  Duration: prim(Types.duration),
+const BUILTIN_TYPE_REFS: Record<string, EloType> = {
+  Any: Types.any,
+  Null: Types.null,
+  String: Types.string,
+  Int: Types.int,
+  Float: Types.float,
+  Bool: Types.bool,
+  Boolean: Types.bool,
+  Date: Types.date,
+  Datetime: Types.datetime,
+  Duration: Types.duration,
   // `Data` is the plain-data contract: it validates that a value is data and
   // parses a JSON string, but says nothing about the shape that comes out.
-  Data: ANY,
+  Data: Types.any,
 };
 
 /** The names above, for the test that pins them to the transform's list. */
@@ -1120,5 +1118,19 @@ export const BUILTIN_TYPE_NAMES: readonly string[] = Object.keys(BUILTIN_TYPE_RE
 // Re-exported so a host can work with the checker's richer types without
 // reaching into an internal module.
 export type { TypeAnnotations } from './types';
-export type { CheckType } from './checktypes';
-export { describe as describeType, project as projectType, equals as typesEqual } from './checktypes';
+export type { EloType } from './types';
+export { describeType, structurallyEquals as typesEqual } from './types';
+/**
+ * There is one type now, so there is nothing to project onto: a type's `kind`
+ * *is* what dispatch sees. Kept so a host that called it still compiles.
+ *
+ * @deprecated the type it would return is the type it was given
+ */
+export function projectType(type: EloType): EloType {
+  return type;
+}
+/**
+ * @deprecated `EloType` is the checker's type and the compiler's; this alias
+ * is kept for hosts that named the old one.
+ */
+export type CheckType = EloType;
