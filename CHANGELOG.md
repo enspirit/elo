@@ -4,6 +4,27 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-11-03
+
+A security patch backported from 1.2.0, no behaviour changes. This is the
+conservative patch for projects pinned below 1.1.0.
+
+### Security
+
+- Close a sandbox escape in the **JavaScript** target that reached arbitrary
+  code execution, reported by Arthur Deierlein (c0rydoras) under coordinated
+  disclosure. Chained, the proof of concept was
+  `fetch({__proto__: [].map}, [['constructor']])('alert(1)')()`. Two
+  independent holes: the `kFetch` runtime denylist compared a path segment
+  against the forbidden meta-property names with `===`, which a non-string key
+  slips past — `['constructor']` and an object with a `toString` both coerce to
+  `"constructor"` only when the property read happens, after the check; and an
+  object literal emitted `{__proto__: v}` with the bare key, running the
+  `[[Prototype]]` setter rather than defining a data property. `kFetch` and
+  `kPatch` now coerce a segment to a string before the denylist, and the
+  emitter writes `__proto__` as a computed key. Either fix alone closes the
+  chain; both ship. Ruby and Python were never affected
+
 ## [1.0.3] - 2026-11-01
 
 A conservative patch release: one security fix and one portability fix, no new
