@@ -538,6 +538,7 @@ A value Elo refuses raises an `EloFailure` — an ordinary `Error` that also say
 the message:
 
 ```typescript
+import { compile } from '@enspirit/elo';
 import type { EloFailure } from '@enspirit/elo';
 
 try {
@@ -596,6 +597,7 @@ is what the `scope` option is for.
 
 ```typescript
 import { compile, loadProgram, readProgram, hasNoExpression } from '@enspirit/elo';
+import { nodeLoader } from '@enspirit/elo/node';
 
 const program = loadProgram(source, { loader: nodeLoader(), file });
 for (const line of readProgram(program.body, true)) {
@@ -633,16 +635,43 @@ console.log(compileToSQL(ast));
 
 ## Programmatic AST Construction
 
-```typescript
-import { binary, variable, literal } from './src';
+A host can build an expression directly, without going through Elo source text
+— what a formula builder does when the user picks fields from a menu rather
+than typing. The factories produce the same AST `parse()` does, so the
+compilers take it unchanged:
 
-// Build: (price * quantity) - discount
+```typescript
+import { binary, memberAccess, variable, compileToJavaScript } from '@enspirit/elo';
+
+// Build `_.price * _.quantity - _.discount`
+const field = (name: string) => memberAccess(variable('_'), name);
 const ast = binary(
   '-',
-  binary('*', variable('price'), variable('quantity')),
-  variable('discount')
+  binary('*', field('price'), field('quantity')),
+  field('discount')
 );
+
+compileToJavaScript(ast);   // => (function(_) { … return kSub(kMul(_.price, _.quantity), _.discount); })
 ```
+
+Values come off `_`, the input, as they do in Elo source. A bare
+`variable('price')` is **not** a free variable waiting to be supplied — Elo has
+no such thing, so the transform refuses it with `Undefined variable: 'price'`.
+Bind it with `letExpr` if you need a local:
+
+```typescript
+import { letExpr, binary, memberAccess, variable, literal, compileToJavaScript } from '@enspirit/elo';
+
+const ast = letExpr(
+  [{ name: 'rate', value: literal(0.21) }],
+  binary('*', memberAccess(variable('_'), 'total'), variable('rate'))
+);
+
+compileToJavaScript(ast);
+```
+
+The AST is **protected**, not public: it may change in a minor release. Pin
+`1.2.x` if you build or read one — see [Versioning](#versioning-and-the-public-interface).
 
 ## Versioning and the public interface
 
