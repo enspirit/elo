@@ -4,6 +4,26 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-11-03
+
+A security patch backported from 1.2.1, completing the fix 1.0.4 began. This is
+the conservative patch for projects pinned below 1.1.0.
+
+### Security
+
+- Complete the JavaScript sandbox-escape fix. 1.0.4 closed the reported chain,
+  but a JavaScript property read walks the prototype chain, so any host builtin
+  the denylist does not name was still handed back as a live function —
+  `[].map` is `Array.prototype.map`, `{a: 1}.toString` is
+  `Object.prototype.toString`, and `fetch({}, 'toString')` the same through the
+  runtime path. None escalate on their own (the Function constructor stays
+  denylisted at every hop), but the security model promises compiled code
+  cannot reach host internals. Member access, `fetch` and `patch` on JavaScript
+  now read an **own** property or null, through a new `kMember` helper — a
+  structural guard that closes every name at once where a denylist could not.
+  Real data is unaffected: a key the author wrote shadows any namesake on the
+  prototype, so `{map: 42}.map` is `42`. Ruby and Python were never affected
+
 ## [1.0.4] - 2026-11-03
 
 A security patch backported from 1.2.0, no behaviour changes. This is the

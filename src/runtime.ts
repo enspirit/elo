@@ -41,7 +41,10 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   kPad: [],
   kRound: [],
   kNeq: ['kEq'],
-  kFetchObject: ['kFetch'],
+  kMember: [],
+  kFetch: ['kMember'],
+  kFetchObject: ['kFetch', 'kMember'],
+  kPatch: ['kMember'],
   // Parser helpers depend on pOk/pFail
   pAny: ['pOk'],
   pNull: ['pOk', 'pFail'],
@@ -127,6 +130,16 @@ export const JS_HELPERS: Record<string, string> = {
   return 'Tuple';
 }`,
   kIsNull: `function kIsNull(v) { return v === null || v === undefined; }`,
+  /* A member read must reach data, never the host prototype. A JavaScript
+     property read walks the chain, so an absent key hands back a builtin
+     method (toString, map, call...) as a live function. Reading only an own
+     property, null otherwise, closes that for every name at once, while a
+     key the author wrote shadows any namesake on the prototype. The name
+     denylists in kFetch and kPatch are the older, narrower layer behind it. */
+  kMember: `function kMember(o, k) {
+  if (o === null || typeof o !== 'object') return null;
+  return Object.prototype.hasOwnProperty.call(o, k) ? o[k] : null;
+}`,
   kFetch: `function kFetch(data, path) {
   var FORBIDDEN = ['constructor', '__proto__', 'prototype', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'];
   let current = data;
@@ -140,7 +153,7 @@ export const JS_HELPERS: Record<string, string> = {
       /* A property read walks the prototype chain, so a meta-property name (reachable via a variable, array or concatenated key the compile-time denylist cannot see) would hand back Object.prototype or the Object constructor. These are never valid data keys. The read coerces the key to a string, so a non-string segment (an array, or an object with a toString) would slip past a === check and still land on the coerced name — the denylist must see the same string the read will. */
       const key = String(segment);
       if (FORBIDDEN.indexOf(key) !== -1) return null;
-      current = current[key];
+      current = kMember(current, key);
     }
   }
   return current === undefined ? null : current;
@@ -174,7 +187,7 @@ export const JS_HELPERS: Record<string, string> = {
   } else {
     if (Array.isArray(data)) throw new Error('cannot patch object key on array');
     const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {};
-    const existing = obj[key];
+    const existing = kMember(obj, key);
     const patched = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value);
     /* Assigning obj['__proto__'] runs the prototype setter; defineProperty keeps it a data property. */
     if (key === '__proto__') { Object.defineProperty(obj, key, { value: patched, writable: true, enumerable: true, configurable: true }); }

@@ -61,8 +61,8 @@ describe('JavaScript Compiler - Variables', () => {
   });
 
   it('should compile member access on _', () => {
-    assert.strictEqual(compileToJavaScript(memberAccess(variable('_'), 'price')), wrapJS('_.price'));
-    assert.strictEqual(compileToJavaScript(memberAccess(variable('_'), 'userName')), wrapJS('_.userName'));
+    assert.strictEqual(compileToJavaScript(memberAccess(variable('_'), 'price')), withHelpers('kMember(_, "price")', 'kMember'));
+    assert.strictEqual(compileToJavaScript(memberAccess(variable('_'), 'userName')), withHelpers('kMember(_, "userName")', 'kMember'));
   });
 });
 
@@ -101,17 +101,17 @@ describe('JavaScript Compiler - Arithmetic Operators (typed literals)', () => {
 describe('JavaScript Compiler - Arithmetic Operators (unknown types)', () => {
   it('should use kPow helper for input variable members', () => {
     const ast = binary('^', memberAccess(variable('_'), 'x'), memberAccess(variable('_'), 'y'));
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kPow(_.x, _.y)', 'kPow'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kPow(kMember(_, "x"), kMember(_, "y"))', 'kPow', 'kMember'));
   });
 
   it('should use kAdd helper for input variable members', () => {
     const ast = binary('+', memberAccess(variable('_'), 'a'), memberAccess(variable('_'), 'b'));
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kAdd(_.a, _.b)', 'kAdd'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kAdd(kMember(_, "a"), kMember(_, "b"))', 'kAdd', 'kMember'));
   });
 
   it('should use kMul helper for mixed known/unknown', () => {
     const ast = binary('*', literal(2), memberAccess(variable('_'), 'x'));
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(2, _.x)', 'kMul'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(2, kMember(_, "x"))', 'kMul', 'kMember'));
   });
 });
 
@@ -149,7 +149,7 @@ describe('JavaScript Compiler - Comparison Operators', () => {
   it('should use native operators for comparison with unknown types', () => {
     // JS comparison always uses native operators, even with unknown types
     const ast = binary('<', memberAccess(variable('_'), 'x'), literal(10));
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('_.x < 10'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMember(_, "x") < 10', 'kMember'));
   });
 });
 
@@ -172,7 +172,7 @@ describe('JavaScript Compiler - Logical Operators', () => {
   it('should use native NOT for unknown type', () => {
     // NOT always uses native JS ! operator
     const ast = unary('!', memberAccess(variable('_'), 'active'));
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('!_.active'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('!kMember(_, "active")', 'kMember'));
   });
 });
 
@@ -189,7 +189,7 @@ describe('JavaScript Compiler - Unary Operators', () => {
 
   it('should use kNeg helper for negated variable (unknown type)', () => {
     const ast = unary('-', memberAccess(variable('_'), 'x'));
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kNeg(_.x)', 'kNeg'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kNeg(kMember(_, "x"))', 'kNeg', 'kMember'));
   });
 });
 
@@ -223,7 +223,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       binary('+', memberAccess(variable('_'), 'a'), memberAccess(variable('_'), 'b')),
       memberAccess(variable('_'), 'c')
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(kAdd(_.a, _.b), _.c)', 'kAdd', 'kMul'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(kAdd(kMember(_, "a"), kMember(_, "b")), kMember(_, "c"))', 'kAdd', 'kMul', 'kMember'));
   });
 
   it('should compile _.price * _.quantity - _.discount', () => {
@@ -232,7 +232,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       binary('*', memberAccess(variable('_'), 'price'), memberAccess(variable('_'), 'quantity')),
       memberAccess(variable('_'), 'discount')
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kSub(kMul(_.price, _.quantity), _.discount)', 'kMul', 'kSub'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kSub(kMul(kMember(_, "price"), kMember(_, "quantity")), kMember(_, "discount"))', 'kMul', 'kSub', 'kMember'));
   });
 
   it('should compile _.x > 0 && _.x < 100 with native operators', () => {
@@ -242,7 +242,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       binary('>', memberAccess(variable('_'), 'x'), literal(0)),
       binary('<', memberAccess(variable('_'), 'x'), literal(100))
     );
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('_.x > 0 && _.x < 100'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMember(_, "x") > 0 && kMember(_, "x") < 100', 'kMember'));
   });
 
   it('should compile (_.x + 5) * (_.y - 3) / 2', () => {
@@ -255,7 +255,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       ),
       literal(2)
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kDiv(kMul(kAdd(_.x, 5), kSub(_.y, 3)), 2)', 'kAdd', 'kSub', 'kMul', 'kDiv'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kDiv(kMul(kAdd(kMember(_, "x"), 5), kSub(kMember(_, "y"), 3)), 2)', 'kAdd', 'kSub', 'kMul', 'kDiv', 'kMember'));
   });
 
   it('should compile mixed arithmetic and boolean', () => {
@@ -265,7 +265,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       binary('*', memberAccess(variable('_'), 'total'), literal(1.1)),
       literal(1000)
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(_.total, 1.1) > 1000', 'kMul'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(kMember(_, "total"), 1.1) > 1000', 'kMul', 'kMember'));
   });
 });
 
@@ -291,7 +291,7 @@ describe('JavaScript Compiler - Edge Cases', () => {
   it('should handle multiple unary operators with unknown type', () => {
     const ast = unary('!', unary('!', memberAccess(variable('_'), 'x')));
     // NOT uses native ! even for unknown types
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('!!_.x'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('!!kMember(_, "x")', 'kMember'));
   });
 });
 

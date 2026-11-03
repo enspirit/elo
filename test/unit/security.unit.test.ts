@@ -298,6 +298,74 @@ describe('Security - JavaScript runtime sandbox escape via fetch (c0rydoras)', (
   });
 });
 
+/**
+ * Security: member access, fetch and patch must read *data*, not the host
+ * prototype chain.
+ *
+ * The denylist fix above blocks the seven meta-property names that reach the
+ * Function constructor, but a denylist cannot name every host property. A
+ * JavaScript property read walks the prototype chain, so any *other* builtin —
+ * `toString`, `valueOf`, `hasOwnProperty`, `map`, `filter`, `call`, `bind` — was
+ * still handed back as a live host function: `[].map` is `Array.prototype.map`,
+ * `{a: 1}.toString` is `Object.prototype.toString`, and `fetch({}, 'toString')`
+ * the same through the runtime path. None escalate on their own (the Function
+ * constructor stays denylisted at every hop), but the security model promises
+ * compiled code cannot reach host internals, and a leaked `.call`/`.bind` is the
+ * foothold a future gap would build on.
+ *
+ * The fix is structural rather than a longer denylist: a read resolves to a
+ * value only when the key is an *own* property, and otherwise to null — which
+ * is what reading an absent key already means in Elo. Legitimate data is
+ * unaffected, because a key the author put there is an own property and shadows
+ * any namesake on the prototype. JavaScript only: a Ruby Hash and a Python dict
+ * index data and never consult a prototype, so both already answer nil/None.
+ */
+describe('Security - member access reads data, not the host prototype (JS)', () => {
+  const run = (src: string): unknown =>
+    compile<(input: unknown) => unknown>(src, { runtime: {} })(null);
+
+  const HOST_METHODS = ['toString', 'valueOf', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable'];
+  const ARRAY_METHODS = ['map', 'filter', 'sort', 'call', 'bind', 'apply', 'reduce'];
+
+  for (const name of HOST_METHODS) {
+    it(`{...}.${name} is null, not Object.prototype.${name}`, () => {
+      assert.strictEqual(run(`{a: 1}.${name}`), null);
+    });
+  }
+
+  for (const name of ARRAY_METHODS) {
+    it(`[].${name} is null, not the native array method`, () => {
+      assert.strictEqual(run(`[].${name}`), null);
+    });
+  }
+
+  it('fetch reads an own key, never a prototype method', () => {
+    assert.strictEqual(run(`fetch({}, 'toString')`), null);
+    assert.strictEqual(run(`fetch({}, [['hasOwnProperty']])`), null);
+    assert.strictEqual(run(`fetch([], 'map')`), null);
+    assert.strictEqual(run(`fetch({a: {b: 1}}, .a.valueOf)`), null);
+  });
+
+  it('a data key that happens to share a host-method name still reads', () => {
+    assert.strictEqual(run(`{map: 42}.map`), 42);
+    assert.strictEqual(run(`{toString: 7}.toString`), 7);
+    assert.strictEqual(run(`fetch({toString: 9}, 'toString')`), 9);
+  });
+
+  it('member access never yields a function value', () => {
+    for (const src of [`[].map`, `{a: 1}.toString`, `{a: 1}.hasOwnProperty`]) {
+      assert.notStrictEqual(typeof run(src), 'function', `${src} leaked a function`);
+    }
+  });
+
+  it('ordinary data access is unchanged', () => {
+    assert.strictEqual(run(`{a: {b: 5}}.a.b`), 5);
+    assert.strictEqual(run(`{name: 'Alice'}.name`), 'Alice');
+    assert.strictEqual(run(`isNull({a: 1}.missing)`), true);
+  });
+});
+
+
 
 describe('Security - Subtype constraint label injection (JS/Ruby)', () => {
   // Constraint-label emission in JS (javascript.ts:313,410) and Ruby
