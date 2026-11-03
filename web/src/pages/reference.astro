@@ -35,6 +35,7 @@ import Footer from '../components/Footer.astro';
         <a href="#get-started">Installation</a>
         <a href="#javascript-api">JavaScript API</a>
         <a href="#command-line">Command Line</a>
+        <a href="#versioning">Versioning</a>
       </nav>
     </aside>
     <article class="doc-content">
@@ -1296,6 +1297,73 @@ eloc --typecheck -e "if 1 then 2 else 3"</pre>
           is idempotent — on each deploy is a fine place for it.
           <code>eloc -p -t sql</code> refuses rather than emit statements no
           host can run as an expression.
+        </p>
+      </section>
+
+      <section class="doc-section" id="versioning">
+        <h2>Versioning</h2>
+        <p>
+          Elo follows <a href="https://semver.org">semantic versioning</a>,
+          which is a promise about a surface — so here is the surface. Three
+          tiers, and the tier a thing sits in decides what changing it costs.
+        </p>
+        <h3>Public — changes only in a major release</h3>
+        <ul>
+          <li>The <strong>language and the standard library</strong>, and their
+          intended semantics</li>
+          <li>The <strong><code>elo</code> and <code>eloc</code> binaries</strong>:
+          their options, and their exit codes — <code>0</code> when code was
+          produced, non-zero when the compiler refused</li>
+          <li>The <strong>TypeScript entry points</strong> for parsing,
+          compiling, evaluating and type-checking: <code>compile</code>,
+          <code>parse</code>, the four <code>compileTo…</code> functions,
+          <code>typecheck</code>, <code>getPrelude</code>, and the module
+          loader. <code>@enspirit/elo</code> stays importable in a browser;
+          <code>@enspirit/elo/node</code> is where anything touching the
+          filesystem lives</li>
+          <li>Two things that live <em>inside</em> the generated code, because a
+          host has to hold onto them: a failure's <code>kind</code>,
+          <code>path</code> and <code>label</code> — the <code>message</code>
+          prose is not promised, which is why the kinds exist — and the ten
+          <code>elo_*</code> PostgreSQL prelude function names you install in
+          your database</li>
+        </ul>
+        <h3>Protected — may change in a minor release, always announced in the changelog</h3>
+        <ul>
+          <li>The <strong>AST</strong>: its node shapes and its factory functions</li>
+          <li>The type checker's <strong>diagnostic codes</strong>. The checker
+          keeps working and keeps reporting; which code it uses for a given
+          mistake may be renamed</li>
+        </ul>
+        <h3>Private — no promise at all</h3>
+        <ul>
+          <li>The <strong>shape of the generated code</strong>. Do not depend on
+          how an expression translates, nor on the target language's own dynamic
+          behaviour around it. Elo promises what an expression <em>means</em>,
+          not what it compiles to</li>
+          <li>Everything else reachable from the package. Being importable is
+          not a promise</li>
+        </ul>
+        <p class="note">
+          <strong>Which version to depend on.</strong> Use <code>1.x</code> if
+          Elo is a black box to you — the language, the CLIs,
+          <code>compile()</code>. Pin <code>1.2.x</code> if you build or read an
+          AST, or branch on diagnostic codes.
+        </p>
+        <h3>What counts as a breaking change</h3>
+        <p>
+          A program Elo never meant to accept is a <strong>bug fix</strong>, not
+          a break. The compiler used to accept <code>round('x')</code>, and
+          <code>[1, 'two']</code> on PostgreSQL, and emitted code that raised or
+          that the database rejected; refusing them breaks nothing that worked.
+          Where the four targets disagreed, at most one of them was right.
+        </p>
+        <p>
+          What makes "never meant to" checkable rather than a matter of opinion:
+          <strong>the acceptance corpus is the specification</strong>. A
+          behaviour asserted by a fixture, on a target, is promised. A behaviour
+          no fixture asserts is unspecified, and making the four targets agree
+          on it is a fix.
         </p>
       </section>
 

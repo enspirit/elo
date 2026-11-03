@@ -644,6 +644,65 @@ const ast = binary(
 );
 ```
 
+## Versioning and the public interface
+
+Elo follows [semantic versioning](https://semver.org), which is a promise about
+a surface — so here is the surface. Three tiers, and the tier a thing sits in
+decides what changing it costs.
+
+**Public — changes only in a major release**
+
+- The **language and the standard library**, and their intended semantics
+- The **`elo` and `eloc` binaries**: their options, and their exit codes (`0`
+  when code was produced, non-zero when the compiler refused)
+- The **TypeScript entry points** for parsing, compiling, evaluating and
+  type-checking — `compile`, `parse`, `compileToRuby` / `compileToJavaScript` /
+  `compileToPython` / `compileToSQL`, `typecheck`, `getPrelude`, and the module
+  loader entry points. `@enspirit/elo` stays importable in a browser;
+  `@enspirit/elo/node` is where anything touching the filesystem lives
+- Two things that live *inside* the generated code, because a host has to hold
+  onto them: a failure's **`kind`, `path` and `label`** (the `message` prose is
+  not promised — that is why the kinds exist), and the ten **`elo_*` PostgreSQL
+  prelude function names**, which you install in your database
+
+**Protected — may change in a minor release, always announced in the [changelog](CHANGELOG.md)**
+
+- The **AST**: its node shapes and its factory functions
+- The type checker's **`DiagnosticCode`** set. The checker keeps working and
+  keeps reporting; which code it uses for a given mistake may be renamed
+
+**Private — no promise at all**
+
+- The **shape of the generated code**. Do not depend on how an expression
+  translates, nor on the target language's own dynamic behaviour around it. Elo
+  promises what an expression *means*, not what it compiles to
+- Everything else reachable from the package: `toEloCode`, the format adapters,
+  `locate` / `isLocated` / `formatSourceLocation`, and anything under
+  `src/compilers`, `src/bindings`, `src/ir.ts`, `src/transform.ts`,
+  `src/stdlib.ts`. Being importable is not a promise
+
+### Which version to depend on
+
+| If you use | Depend on |
+| --- | --- |
+| the language, the CLIs, or `compile` / `parse` / `compileToX` — Elo as a black box | `^1.2.0` — any `1.x` |
+| the AST factories or node shapes, or you branch on `DiagnosticCode` | `~1.2.0` — `1.2.x` only |
+
+In one sentence: **use `1.x` if Elo is a black box to you; pin `1.2.x` if you
+build or read an AST, or branch on diagnostic codes.**
+
+### What counts as a breaking change
+
+A program Elo never meant to accept is a **bug fix**, not a break. The compiler
+used to accept `round('x')` and `[1, 'two']` on PostgreSQL, and emitted code
+that raised or that psql rejected; refusing them breaks nothing that worked.
+Where the four targets disagreed, at most one of them was right.
+
+What makes "never meant to" checkable rather than a matter of opinion: **the
+acceptance corpus is the specification.** A behaviour asserted by a fixture, on
+a target, is promised. A behaviour no fixture asserts is unspecified, and making
+the four targets agree on it is a fix — see `test/fixtures/`.
+
 ## Examples
 
 Run the examples:

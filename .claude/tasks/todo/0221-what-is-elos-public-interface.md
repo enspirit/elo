@@ -260,10 +260,14 @@ read an AST, or branch on diagnostic codes.*
 
 ## Still open
 
-1. Where do the **format adapters** sit — `jsonAdapter`, `csvAdapter`,
-   `eloAdapter`, `defaultFormats`, `getFormat`, `parseCSV`, `toCSV`,
-   `FormatAdapter`, `FormatRegistry`? All exported, none documented. The
-   formats themselves are public through the binaries (that is how `elo` reads
-   and writes data), so this is the same split `toEloCode` has: probably
-   private names over a public format. Needs saying rather than inheriting the
-   ambiguity.
+Nothing. The last one is answered: the **nine format exports** — `jsonAdapter`,
+`csvAdapter`, `eloAdapter`, `defaultFormats`, `getFormat`, `parseCSV`, `toCSV`,
+`FormatAdapter`, `FormatRegistry` — are **private**, the same split `toEloCode`
+has. The *names* carry no promise; the *formats* stay public through the
+binaries, since that is how `elo` reads and writes data. A host that wants to
+read Elo's CSV or Elo-literal output should go through the CLI, not through
+these functions.
+
+So every name is now classified, in words. What remains to implement is the
+part that makes it true: the explicit export list replacing
+`export * from './ast'`, the three-bucket test, and the README section.
