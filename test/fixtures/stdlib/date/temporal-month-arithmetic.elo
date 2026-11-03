@@ -1,0 +1,35 @@
+# A month in a duration is a calendar month, not a fixed number of days.
+#
+# Python converted the month component of a duration to thirty days, so
+# `D2026-03-01 + P1M` landed on 31 March — a plausible date, one day off, and
+# only wrong for months whose length is not thirty. JavaScript, Ruby and SQL
+# were already doing calendar arithmetic; these assertions pin the four
+# together.
+#
+# The clamping cases matter as much as the plain ones: adding a month to the
+# 31st of a month is the one place where the four targets could silently
+# differ again.
+
+assert(D2026-03-01 + P1M == D2026-04-01)
+assert(D2026-03-01 + P2M == D2026-05-01)
+assert(D2026-03-01 + P3M == D2026-06-01)
+assert(D2026-04-01 - P1M == D2026-03-01)
+
+# Clamping: the day-of-month does not exist in the target month
+assert(D2026-01-31 + P1M == D2026-02-28)
+assert(D2026-03-31 - P1M == D2026-02-28)
+assert(D2026-05-31 + P1M == D2026-06-30)
+assert(D2026-01-31 + P1M + P1M == D2026-03-28)  # clamps at each step
+assert(D2026-01-31 + P1Y == D2027-01-31)
+
+# The month component travels with the others, and goes first
+assert(D2026-03-01 + P1M1D == D2026-04-02)
+assert(D2026-01-31 + P1M1D == D2026-03-01)
+assert(D2026-03-01 + P1Y1M1D == D2027-04-02)
+assert(D2026-03-01 + (P1M + P1M) == D2026-05-01)
+assert(D2026-03-01 + (P1M + P1D) == D2026-04-02)
+
+# Datetimes take the same path as dates
+assert(D2026-05-15T08:00:00Z + P1M == D2026-06-15T08:00:00Z)
+assert(D2026-06-30T08:00:00Z - P1M == D2026-05-30T08:00:00Z)
+assert(D2026-05-31T08:00:00Z + P1M == D2026-06-30T08:00:00Z)

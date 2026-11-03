@@ -35,8 +35,13 @@ assert((let f = fn( x ~> x - P1D ) in f(D2024-01-16T00:00:00Z)) == D2024-01-15T0
 assert((let f = fn( x ~> x == D2024-01-15T00:00:00Z ) in f(D2024-01-15T00:00:00Z)) == true)
 assert((let f = fn( x, y ~> x - y ) in f(D2024-01-16T00:00:00Z, D2024-01-15T00:00:00Z)) == P1D)
 
+# A calendar month through the dynamic path, where Python added thirty days
+assert((let f = fn( x, y ~> x + y ) in f(D2026-03-01, P1M)) == D2026-04-01)
+assert((let f = fn( x, y ~> x - y ) in f(D2026-04-01, P1M)) == D2026-03-01)
+
 # The typed twins, which were already correct and must stay so
 assert(P1D + P1D == P2D)
 assert(P1D == P1D)
 assert(PT24H == P1D)
 assert(D2024-01-15T00:00:00Z + P1D == D2024-01-16T00:00:00Z)
+assert(D2026-03-01 + P1M == D2026-04-01)

@@ -134,6 +134,11 @@ import Footer from '../components/Footer.astro';
           <pre class="language-elo">PT2H30M</pre>
           <p class="example-desc">2 hours and 30 minutes. Use <code>PT</code> for time-only durations.</p>
         </div>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">Calendar Months</div>
+          <pre class="language-elo">D2026-01-31 + P1M</pre>
+          <p class="example-desc">Years and months are calendar units, not fixed lengths: <code>+ P1M</code> keeps the day-of-month and moves to the next month, clamping to its last day when that day does not exist — here <code>D2026-02-28</code>.</p>
+        </div>
         <h3>Data Paths</h3>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Path Literal</div>

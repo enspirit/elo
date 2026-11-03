@@ -738,10 +738,27 @@ export const PY_HELPERS: Record<string, string> = {
   _import_re: `import re`,
   _import_collections: `from collections import namedtuple`,
   _EloInterval: `EloInterval = namedtuple('EloInterval', ['start', 'end'])`,
+  // A duration keeps its year and month components apart from its time
+  // component, because they are not a number of milliseconds: a month is a
+  // calendar month, so `date + P1M` lands on the same day-of-month of the next
+  // month whatever that month's length. Folding them into milliseconds made
+  // Python add thirty days per month, where JavaScript, Ruby and SQL all did
+  // calendar arithmetic.
+  //
+  // `to_ms` remains, for the comparisons and the in_* conversions, which need a
+  // total order. It uses the same nominal lengths as the other targets — 365
+  // days for a year, 30 for a month — so `P1Y != P12M` there, as on JavaScript.
+  //
+  // Scaling (`scale`, `divide`, `negate`) collapses to milliseconds, which is
+  // what the JavaScript target does too: `Duration.fromMillis(l.toMillis() * r)`
+  // has no month left either. Ruby keeps the month, so `date + P1M * 2` already
+  // differs between those two; that divergence is its own defect, not this one.
   _elo_duration: `class EloDuration:
-    __slots__ = ('_ms',)
-    def __init__(self, ms):
+    __slots__ = ('_ms', '_years', '_months')
+    def __init__(self, ms, years=0, months=0):
         self._ms = ms
+        self._years = years
+        self._months = months
     @staticmethod
     def from_iso(s):
         m = re.match(r'^P(?:(\\d+)Y)?(?:(\\d+)M)?(?:(\\d+)W)?(?:(\\d+)D)?(?:T(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+(?:\\.\\d+)?)S)?)?$', s)
@@ -753,43 +770,52 @@ export const PY_HELPERS: Record<string, string> = {
         hrs = int(m.group(5) or 0)
         mns = int(m.group(6) or 0)
         scs = float(m.group(7) or 0)
-        total_days = yrs * 365 + mos * 30 + wks * 7 + dys
-        return EloDuration(((total_days * 24 + hrs) * 60 + mns) * 60000 + scs * 1000)
+        total_days = wks * 7 + dys
+        return EloDuration(((total_days * 24 + hrs) * 60 + mns) * 60000 + scs * 1000, yrs, mos)
     @staticmethod
     def from_timedelta(td):
         return EloDuration(td.total_seconds() * 1000)
-    def to_ms(self): return self._ms
+    def to_ms(self): return self._ms + (self._years * 365 + self._months * 30) * 86400000
+    def time_ms(self): return self._ms
+    def calendar_months(self): return self._years * 12 + self._months
     def plus(self, other):
-        if isinstance(other, EloDuration): return EloDuration(self._ms + other._ms)
+        if isinstance(other, EloDuration): return EloDuration(self._ms + other._ms, self._years + other._years, self._months + other._months)
         if isinstance(other, _dt.datetime): return _elo_dt_plus(other, self)
         raise Exception('Cannot add duration to ' + type(other).__name__)
     def minus(self, other):
-        if isinstance(other, EloDuration): return EloDuration(self._ms - other._ms)
+        if isinstance(other, EloDuration): return EloDuration(self._ms - other._ms, self._years - other._years, self._months - other._months)
         raise Exception('Cannot subtract ' + type(other).__name__ + ' from duration')
-    def scale(self, n): return EloDuration(self._ms * n)
-    def divide(self, n): return EloDuration(self._ms / n)
-    def negate(self): return EloDuration(-self._ms)
-    def __eq__(self, other): return isinstance(other, EloDuration) and self._ms == other._ms
+    def scale(self, n): return EloDuration(self.to_ms() * n)
+    def divide(self, n): return EloDuration(self.to_ms() / n)
+    def negate(self): return EloDuration(-self.to_ms())
+    def __eq__(self, other): return isinstance(other, EloDuration) and self.to_ms() == other.to_ms()
     def __ne__(self, other): return not self.__eq__(other)
-    def __lt__(self, other): return self._ms < other._ms
-    def __le__(self, other): return self._ms <= other._ms
-    def __gt__(self, other): return self._ms > other._ms
-    def __ge__(self, other): return self._ms >= other._ms
-    def __repr__(self): return f'EloDuration({self._ms}ms)'
-    def in_seconds(self): return self._ms / 1000.0
-    def in_minutes(self): return self._ms / 60000.0
-    def in_hours(self): return self._ms / 3600000.0
-    def in_days(self): return self._ms / 86400000.0
-    def in_weeks(self): return self._ms / 604800000.0
-    def in_months(self): return self._ms / (30.4375 * 86400000.0)
-    def in_quarters(self): return self._ms / (91.3125 * 86400000.0)
-    def in_years(self): return self._ms / (365.25 * 86400000.0)`,
-  _elo_dt_helpers: `def _elo_dt_plus(dt, dur):
+    def __lt__(self, other): return self.to_ms() < other.to_ms()
+    def __le__(self, other): return self.to_ms() <= other.to_ms()
+    def __gt__(self, other): return self.to_ms() > other.to_ms()
+    def __ge__(self, other): return self.to_ms() >= other.to_ms()
+    def __repr__(self): return f'EloDuration({self._years}Y{self._months}M{self._ms}ms)'
+    def in_seconds(self): return self.to_ms() / 1000.0
+    def in_minutes(self): return self.to_ms() / 60000.0
+    def in_hours(self): return self.to_ms() / 3600000.0
+    def in_days(self): return self.to_ms() / 86400000.0
+    def in_weeks(self): return self.to_ms() / 604800000.0
+    def in_months(self): return self.to_ms() / (30.4375 * 86400000.0)
+    def in_quarters(self): return self.to_ms() / (91.3125 * 86400000.0)
+    def in_years(self): return self.to_ms() / (365.25 * 86400000.0)`,
+  _elo_dt_helpers: `def _elo_shift_months(dt, n):
+    if not n: return dt
+    import calendar
+    m = dt.month - 1 + n
+    y = dt.year + m // 12
+    m = m % 12 + 1
+    return dt.replace(year=y, month=m, day=min(dt.day, calendar.monthrange(y, m)[1]))
+def _elo_dt_plus(dt, dur):
     from datetime import timedelta
-    return dt + timedelta(milliseconds=dur.to_ms())
+    return _elo_shift_months(dt, dur.calendar_months()) + timedelta(milliseconds=dur.time_ms())
 def _elo_dt_minus_dur(dt, dur):
     from datetime import timedelta
-    return dt - timedelta(milliseconds=dur.to_ms())
+    return _elo_shift_months(dt, -dur.calendar_months()) - timedelta(milliseconds=dur.time_ms())
 def _elo_dt_diff(a, b):
     diff = a - b
     return EloDuration(diff.total_seconds() * 1000)
@@ -935,15 +961,20 @@ def _elo_end_of_year(dt):
     if isinstance(v, dict): return '{' + ', '.join(k + ': ' + kString(v[k]) for k in v) + '}'
     return str(v)`,
   _elo_dur_to_iso: `def _elo_dur_to_iso(d):
-    ms = d.to_ms()
-    if ms == 0: return 'PT0S'
-    neg = ms < 0
+    mos = d.calendar_months()
+    ms = d.time_ms()
+    if mos and ms and (mos < 0) != (ms < 0): mos, ms = 0, d.to_ms()
+    if mos == 0 and ms == 0: return 'PT0S'
+    neg = mos < 0 or ms < 0
+    mos = abs(mos)
     ms = abs(ms)
     secs = ms / 1000
     days = int(secs // 86400); secs -= days * 86400
     hours = int(secs // 3600); secs -= hours * 3600
     mins = int(secs // 60); secs -= mins * 60
     s = '-P' if neg else 'P'
+    if mos // 12: s += str(mos // 12) + 'Y'
+    if mos % 12: s += str(mos % 12) + 'M'
     if days: s += str(days) + 'D'
     if hours or mins or secs: s += 'T'
     if hours: s += str(hours) + 'H'
