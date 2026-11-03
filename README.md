@@ -732,6 +732,34 @@ acceptance corpus is the specification.** A behaviour asserted by a fixture, on
 a target, is promised. A behaviour no fixture asserts is unspecified, and making
 the four targets agree on it is a fix — see `test/fixtures/`.
 
+### Pin the behaviour you depend on
+
+Which means: **if your code relies on something, send us an assertion for it.**
+A fixture is the only thing that turns a behaviour you observed into a behaviour
+Elo owes you — and it is the cheapest contribution there is, one line:
+
+```elo
+assert(startOfMonth(D2026-03-15) == D2026-03-01)
+```
+
+Drop it in the right file under `test/fixtures/`, run
+`./scripts/regenerate-fixtures.sh <fixture-name>`, and open a pull request. The
+suite then runs it on Ruby, JavaScript, Python and PostgreSQL on every commit,
+so the day one target disagrees, it is our bug rather than your surprise.
+
+This is genuinely the most useful thing an Elo user can contribute, for two
+reasons. An assertion that **passes on all four** targets costs us nothing and
+locks the behaviour down forever. An assertion that **fails on one** has found a
+portability bug — most of the defects fixed in 1.2.0 were exactly that, four
+targets asked the same question and one answering differently. Either way you
+end up better off, and you do not need to know how the compiler works to write
+one.
+
+If you are unsure whether something is specified, grep the corpus. If it is not
+there, it is not promised yet — and that is the gap worth a pull request. See
+[HACKING.md](HACKING.md) for running the suite, and `CLAUDE.md` for the fixture
+conventions.
+
 ## Examples
 
 Run the examples:
@@ -844,4 +872,10 @@ Elo follows a strict test-driven development methodology to ensure semantic equi
 - Detailed development workflow
 - How to add new features and operators
 - Architecture documentation
+
+**Using Elo and want to keep it working?** The single most useful contribution
+is an acceptance assertion for the behaviour your code relies on — see
+[Pin the behaviour you depend on](#pin-the-behaviour-you-depend-on). One line in
+`test/fixtures/` turns something you observed into something Elo owes you, and
+runs on all four targets on every commit. No compiler knowledge needed.
 

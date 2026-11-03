@@ -1365,6 +1365,34 @@ eloc --typecheck -e "if 1 then 2 else 3"</pre>
           no fixture asserts is unspecified, and making the four targets agree
           on it is a fix.
         </p>
+        <h3>Pin the behaviour you depend on</h3>
+        <p>
+          Which means: <strong>if your code relies on something, send us an
+          assertion for it.</strong> A fixture is the only thing that turns a
+          behaviour you observed into a behaviour Elo owes you — and it is the
+          cheapest contribution there is, one line:
+        </p>
+        <div class="example" data-action="click->doc#tryExample">
+          <div class="example-header">One Line Is A Contribution</div>
+          <pre class="language-elo">assert(startOfMonth(D2026-03-15) == D2026-03-01)</pre>
+          <p class="example-desc">Add it under <code>test/fixtures/</code>,
+          regenerate, open a pull request. It then runs on Ruby, JavaScript,
+          Python and PostgreSQL on every commit.</p>
+        </div>
+        <p>
+          This is the most useful thing an Elo user can contribute, for two
+          reasons. An assertion that <strong>passes on all four</strong> targets
+          costs us nothing and locks the behaviour down for good. One that
+          <strong>fails on one</strong> has found a portability bug — most of
+          the defects fixed in 1.2.0 were exactly that, four targets asked the
+          same question and one answering differently. Either way you end up
+          better off, and you do not need to know how the compiler works.
+        </p>
+        <p class="note">
+          Unsure whether something is specified? Search the corpus. If it is not
+          there, it is not promised yet — and that is the gap worth a pull
+          request.
+        </p>
       </section>
 
 
