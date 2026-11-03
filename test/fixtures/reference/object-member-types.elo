@@ -49,3 +49,19 @@ assert(trim({a: ' x '}.a) == 'x')
 assert((let o = {n: 10} in o.n) == 10)
 assert((let o = {n: 10} in o.n + 5) == 15)
 assert((let o = { x: '12' } in Int(o.x | 0)) == 12)
+
+# And with the member read *bound* to a name, which is the harder half: above,
+# the cast is decided at the access and lands in the expression that needs the
+# number. A let in between used to drop it — `m->>'n' AS n` was bound as text
+# and `n` was text from there on, so `n = 10` had no operator at all. It is the
+# one place where naming a subexpression changed what a program meant.
+assert((let o = {n: 10}, n = o.n in n) == 10)
+assert((let o = {n: 10}, n = o.n in n + 5) == 15)
+assert((let o = {n: 10}, n = o.n, m = n in m * 2) == 20)   # through one more binding
+assert((let o = {n: 10}, n = o.n in let m = n in m > 9) == true)  # and a nested let
+assert((let o = {f: 1.5}, f = o.f in f) == 1.5)
+assert((let o = {b: true}, b = o.b in b) == true)
+assert((let o = {d: D2024-01-15}, d = o.d in d) == D2024-01-15)
+# `+` on a bound string field is concatenation, and ordering is string ordering
+assert((let o = {s: 'x'}, s = o.s in s + '-a') == 'x-a')
+assert((let o = {s: 'a', t: 'b'}, s = o.s, t = o.t in s < t) == true)

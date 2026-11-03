@@ -75,3 +75,40 @@ threading it through the binding.
 - `reference/imports.elo` and `reference/imports-sharing.elo` gain `.sql`
   expected files, with the numeric assertions `imports-sharing` had to drop —
   lambdas aside, which SQL refuses for its own stated reason.
+
+## Closed
+
+Fixed, but not by this task: the 0214 family (`902ad8f` *EloType carries the
+shape the author wrote*, `0322e9f` *A declared type carries its shape through
+the transform*) gave the transform field types that survive a binding, and the
+SQL compiler now emits the cast *at* the binding — `(m->>'one')::numeric AS
+one` — which is one of the two shapes "What it should be" asked for.
+
+What this task actually did was add the coverage, because there was none: no
+fixture bound a member read to a name and ran on SQL, so nothing would have
+caught it coming back.
+
+- `reference/object-member-types.elo` gains nine assertions for the bound
+  member read, over Int, Float, Bool, Date and String, through a second
+  binding and through a nested `let`. **8 of the 9 were red on SQL** at
+  `16bfa14`, the commit before the 0214 family, and 0 of 9 on JavaScript, Ruby
+  and Python — SQL-only, as described above. The ninth, `s < t` on two bound
+  string fields, was already green: text ordering is one of the things that
+  happened to work, and it is kept to pin that the fix did not break it.
+- `reference/imports-sharing.elo` gains the numeric assertions it had to drop,
+  and `modules/shared-helper.elo` the `count`, `ratio` and `shared` fields they
+  need. **7 of 7 red** at `16bfa14`. That covers the import half, since an
+  import *is* a let of a member: the emission is now
+  `(_module_0->>'count')::numeric AS count`.
+
+Not done, and not about this: `reference/imports.elo` still has no `.sql`
+expected file, and cannot have one yet. It is refused for an unrelated reason —
+`Type definitions are not yet supported in SQL compilation` — and it also uses
+lambdas, `map` and `assertFails`. Nothing in it is blocked by the binding any
+more; it is blocked by the type prelude. `imports-sharing` covers what this
+task needed from it.
+
+One incidental fix: `test/unit/host-api.unit.test.ts` asserted a hardcoded
+count of 6 assertions in `imports-sharing.elo`. It now counts them from the
+file, so a fixture the corpus keeps growing does not have to come back and edit
+a number.

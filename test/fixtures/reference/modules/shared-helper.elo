@@ -1,8 +1,16 @@
 # A module imported by two others — the diamond any shared helper makes the
-# moment a second module wants it. It exports plain strings, so the diamond it
-# is part of compiles to SQL too. The label is what a test counts: it appears
+# moment a second module wants it. The label is what a test counts: it appears
 # once per copy of this module in the emitted code.
+#
+# It used to export plain strings only, because an import *is* a let of a
+# member and the SQL binding dropped the member's type: `_module_0->>'count'`
+# was bound as text, so `count == 2` had no operator at all. Equality on text
+# was the one thing that happened to work. The numbers are here now because
+# that is fixed, and they are what would catch it coming back.
 {
   name: 'helper',
-  label: 'shared-helper'
+  label: 'shared-helper',
+  count: 2,
+  ratio: 1.5,
+  shared: true
 }

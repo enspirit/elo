@@ -75,7 +75,8 @@ describe('readProgram - one expression per line', () => {
    */
   it('runs a file of per-line assertions, imports included', () => {
     const file = join(FIXTURES, 'imports-sharing.elo');
-    const program = loadProgram(readFileSync(file, 'utf-8'), { loader: nodeLoader(), file });
+    const source = readFileSync(file, 'utf-8');
+    const program = loadProgram(source, { loader: nodeLoader(), file });
     const lines = readProgram(program.body, true);
 
     let ran = 0;
@@ -85,7 +86,12 @@ describe('readProgram - one expression per line', () => {
       assert.strictEqual(run(null), true, line.trim());
       ran++;
     }
-    assert.strictEqual(ran, 6, 'every assertion of the fixture ran');
+    // Counted from the fixture rather than written here: what this guards is
+    // that the loop did not silently skip lines, and a fixture the corpus
+    // keeps growing should not have to come back and edit a number.
+    const expected = source.split('\n').filter((l) => l.startsWith('assert')).length;
+    assert.ok(expected > 0, 'the fixture has assertions to run');
+    assert.strictEqual(ran, expected, 'every assertion of the fixture ran');
   });
 
   it('keeps one entry per line of the source, blanks included', () => {

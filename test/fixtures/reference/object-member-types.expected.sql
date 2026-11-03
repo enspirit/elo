@@ -49,3 +49,19 @@ CASE WHEN TRIM((jsonb_build_object('a', ' x ')->>'a')) = 'x' THEN TRUE ELSE (SEL
 CASE WHEN (SELECT (o->>'n')::numeric FROM (SELECT jsonb_build_object('n', 10) AS o) AS _let) = 10 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (SELECT (o->>'n')::numeric + 5 FROM (SELECT jsonb_build_object('n', 10) AS o) AS _let) = 15 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (SELECT elo_int(COALESCE((o->>'x'), (0)::text)) FROM (SELECT jsonb_build_object('x', '12') AS o) AS _let) = 12 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+
+
+
+
+
+
+CASE WHEN (SELECT (SELECT n FROM (SELECT (o->>'n')::numeric AS n) AS _let) FROM (SELECT jsonb_build_object('n', 10) AS o) AS _let) = 10 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT n + 5 FROM (SELECT (o->>'n')::numeric AS n) AS _let) FROM (SELECT jsonb_build_object('n', 10) AS o) AS _let) = 15 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT (SELECT m * 2 FROM (SELECT n AS m) AS _let) FROM (SELECT (o->>'n')::numeric AS n) AS _let) FROM (SELECT jsonb_build_object('n', 10) AS o) AS _let) = 20 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT (SELECT m > 9 FROM (SELECT n AS m) AS _let) FROM (SELECT (o->>'n')::numeric AS n) AS _let) FROM (SELECT jsonb_build_object('n', 10) AS o) AS _let) = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT f FROM (SELECT (o->>'f')::numeric AS f) AS _let) FROM (SELECT jsonb_build_object('f', 1.5) AS o) AS _let) = 1.5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT b FROM (SELECT (o->>'b')::boolean AS b) AS _let) FROM (SELECT jsonb_build_object('b', TRUE) AS o) AS _let) = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT d FROM (SELECT (o->>'d')::date AS d) AS _let) FROM (SELECT jsonb_build_object('d', DATE '2024-01-15') AS o) AS _let) = DATE '2024-01-15' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+
+CASE WHEN (SELECT (SELECT s || '-a' FROM (SELECT (o->>'s') AS s) AS _let) FROM (SELECT jsonb_build_object('s', 'x') AS o) AS _let) = 'x-a' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (SELECT (SELECT s < t FROM (SELECT (o->>'t') AS t) AS _let) FROM (SELECT (o->>'s') AS s) AS _let) FROM (SELECT jsonb_build_object('s', 'a', 't', 'b') AS o) AS _let) = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

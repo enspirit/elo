@@ -49,3 +49,19 @@
 (lambda _: kAssert((o := {"n": 10}, o.get("n"))[-1] == 10))(None)
 (lambda _: kAssert((o := {"n": 10}, o.get("n") + 5)[-1] == 15))(None)
 (lambda _: kAssert((o := {"x": "12"}, int(((_alt0) if (_alt0 := o.get("x")) is not None else (0))))[-1] == 12))(None)
+
+
+
+
+
+
+(lambda _: kAssert((o := {"n": 10}, n := o.get("n"), n)[-1] == 10))(None)
+(lambda _: kAssert((o := {"n": 10}, n := o.get("n"), n + 5)[-1] == 15))(None)
+(lambda _: kAssert((o := {"n": 10}, n := o.get("n"), m := n, m * 2)[-1] == 20))(None)
+(lambda _: kAssert((o := {"n": 10}, n := o.get("n"), m := n, m > 9)[-1] == True))(None)
+(lambda _: kAssert((o := {"f": 1.5}, f := o.get("f"), f)[-1] == 1.5))(None)
+(lambda _: kAssert((o := {"b": True}, b := o.get("b"), b)[-1] == True))(None)
+(lambda _: kAssert(kEq((o := {"d": _elo_dt(2024, 1, 15)}, d := o.get("d"), d)[-1], _elo_dt(2024, 1, 15))))(None)
+
+(lambda _: kAssert((o := {"s": "x"}, s := o.get("s"), s + "-a")[-1] == "x-a"))(None)
+(lambda _: kAssert((o := {"s": "a", "t": "b"}, s := o.get("s"), t := o.get("t"), (s < t))[-1] == True))(None)

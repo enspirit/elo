@@ -1,9 +1,14 @@
 # A module imported by two others is one module: it is bound once, at the root
 # of the program, and every importer reads that one binding. Here the helper is
 # reached three ways — through each side of a diamond, and directly.
+#
+# An import is a `let` of a member, so the imported names are also what pins
+# that a binding carries the type of the member it holds. On SQL that type was
+# dropped: `jsonb->>'k'` is text, and `count == 2` compiled to `count = 2` with
+# no operator between text and integer.
 import './modules/diamond-a' as a
 import './modules/diamond-b' as b
-import { name, label } from './modules/shared-helper'
+import { name, label, count, ratio, shared } from './modules/shared-helper'
 
 assert(a.a == 'helper')
 assert(b.b == 'shared-helper')
@@ -12,3 +17,11 @@ assert(label == 'shared-helper')
 # The value is the same one however it was reached
 assert(a.label == label)
 assert(b.label == label)
+# An imported name that is not a string: equality, arithmetic and ordering
+assert(count == 2)
+assert(count + 1 == 3)
+assert(count > 1)
+assert(ratio == 1.5)
+assert(ratio * 2 == 3)
+assert(shared == true)
+assert(name + '-' + label == 'helper-shared-helper')
