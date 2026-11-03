@@ -271,3 +271,77 @@ these functions.
 So every name is now classified, in words. What remains to implement is the
 part that makes it true: the explicit export list replacing
 `export * from './ast'`, the three-bucket test, and the README section.
+
+## Implemented
+
+`src/index.ts` is now the surface: every name listed, grouped under a `PUBLIC`
+/ `PROTECTED` / `PRIVATE` banner with the reason each tier exists, and no
+`export *`. `test/unit/public-surface.unit.test.ts` holds the three manifests
+and fails in four directions.
+
+The runtime surface is **byte-identical** across the rewrite — 66 exports
+before, 66 after, nothing lost and nothing gained — so this changes what is
+*declared*, not what is reachable. That was the point: the names were already
+public, nobody had decided which ones were promised.
+
+### Reading the surface from the source, not the module
+
+The test parses `src/index.ts` rather than calling `Object.keys` on the module,
+because a type export leaves nothing behind at runtime — and `EloFailure` and
+`DiagnosticCode` are exactly the promises that would otherwise go unpinned. The
+runtime view is checked too, as a second direction: a value reachable from the
+package entry and classified nowhere is a failure.
+
+`src/node.ts` keeps `export * from './index'`, and the wildcard ban is scoped
+to `index.ts` on purpose. There the wildcard means "everything the main entry
+promises, plus `nodeLoader`" — it re-exports a curated list rather than a
+module's accidents, which is the opposite of the problem.
+
+### Seen red, and mutation-tested in four directions
+
+Red first: with `export *` still in place, the wildcard assertion failed and so
+did "has no classified name that is not exported". Then each direction was
+mutation-tested against the finished code:
+
+| Mutation | Caught by |
+| --- | --- |
+| add `export { transform }` | has no unclassified export |
+| delete `export { getPrelude, … }` | has no classified name that is not exported |
+| restore `export * from './compile'` | src/index.ts has no wildcard export |
+| README lists `typeDef` as public | names only public things in its public tier |
+
+The fourth is what keeps the documentation from drifting: every name the
+README's public tier mentions in backticks must be classified public here.
+
+### The derivations worth keeping
+
+Two classifications follow from the tiers rather than from taste, and the
+comments in `index.ts` say so:
+
+* **A public function's option and result types are public.** A function whose
+  arguments you cannot name is not usable from TypeScript, so `CompileOptions`,
+  `ParserOptions`, `Diagnostic` and the four `…CompileOptions` come with their
+  functions.
+* **`formatDiagnostic` is public because `DiagnosticCode` is protected.** It
+  renders a diagnostic the way the CLI does, which is what lets a host report
+  one *without* switching on a code that may be renamed. Making it private
+  would have forced every host into the protected tier.
+
+`parseTypeExpr`, `typecheckWithAnnotations` and `TypeAnnotations` are protected
+rather than private: they produce or are keyed on AST nodes, so they move with
+the AST — and the 1.2.0 changelog already described them as exported for hosts,
+which private would have contradicted.
+
+### What this turned up
+
+The playground — our own flagship host — imports three **private** names:
+`defaultFormats`, `getFormat` and `compileToJavaScriptWithMeta`. That does not
+make the classification wrong (private means no promise, and we control the
+playground), but it is worth knowing that the private tier has an in-repo
+consumer that moves when it moves. Filed as 0223.
+
+### Still open
+
+The README now promises CLI exit-code semantics — `0` when code was produced,
+non-zero when the compiler refused. The two paths 1.2.0 touched were checked by
+hand, but there is no test over every CLI path. That is 0224.
