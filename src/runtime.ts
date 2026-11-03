@@ -102,19 +102,19 @@ export const JS_HELPERS: Record<string, string> = {
   kAdd: `function kAdd(l, r) {
   if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
   if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l);
-  if (Duration.isDuration(l) && Duration.isDuration(r)) return Duration.fromMillis(l.toMillis() + r.toMillis());
+  if (Duration.isDuration(l) && Duration.isDuration(r)) return l.plus(r);
   return l + r;
 }`,
   kSub: `function kSub(l, r) {
   if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.minus(r);
   if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return Duration.fromMillis(l.toMillis() - r.toMillis());
-  if (Duration.isDuration(l) && Duration.isDuration(r)) return Duration.fromMillis(l.toMillis() - r.toMillis());
+  if (Duration.isDuration(l) && Duration.isDuration(r)) return l.minus(r);
   return l - r;
 }`,
   kMul: `function kMul(l, r) {
   if (Array.isArray(l) || Array.isArray(r)) throw new Error("Array multiplication is not supported");
-  if (Duration.isDuration(l)) return Duration.fromMillis(l.toMillis() * r);
-  if (Duration.isDuration(r)) return Duration.fromMillis(r.toMillis() * l);
+  if (Duration.isDuration(l)) return Number.isInteger(r) ? l.mapUnits(u => u * r) : Duration.fromMillis(l.toMillis() * r);
+  if (Duration.isDuration(r)) return Number.isInteger(l) ? r.mapUnits(u => u * l) : Duration.fromMillis(r.toMillis() * l);
   return l * r;
 }`,
   kDiv: `function kDiv(l, r) {
@@ -785,9 +785,14 @@ export const PY_HELPERS: Record<string, string> = {
     def minus(self, other):
         if isinstance(other, EloDuration): return EloDuration(self._ms - other._ms, self._years - other._years, self._months - other._months)
         raise Exception('Cannot subtract ' + type(other).__name__ + ' from duration')
-    def scale(self, n): return EloDuration(self.to_ms() * n)
+    def scale(self, n):
+        # An integer scales each component, so P1M * 2 is two calendar months.
+        # A non-integer cannot — half a calendar month is not a thing — so it
+        # collapses to the nominal length, which is what division gives.
+        if float(n).is_integer(): return EloDuration(self._ms * n, self._years * int(n), self._months * int(n))
+        return EloDuration(self.to_ms() * n)
     def divide(self, n): return EloDuration(self.to_ms() / n)
-    def negate(self): return EloDuration(-self.to_ms())
+    def negate(self): return EloDuration(-self._ms, -self._years, -self._months)
     def __eq__(self, other): return isinstance(other, EloDuration) and self.to_ms() == other.to_ms()
     def __ne__(self, other): return not self.__eq__(other)
     def __lt__(self, other): return self.to_ms() < other.to_ms()

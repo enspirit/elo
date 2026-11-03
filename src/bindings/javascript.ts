@@ -151,14 +151,22 @@ export function createJavaScriptBinding(): StdLib<string> {
     `${ctx.emit(args[0])}.minus(${ctx.emit(args[1])})`);
   jsLib.register('sub', [Types.datetime, Types.duration], (args, ctx) =>
     `${ctx.emit(args[0])}.minus(${ctx.emit(args[1])})`);
+  // Duration minus duration keeps each unit, so the calendar months survive:
+  // P1M - P10D is one month and minus ten days, not twenty nominal days.
+  jsLib.register('sub', [Types.duration, Types.duration], (args, ctx) =>
+    `${ctx.emit(args[0])}.minus(${ctx.emit(args[1])})`);
 
-  // Duration scaling: n * duration or duration * n
+  // Duration scaling: n * duration or duration * n.
+  //
+  // An integer scales each unit, so P1M * 2 is two calendar months. A
+  // non-integer cannot — half a calendar month is not a thing — so it
+  // collapses to the nominal length, which is the same answer division gives.
   jsLib.register('mul', [Types.int, Types.duration], (args, ctx) =>
-    `Duration.fromMillis(${ctx.emit(args[1])}.toMillis() * ${ctx.emit(args[0])})`);
+    `${ctx.emit(args[1])}.mapUnits(u => u * ${ctx.emit(args[0])})`);
   jsLib.register('mul', [Types.float, Types.duration], (args, ctx) =>
     `Duration.fromMillis(${ctx.emit(args[1])}.toMillis() * ${ctx.emit(args[0])})`);
   jsLib.register('mul', [Types.duration, Types.int], (args, ctx) =>
-    `Duration.fromMillis(${ctx.emit(args[0])}.toMillis() * ${ctx.emit(args[1])})`);
+    `${ctx.emit(args[0])}.mapUnits(u => u * ${ctx.emit(args[1])})`);
   jsLib.register('mul', [Types.duration, Types.float], (args, ctx) =>
     `Duration.fromMillis(${ctx.emit(args[0])}.toMillis() * ${ctx.emit(args[1])})`);
 

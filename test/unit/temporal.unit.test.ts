@@ -158,7 +158,7 @@ describe('Temporal - Date Arithmetic', () => {
     const ast = parse('2 * P1D');
     assert.strictEqual(
       compileToJavaScript(ast),
-      wrapJS("Duration.fromMillis(Duration.fromISO(\"P1D\").toMillis() * 2)")
+      wrapJS("Duration.fromISO(\"P1D\").mapUnits(u => u * 2)")
     );
     assert.strictEqual(
       compileToRuby(ast),
@@ -174,7 +174,7 @@ describe('Temporal - Date Arithmetic', () => {
     const ast = parse('P1D * 2');
     assert.strictEqual(
       compileToJavaScript(ast),
-      wrapJS("Duration.fromMillis(Duration.fromISO(\"P1D\").toMillis() * 2)")
+      wrapJS("Duration.fromISO(\"P1D\").mapUnits(u => u * 2)")
     );
     assert.strictEqual(
       compileToRuby(ast),

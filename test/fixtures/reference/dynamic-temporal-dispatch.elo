@@ -39,9 +39,19 @@ assert((let f = fn( x, y ~> x - y ) in f(D2024-01-16T00:00:00Z, D2024-01-15T00:0
 assert((let f = fn( x, y ~> x + y ) in f(D2026-03-01, P1M)) == D2026-04-01)
 assert((let f = fn( x, y ~> x - y ) in f(D2026-04-01, P1M)) == D2026-03-01)
 
+# A month scaled or subtracted through kMul / kSub, where the duration is
+# rebuilt from its operands rather than read as a literal
+assert((let f = fn( x, n ~> x * n ) in D2026-03-01 + f(P1M, 2)) == D2026-05-01)
+assert((let f = fn( x, n ~> n * x ) in D2026-03-01 + f(P1M, -1)) == D2026-02-01)
+assert((let f = fn( x, y ~> x - y ) in D2026-01-31 + f(P1M, P10D)) == D2026-02-18)
+assert((let f = fn( x, y ~> x - y ) in D2026-03-01 + f(P2M, P1M)) == D2026-04-01)
+assert((let f = fn( x, y ~> x + y ) in D2026-03-01 + f(P1M, P1D)) == D2026-04-02)
+
 # The typed twins, which were already correct and must stay so
 assert(P1D + P1D == P2D)
 assert(P1D == P1D)
 assert(PT24H == P1D)
 assert(D2024-01-15T00:00:00Z + P1D == D2024-01-16T00:00:00Z)
 assert(D2026-03-01 + P1M == D2026-04-01)
+assert(D2026-03-01 + P1M * 2 == D2026-05-01)
+assert(D2026-01-31 + (P1M - P10D) == D2026-02-18)

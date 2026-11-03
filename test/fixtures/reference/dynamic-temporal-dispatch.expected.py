@@ -40,8 +40,18 @@
 (lambda _: kAssert(kEq((f := lambda x, y: kSub(x, y), f(_elo_dt(2026, 4, 1), EloDuration.from_iso("P1M")))[-1], _elo_dt(2026, 3, 1))))(None)
 
 
+
+(lambda _: kAssert(kEq((f := lambda x, n: kMul(x, n), kAdd(_elo_dt(2026, 3, 1), f(EloDuration.from_iso("P1M"), 2)))[-1], _elo_dt(2026, 5, 1))))(None)
+(lambda _: kAssert(kEq((f := lambda x, n: kMul(n, x), kAdd(_elo_dt(2026, 3, 1), f(EloDuration.from_iso("P1M"), -1)))[-1], _elo_dt(2026, 2, 1))))(None)
+(lambda _: kAssert(kEq((f := lambda x, y: kSub(x, y), kAdd(_elo_dt(2026, 1, 31), f(EloDuration.from_iso("P1M"), EloDuration.from_iso("P10D"))))[-1], _elo_dt(2026, 2, 18))))(None)
+(lambda _: kAssert(kEq((f := lambda x, y: kSub(x, y), kAdd(_elo_dt(2026, 3, 1), f(EloDuration.from_iso("P2M"), EloDuration.from_iso("P1M"))))[-1], _elo_dt(2026, 4, 1))))(None)
+(lambda _: kAssert(kEq((f := lambda x, y: kAdd(x, y), kAdd(_elo_dt(2026, 3, 1), f(EloDuration.from_iso("P1M"), EloDuration.from_iso("P1D"))))[-1], _elo_dt(2026, 4, 2))))(None)
+
+
 (lambda _: kAssert((kAdd(EloDuration.from_iso("P1D"), EloDuration.from_iso("P1D")) == EloDuration.from_iso("P2D"))))(None)
 (lambda _: kAssert((EloDuration.from_iso("P1D") == EloDuration.from_iso("P1D"))))(None)
 (lambda _: kAssert((EloDuration.from_iso("PT24H") == EloDuration.from_iso("P1D"))))(None)
 (lambda _: kAssert(kEq(kAdd(_elo_dt(2024, 1, 15, 0, 0, 0), EloDuration.from_iso("P1D")), _elo_dt(2024, 1, 16, 0, 0, 0))))(None)
 (lambda _: kAssert(kEq(kAdd(_elo_dt(2026, 3, 1), EloDuration.from_iso("P1M")), _elo_dt(2026, 4, 1))))(None)
+(lambda _: kAssert(kEq(kAdd(_elo_dt(2026, 3, 1), kMul(EloDuration.from_iso("P1M"), 2)), _elo_dt(2026, 5, 1))))(None)
+(lambda _: kAssert(kEq(kAdd(_elo_dt(2026, 1, 31), kSub(EloDuration.from_iso("P1M"), EloDuration.from_iso("P10D"))), _elo_dt(2026, 2, 18))))(None)

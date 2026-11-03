@@ -1,0 +1,45 @@
+# A calendar month survives the operators, not just `date + duration`.
+#
+# A duration has two parts: the calendar one (years, months), whose length
+# depends on where in the calendar it is applied, and the exact one (days and
+# below), whose length does not. `date + P1M` already shifted the calendar,
+# but every operator that *built* a duration out of another one rebuilt it
+# from a millisecond total, which has no month left in it. So the month
+# collapsed to a nominal thirty days as soon as it was scaled or subtracted.
+#
+# Scaling by an integer and subtracting keep the components, because that many
+# calendar months is still a calendar quantity. Division is a separate
+# question with three defensible answers and is not asserted here; see the
+# task on the nominal length of a divided duration.
+
+# Scaling a month scales the calendar months
+assert(D2026-03-01 + P1M * 2 == D2026-05-01)
+assert(D2026-03-01 + 2 * P1M == D2026-05-01)
+assert(D2026-03-01 + P1M * 3 == D2026-06-01)
+assert(D2026-03-01 + -1 * P1M == D2026-02-01)
+assert(D2026-03-01 + P1M * 1 == D2026-04-01)
+assert(D2026-03-01 + P1M * 0 == D2026-03-01)
+
+# Scaling clamps at the target month, as adding one does
+assert(D2026-01-31 + P1M * 1 == D2026-02-28)
+assert(D2026-12-31 + P1M * 2 == D2027-02-28)
+
+# A year scales too, and the components travel together
+assert(D2026-03-01 + P1Y * 2 == D2028-03-01)
+assert(D2026-03-01 + P1M1D * 2 == D2026-05-03)
+assert(D2026-03-01 + P1Y1M * 2 == D2028-05-01)
+
+# Subtracting one duration from another keeps both their components
+assert(D2026-01-31 + (P1M - P10D) == D2026-02-18)
+assert(D2026-03-01 + (P2M - P1M) == D2026-04-01)
+assert(D2026-03-01 + (P1M - P1M) == D2026-03-01)
+assert(D2026-03-01 + (P1M1D - P1D) == D2026-04-01)
+assert(D2026-03-01 + (P1Y - P1M) == D2027-02-01)
+
+# Adding durations already worked and must stay working
+assert(D2026-03-01 + (P1M + P1M) == D2026-05-01)
+assert(D2026-03-01 + (P1M + P1D) == D2026-04-02)
+
+# Datetimes take the same path
+assert(D2026-05-31T08:00:00Z + P1M * 2 == D2026-07-31T08:00:00Z)
+assert(D2026-05-15T08:00:00Z + (P1M - P1D) == D2026-06-14T08:00:00Z)

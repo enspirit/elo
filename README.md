@@ -42,6 +42,11 @@ See also the Related work section below.
     single number type — so `typeOf(2.0)` is `'Int'` there and `'Float'` on the
     other three. A whole-valued Float is the one case where `typeOf` is
     target-dependent.
+  - On a **duration**, `*` by a whole number and `-` between two durations keep
+    the calendar components, so `D2026-03-01 + P1M * 2` is `D2026-05-01` and
+    `D2026-01-31 + (P1M - P10D)` is `D2026-02-18`. Multiplying by a fraction or
+    dividing cannot — half a calendar month is not a thing — so those collapse
+    the duration to its nominal length, where a month is 30 days.
 - **Comparison operators**: `<`, `>`, `<=`, `>=`, `==`, `!=`
 - **Logical operators**: `&&`, `||`, `!`
 - **Unary operators**: `-`, `+`, `!`
