@@ -336,3 +336,25 @@ export function describeType(t: EloType): string {
       return t.kind.charAt(0).toUpperCase() + t.kind.slice(1);
   }
 }
+
+/**
+ * What a built-in type name stands for.
+ *
+ * One table, because there is one type system: the checker reads it to resolve
+ * `Int` in `{ a: Int }`, and so does the transform, through `typeExprType`.
+ */
+export const BUILTIN_TYPES: Readonly<Record<string, EloType>> = {
+  Any: Types.any,
+  Null: Types.null,
+  String: Types.string,
+  Int: Types.int,
+  Float: Types.float,
+  Bool: Types.bool,
+  Boolean: Types.bool,
+  Date: Types.date,
+  Datetime: Types.datetime,
+  Duration: Types.duration,
+  // `Data` is the plain-data contract: it validates that a value is data and
+  // parses a JSON string, but says nothing about the shape that comes out.
+  Data: Types.any,
+};

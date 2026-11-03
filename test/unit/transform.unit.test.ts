@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { transform, TypeEnv } from '../../src/transform';
 import { parse } from '../../src/parser';
+import { inferType } from '../../src/ir';
 import { compileToJavaScript } from '../../src/compilers/javascript';
 import {
   literal,
@@ -24,7 +25,6 @@ import {
   unionType,
 } from '../../src/ast';
 import { Types } from '../../src/types';
-import { inferType } from '../../src/ir';
 
 describe('transform - literals', () => {
   it('transforms integer literal', () => {
@@ -776,6 +776,59 @@ describe('transform - let expressions', () => {
         }
       }
     }
+  });
+});
+
+describe('transform - a declared type carries its shape', () => {
+  // `let T = { a: Int } in _ |> T` used to record only "T is a function", so
+  // `_ |> T` was `any` and every read off it with it — every operation on a
+  // coerced value fell to runtime dispatch even though the author had declared
+  // the types and the runtime validated them. The transform walks the type
+  // expression already; now it keeps the answer.
+
+  /** The type the transform worked out for the whole expression. */
+  function typeOf(source: string) {
+    return inferType(transform(parse(source)));
+  }
+
+  it('types what a type selector produces', () => {
+    assert.strictEqual(typeOf("let T = Int in '1' |> T").kind, 'int');
+  });
+
+  it('types a field of a declared schema', () => {
+    assert.strictEqual(typeOf("let T = { a: Int } in (_ |> T).a").kind, 'int');
+  });
+
+  it('types a field reached through a binding', () => {
+    assert.strictEqual(typeOf("let T = { a: String }, k = _ |> T in k.a").kind, 'string');
+  });
+
+  it('follows a type definition that builds on an earlier one', () => {
+    assert.strictEqual(typeOf("let L = { p: Int }, O = { l: L }, o = _ |> O in o.l.p").kind, 'int');
+  });
+
+  it('types the element of a declared list', () => {
+    const type = typeOf("let T = { xs: [Int] }, k = _ |> T in k.xs");
+    assert.strictEqual(type.kind, 'array');
+    assert.strictEqual(type.element?.kind, 'int');
+  });
+
+  it('looks through a subtype constraint, which narrows values and not types', () => {
+    assert.strictEqual(typeOf("let T = Int(i | i > 0) in '1' |> T").kind, 'int');
+  });
+
+  it('says nothing about a field the schema does not declare', () => {
+    assert.strictEqual(typeOf("let T = { a: Int } in (_ |> T).b").kind, 'any');
+  });
+
+  it('says nothing about an optional field, which may be absent', () => {
+    // `:? Int` is `Int|Null`, and those disagree, so dispatch sees `any` —
+    // which is right: an operation on it has to cope with the null.
+    assert.strictEqual(typeOf("let T = { a :? Int } in (_ |> T).a").kind, 'any');
+  });
+
+  it('leaves an undeclared input alone', () => {
+    assert.strictEqual(typeOf('_').kind, 'any');
   });
 });
 

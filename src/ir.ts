@@ -10,7 +10,7 @@
  */
 
 import { Located } from './ast';
-import { EloType, Types, arrayOf, objectOf } from './types';
+import { BUILTIN_TYPES, EloType, Types, arrayOf, join, objectOf } from './types';
 
 /**
  * IR expression types.
@@ -499,6 +499,55 @@ export function irGuard(constraints: IRConstraint[], body: IRExpr, guardType: 'g
 /**
  * Infer the type of an IR expression
  */
+/**
+ * The type a type expression stands for.
+ *
+ * `let T = { a: Int } in …` says what `T(x)` produces, and the transform walks
+ * that expression already — it just used to record only "T is a function" and
+ * throw the shape away, so `_ |> T` came out `any` and every read off it with
+ * it. This is the shape, so a declared schema is as good as a literal one.
+ *
+ * `resolve` answers what a *user* type name stands for, since a type
+ * definition may build on one declared before it. Unknown names and unknown
+ * built-ins are `any` rather than an error: refusing them is the transform's
+ * job, and it does it where the name is used.
+ *
+ * A subtype constraint contributes nothing here on purpose. `Int(i | i > 0)`
+ * narrows which *values* are allowed, not which type they have, and the
+ * narrowing is enforced at runtime by the emitted parser.
+ */
+export function typeExprType(
+  typeExpr: IRTypeExpr,
+  resolve: (name: string) => EloType | undefined
+): EloType {
+  switch (typeExpr.kind) {
+    case 'type_ref':
+      return BUILTIN_TYPES[typeExpr.name] ?? resolve(typeExpr.name) ?? Types.any;
+
+    case 'type_schema': {
+      const props = typeExpr.properties.map(prop => ({
+        key: prop.key,
+        type: typeExprType(prop.typeExpr, resolve),
+        optional: prop.optional ?? false,
+      }));
+      const extras =
+        typeExpr.extras === undefined || typeof typeExpr.extras === 'string'
+          ? typeExpr.extras ?? 'closed'
+          : typeExprType(typeExpr.extras, resolve);
+      return objectOf(props, extras);
+    }
+
+    case 'subtype_constraint':
+      return typeExprType(typeExpr.baseType, resolve);
+
+    case 'array_type':
+      return arrayOf(typeExprType(typeExpr.elementType, resolve));
+
+    case 'union_type':
+      return join(typeExpr.types.map(t => typeExprType(t, resolve)));
+  }
+}
+
 export function inferType(ir: IRExpr): EloType {
   switch (ir.type) {
     case 'int_literal':

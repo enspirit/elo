@@ -79,6 +79,17 @@ const PROGRAMS: Array<[string, string]> = [
   ['map over a list', "let S = { xs: [Int] }, s = _ |> S in map(s.xs, fn( x ~> x * 2 ))"],
 ];
 
+/**
+ * The programs the transform types on its own, by reading the declaration.
+ *
+ * All but the higher-order one: typing `x` in `map(s.xs, fn( x ~> … ))` means
+ * carrying the list's element type into the lambda's parameter, which is
+ * inference about a *call*, not the shape of a declaration. The checker does
+ * it (`lambdaParamTypes`); the transform does not, and that is the one thing
+ * `--optimize` still buys for a fully declared program.
+ */
+const SELF_TYPED = PROGRAMS.filter(([name]) => name !== 'map over a list');
+
 const TARGETS: Array<'js' | 'ruby' | 'python'> = ['js', 'ruby', 'python'];
 
 describe('Compiling with the checker\'s types', () => {
@@ -95,18 +106,45 @@ describe('Compiling with the checker\'s types', () => {
     }
   }
 
-  it('is the annotations that make the difference, not the programs', () => {
-    // Without the map the same programs do pull dispatchers in — otherwise the
-    // assertions above would pass for the wrong reason.
-    const withoutAnnotations = PROGRAMS.flatMap(([name, source]) =>
-      TARGETS.flatMap(target =>
-        dispatchersIn(plain(source, target)).map(helper => `${name}/${target}: ${helper}`)
-      )
-    );
-    assert.ok(
-      withoutAnnotations.length > 0,
-      'the unannotated emission should still dispatch at runtime'
-    );
+  // A declared schema no longer needs the checker to be emitted well: the
+  // transform walks the type expression itself, so `_ |> T` carries T's shape
+  // and `k.a` is an Int to the transform the same way `1` is. The annotations
+  // are left with what the checker genuinely knows and the transform cannot —
+  // a host-declared input type, and the nullability it narrows.
+  for (const [name, source] of SELF_TYPED) {
+    for (const target of TARGETS) {
+      it(`${name} needs no dynamic dispatcher on ${target} without the checker`, () => {
+        assert.deepStrictEqual(
+          dispatchersIn(plain(source, target)),
+          [],
+          `the program declares every operand's type, so the transform can ` +
+          `read it off the declaration without being told.\n\n${plain(source, target)}`
+        );
+      });
+    }
+  }
+
+  it('emits the same code with and without the annotations, where the program declares its types', () => {
+    // For a program that declares everything, --optimize has nothing left to
+    // optimise: the transform read the declaration itself.
+    for (const [name, source] of SELF_TYPED) {
+      for (const target of TARGETS) {
+        assert.strictEqual(
+          plain(source, target),
+          optimized(source, target),
+          `${name}/${target}`
+        );
+      }
+    }
+  });
+
+  it('still needs the annotations for a lambda parameter typed from a list', () => {
+    // The one case left: the element type has to be carried into the
+    // parameter, which is inference about the call rather than the shape of a
+    // declaration. If this ever stops failing, --optimize has nothing left.
+    const [, source] = PROGRAMS.find(([name]) => name === 'map over a list')!;
+    assert.deepStrictEqual(dispatchersIn(plain(source, 'js')), ['kMul']);
+    assert.deepStrictEqual(dispatchersIn(optimized(source, 'js')), []);
   });
 
   describe('what the annotation reaches', () => {

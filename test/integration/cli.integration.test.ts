@@ -713,6 +713,11 @@ describe('CLI - --typecheck', () => {
 
 describe('CLI - --optimize', () => {
   const DECLARED = `let T = { a: Int, b: Int }, k = _ |> T in k.a - k.b`;
+  // A lambda parameter typed from the element type of a declared list. The
+  // transform reads a declaration's *shape* on its own, so DECLARED above
+  // needs no flag; carrying an element type into a parameter is inference
+  // about the call, and that is the checker's.
+  const HIGHER_ORDER = `let S = { xs: [Int] }, s = _ |> S in map(s.xs, fn( x ~> x * 2 ))`;
 
   it('emits a typed operation where the schema declares the types', () => {
     const result = elocWithError(`--optimize -t ruby -e "${DECLARED}"`);
@@ -721,9 +726,17 @@ describe('CLI - --optimize', () => {
     assert.doesNotMatch(result.stdout, /k_sub/);
   });
 
-  it('is the flag that makes the difference', () => {
+  it('needs no flag for a declared schema, which the transform reads itself', () => {
     const plain = eloc(`-t ruby -e "${DECLARED}"`);
-    assert.match(plain, /k_sub/);
+    assert.match(plain, /k\[:a\] - k\[:b\]/);
+    assert.doesNotMatch(plain, /k_sub/);
+  });
+
+  it('is the flag that makes the difference, for a lambda parameter', () => {
+    // On JavaScript, because that is where an unknown `*` costs a dispatcher:
+    // Ruby's `mul` on two unknowns is a bare `*`, so there is nothing to see.
+    assert.match(eloc(`-t js -e "${HIGHER_ORDER}"`), /kMul/);
+    assert.doesNotMatch(eloc(`--optimize -t js -e "${HIGHER_ORDER}"`), /kMul/);
   });
 
   it('implies --typecheck', () => {

@@ -41,9 +41,10 @@ import {
   irGuard,
   inferType,
   commonElementType,
+  typeExprType,
 } from './ir';
 import { TypeExpr } from './ast';
-import { EloType, Types, TypeKind, TypeAnnotations, propertyType } from './types';
+import { EloType, Types, TypeKind, TypeAnnotations, fnOf, propertyType } from './types';
 import { eloTypeDefs } from './typedefs';
 import { parseExtractTemplate } from './extract';
 
@@ -139,6 +140,12 @@ interface TransformContext {
    * is ever removed from it.
    */
   typeNames: Set<string>;
+  /**
+   * What each type definition in scope stands for, by the name it is emitted
+   * under — which is the name an `IRTypeRef` carries, so `typeExprType` can
+   * resolve a definition that builds on an earlier one.
+   */
+  typeShapes: Map<string, EloType>;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -160,6 +167,7 @@ export function transform(
     inScope: new Map(),
     fieldBound: new Set(),
     typeNames: new Set(),
+    typeShapes: new Map(),
   };
   return transformWithDepth(expr, env, defining, 0, ctx);
 }
@@ -467,8 +475,13 @@ function transformNode(
         // The type expression is walked before the name it defines comes into
         // scope, so `let T = Int in let T = [T] in …` builds on the outer T.
         const irTypeExpr = transformTypeExprWithContext(definition.typeExpr, newEnv, defining, nextDepth, ctx);
-        // Add type name to environment as a parser function type
-        newEnv.set(definition.name, Types.fn);
+        // The shape is what the author wrote, and the walk above has it in
+        // hand. Recording it is what makes `_ |> T` more than `any`, and
+        // every read off it more than `any` in turn.
+        const shape = typeExprType(irTypeExpr, (name) => ctx.typeShapes.get(name));
+        ctx.typeShapes.set(emitted, shape);
+        // The type name is a parser function returning that shape.
+        newEnv.set(definition.name, fnOf(shape));
         openBinding(definition.name, emitted, ctx);
         opened.push([definition.name, emitted]);
         return { name: emitted, typeExpr: irTypeExpr };
@@ -779,9 +792,11 @@ function transformFunctionCall(
   const varType = env.get(name);
   const emitted = emittedName(name, ctx);
   if (varType && varType.kind === 'fn') {
-    // Lambda application: emit irApply
+    // Lambda application: emit irApply. A type selector knows what it
+    // produces — `_ |> Order` is an Order — and a let-bound lambda does not,
+    // so `result` is absent there and the answer stays `any`.
     const fnVar = irVariable(emitted, varType);
-    return irApply(fnVar, argsIR, argTypes, Types.any);
+    return irApply(fnVar, argsIR, argTypes, varType.result ?? Types.any);
   }
 
   // A name bound to a field read — what `import { double } from './m'` is —

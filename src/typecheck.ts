@@ -47,6 +47,7 @@
 
 import { Constraint, Expr, Lambda, SourceLocation, TypeExpr } from './ast';
 import {
+  BUILTIN_TYPES,
   EloType,
   Extras,
   SchemaProp,
@@ -782,7 +783,7 @@ class Checker {
 
     switch (typeExpr.kind) {
       case 'type_ref': {
-        const builtin = BUILTIN_TYPE_REFS[typeExpr.name];
+        const builtin = BUILTIN_TYPES[typeExpr.name];
         if (builtin) return builtin;
         const named = types.get(typeExpr.name);
         if (named) return named;
@@ -1096,24 +1097,8 @@ const TEMPORAL_KEYWORD_TYPES: Record<string, EloType> = {
  * type, because no target has a parser for it (done/0173). A name admitted
  * here without one compiles to a reference that does not exist.
  */
-const BUILTIN_TYPE_REFS: Record<string, EloType> = {
-  Any: Types.any,
-  Null: Types.null,
-  String: Types.string,
-  Int: Types.int,
-  Float: Types.float,
-  Bool: Types.bool,
-  Boolean: Types.bool,
-  Date: Types.date,
-  Datetime: Types.datetime,
-  Duration: Types.duration,
-  // `Data` is the plain-data contract: it validates that a value is data and
-  // parses a JSON string, but says nothing about the shape that comes out.
-  Data: Types.any,
-};
-
 /** The names above, for the test that pins them to the transform's list. */
-export const BUILTIN_TYPE_NAMES: readonly string[] = Object.keys(BUILTIN_TYPE_REFS);
+export const BUILTIN_TYPE_NAMES: readonly string[] = Object.keys(BUILTIN_TYPES);
 
 // Re-exported so a host can work with the checker's richer types without
 // reaching into an internal module.

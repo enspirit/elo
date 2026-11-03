@@ -1,11 +1,11 @@
-(lambda _: kAssert(kEq((_p_X := pString, X := lambda v: pUnwrap(_p_X(v, '')), X("hello"))[-1], "hello")))(None)
-(lambda _: kAssert(kEq((_p_X := pInt, X := lambda v: pUnwrap(_p_X(v, '')), X("42"))[-1], 42)))(None)
+(lambda _: kAssert((_p_X := pString, X := lambda v: pUnwrap(_p_X(v, '')), X("hello"))[-1] == "hello"))(None)
+(lambda _: kAssert((_p_X := pInt, X := lambda v: pUnwrap(_p_X(v, '')), X("42"))[-1] == 42))(None)
 (lambda _: kAssert(kEq((_p_X := pAny, X := lambda v: pUnwrap(_p_X(v, '')), X("anything"))[-1], "anything")))(None)
 (lambda _: kAssert(kEq((_p_X := pAny, X := lambda v: pUnwrap(_p_X(v, '')), X(123))[-1], 123)))(None)
 (lambda _: kAssert(kEq((_p_Person := pSchema([("name", pString, False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), Person({"name": "Alice"}))[-1], {"name": "Alice"})))(None)
 (lambda _: kAssert(kEq((_p_Person := pSchema([("name", pString, False), ("age", pInt, False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), Person({"name": "Bob", "age": "30"}))[-1], {"name": "Bob", "age": 30})))(None)
 (lambda _: kAssert(kEq((_p_Empty := pSchema([], "closed", None), Empty := lambda v: pUnwrap(_p_Empty(v, '')), Empty({}))[-1], {})))(None)
-(lambda _: kAssert(kEq((_p_PosInt := pSubtype(pInt, [("constraint failed", None, lambda i: (i > 0))]), PosInt := lambda v: pUnwrap(_p_PosInt(v, '')), PosInt("42"))[-1], 42)))(None)
+(lambda _: kAssert((_p_PosInt := pSubtype(pInt, [("constraint failed", None, lambda i: (i > 0))]), PosInt := lambda v: pUnwrap(_p_PosInt(v, '')), PosInt("42"))[-1] == 42))(None)
 (lambda _: kAssert(kEq((_p_Ints := pArray(pInt), Ints := lambda v: pUnwrap(_p_Ints(v, '')), Ints(["1", "2", "3"]))[-1], [1, 2, 3])))(None)
 (lambda _: kAssert(kEq((_p_Strings := pArray(pString), Strings := lambda v: pUnwrap(_p_Strings(v, '')), Strings(["a", "b"]))[-1], ["a", "b"])))(None)
 (lambda _: kAssert(kEq((_p_People := pArray(pSchema([("name", pString, False)], "closed", None)), People := lambda v: pUnwrap(_p_People(v, '')), People([{"name": "Alice"}, {"name": "Bob"}]))[-1], [{"name": "Alice"}, {"name": "Bob"}])))(None)
@@ -39,8 +39,8 @@
 
 (lambda _: kAssert(kEq((_p_Open := pSchema([], "ignored", None), Open := lambda v: pUnwrap(_p_Open(v, '')), Open({"a": 1, "b": "two"}))[-1], {})))(None)
 
-(lambda _: kAssert(kEq((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), _p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), B("42"))[-1], 42)))(None)
-(lambda _: kAssert(kEq((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), _p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), A("hello"))[-1], "hello")))(None)
+(lambda _: kAssert((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), _p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), B("42"))[-1] == 42))(None)
+(lambda _: kAssert((_p_A := pString, A := lambda v: pUnwrap(_p_A(v, '')), _p_B := pInt, B := lambda v: pUnwrap(_p_B(v, '')), A("hello"))[-1] == "hello"))(None)
 (lambda _: kAssert(kEq((_p_Person := pSchema([("name", pString, False), ("age", pSubtype(pInt, [("constraint failed", None, lambda i: (i > 0))]), False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), _p_Persons := pArray(_p_Person), Persons := lambda v: pUnwrap(_p_Persons(v, '')), Persons([{"name": "Bernard", "age": "18"}, {"name": "Louis", "age": "10"}]))[-1], [{"name": "Bernard", "age": 18}, {"name": "Louis", "age": 10}])))(None)
 (lambda _: kAssert(kEq((_p_Item := pSchema([("id", pInt, False)], "closed", None), Item := lambda v: pUnwrap(_p_Item(v, '')), _p_Items := pArray(_p_Item), Items := lambda v: pUnwrap(_p_Items(v, '')), Items([{"id": "1"}, {"id": "2"}]))[-1], [{"id": 1}, {"id": 2}])))(None)
 
@@ -58,16 +58,16 @@
 
 (lambda _: kAssert(kEq((_p_Ints := pArray(pInt), Ints := lambda v: pUnwrap(_p_Ints(v, '')), Ints([]))[-1], [])))(None)
 
-(lambda _: kAssert(kEq((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T("3.14"))[-1], 3.14)))(None)
-(lambda _: kAssert(kEq((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T(42))[-1], 42.0)))(None)
+(lambda _: kAssert((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T("3.14"))[-1] == 3.14))(None)
+(lambda _: kAssert((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T(42))[-1] == 42.0))(None)
 
 (lambda _: kAssert(kEq((_p_Config := pSchema([("enabled", pBool, False)], "closed", None), Config := lambda v: pUnwrap(_p_Config(v, '')), Config({"enabled": "true"}))[-1], {"enabled": True})))(None)
 (lambda _: kAssert(kEq((_p_Config := pSchema([("enabled", pBool, False)], "closed", None), Config := lambda v: pUnwrap(_p_Config(v, '')), Config({"enabled": "false"}))[-1], {"enabled": False})))(None)
 
-(lambda _: kAssert(kEq((_p_Event := pSchema([("date", pDate, False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15"}).get("date").year)[-1], 2024)))(None)
+(lambda _: kAssert((_p_Event := pSchema([("date", pDate, False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15"}).get("date").year)[-1] == 2024))(None)
 (lambda _: kAssertFails(lambda : (_p_T := pDate, T := lambda v: pUnwrap(_p_T(v, '')), T("bad"))[-1]))(None)
 
-(lambda _: kAssert(kEq((_p_Event := pSchema([("date", pDatetime, False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15T10:30:00"}).get("date").year)[-1], 2024)))(None)
+(lambda _: kAssert((_p_Event := pSchema([("date", pDatetime, False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15T10:30:00"}).get("date").year)[-1] == 2024))(None)
 
 (lambda _: kAssert(kEq((_p_T := pSchema([("a", pSchema([("b", pSchema([("c", pInt, False)], "closed", None), False)], "closed", None), False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"a": {"b": {"c": "42"}}}))[-1], {"a": {"b": {"c": 42}}})))(None)
 
@@ -75,7 +75,7 @@
 (lambda _: kAssert(kEq((_p_T := pSchema([("value", pUnion([pInt, pString]), True)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"value": "hello"}))[-1], {"value": "hello"})))(None)
 (lambda _: kAssert(kEq((_p_T := pSchema([("value", pUnion([pInt, pString]), True)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({}))[-1], {})))(None)
 
-(lambda _: kAssert(kEq((_p_NonNeg := pSubtype(pInt, [("constraint failed", None, lambda i: (i >= 0))]), NonNeg := lambda v: pUnwrap(_p_NonNeg(v, '')), NonNeg("0"))[-1], 0)))(None)
+(lambda _: kAssert((_p_NonNeg := pSubtype(pInt, [("constraint failed", None, lambda i: (i >= 0))]), NonNeg := lambda v: pUnwrap(_p_NonNeg(v, '')), NonNeg("0"))[-1] == 0))(None)
 
 (lambda _: kAssert(kEq((_p_T := pSchema([("x1", pInt, False), ("x2", pInt, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"x1": "1", "x2": "2"}))[-1], {"x1": 1, "x2": 2})))(None)
 
@@ -86,7 +86,7 @@
 
 (lambda _: kAssertFails(lambda : (_p_T := pBool, T := lambda v: pUnwrap(_p_T(v, '')), T("bad"))[-1]))(None)
 
-(lambda _: kAssert(kEq((_p_T := pNull, T := lambda v: pUnwrap(_p_T(v, '')), T(None))[-1], None)))(None)
+(lambda _: kAssert((_p_T := pNull, T := lambda v: pUnwrap(_p_T(v, '')), T(None))[-1] == None))(None)
 (lambda _: kAssertFails(lambda : (_p_T := pNull, T := lambda v: pUnwrap(_p_T(v, '')), T("not-null"))[-1]))(None)
 (lambda _: kAssertFails(lambda : (_p_T := pNull, T := lambda v: pUnwrap(_p_T(v, '')), T(42))[-1]))(None)
 (lambda _: kAssertFails(lambda : (_p_T := pNull, T := lambda v: pUnwrap(_p_T(v, '')), T(True))[-1]))(None)
@@ -99,28 +99,28 @@
 (lambda _: kAssert(kEq((_p_T := pSchema([("value", pUnion([pInt, pNull]), False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"value": 42}))[-1], {"value": 42})))(None)
 
 
-(lambda _: kAssert(kEq((_p_PosInt := pSubtype(pInt, [("constraint 'positive' failed", "positive", lambda i: (i > 0))]), PosInt := lambda v: pUnwrap(_p_PosInt(v, '')), PosInt("42"))[-1], 42)))(None)
+(lambda _: kAssert((_p_PosInt := pSubtype(pInt, [("constraint 'positive' failed", "positive", lambda i: (i > 0))]), PosInt := lambda v: pUnwrap(_p_PosInt(v, '')), PosInt("42"))[-1] == 42))(None)
 (lambda _: kAssertFails(lambda : (_p_PosInt := pSubtype(pInt, [("constraint 'positive' failed", "positive", lambda i: (i > 0))]), PosInt := lambda v: pUnwrap(_p_PosInt(v, '')), PosInt("-5"))[-1]))(None)
 
-(lambda _: kAssert(kEq((_p_PosInt := pSubtype(pInt, [("must be positive", "must be positive", lambda i: (i > 0))]), PosInt := lambda v: pUnwrap(_p_PosInt(v, '')), PosInt("42"))[-1], 42)))(None)
+(lambda _: kAssert((_p_PosInt := pSubtype(pInt, [("must be positive", "must be positive", lambda i: (i > 0))]), PosInt := lambda v: pUnwrap(_p_PosInt(v, '')), PosInt("42"))[-1] == 42))(None)
 
-(lambda _: kAssert(kEq((_p_PosEven := pSubtype(pInt, [("constraint 'positive' failed", "positive", lambda i: (i > 0)), ("constraint 'even' failed", "even", lambda i: kEq(kMod(i, 2), 0))]), PosEven := lambda v: pUnwrap(_p_PosEven(v, '')), PosEven("42"))[-1], 42)))(None)
+(lambda _: kAssert((_p_PosEven := pSubtype(pInt, [("constraint 'positive' failed", "positive", lambda i: (i > 0)), ("constraint 'even' failed", "even", lambda i: kEq(kMod(i, 2), 0))]), PosEven := lambda v: pUnwrap(_p_PosEven(v, '')), PosEven("42"))[-1] == 42))(None)
 (lambda _: kAssertFails(lambda : (_p_PosEven := pSubtype(pInt, [("constraint 'positive' failed", "positive", lambda i: (i > 0)), ("constraint 'even' failed", "even", lambda i: kEq(kMod(i, 2), 0))]), PosEven := lambda v: pUnwrap(_p_PosEven(v, '')), PosEven("41"))[-1]))(None)
 (lambda _: kAssertFails(lambda : (_p_PosEven := pSubtype(pInt, [("constraint 'positive' failed", "positive", lambda i: (i > 0)), ("constraint 'even' failed", "even", lambda i: kEq(kMod(i, 2), 0))]), PosEven := lambda v: pUnwrap(_p_PosEven(v, '')), PosEven("-2"))[-1]))(None)
 
-(lambda _: kAssert(kEq((_p_T := pSubtype(pInt, [("constraint failed", None, lambda i: (i > 0)), ("constraint 'even' failed", "even", lambda i: kEq(kMod(i, 2), 0))]), T := lambda v: pUnwrap(_p_T(v, '')), T("42"))[-1], 42)))(None)
+(lambda _: kAssert((_p_T := pSubtype(pInt, [("constraint failed", None, lambda i: (i > 0)), ("constraint 'even' failed", "even", lambda i: kEq(kMod(i, 2), 0))]), T := lambda v: pUnwrap(_p_T(v, '')), T("42"))[-1] == 42))(None)
 
 (lambda _: kAssert(kEq((_p_Person := pSchema([("age", pSubtype(pInt, [("constraint 'adult' failed", "adult", lambda a: (a >= 18))]), False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), Person({"age": 18}))[-1], {"age": 18})))(None)
 (lambda _: kAssertFails(lambda : (_p_Person := pSchema([("age", pSubtype(pInt, [("constraint 'adult' failed", "adult", lambda a: (a >= 18))]), False)], "closed", None), Person := lambda v: pUnwrap(_p_Person(v, '')), Person({"age": 17}))[-1]))(None)
 
-(lambda _: kAssert(kEq((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P1D"}))[-1].get("d"), EloDuration.from_iso("P1D"))))(None)
-(lambda _: kAssert(kEq((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "PT2H30M"}))[-1].get("d"), EloDuration.from_iso("PT2H30M"))))(None)
+(lambda _: kAssert(((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P1D"}))[-1].get("d") == EloDuration.from_iso("P1D"))))(None)
+(lambda _: kAssert(((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "PT2H30M"}))[-1].get("d") == EloDuration.from_iso("PT2H30M"))))(None)
 
-(lambda _: kAssert(kEq((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": EloDuration.from_iso("P1D")}))[-1].get("d"), EloDuration.from_iso("P1D"))))(None)
+(lambda _: kAssert(((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": EloDuration.from_iso("P1D")}))[-1].get("d") == EloDuration.from_iso("P1D"))))(None)
 
-(lambda _: kAssert(kEq((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P2D"}))[-1].get("d").in_days(), 2.0)))(None)
-(lambda _: kAssert(kEq((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "PT90M"}))[-1].get("d").in_hours(), 1.5)))(None)
-(lambda _: kAssert(kEq(kAdd((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P1D"}))[-1].get("d"), EloDuration.from_iso("P1D")), EloDuration.from_iso("P2D"))))(None)
+(lambda _: kAssert((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P2D"}))[-1].get("d").in_days() == 2.0))(None)
+(lambda _: kAssert((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "PT90M"}))[-1].get("d").in_hours() == 1.5))(None)
+(lambda _: kAssert((kAdd((_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "P1D"}))[-1].get("d"), EloDuration.from_iso("P1D")) == EloDuration.from_iso("P2D"))))(None)
 
 (lambda _: kAssertFails(lambda : (_p_T := pSchema([("d", pDuration, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "nope"}))[-1]))(None)
 
