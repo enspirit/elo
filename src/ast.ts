@@ -579,8 +579,25 @@ export function typeSchema(properties: TypeSchemaProperty[], extras?: 'closed' |
  * type definitions by the transform depth guard — a limit meant for deeply
  * nested expressions, not for how many types a file declares. Each definition
  * is still in scope for the ones after it, and for the body.
+ *
+ * `typeDef(name, typeExpr, body)` — the single-definition form, and the only
+ * one there was up to 1.1.1 — is still accepted. The factory is reachable from
+ * the package entry, so that call shape is a published interface whatever it
+ * was meant to be, and a host that builds a one-type definition should not
+ * have to be rewritten for a change it gains nothing from.
  */
-export function typeDef(definitions: TypeBinding[], body: Expr): TypeDef {
+export function typeDef(definitions: TypeBinding[], body: Expr): TypeDef;
+export function typeDef(name: string, typeExpr: TypeExpr, body: Expr): TypeDef;
+export function typeDef(
+  first: TypeBinding[] | string,
+  second: Expr | TypeExpr,
+  third?: Expr
+): TypeDef {
+  const definitions = typeof first === 'string'
+    ? [{ name: first, typeExpr: second as TypeExpr }]
+    : first;
+  const body = (typeof first === 'string' ? third : second) as Expr;
+
   if (definitions.length === 0) {
     throw new Error('Type definition must have at least one definition');
   }

@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { literal, variable, binary, unary, typeRef, withTypeDefs, letExpr, lambda } from '../../src/ast';
+import { literal, variable, binary, unary, typeRef, typeDef, withTypeDefs, letExpr, lambda } from '../../src/ast';
+import { compileToJavaScript } from '../../src/index';
 
 describe('AST - literal() helper', () => {
   it('should create numeric literal', () => {
@@ -341,5 +342,33 @@ describe('AST - lambda() helper', () => {
       () => lambda(['a', 'a'], variable('a')),
       /Duplicate parameter 'a'/
     );
+  });
+});
+
+/**
+ * `typeDef` is reachable from the package entry (`export * from './ast'`), so
+ * the shape it was called with in 1.1.1 is a published interface whatever we
+ * meant it to be. It takes a list of definitions now; the single-definition
+ * form a host already wrote has to keep working.
+ */
+describe('typeDef - the 1.1.1 call shape', () => {
+  it('accepts typeDef(name, typeExpr, body)', () => {
+    const legacy = (typeDef as any)('Age', typeRef('Int'), literal(1));
+    assert.deepStrictEqual(legacy, {
+      type: 'typedef',
+      definitions: [{ name: 'Age', typeExpr: { kind: 'type_ref', name: 'Int' } }],
+      body: { type: 'literal', value: 1 },
+    });
+  });
+
+  it('compiles the same as the list form', () => {
+    const legacy = (typeDef as any)('Age', typeRef('Int'), literal(1));
+    const modern = typeDef([{ name: 'Age', typeExpr: typeRef('Int') }], literal(1));
+    assert.deepStrictEqual(legacy, modern);
+    assert.strictEqual(compileToJavaScript(legacy), compileToJavaScript(modern));
+  });
+
+  it('still refuses an empty definition list', () => {
+    assert.throws(() => typeDef([], literal(1)), /at least one definition/);
   });
 });
