@@ -27,12 +27,17 @@ assert({a: 7}.a - 2 == 5)
 assert({a: 3}.a * 3 == 9)
 assert({a: 10}.a / 4 == 2.5)
 assert({a: 1, b: 2}.a + {a: 1, b: 2}.b == 3)
+# `+` on two string fields is concatenation, not addition. Nothing but the
+# fields themselves can say so: reading it off the operator makes this numeric.
+assert({a: 'x', b: 'y'}.a + {a: 'x', b: 'y'}.b == 'xy')
 
 # Ordering, which text would get wrong rather than reject: '10' < '9'
 assert({a: 10}.a > 9)
 assert({a: 10}.a >= 10)
 assert({a: 10}.a < 11)
 assert({a: 1, b: 2}.a < {a: 1, b: 2}.b)
+# And ordering two string fields is string ordering
+assert({a: 'a', b: 'b'}.a < {a: 'a', b: 'b'}.b)
 
 # A string field still composes with the string functions. Not `length`: that
 # name has a List and a String implementation on SQL and no way to choose

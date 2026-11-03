@@ -258,12 +258,17 @@ const sqlEmitter: Emitter = {
       const read = keys.length === 1
         ? `${rootExpr}->>${keys[0]}`
         : `${rootExpr} #>> ARRAY[${keys.join(', ')}]`;
-      // Either way the read is text whatever the field holds. When the type
-      // checker told us what it holds (`--optimize`), say so here and the
-      // value composes like any other; otherwise it stays text and the
-      // operation using it supplies the type — see readsJsonField.
+      // Parenthesised whether or not it is cast: PostgreSQL binds `||` tighter
+      // than `->>`, so a bare `a->>'x' || b->>'y'` parses as
+      // `a ->> ('x' || b) ->> 'y'` and fails with "operator does not exist:
+      // text ->> unknown". A cast used to hide that by parenthesising as a
+      // side effect, which held only as long as every read was cast.
+      //
+      // The read itself is text whatever the field holds. Where the field's
+      // type is known the cast says so and the value composes like any other;
+      // a String field needs none, since text is what the read already is.
       const pg = jsonFieldPgType(ir.inferredType);
-      return pg ? `(${read})::${pg}` : read;
+      return pg ? `(${read})::${pg}` : `(${read})`;
     }
 
     // The input is a *row* on SQL, not a document: `_.person.age` is a field

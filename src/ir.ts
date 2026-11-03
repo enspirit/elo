@@ -10,7 +10,7 @@
  */
 
 import { Located } from './ast';
-import { EloType, Types } from './types';
+import { EloType, Types, arrayOf, objectOf } from './types';
 
 /**
  * IR expression types.
@@ -518,9 +518,12 @@ export function inferType(ir: IRExpr): EloType {
     case 'duration_literal':
       return Types.duration;
     case 'object_literal':
-      return Types.object;
+      // The shape is right here, so an object written in place knows it. What
+      // a read off it produces then comes from the type rather than from
+      // whatever the read sits next to.
+      return objectOf(new Map(ir.properties.map(p => [p.key, inferType(p.value)])));
     case 'array_literal':
-      return Types.array;
+      return ir.elementType.kind === 'any' ? Types.array : arrayOf(ir.elementType);
     case 'variable':
       return ir.inferredType;
     case 'call':

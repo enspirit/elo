@@ -114,7 +114,47 @@ If the narrow version does not clearly pay for itself, move this to
 `analyzed` with the measurement recorded, and leave the workaround documented
 where it is. A measured decision not to do it is a good outcome for this task.
 
-## Measured, 2026-11-02 — and the answer changes the task
+## Step 1 is done, 2026-11-03
+
+`EloType` gained `props` and `element`, and the transform propagates them from
+the object literals and type expressions it already walks. Measured again over
+the corpus: `OPERATOR_DEMAND` fired **8 times before, 0 times after**, without
+the checker — so the asymmetry this task was really about (`--optimize`
+changing emission *semantics*) is gone, and the invariant that nothing in the
+compile path calls the checker is preserved rather than broken.
+
+The claim below that the transform cannot find a field's type without
+duplicating the checker's walk was **wrong**: `transformTypeExprWithContext`
+already builds the whole `IRTypeExpr`, and `inferType` already has the object
+literal in hand. Both were throwing the shape away — `Types.fn` at the binding
+and `Types.any` at the read. Recording it instead is propagation, not a second
+inference engine.
+
+Two bugs fell out, both now fixed and pinned:
+
+- `{a: 'x'}.a + {b: 'y'}.b` cast two strings to `numeric` on SQL and errored on
+  PostgreSQL, where the other three concatenate. The residual case — an
+  untyped `jsonb` value — is ideation **0216**.
+- A json read did not parenthesise itself, and PostgreSQL binds `||` tighter
+  than `->>`, so `a->>'x' || b->>'y'` parsed as `a ->> ('x' || b) ->> 'y'`. A
+  cast had been hiding it by parenthesising as a side effect, which held only
+  as long as every read was cast.
+
+Emitted JavaScript shrank 2.6% over the corpus, because a read off a known
+shape dispatches statically: `kEq(kMul(o.price, o.quantity), 100)` became
+`o.price * o.quantity == 100`.
+
+### What is left
+
+Collapsing `CheckType` into `EloType` — the other half of "collapse
+representations 1 and 2". `CheckType` still carries `optional`, `extras`,
+`nullable` and unions, which only the checker reads. The fork to decide:
+whether `EloType` grows those too (which is representation 2 again, inside 1)
+or whether the compiler's type keeps only what it dispatches and emits on, and
+`CheckType` stays the checker's richer view of the same thing. Step 1 is a
+prerequisite either way and is independent of the answer.
+
+## Measured, 2026-11-02 — and the answer changed the task
 
 The task asked for a number before any code: how many SQL emissions actually
 depend on `demandedPgType` guessing, and whether field types alone remove them.

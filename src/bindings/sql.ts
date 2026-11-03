@@ -46,9 +46,15 @@ export const PG_TYPE: Partial<Record<string, string>> = {
  * A number in `jsonb` is a `numeric`: json draws no line between 1 and 1.0, so
  * neither can the read. Reading an Int field as `integer` would also make
  * `{ a: 10 }.a / 4` truncate, which is not what Elo's `/` means.
+ *
+ * A String field needs no cast at all: `jsonb->>'k'` is text by definition, so
+ * `::text` would say what the read already says. Knowing the field *is* a
+ * String still matters — it is what sends `+` to `||` instead of to numeric
+ * addition — but it is the type that carries that, not a cast.
  */
 export function jsonFieldPgType(type: EloType): string | undefined {
   if (type.kind === 'int' || type.kind === 'float') return 'numeric';
+  if (type.kind === 'string') return undefined;
   return PG_TYPE[type.kind];
 }
 
@@ -255,7 +261,15 @@ export function pgTypeOf(ir: IRExpr): string | null {
     case 'if':
       return pgTypeOf(ir.then);
     case 'member_access':
-      return jsonFieldPgType(ir.inferredType) ?? null;
+      // What the read *has*, which is not the same question as what cast it
+      // needs: a String field needs none — `->>` is already text — but its
+      // type is `text` all the same, and COALESCE has to be told so. Reading
+      // the cast instead answered "no type" and let `o.x | 0` through as
+      // COALESCE(text, integer).
+      if (jsonPath(ir) !== null) {
+        return jsonFieldPgType(ir.inferredType) ?? 'text';
+      }
+      return PG_TYPE[inferType(ir).kind] ?? null;
     default:
       return PG_TYPE[inferType(ir).kind] ?? null;
   }

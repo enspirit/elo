@@ -23,7 +23,7 @@
 (lambda _: kAssert(kEq(kFetch({"a": {"b": {"c": "deep"}}}, ["a", "b", "c"]), "deep")))(None)
 
 
-(lambda _: kAssert(kEq({"v": 42}.get("v"), 42)))(None)
+(lambda _: kAssert({"v": 42}.get("v") == 42))(None)
 (lambda _: kAssert(kEq(kData("{\"v\": 42}").get("v"), 42)))(None)
 (lambda _: kAssert(kEq(kData("{\"v\": \"x\"}").get("v"), "x")))(None)
 (lambda _: kAssert(kEq(kData("{\"v\": true}").get("v"), True)))(None)

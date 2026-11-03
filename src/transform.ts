@@ -43,7 +43,7 @@ import {
   commonElementType,
 } from './ir';
 import { TypeExpr } from './ast';
-import { EloType, Types, TypeKind, TypeAnnotations } from './types';
+import { EloType, Types, TypeKind, TypeAnnotations, propertyType } from './types';
 import { eloTypeDefs } from './typedefs';
 import { parseExtractTemplate } from './extract';
 
@@ -366,9 +366,15 @@ function transformNode(
         );
       }
 
-      // `inferType` has nothing to say about a member read on its own — data is
-      // opaque to it — so a declared field's type can only come from here.
-      return irMemberAccess(objectIR, expr.property, checkedType(expr, ctx, Types.any));
+      // What the read produces comes from the object's own shape where it has
+      // one — an object written in place, or a value coerced through a
+      // declared type. The checker's annotation is consulted only where that
+      // leaves `any`, as everywhere else.
+      return irMemberAccess(
+        objectIR,
+        expr.property,
+        checkedType(expr, ctx, propertyType(objectType, expr.property))
+      );
     }
 
     case 'let':
