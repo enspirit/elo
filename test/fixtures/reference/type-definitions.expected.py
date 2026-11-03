@@ -132,3 +132,11 @@
 (lambda _: kAssertFails(lambda : (_p_T := pSchema([("d", pData, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"d": "{oops"}))[-1]))(None)
 
 (lambda _: kAssert(kEq((_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), (_p_T__2 := pArray(_p_T), T__2 := lambda v: pUnwrap(_p_T__2(v, '')), T__2(["1"]))[-1])[-1], [1])))(None)
+
+
+(lambda _: kAssert(kEq((f := (_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), lambda x: T(x))[-1], (_p_T__2 := pString, T__2 := lambda v: pUnwrap(_p_T__2(v, '')), f("1"))[-1])[-1], 1)))(None)
+
+(lambda _: kAssert(kEq((a := (_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), T("1"))[-1], b := (_p_T__2 := pArray(pInt), T__2 := lambda v: pUnwrap(_p_T__2(v, '')), T__2(["2"]))[-1], [a, b])[-1], [1, [2]])))(None)
+(lambda _: kAssert(kEq((f := (_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), lambda x: T(x))[-1], g := (_p_T__2 := pArray(pInt), T__2 := lambda v: pUnwrap(_p_T__2(v, '')), lambda x: T__2(x))[-1], [f("1"), g(["2"])])[-1], [1, [2]])))(None)
+
+(lambda _: kAssertFails(lambda : (f := (_p_T := pInt, T := lambda v: pUnwrap(_p_T(v, '')), lambda x: T(x))[-1], (_p_T__2 := pString, T__2 := lambda v: pUnwrap(_p_T__2(v, '')), f("x"))[-1])[-1]))(None)

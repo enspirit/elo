@@ -855,6 +855,33 @@ describe('transform - shadowing', () => {
     );
   });
 
+  it('renames a type definition that a closed sibling already used', () => {
+    // A `let` binding is a local in all four targets, so two sibling bindings
+    // of one name are fine. A type definition is not: Ruby emits an uppercase
+    // name, which is a *constant* in the enclosing scope, and Python assigns
+    // in the enclosing function. So the second sibling would be the first.
+    const ir = transform(parse('(let T = Int in 1 |> T) + (let T = Int in 2 |> T)'));
+    assert.strictEqual(ir.type, 'call');
+    if (ir.type !== 'call') return;
+    const names = ir.args.map(arg => {
+      assert.strictEqual(arg.type, 'typedef');
+      return arg.type === 'typedef' ? arg.definitions[0].name : '';
+    });
+    assert.deepStrictEqual(names, ['T', 'T__2']);
+  });
+
+  it('still lets sibling let bindings share one name', () => {
+    // The counterpart: only type definitions need a program-wide name, and
+    // renaming bindings too would churn the corpus for nothing.
+    const ir = transform(parse('(let x = 1 in x) + (let x = 2 in x)'));
+    assert.strictEqual(ir.type, 'call');
+    if (ir.type !== 'call') return;
+    for (const arg of ir.args) {
+      assert.strictEqual(arg.type, 'let');
+      if (arg.type === 'let') assert.strictEqual(arg.bindings[0].name, 'x');
+    }
+  });
+
   it('renames a constraint variable that shadows a binding', () => {
     // Ruby assigns the constraint variable inside the parser lambda, which
     // captures the enclosing locals, so `i` must not be the same name twice.

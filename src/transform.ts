@@ -122,6 +122,23 @@ interface TransformContext {
    * applied to itself, which is how Elo's termination guarantee breaks.
    */
   fieldBound: Set<string>;
+  /**
+   * Every name a type definition has been emitted under *anywhere* in the
+   * program, including scopes already closed.
+   *
+   * A `let` binding is a local in all four targets, so two sibling bindings of
+   * one name are fine and keep it — `inScope` forgetting a closed scope is
+   * exactly right for them. A type definition is not a local: Ruby emits
+   * `T = ->(v) { … }`, an uppercase name, which is a *constant* in the
+   * enclosing scope, and Python emits `T := …`, which assigns in the enclosing
+   * function. So the second of two siblings overwrites the first, and a lambda
+   * built under the first sees the second when it is finally called.
+   *
+   * A type name therefore has to be unused in the whole program rather than
+   * merely in the scopes enclosing it, which is what this remembers. Nothing
+   * is ever removed from it.
+   */
+  typeNames: Set<string>;
 }
 
 const DEFAULT_MAX_DEPTH = 100;
@@ -142,6 +159,7 @@ export function transform(
     renames: new Map(),
     inScope: new Map(),
     fieldBound: new Set(),
+    typeNames: new Set(),
   };
   return transformWithDepth(expr, env, defining, 0, ctx);
 }
@@ -154,11 +172,16 @@ function emittedName(name: string, ctx: TransformContext): string {
   return stack === undefined || stack.length === 0 ? name : stack[stack.length - 1];
 }
 
-/** A name of the `x__2` family that nothing in scope answers to. */
+/**
+ * A name of the `x__2` family that nothing in scope answers to, and that no
+ * type definition has ever been emitted under.
+ */
 function unusedName(name: string, env: TypeEnv, ctx: TransformContext): string {
   for (let suffix = 2; ; suffix++) {
     const candidate = `${name}__${suffix}`;
-    if (!env.has(candidate) && !ctx.inScope.has(candidate)) return candidate;
+    if (!env.has(candidate) && !ctx.inScope.has(candidate) && !ctx.typeNames.has(candidate)) {
+      return candidate;
+    }
   }
 }
 
@@ -175,6 +198,22 @@ function unusedName(name: string, env: TypeEnv, ctx: TransformContext): string {
 function localName(name: string, env: TypeEnv, ctx: TransformContext): string {
   const taken = name === '_' || env.has(name) || ctx.inScope.has(name);
   return taken ? unusedName(name, env, ctx) : name;
+}
+
+/**
+ * What to emit for a type definition.
+ *
+ * Like a local, except that the name must be unused in the *whole program*
+ * rather than only in the scopes enclosing it: a type definition is a constant
+ * in Ruby and an enclosing-function assignment in Python, so two siblings of
+ * one name would be one name, and a lambda built under the first would see the
+ * second. See `TransformContext.typeNames`.
+ */
+function typeDefName(name: string, env: TypeEnv, ctx: TransformContext): string {
+  const taken = ctx.typeNames.has(name) || name === '_' || env.has(name) || ctx.inScope.has(name);
+  const emitted = taken ? unusedName(name, env, ctx) : name;
+  ctx.typeNames.add(emitted);
+  return emitted;
 }
 
 /**
@@ -415,7 +454,7 @@ function transformNode(
       const newEnv = new Map(env);
       const opened: Array<[string, string]> = [];
       const definitions = expr.definitions.map((definition) => {
-        const emitted = localName(definition.name, newEnv, ctx);
+        const emitted = typeDefName(definition.name, newEnv, ctx);
         // Taken from here on, as a let binding's name is, so that nothing
         // inside the type expression reuses it
         ctx.inScope.set(emitted, definition.name);

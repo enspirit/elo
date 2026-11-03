@@ -132,3 +132,11 @@ assert((let T = { d: Data } in { d: 42 } |> T).d == 42)
 assertFails(fn( ~> let T = { d: Data } in { d: '{oops' } |> T ))
 # A type definition that shadows another may build on it
 assert((let T = Int in let T = [T] in ['1'] |> T) == [1])
+# Two sibling definitions of one name are two types: the first is closed before
+# the second opens, so a lambda built under the first keeps it
+assert((let f = (let T = Int in fn( x ~> x |> T )) in (let T = String in f('1'))) == 1)
+# And each coerces its own way where it is used
+assert((let a = (let T = Int in '1' |> T), b = (let T = [Int] in ['2'] |> T) in [a, b]) == [1, [2]])
+assert((let f = (let T = Int in fn( x ~> x |> T )), g = (let T = [Int] in fn( x ~> x |> T )) in [f('1'), g(['2'])]) == [1, [2]])
+# A sibling that would have been overwritten is a different type, so it refuses
+assertFails(fn( ~> let f = (let T = Int in fn( x ~> x |> T )) in (let T = String in f('x')) ))
