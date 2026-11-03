@@ -4,6 +4,29 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-03
+
+### Security
+
+- Complete the fix for the JavaScript sandbox escape that 1.2.0 began. 1.2.0
+  closed the reported chain (a non-string `fetch` key coercing past the
+  denylist, and the `{__proto__: …}` literal), but the underlying flaw was
+  broader: a JavaScript property read walks the prototype chain, so **any**
+  host builtin whose name the seven-entry denylist does not list was still
+  handed back as a live function — `[].map` is `Array.prototype.map`,
+  `{a: 1}.toString` is `Object.prototype.toString`, and `fetch({}, 'toString')`
+  the same through the runtime path. None escalated on their own, because the
+  Function constructor stays denylisted at every hop, but the security model
+  promises compiled code cannot reach host internals, and a leaked
+  `.call`/`.bind` is the foothold a later gap would build on. Member access,
+  `fetch` and `patch` on the JavaScript target now read an **own** property or
+  null — a structural guard that closes every name at once, where a denylist
+  could not — through a new `kMember` helper. Real data is unaffected: a key the
+  author wrote is an own property and shadows any namesake on the prototype, so
+  `{map: 42}.map` is `42`. Ruby and Python were never affected (both index data
+  and never consult a prototype). Backported to 1.1.3 and 1.0.5.
+  `{__proto__: 5}` reading as data, from the 1.2.0 note, is unchanged
+
 ## [1.2.0] - 2026-11-03
 
 ### Security

@@ -157,9 +157,14 @@ const jsEmitter: Emitter = {
 
   variable: (name) => assertSafeIdentifier(name, 'variable name'),
 
-  memberAccess: (object, property, ir) => {
-    const objectExpr = ir.object.type === 'call' ? `(${object})` : object;
-    return `${objectExpr}.${assertSafeIdentifier(property, 'member_access property')}`;
+  // A plain `obj.prop` read walks the prototype chain, so naming a host builtin
+  // (`toString`, `map`, `call`...) hands back a live function rather than data.
+  // kMember reads an own property only, returning null otherwise — which is
+  // already what an absent key means in Elo. A data key shadows any namesake on
+  // the prototype, so real access is unchanged.
+  memberAccess: (object, property, ir, ctx) => {
+    ctx.requireHelper('kMember');
+    return `kMember(${object}, ${JSON.stringify(assertSafeIdentifier(property, 'member_access property'))})`;
   },
 
   letExpr: (bindings, body) => {
