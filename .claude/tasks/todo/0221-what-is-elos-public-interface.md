@@ -221,15 +221,49 @@ Stated the other way round, which is the sentence to put in the README: **use
 - Spec coverage per target (the `.expected.*` count above) reported by the
   acceptance runners, so an unspecified cell is visible rather than inferred.
 
-## Open sub-questions
+## The three sub-questions, answered
 
-1. Does "the AST structure" include the **node shapes**, or only the
-   factories? The take says structure, which reads as both — so 1.2.0's
-   `TypeDef` holding `definitions` where it held `name`/`typeExpr` is a
-   protected break, correctly a minor. Worth stating explicitly, because it is
-   the case that prompted all of this.
-2. Is `toEloCode` public or protected? It serialises an AST, so it is coupled
-   to the protected tier while looking like a black-box convenience.
-3. Where does the **type checker's diagnostic set** sit? `DiagnosticCode` is a
-   closed set a host could switch on. Adding a code is harmless; renaming one
-   is not. Probably protected, by the same argument as the failure kinds.
+1. **Node shapes are part of the AST, and so are protected.** "The AST
+   structure" means both the shapes and the factories. That confirms rather
+   than infers the 1.2.0 verdict: `TypeDef` holding `definitions` where it held
+   `name`/`typeExpr` is a protected break, hence a minor. It is the case that
+   prompted all of this, and it now has a rule rather than an argument.
+2. **`toEloCode` is private, for now.**
+3. **`DiagnosticCode` is protected**, by the same argument as the failure
+   kinds: it is a closed set a host switches on, so renaming a member has to
+   cost something, and adding one should not cost a major.
+
+### Two consequences to carry into the implementation
+
+**Private does not mean unreachable, and `toEloCode` shows why.** It stays
+exported from `src/index.ts` — unexporting it buys nothing, since private
+already means no promise — so the export-list test needs three buckets, not
+two: public, protected, and *reachable but unsupported*. A name in the third
+bucket is the normal case for a compiler, not an anomaly, and saying so in the
+list is what stops the next person from reading reachability as a promise.
+
+More to the point, the function is private while **the syntax it emits is
+not**. `src/formats.ts` uses `toEloCode` as the `serialize` of its `eloAdapter`,
+and the CLIs write that format, so a host can depend on the Elo data literal
+syntax without ever importing the function. The function name is private; the
+output format is public, by way of the binaries. Worth stating in those terms,
+because "private" on its own would wrongly suggest the format can change.
+
+**A public function can have a protected detail in its return type.**
+`typecheck()` is a public entry point; the `DiagnosticCode` it reports is
+protected. So the promise is "the checker keeps working and keeps reporting",
+not "this diagnostic keeps this name". That changes the dependency advice: a
+host that renders diagnostics **by code** needs the `1.2.x` pin even if it
+never touches an AST — a formula editor is exactly that host. The one-line
+guidance becomes: *use `1.x` if Elo is a black box; pin `1.2.x` if you build or
+read an AST, or branch on diagnostic codes.*
+
+## Still open
+
+1. Where do the **format adapters** sit — `jsonAdapter`, `csvAdapter`,
+   `eloAdapter`, `defaultFormats`, `getFormat`, `parseCSV`, `toCSV`,
+   `FormatAdapter`, `FormatRegistry`? All exported, none documented. The
+   formats themselves are public through the binaries (that is how `elo` reads
+   and writes data), so this is the same split `toEloCode` has: probably
+   private names over a public format. Needs saying rather than inheriting the
+   ambiguity.
