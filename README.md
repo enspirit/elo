@@ -172,9 +172,9 @@ The compiler translates Elo expressions to Ruby, JavaScript, or SQL:
 echo "2 + 3 * 4" | ./bin/eloc -
 cat input.elo | ./bin/eloc - -t ruby
 
-# Report type errors before compiling
-./bin/eloc --typecheck -e "'hello' - 5"
-# 1:9: error: No signature of operator '-' accepts sub(String, Int). ...
+# Report the type errors a compile does not refuse on its own
+./bin/eloc --typecheck -e "if 1 then 2 else 3"
+# 1:4: error: if condition must be Bool, got Int [non-bool-condition]
 ```
 
 Every compile-time refusal names **where** it is — the line, the column, and
@@ -292,7 +292,8 @@ applied to the database **before** any compiled Elo runs there:
 Every definition is `CREATE OR REPLACE`, so re-running it is idempotent — on
 each deploy is a fine place for it. `eloc -p -t sql` refuses rather than emit
 statements no host can run as an expression.
-- `--typecheck` - Report static type errors to stderr, exit non-zero if any
+- `--typecheck` - Report the *advisory* static type errors to stderr, exit
+  non-zero if any (a call with no matching signature is refused anyway)
 - `--strict` - Also report anything the checker cannot type (implies `--typecheck`)
 - `--input-type <type>` - Declare the type of `_` (implies `--typecheck`)
 - `--optimize` - Compile with the checker's types (implies `--typecheck`)
@@ -301,13 +302,27 @@ statements no host can run as an expression.
 
 ### Type checking
 
-`--typecheck` runs an optional static check before compiling. It reports
-unknown functions, wrong argument counts, arguments of the wrong type,
-operators applied to types they do not accept, and conditions that are not
-`Bool`. Each problem is reported with its line and column, it reports every
-problem it finds in one pass, and it does not change the generated code — the
-same code is emitted with or without the flag. (`--optimize`, below, is the one
-flag that does change it.)
+Some of what the checker knows is not optional. A call whose argument types are
+known and that matches **no signature** is wrong whatever the target, so every
+compile refuses it — flag or no flag:
+
+```bash
+./bin/eloc -e "startOfMonth('2026-03-15')"
+# Compilation error: Error: No signature of startOfMonth accepts
+# startOfMonth(String). Known: startOfMonth(Date), startOfMonth(Datetime)
+# at line 1, column 1
+```
+
+An argument the checker *cannot* type is a different matter and still compiles:
+`startOfMonth(_.d)` on an undeclared input is accepted, and `--strict` below is
+how you ask about it.
+
+`--typecheck` reports the rest, which is advisory: conditions that are not
+`Bool`, a field a declared schema does not have, a value that may be null used
+where null is not accepted. Each problem is reported with its line and column,
+it reports every problem it finds in one pass, and it does not change the
+generated code — the same code is emitted with or without the flag.
+(`--optimize`, below, is the one flag that does change it.)
 
 The checker is deliberately silent about what it cannot know. The input `_` has
 type `Any` until it is coerced, so a call with an unknown argument type is

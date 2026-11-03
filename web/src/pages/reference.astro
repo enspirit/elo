@@ -812,19 +812,38 @@ People = [Person]
         <h2>Type Checking</h2>
         <p>
           Elo is dynamically typed: a type mismatch normally surfaces when the
-          compiled code runs. <code>eloc --typecheck</code> is an optional pass
-          that looks for those mistakes first. It reports every problem it finds
-          in one run and does not change the generated code — the same code is
-          emitted with or without the flag.
+          compiled code runs. Some of them do not get that far.
+        </p>
+
+        <h3>Refused by every compile</h3>
+        <p>
+          A call whose argument types are known and that matches <strong>no
+          signature</strong> is wrong whatever the target, so it never compiles
+          — on any target, with or without a flag. Same for an unknown name and
+          a wrong argument count.
+        </p>
+        <table class="type-table">
+          <thead><tr><th>Refused</th><th>Because</th></tr></thead>
+          <tbody>
+            <tr><td><code class="language-elo" data-invalid>foo(1)</code></td><td>no function by that name</td></tr>
+            <tr><td><code class="language-elo" data-invalid>upper('a', 'b')</code></td><td>no signature takes two arguments</td></tr>
+            <tr><td><code class="language-elo" data-invalid>startOfMonth('2026-03-15')</code></td><td>it takes a Date or a DateTime, not a String — write <code class="language-elo">startOfMonth(Date('2026-03-15'))</code> if that is what you meant</td></tr>
+            <tr><td><code class="language-elo" data-invalid>'hello' - 5</code></td><td>the same, for a name written as an operator</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Reported by <code>--typecheck</code></h3>
+        <p>
+          <code>eloc --typecheck</code> is an optional pass that looks for the
+          rest. It reports every problem it finds in one run and does not change
+          the generated code — the same code is emitted with or without the
+          flag.
         </p>
         <table class="type-table">
           <thead><tr><th>Reports</th><th>Example</th></tr></thead>
           <tbody>
-            <tr><td>Unknown function</td><td><code class="language-elo" data-invalid>foo(1)</code></td></tr>
-            <tr><td>Wrong number of arguments</td><td><code class="language-elo" data-invalid>upper('a', 'b')</code></td></tr>
-            <tr><td>Argument of the wrong type</td><td><code class="language-elo" data-invalid>year('hello')</code></td></tr>
-            <tr><td>Operator applied to the wrong types</td><td><code class="language-elo" data-invalid>'hello' - 5</code></td></tr>
             <tr><td>Condition that is not a Bool</td><td><code class="language-elo" data-invalid>if 42 then 1 else 2</code></td></tr>
+            <tr><td>A field a declared schema does not have</td><td><code class="language-elo" data-invalid>order.totl</code></td></tr>
             <tr><td>A value that may be null, used as if it were not</td><td><code class="language-elo" data-invalid>k.a + 1</code> where <code>a :? Int</code></td></tr>
           </tbody>
         </table>
@@ -1186,8 +1205,8 @@ eloc --prelude-only -t ruby
 # Compile a file: one program
 eloc program.elo -t ruby
 
-# Report type errors before compiling
-eloc --typecheck -e "'hello' - 5"</pre>
+# Report the type errors a compile does not refuse on its own
+eloc --typecheck -e "if 1 then 2 else 3"</pre>
         <p>
           Every compile-time refusal names <strong>where</strong> it is — the
           line, the column, and the file when the source came from one. With
@@ -1205,7 +1224,7 @@ eloc --typecheck -e "'hello' - 5"</pre>
             <tr><td><code>--prelude-only</code></td><td>Emit only the prelude</td></tr>
             <tr><td><code>--strip-guards</code></td><td>Remove guard/check assertions</td></tr>
             <tr><td><code>--lines</code></td><td>One expression per line, instead of one program</td></tr>
-            <tr><td><code>--typecheck</code></td><td>Report type errors, exit non-zero if any</td></tr>
+            <tr><td><code>--typecheck</code></td><td>Report the advisory type errors, exit non-zero if any</td></tr>
             <tr><td><code>--strict</code></td><td>Also report what the checker cannot type</td></tr>
             <tr><td><code>--input-type</code></td><td>Declare the type of <code>_</code></td></tr>
             <tr><td><code>--optimize</code></td><td>Compile with the checker's types</td></tr>

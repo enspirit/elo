@@ -8,6 +8,8 @@ import { eloTypeDefs, parseSignatureKey } from '../../src/typedefs';
 import { compileToJavaScript } from '../../src/compilers/javascript';
 import { compileToRuby } from '../../src/compilers/ruby';
 import { compileToPython } from '../../src/compilers/python';
+import { compileToSQL } from '../../src/compilers/sql';
+import type { DiagnosticCode } from '../../src/typecheck';
 
 /**
  * The property that makes the checker worth trusting:
@@ -105,6 +107,28 @@ const targets: Array<[string, (ast: ReturnType<typeof parse>) => string]> = [
   ['python', compileToPython],
 ];
 
+/** The same four targets `eloc -t` offers, for the refusal direction. */
+const allTargets: Array<[string, (ast: ReturnType<typeof parse>) => string]> = [
+  ...targets,
+  ['sql', compileToSQL],
+];
+
+/**
+ * The two codes that say "these argument types are known, and no signature in
+ * the table accepts them". Both are the same defect — one for a name the
+ * author wrote as a call, one for a name they wrote as an operator.
+ */
+const NO_SIGNATURE: DiagnosticCode[] = ['no-matching-signature', 'operator-type-mismatch'];
+
+function refuses(compile: (ast: ReturnType<typeof parse>) => string, ast: ReturnType<typeof parse>): boolean {
+  try {
+    compile(ast);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 describe('Typecheck - silence means every compiler accepts', () => {
   const corpus = buildCorpus();
 
@@ -150,12 +174,17 @@ describe('Typecheck - silence means every compiler accepts', () => {
     );
   });
 
-  it('reports plenty that the compilers accept in silence', () => {
-    // The other direction, as a measurement rather than a constraint: these
-    // are the programs that compile everywhere and then behave differently per
-    // target, which is what the checker exists to catch. If this ever dropped
-    // to nothing, the checker would have stopped doing its job.
-    let reported = 0;
+  it('refuses, on every target, what it calls a missing signature', () => {
+    // The other direction, and the half that used to be only a measurement:
+    // whether a call with no matching signature is refused at all used to
+    // depend on the target's bindings. `startOfMonth('2026-03-15')` was
+    // refused on three targets and compiled on Ruby, which registers the
+    // period-boundary family on `any`; `round('x')` and `'a' - 1` compiled on
+    // all four. The check belongs to the language, so a program the checker
+    // reports under these two codes must now fail to compile everywhere.
+    const gaps: string[] = [];
+    let refused = 0;
+
     for (const source of corpus) {
       let ast;
       try {
@@ -163,19 +192,80 @@ describe('Typecheck - silence means every compiler accepts', () => {
       } catch {
         continue;
       }
-      if (typecheck(ast).length === 0) continue;
-      const allCompile = targets.every(([, compile]) => {
-        try {
-          compile(ast);
-          return true;
-        } catch {
-          return false;
-        }
-      });
-      if (allCompile) reported++;
+      let diagnostics;
+      try {
+        diagnostics = typecheck(ast);
+      } catch {
+        continue; // a checker crash is the first test's business, not this one
+      }
+      if (!diagnostics.some((d) => NO_SIGNATURE.includes(d.code))) continue;
+      refused++;
+
+      const accepted = allTargets.filter(([, compile]) => !refuses(compile, ast)).map(([t]) => t);
+      if (accepted.length > 0) {
+        gaps.push(`${source}\n    compiled on ${accepted.join(', ')}`);
+      }
     }
-    assert.ok(reported > 500, `only ${reported} silently-accepted programs are reported`);
+
+    assert.ok(refused > 500, `only ${refused} expressions have no matching signature`);
+    assert.deepStrictEqual(
+      gaps.slice(0, 20),
+      [],
+      `${gaps.length} expression(s) with no matching signature still compile on ` +
+      `some target. The refusal must come from the signature table, not from ` +
+      `whether a target happens to have registered an implementation.`
+    );
   });
+});
+
+describe('Typecheck - a missing signature is refused on every target', () => {
+  // The cases 0218 was written from. Named rather than generated, so that the
+  // corpus sweep above cannot go green by the corpus losing them.
+  const refusedEverywhere = [
+    "startOfMonth('2026-03-15')",  // compiled on Ruby: registered on `any`
+    'startOfMonth([1])',           // and so did this
+    "endOfWeek('x')",
+    "round('x')",                  // compiled on all four
+    'floor(true)',
+    'ceil([1])',
+    "'hello' - 5",                 // an operator, same defect
+    "1 + 'x'",
+    'upper(42)',
+    'length(3.5)',
+    // Where a real program meets this: the field is declared a String, and
+    // the checker can see it.
+    'let Row = { d: String } in startOfMonth((_ |> Row).d)',
+  ];
+
+  for (const source of refusedEverywhere) {
+    it(`refuses ${source}`, () => {
+      const ast = parse(source, { locations: true });
+      assert.ok(
+        typecheck(ast).some((d) => NO_SIGNATURE.includes(d.code)),
+        'expected the checker to report a missing signature'
+      );
+      for (const [target, compile] of allTargets) {
+        assert.ok(refuses(compile, ast), `${target} compiled it`);
+      }
+    });
+  }
+
+  // An argument the checker cannot type is a different matter, and stays
+  // compilable: that is `unresolved-any` under --strict, not this task.
+  const stillCompiles = [
+    'startOfMonth(_.d)',
+    'round(_)',
+    '_ - 1',
+  ];
+
+  for (const source of stillCompiles) {
+    it(`still compiles ${source}`, () => {
+      const ast = parse(source, { locations: true });
+      for (const [target, compile] of allTargets) {
+        assert.ok(!refuses(compile, ast), `${target} refused it`);
+      }
+    });
+  }
 });
 
 describe('Typecheck - type names match the transform', () => {

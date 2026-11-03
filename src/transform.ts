@@ -46,6 +46,7 @@ import {
 import { TypeExpr } from './ast';
 import { EloType, Types, TypeKind, TypeAnnotations, fnOf, propertyType } from './types';
 import { eloTypeDefs } from './typedefs';
+import { refuseMissingSignature } from './typecheck';
 import { parseExtractTemplate } from './extract';
 
 const FORBIDDEN_MEMBERS: ReadonlySet<string> = new Set([
@@ -152,6 +153,11 @@ const DEFAULT_MAX_DEPTH = 100;
 
 /**
  * Transform an AST expression into IR
+ *
+ * A call whose argument types are known and match no signature in the table is
+ * refused here, before anything is emitted — this is the one place all four
+ * compilers go through, and inferring the types is what this phase is for.
+ * See `refuseMissingSignature`.
  */
 export function transform(
   expr: Expr,
@@ -159,6 +165,11 @@ export function transform(
   defining: DefiningSet = new Set(),
   options: TransformOptions = {}
 ): IRExpr {
+  refuseMissingSignature(expr, {
+    // A bare name is a column reference in SQL, so the checker must not be
+    // stricter than the compiler about it. Same flag, same reason.
+    allowUndefinedVariables: options.allowUndefinedVariables ?? false,
+  });
   const ctx: TransformContext = {
     maxDepth: options.maxDepth ?? DEFAULT_MAX_DEPTH,
     allowUndefinedVariables: options.allowUndefinedVariables ?? false,

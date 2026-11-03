@@ -421,7 +421,7 @@ describe('Typecheck - options', () => {
   });
 });
 
-describe('Typecheck - does not touch the compile path', () => {
+describe('Typecheck - what it blocks from compiling, and what it only reports', () => {
   it('leaves the AST unchanged', () => {
     const ast = parse("upper(42) + year('x')");
     const before = JSON.stringify(ast);
@@ -429,10 +429,29 @@ describe('Typecheck - does not touch the compile path', () => {
     assert.strictEqual(JSON.stringify(ast), before);
   });
 
-  it('reports on a program the compilers still compile', () => {
-    // Checking is advisory: a reported program is not blocked from compiling.
+  it('blocks a call with no matching signature', () => {
+    // Not advisory: these argument types are known and no signature accepts
+    // them, which is wrong whatever the target, so the transform refuses it
+    // rather than leaving each target's bindings to decide. See
+    // `refuseMissingSignature`.
     const ast = parse("'hello' - 5");
     assert.strictEqual(typecheck(ast).length, 1);
+    assert.throws(() => transform(ast), /No signature of operator '-' accepts sub\(String, Int\)/);
+  });
+
+  it('still compiles an argument it cannot type', () => {
+    // `any` buys silence from the signature check, and must keep buying it:
+    // how much Elo demands to be typed is `--strict`'s question.
+    const ast = parse('_ - 5');
+    assert.deepStrictEqual(typecheck(ast), []);
+    assert.doesNotThrow(() => transform(ast));
+  });
+
+  it('only reports its other objections', () => {
+    // A condition that is not a Bool is a real defect and a different one. It
+    // is not a missing signature, and this did not make it fatal.
+    const ast = parse('if 1 then 2 else 3');
+    assert.deepStrictEqual(typecheck(ast).map((d) => d.code), ['non-bool-condition']);
     assert.doesNotThrow(() => transform(ast));
   });
 
@@ -577,7 +596,7 @@ describe('Parser - opt-in locations', () => {
     // without, or the feature would not be free. The IR carries the positions
     // too — that is how a refusal raised while emitting says where it is — so
     // the emission is where the two have to agree.
-    const source = "let X = { a: Int }, k = _ |> X in upper('a') + 'b' + k.a";
+    const source = "let X = { a: Int }, k = _ |> X in upper('a') + 'b' + String(k.a)";
     for (const compile of [compileToJavaScript, compileToRuby, compileToPython]) {
       assert.strictEqual(
         compile(parse(source)),

@@ -45,7 +45,7 @@
  * wrong tool, not a more powerful one.
  */
 
-import { Constraint, Expr, Lambda, SourceLocation, TypeExpr } from './ast';
+import { Constraint, Expr, Lambda, locate, SourceLocation, TypeExpr } from './ast';
 import {
   BUILTIN_TYPES,
   EloType,
@@ -195,6 +195,48 @@ type Narrowing = ReadonlySet<string>;
  */
 export function typecheck(expr: Expr, options: TypecheckOptions = {}): Diagnostic[] {
   return new Checker(options).run(expr).diagnostics;
+}
+
+/**
+ * The two codes that say: these argument types are known, and no signature in
+ * the table accepts them. One defect, under two names — `operator-type-mismatch`
+ * is the same thing for a node the author wrote as an operator.
+ */
+const MISSING_SIGNATURE: ReadonlySet<DiagnosticCode> = new Set([
+  'no-matching-signature',
+  'operator-type-mismatch',
+]);
+
+/**
+ * Refuse a call whose argument types are known and match no declared signature.
+ *
+ * This runs on every compile, not on request, which is why it is here rather
+ * than in `eloc`. Whether such a call was refused used to depend on the
+ * target's bindings: Ruby registers the period-boundary family on `any`, and
+ * `StdLib.lookup` generalizes a concrete type to `any`, so
+ * `startOfMonth('2026-03-15')` compiled on Ruby and was refused on the other
+ * three — while `round('x')` and `'a' - 1` compiled on all four. The signature
+ * table is the language's, so the refusal is too.
+ *
+ * `StdLib`'s own "No signature" error stays as a backstop, for a target that
+ * is missing an implementation the table declares. That is a compiler bug
+ * rather than an author's mistake, and it can no longer be the only thing
+ * standing between an ill-typed program and emitted code.
+ *
+ * Only these two codes. An argument the checker cannot type is a different
+ * matter and stays compilable — that is `unresolved-any`, which `--strict`
+ * asks for — and so are the checker's other objections, which `--typecheck`
+ * still reports.
+ *
+ * The cost is a second walk of the tree on every compile, which takes a
+ * compile from roughly 0.01ms to 0.13ms. It buys the cases the transform
+ * cannot see on its own: `let Row = { d: String } in startOfMonth((_ |> Row).d)`
+ * is the one a real program hits, and only the checker reads the declaration
+ * well enough to know `.d` is a String there.
+ */
+export function refuseMissingSignature(expr: Expr, options: TypecheckOptions = {}): void {
+  const found = typecheck(expr, options).find((d) => MISSING_SIGNATURE.has(d.code));
+  if (found) throw locate(new Error(found.message), found.loc);
 }
 
 /**

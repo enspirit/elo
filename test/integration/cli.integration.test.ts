@@ -596,17 +596,33 @@ describe('CLI - --typecheck', () => {
   });
 
   it('still emits the code it was asked for', () => {
-    // Checking is advisory: the emitted code is identical with and without
-    // the flag, so there is no reason to withhold it.
-    const checked = elocWithError(`--typecheck -e "'hello' - 5"`);
-    const unchecked = eloc(`-e "'hello' - 5"`);
+    // Most of what the checker reports is advisory: the emitted code is
+    // identical with and without the flag, so there is no reason to withhold
+    // it. A non-Bool condition is one of those.
+    const checked = elocWithError(`--typecheck -e "if 1 then 2 else 3"`);
+    const unchecked = eloc(`-e "if 1 then 2 else 3"`);
     assert.strictEqual(checked.stdout, unchecked);
   });
 
   it('changes nothing when the flag is absent', () => {
-    const result = elocWithError(`-e "'hello' - 5"`);
+    const result = elocWithError(`-e "if 1 then 2 else 3"`);
     assert.strictEqual(result.exitCode, 0);
     assert.strictEqual(result.stderr, '');
+  });
+
+  it('is not what refuses a missing signature', () => {
+    // The one thing the flag is *not* needed for. A call whose argument types
+    // are known and match no signature is wrong whatever the target, so it is
+    // refused on a plain compile too — see refuseMissingSignature. This used
+    // to depend on the target's bindings: `startOfMonth('2026-03-15')` was
+    // refused on three targets and compiled on Ruby.
+    for (const flags of ['', '--typecheck']) {
+      for (const target of ['js', 'ruby', 'python', 'sql']) {
+        const result = elocWithError(`${flags} -t ${target} -e "startOfMonth('2026-03-15')"`);
+        assert.strictEqual(result.exitCode, 1, `${target} ${flags}`);
+        assert.match(result.stderr, /No signature of startOfMonth accepts startOfMonth\(String\)/);
+      }
+    }
   });
 
   it('reports every problem in one run', () => {
@@ -749,10 +765,10 @@ describe('CLI - --optimize', () => {
     // On a reported node the recorded type is a guess rather than a
     // conclusion, so emitting from it would turn a visible error into
     // silently wrong code.
-    const result = elocWithError(`--optimize -e "'hello' - 5"`);
+    const result = elocWithError(`--optimize -e "if 1 then 2 else 3"`);
     assert.strictEqual(result.exitCode, 1);
     assert.match(result.stderr, /\[optimize-refused\]/);
-    assert.strictEqual(result.stdout, eloc(`-e "'hello' - 5"`));
+    assert.strictEqual(result.stdout, eloc(`-e "if 1 then 2 else 3"`));
   });
 
   it('changes nothing for an undeclared input', () => {
