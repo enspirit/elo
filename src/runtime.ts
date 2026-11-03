@@ -181,9 +181,10 @@ export const JS_HELPERS: Record<string, string> = {
       current = current[segment];
     } else {
       if (typeof current !== 'object' || current === null) return null;
-      /* A property read walks the prototype chain, so a meta-property name (reachable via a variable, array or concatenated key the compile-time denylist cannot see) would hand back Object.prototype or the Object constructor. These are never valid data keys. */
-      if (FORBIDDEN.indexOf(segment) !== -1) return null;
-      current = current[segment];
+      /* A property read walks the prototype chain, so a meta-property name (reachable via a variable, array or concatenated key the compile-time denylist cannot see) would hand back Object.prototype or the Object constructor. These are never valid data keys. The read coerces the key to a string, so a non-string segment (an array, or an object with a toString) would slip past a === check and still land on the coerced name — the denylist must see the same string the read will. */
+      const key = String(segment);
+      if (FORBIDDEN.indexOf(key) !== -1) return null;
+      current = current[key];
     }
   }
   return current === undefined ? null : current;
@@ -191,7 +192,10 @@ export const JS_HELPERS: Record<string, string> = {
   kFetchObject: `function kFetchObject(data, paths) {
   const result = {};
   for (const key of Object.keys(paths)) {
-    result[key] = kFetch(data, paths[key]);
+    /* Assigning result['__proto__'] directly runs the prototype setter, so a path object with a '__proto__' key would repoint the result's prototype instead of storing a value. defineProperty makes it an own data property either way. */
+    const value = kFetch(data, paths[key]);
+    if (key === '__proto__') { Object.defineProperty(result, key, { value: value, writable: true, enumerable: true, configurable: true }); }
+    else { result[key] = value; }
   }
   return result;
 }`,
@@ -200,21 +204,25 @@ export const JS_HELPERS: Record<string, string> = {
   if (path.length === 0) return value;
   const seg = path[0];
   const rest = path.slice(1);
-  /* A meta-property name is never a valid data key; writing (or reading) one would reach the host prototype chain, so reject it however the segment was supplied. */
-  if (typeof seg === 'string' && FORBIDDEN.indexOf(seg) !== -1) throw new Error("patch() segment '" + seg + "' is forbidden: this name would expose the host runtime and is not a valid Elo property.");
+  /* A meta-property name is never a valid data key; writing (or reading) one would reach the host prototype chain, so reject it however the segment was supplied. A write coerces the key to a string, so a non-string segment must be coerced before the denylist too — otherwise an array or toString-bearing key slips past and lands on the coerced name. */
+  const key = typeof seg === 'number' ? seg : String(seg);
+  if (typeof key === 'string' && FORBIDDEN.indexOf(key) !== -1) throw new Error("patch() segment '" + key + "' is forbidden: this name would expose the host runtime and is not a valid Elo property.");
   const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {};
-  if (typeof seg === 'number') {
+  if (typeof key === 'number') {
     if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array');
     const arr = Array.isArray(data) ? [...data] : [];
-    while (arr.length <= seg) arr.push(null);
-    const existing = arr[seg];
-    arr[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value);
+    while (arr.length <= key) arr.push(null);
+    const existing = arr[key];
+    arr[key] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value);
     return arr;
   } else {
     if (Array.isArray(data)) throw new Error('cannot patch object key on array');
     const obj = data !== null && data !== undefined && typeof data === 'object' ? {...data} : {};
-    const existing = obj[seg];
-    obj[seg] = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value);
+    const existing = obj[key];
+    const patched = kPatch(existing === null || existing === undefined ? nextDefault : existing, rest, value);
+    /* Assigning obj['__proto__'] runs the prototype setter; defineProperty keeps it a data property. */
+    if (key === '__proto__') { Object.defineProperty(obj, key, { value: patched, writable: true, enumerable: true, configurable: true }); }
+    else { obj[key] = patched; }
     return obj;
   }
 }`,

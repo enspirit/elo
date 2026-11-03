@@ -140,9 +140,18 @@ const jsEmitter: Emitter = {
   datetimeLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)})`,
   durationLiteral: (value) => `Duration.fromISO(${JSON.stringify(value)})`,
 
-  // Wrapped in parens to avoid the ambiguity with a block
+  // Wrapped in parens to avoid the ambiguity with a block.
+  //
+  // `__proto__: v` as a bare (or quoted) key runs the [[Prototype]] setter
+  // instead of defining a data property — so `{__proto__: x}` would repoint the
+  // object's prototype, losing the key and, with a function value, defeating a
+  // `typeof === 'object'` guard downstream. A *computed* key `['__proto__']: v`
+  // defines an own property, which is what Elo means by a key named __proto__.
   objectLiteral: (properties) =>
-    `({${properties.map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${p.value}`).join(', ')}})`,
+    `({${properties.map(p => {
+      const key = assertSafeIdentifier(p.key, 'object_literal key');
+      return key === '__proto__' ? `['__proto__']: ${p.value}` : `${key}: ${p.value}`;
+    }).join(', ')}})`,
 
   arrayLiteral: (elements) => `[${elements.join(', ')}]`,
 

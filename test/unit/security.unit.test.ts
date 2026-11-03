@@ -212,6 +212,92 @@ describe('Security - Sandbox escape via meta-property member access', () => {
   });
 });
 
+/**
+ * Security: the runtime sandbox escape in the JavaScript target, reported by
+ * Arthur Deierlein (c0rydoras) under coordinated disclosure.
+ *
+ * The compile-time denylist above only sees *literal* segment names. The
+ * `kFetch`/`kPatch` runtime denylist is what guards a segment computed at run
+ * time — and it compared the segment against the forbidden strings with `===`,
+ * which a non-string key slips past: `['constructor']` and an object with a
+ * `toString` both coerce to `"constructor"` only when JavaScript performs the
+ * property read, after the check has passed. Separately, an object literal
+ * emitted `{__proto__: v}` with the bare key, which runs the `[[Prototype]]`
+ * setter rather than creating a data property — so `{__proto__: [].map}` makes
+ * an object whose prototype is a Function while still reporting `typeof
+ * 'object'`, defeating kFetch's object guard. Chained:
+ *
+ *   fetch({__proto__: [].map}, [['constructor']])('alert(1)')()
+ *
+ * reached the Function constructor and ran arbitrary code. Either hole closes
+ * the chain; both are fixed. JS-only: a Ruby Hash and a Python dict neither
+ * coerce a non-string key nor expose a prototype chain.
+ */
+describe('Security - JavaScript runtime sandbox escape via fetch (c0rydoras)', () => {
+  const run = (src: string): unknown =>
+    compile<(input: unknown) => unknown>(src, { runtime: {} })(null);
+
+  it('kFetch stringifies an array-coerced segment before the denylist', () => {
+    // ['constructor'] coerces to "constructor" on the read; the check must see
+    // the same string and return null rather than hand back the constructor.
+    assert.strictEqual(run(`fetch({}, [['constructor']])`), null);
+  });
+
+  it('kFetch stringifies an object-coerced segment before the denylist', () => {
+    assert.strictEqual(run(`fetch({}, [{toString: fn(~> 'constructor')}])`), null);
+  });
+
+  it('a legitimate list-shaped key still reads through', () => {
+    // The fix must not break a segment that merely coerces to an ordinary key.
+    assert.strictEqual(run(`fetch({ a: 7 }, [['a']])`), 7);
+  });
+
+  it('an object literal key `__proto__` is a data property, not the prototype', () => {
+    const result = run(`{__proto__: 5}`) as object;
+    assert.strictEqual(
+      Object.getPrototypeOf(result), Object.prototype,
+      '{__proto__: 5} must not set the prototype'
+    );
+    assert.deepStrictEqual(Object.getOwnPropertyNames(result), ['__proto__']);
+    assert.strictEqual((result as Record<string, unknown>).__proto__, 5);
+  });
+
+  it('the emitted object literal uses a computed key for `__proto__`', () => {
+    const code = compileToJavaScript(parse('{__proto__: 1}'));
+    assert.match(code, /\[['"]__proto__['"]\]\s*:/);
+  });
+
+  it('kFetchObject does not let a `__proto__` result key pollute the output', () => {
+    const result = run(`fetch({ a: 1 }, {__proto__: .a})`) as object;
+    assert.strictEqual(Object.getPrototypeOf(result), Object.prototype);
+  });
+
+  it('patch cannot be driven to a meta-property key', () => {
+    // patch only accepts a datapath literal (`.a.b`), whose segments the
+    // compile-time denylist already guards, so the forbidden key is refused
+    // before anything runs — a list path does not even type-check. The kPatch
+    // runtime guard is hardened the same way as kFetch regardless, as
+    // defense-in-depth for the AST-API trust boundary.
+    assert.throws(() => run(`patch({}, .constructor, 1)`), /forbidden/);
+    assert.throws(() => run(`patch({}, [['constructor']], 1)`), /forbidden|No signature/);
+  });
+
+  it('the full escape chain no longer reaches the Function constructor', () => {
+    // After the fix, fetch returns null, so the subsequent call throws a
+    // TypeError instead of constructing and running a function. The assertion
+    // is that it does NOT execute — a thrown TypeError is the safe outcome.
+    (globalThis as Record<string, unknown>).__eloPwned = undefined;
+    assert.throws(
+      () => run(`fetch({__proto__: [].map}, [['constructor']])('globalThis.__eloPwned = 1')()`),
+      /is not a function|null/i
+    );
+    assert.strictEqual(
+      (globalThis as Record<string, unknown>).__eloPwned, undefined,
+      'the payload must not have executed'
+    );
+  });
+});
+
 describe('Security - Subtype constraint label injection (JS/Ruby)', () => {
   // Constraint-label emission in JS (javascript.ts:313,410) and Ruby
   // single-quoted branch (ruby.ts:314) escapes only the single quote, not the
