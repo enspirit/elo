@@ -4,6 +4,408 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
+### Security
+
+- Close a sandbox escape in the **JavaScript** target that reached arbitrary
+  code execution, reported by Arthur Deierlein (c0rydoras) under coordinated
+  disclosure. Two independent holes, chained as
+  `fetch({__proto__: [].map}, [['constructor']])('alert(1)')()`: the `kFetch`
+  runtime denylist compared a path segment against the forbidden meta-property
+  names with `===`, which a non-string key slips past — `['constructor']` and
+  an object with a `toString` both coerce to `"constructor"` only when the
+  property read happens, after the check; and an object literal emitted
+  `{__proto__: v}` with the bare key, running the `[[Prototype]]` setter rather
+  than creating a data property, so `{__proto__: [].map}` produced an object
+  whose prototype was a Function while still passing a `typeof 'object'` guard.
+  `kFetch` and `kPatch` now coerce a segment to a string before the denylist
+  (and `kFetchObject` defines a `__proto__` result key rather than assigning
+  it), and the emitter writes `__proto__` as a computed key so it becomes an
+  own property. Either fix alone closes the chain; both ship. The same flaw is
+  patched in **1.1.2** and **1.0.4** for projects pinned below 1.2.0. Ruby and
+  Python were never affected — neither coerces a non-string key nor exposes a
+  prototype chain. A side benefit: `{__proto__: 5}` is now the data object
+  `{"__proto__": 5}` on JavaScript, where it had silently lost the key
+
+
+Three things happened in this release. Elo gained an optional static type
+checker, so a mistake can be caught before the compiled code runs. A `.elo`
+file became a program rather than a line — it can open with type definitions
+and import other files. And the PostgreSQL target was taken seriously for the
+first time: the SQL acceptance runner had been reporting psql's errors as
+passes, and closing that hole uncovered twenty-six fixtures that were not valid
+SQL at all.
+
+Most of what follows was found by asking the same question of every target and
+comparing the answers. Where they disagreed, one of them was wrong.
+
+### Before you upgrade
+
+Two kinds of program change behaviour: one that produced a wrong number, and
+one the compiler used to accept and now refuses. Nothing else needs action —
+the public API is unchanged, and everything newly refused is listed in Fixes.
+
+- **An ill-typed call is refused at compile time, on every target.** `round('x')`
+  compiled to `"x".round`, `floor(true)` to `true.floor`, `ceil([1])` to
+  `[1].ceil` and `'hello' - 5` to `"hello" - 5` — raising at run time on Ruby
+  and Python, and on JavaScript quietly answering a number instead:
+  `Math.floor(true)` is 1, `Math.ceil([1])` is 1, `'hello' - 5` is `NaN`.
+  `transform()` now refuses a call with no matching signature and an operator
+  applied to types it does not accept, against the one signature table above
+  every target's bindings. An argument the compiler cannot type still compiles,
+  so `round(_.x)` on an undeclared input is unaffected; how much Elo demands to
+  be typed stays `--strict`'s question
+- **`let` binds each name once.** `let x = 1, x = 2 in x` answered 2 on Ruby,
+  Python and SQL and was a `SyntaxError` on JavaScript, so it was a program
+  that compiled and did not run everywhere. It is refused now, naming the
+  duplicate and where it was first bound. A nested `let` still shadows, which
+  is the unambiguous way to say it, and now shadows correctly on every target
+  (see Fixes)
+- **Arithmetic that was wrong is now right**, so four expressions change value:
+  `7 / 2` was 3 on PostgreSQL and is now 3.5; `-7 % 3` was -1 on JavaScript and
+  PostgreSQL and is now 2; `round(2 ^ -1)` was 0.5 on all four targets and is
+  now 1; `2 ^ 3 / 16` was 0 on Ruby and is now 0.5. `2 ^ -1` on Ruby was a
+  `Rational` rather than a Float, which `typeOf` reported as `'Tuple'`. Code
+  that compensated for any of these needs revisiting
+
+### Which version to depend on
+
+Elo now says what it promises, in three tiers — stated here for the first time,
+and written up in the README under
+[Versioning](README.md#versioning-and-the-public-interface) and on the
+reference page:
+
+- **Public**, and it only breaks on a **major**: the language and stdlib and
+  their intended semantics, the `elo` and `eloc` binaries, and the TypeScript
+  entry points for parsing, compiling, evaluating and type-checking
+- **Protected**, and it may break on a **minor**: the AST — its node shapes and
+  its factory methods — and the type checker's `DiagnosticCode` set. The
+  checker itself keeps working and keeps reporting; which code it uses for a
+  given mistake may be renamed
+- **Private**: everything else, including the shape of the generated code
+
+So: **use `1.x` if Elo is a black box to you — the language, the CLIs,
+`compile()`. Pin `1.2.x` if you build or read an AST, or branch on diagnostic
+codes.** A change to either will always be called out under its own heading
+here.
+
+`src/index.ts` now lists every exported name under its tier instead of
+re-exporting modules wholesale, and a test fails on an export in no tier, a
+tier naming something no longer exported, a reintroduced wildcard, or a README
+that puts a name in the wrong tier. The reachable surface is unchanged — 66
+names before and after — so this declares what was already there.
+
+And what to do when the behaviour you depend on is *not* promised: send an
+assertion for it. One line under `test/fixtures/` turns something you observed
+into something Elo owes you, and runs on all four targets on every commit —
+see [Pin the behaviour you depend on](README.md#pin-the-behaviour-you-depend-on).
+
+Two consequences worth stating. The generated code is deliberately *not* an
+interface, so do not depend on how an expression translates, nor on the
+target's own dynamic behaviour around it — but the two things a host genuinely
+has to hold onto are promises: a failure's `kind`, `path` and `label` (its
+`message` prose is not), and the ten `elo_*` SQL prelude function names, which
+a host installs in its database.
+
+In this release the only protected change is that a type definition holds
+`definitions: TypeBinding[]` in one node, where it held one `name` and one
+`typeExpr` — so code that *reads* a `typedef` node sees the list.
+`typeDef(name, typeExpr, body)` still constructs one, so code that only
+*builds* ASTs is unaffected.
+
+### Language
+
+- A source may open with a **type prelude** — `Person = { name: String }` on its
+  own line, before any expression — scoping every expression below it. It is
+  sugar for the `let Person = … in` that was previously the only way to name a
+  type, so nothing downstream of the parser changed
+- **Imports.** `import { Person } from './types'`, `import { double } from
+  './lib'`, `import './lib' as lib`. A module is an ordinary `.elo` file: its
+  type prelude is what it exports as types, its expression is what it exports
+  as a value, and case decides which of the two an imported name means. Elo
+  compiles to one self-contained expression with no runtime to link against, so
+  an import is compile-time inlining — no new IR node, no compiler change, no
+  new semantics to make portable. A module is read, parsed and bound once per
+  program however many times it is imported. A name the module does not export
+  is refused — for a value as well as for a type — naming the module and the
+  line, so a typo is not something you meet as a `null` later. Cycles are
+  refused by name, and `src/modules.ts` reads no files itself: it is given a
+  loader, which is what lets the playground refuse an import rather than
+  silently resolve one
+- `%` is **floored on every target** — it takes the sign of the divisor, as Ruby
+  and Python already did — so `x % n` stays inside `[0, n)`, which is what
+  `day % 7` is written for. `/` is **real division on every target**, which
+  PostgreSQL was the last to do
+- `pow(Int, Int)` is declared a **Float**, because nothing tells the compiler
+  the exponent's sign and `2 ^ -1` is 0.5. The declaration was simply false, and
+  everything dispatching on Int versus Float picked the wrong implementation
+- `Duration` and `Data` are usable as **schema types**, as the documentation
+  already said: `let X = { d: Duration } in …` was refused with "Unknown type
+  selector"
+- A name bound to a **field read can be called**: `let f = o.g in f(1)` was
+  refused because the read is opaque, though `o.g(1)` was already allowed. This
+  is what an import of a module's function needs
+
+### Added
+
+- **`eloc --typecheck`**, an optional static type checker. It walks the AST
+  before the compilers and reports unknown functions, wrong arity, arguments of
+  the wrong type, operators applied to types they do not accept, and conditions
+  that are not Bool, with a `line:column:` for each. It collects rather than
+  throws, so one pass reports every problem. It is silent about what it cannot
+  know, and it reads **declared schemas**: given `let Order = { total: Int },
+  order = _ |> Order`, it reports a field the schema does not declare — the
+  worst class in practice, because it fails silently at runtime as `undefined`,
+  `nil` or `NULL` rather than raising — a declared field used at the wrong type
+  through any depth of nesting, a lambda parameter typed from a list's element
+  type, and an operation only some members of a union support. `:?` makes a
+  field `T|Null` and using it as a `T` is reported, with narrowing for the four
+  idiomatic ways to handle it (`|`, `if isNull`, `if isNotNull`, `guard
+  isNotNull`). The guarantee: **if the checker is silent, every target compiles
+  the program** — asserted by an integration test that rebuilds a corpus from
+  the signature table. What it does not see is documented alongside it
+- **`eloc --strict`** turns the silence about unknown types into a diagnostic,
+  which in practice reads as a contract: declare your input. **`eloc
+  --input-type '<type>'`** declares the input's shape from outside, for a host
+  that already knows it — a formula editor that knows its columns. Both imply
+  `--typecheck`
+- **`eloc --optimize`** compiles with the checker's types, so a lambda
+  parameter typed from a declared list's element type gets a typed operation
+  rather than a runtime dispatcher. It implies `--typecheck` and refuses to
+  annotate a program the checker reported on. The benefit is proportional to
+  how much the program declares
+- **Every compile-time refusal names a line, a column, and the file** when the
+  source came from one — the transform's, the emission's and the AST factories',
+  not only the parser's. On the ordinary compile path, not only under
+  `--typecheck`. `parse(source)` still produces a plain AST; positions are
+  recorded on request with `parse(source, { locations: true })`, and an AST with
+  positions compiles to byte-identical code
+- **A failure is a message and a kind.** Compiled code now raises an error
+  carrying `kind` — `'schema'`, `'missing'`, `'constraint'`, `'guard'` or
+  `'check'` — with the path it happened at and the label it was written under,
+  on JavaScript, Ruby and Python. A host that has to tell data that never
+  arrived from data that arrived and was refused had only the English to go on,
+  so the wording of a diagnostic was a public interface without saying so.
+  `message` is unchanged
+- **`compile(source, { runtime, loader, file })`** resolves an import header the
+  way `elo` does. A host with no loader keeps today's refusal word for word:
+  reading a file is a capability it grants, not one the compiler takes.
+  `nodeLoader` is exported from **`@enspirit/elo/node`**, a second entry point,
+  so `@enspirit/elo` itself stays importable in a browser
+- `eloc --prelude-only -t sql` returns **the SQL prelude from the compiler**,
+  where it used to print `-- No prelude needed for SQL`, which was false. Its
+  ten PL/pgSQL helpers lived only in `docker/init.sql`, so a host compiling Elo
+  to SQL had no way to obtain them and nothing checked that the file and the
+  emitters agreed. `eloc -p -t sql` now explains that they are installed in the
+  database rather than prepended, and exits 1 rather than emitting a comment
+- Also exported for hosts: `parseTypeExpr`, `formatDiagnostic`,
+  `typecheckWithAnnotations`, `TypeAnnotations`, `readProgram`,
+  `isPreludePrependable`
+
+### Fixes
+
+#### PostgreSQL
+
+Closing the hole in the SQL acceptance runner — psql exits 0 after an error
+unless `ON_ERROR_STOP` is set, so invalid SQL had been reported as a pass —
+turned up twenty-six fixtures that psql rejected. Every one of these was
+invisible for that reason.
+
+- A list literal could not be indexed: `ARRAY[1, 2, 3][1]` is a syntax error
+  where `(ARRAY[1, 2, 3])[1]` is 1, so `at`, `first` and `last` on a list
+  written in place compiled to SQL psql refuses. The fixtures only ever indexed
+  `_`, which parses either way
+- An empty list compiled to `ARRAY[]`, which PostgreSQL rejects outright: an
+  array constructor takes its element type from its elements. Every use of `[]`
+  on SQL was invalid. The element type is now inferred from the list or from
+  what the consuming operation requires, and the two places that seemed to need
+  one do not — `xs == []` is `CARDINALITY(xs) = 0` and `xs + []` is `xs`
+- `reverse([])`, `sort([])` and `unique([])` answered null where Elo says `[]`:
+  `ARRAY_AGG` over zero rows is NULL, not an empty array
+- An object field read was text whatever the field held, so
+  `{ budget: 1500 }.budget = 1500` had no operator at all and arithmetic and
+  ordering were as broken and more quietly — `'10' < '9'` is not an ordering.
+  A field read is now cast to the type its context needs
+- A jsonb value compared against a native SQL value had no operator either, and
+  the worst case was not even a type error: `jsonb = 'Alice'` reads `'Alice'`
+  *as json*, where a bare word is not valid json, so the complaint was about the
+  literal. Everything in Elo's data family — object literals, `fetch`, `patch`,
+  `merge`, `deepMerge`, `Data` — is tracked as jsonb and compared against jsonb
+- A chain of member reads off a json value was not a json operation at all and
+  fell through to the SQL dot: `fetch(d, .user).name` gave "syntax error at or
+  near `.`". The chain now resolves in one `#>>` read
+- `flat` emitted a second `UNNEST` of a scalar — "function unnest(integer) does
+  not exist" — because PostgreSQL has no array of arrays, and a ragged list
+  could not be built at all. It concatenates the parts instead, which never
+  constructs the nested array
+- `sum(xs, init)` folded against a literal zero, so the init had to be numeric:
+  `sum([P1D, P2D], P0D)` could not put an interval next to an integer
+- `floor(x)` and `ceil(x)` on a value of unknown type compiled to `x` —
+  flooring did nothing — because `floor(Int)` is the identity and came first in
+  the registration order
+- A `let` binding a member read lost the member's type: `let one = { one: 1 }.one
+  in one == 1` bound `->>'one'` as text and then had no operator for
+  `text = integer`. It was the one place where naming a subexpression changed
+  what a program meant
+- `SET LOCAL search_path = ''`, which the postgres sandbox recipe recommended,
+  made every helper call fail: the compiler emits them unqualified
+- A list PostgreSQL cannot represent is **refused instead of emitted**. An array
+  carries one element type and nests only rectangularly, so `[1, 'two']`
+  compiled to `ARRAY[1, 'two']` ("invalid input syntax for type integer") and
+  `[[1], [2, 3]]` to a nested array psql rejects outright. The compiler now says
+  what it found and what to do instead — one type, or carry the value as `Data`.
+  `[1, 1.5]`, `[D2024-01-01, NOW]` and `[1, null, 3]` are unaffected, since
+  PostgreSQL unifies those
+
+#### The CLIs
+
+- **A `.elo` file is one program, not one expression per line.** Both CLIs split
+  a source on newlines and compiled each line as its own program, so an
+  expression spanning lines was handed to the parser in pieces — a type prelude
+  followed by a multi-line schema was refused with "Expected IDENTIFIER but got
+  EOF" — and a file of several expressions quietly produced several programs. A
+  source is now an optional type prelude and one expression whose newlines mean
+  nothing. The line-wise reading was only ever a test convention, for a fixture
+  corpus of one-line assertions, and moved to `--lines`, which the corpus and
+  the acceptance runners pass. A source holding two expressions is a parse error
+  naming what was left over, with a hint pointing at `--lines`
+
+#### Every target
+
+- `(1 == 1) == true` was unparseable on PostgreSQL, whose comparison operators
+  are non-associative, and **silently wrong on Python**, which chains
+  comparisons: `1 < 2 == True` means `1 < 2 and 2 == True`, so `(1 < 2) == true`
+  answered False. A comparison inside a comparison is now parenthesised
+  whatever the precedence table says
+- `let x = 1 in let x = x + 1 in x` is 2 and the inner binding leaves the outer
+  one alone. **No target got both halves of that right**: JavaScript threw
+  `ReferenceError: Cannot access 'x' before initialization`, Ruby and Python let
+  the inner assignment overwrite the outer binding for the rest of the
+  expression. A shadowing local is now emitted under a name of its own. With it:
+  a type definition can build on the one it shadows, a lambda bound to a
+  shadowing name calls the one it shadows, and a subtype constraint variable no
+  longer overwrites a binding of the same name on Ruby
+- `let x = 1, guard x > 0 in x` parsed while `let T = Int, x = 1, guard x > 0 in
+  x` did not, because a value binding reached through a type definition was read
+  by a near-copy of the binding loop that knew about `in` and not about the
+  guard sugar
+- `round(2 ^ -1)` answered 0.5 on all four targets rather than 1, because the
+  type table declared `pow(Int, Int) -> Int` and `round` of an Int is the
+  identity
+- Two constructs emitted code no target could run, and are refused now:
+  `fn( a, a ~> a )` compiled to `(a, a) => a`, `->(a, a) { a }` and
+  `lambda a, a: a`, a syntax error in all three languages that have lambdas;
+  and `{ i: Interval }` compiled to a call to an undefined `_p_Interval`, since
+  `Interval` was on the schema-type allowlist with no runtime parser in any
+  target. The `Interval(...)` constructor is untouched. Two type definitions of
+  one name in one scope are refused too — they compiled, and the second
+  silently won
+- A hundred type definitions no longer hit the transform's depth guard, which is
+  meant for deeply nested expressions: `let T1 = Int, … T101 = Int in 1` failed
+  with "Maximum expression depth exceeded (100)", because each definition
+  wrapped the body it scoped. They are one node now, and a thousand compile
+
+#### Python
+
+- `D2026-03-01 + P1M` landed on **31 March**: the duration was a millisecond
+  count, so a month became thirty days. A plausible date, one day off, and
+  wrong only for months whose length is not thirty — `D2026-04-01 + P1M` was
+  right by accident. JavaScript, Ruby and SQL were all doing calendar arithmetic
+- `_ + P1D` emitted a bare `+`, which raises, and `_ == P1D` answered **false
+  for equal durations**, because the dynamic operators were registered as a
+  fallback rather than as implementations and the arity fallback picked
+  `add(Int, Int)` and `eq(Int, Int)`
+- `flat([1, 2])` raised "'int' object is not iterable" where the other three
+  targets pass a non-list element through
+
+#### Ruby
+
+- `datetime - datetime` on operands of unknown type emitted a bare `-`, and
+  Ruby's DateTime difference is a `Rational` number of days rather than a
+  duration — so the dynamic path answered `(1/1)` where the typed path answered
+  86400 seconds
+- The ten period boundaries on a value of unknown type picked `Date#end_of_week`,
+  which is a Date at midnight rather than the last instant of the day
+- `2 ^ -1` was `Rational(1, 2)`. It compares equal to 0.5, so only `typeOf`
+  showed it — answering `'Tuple'`, the dispatcher having no case for a Rational
+- `1.5 / 2.0` went through the dynamic divider with both types known, and
+  `div(Float, Int)` emitted a bare `/`, which truncates: `2 ^ 3 / 16` was 0.
+  Numeric division goes through `fdiv` for all four Int/Float combinations now,
+  because a declared Float can still be an integer at run time
+- `p_data` and `p_duration` were dead code that did not work — JSON parsed
+  without `symbolize_names` never compared equal to an Elo tuple, and a `rescue`
+  modifier that did not return handed invalid JSON back as the raw string.
+  Wiring the helpers up is what exposed it
+
+#### JavaScript
+
+- `reverse([1, 2, 3])` raised `TypeError: split is not a function`: the
+  registration sat inside the loop over the String functions, and `reverse` is
+  the one name there whose String emission is wrong for a list
+
+#### JavaScript and Python
+
+- A month survived neither being **scaled** nor being **subtracted**:
+  `D2026-03-01 + P1M * 2` was 30 April rather than 1 May on both, and
+  `D2026-01-31 + (P1M - P10D)` was 20 February rather than 18 on JavaScript,
+  where `sub(Duration, Duration)` was never registered at all and fell through
+  to the millisecond-collapsing dynamic helper. An integer now scales each
+  component and subtraction keeps both operands'. Ruby and PostgreSQL were
+  right throughout
+
+#### Website
+
+- The documentation sidebars could not be scrolled to the end. The table of
+  contents was capped at `max-height: 100vh` while the panel it lives in sits
+  below the site header, so the bottom entries hung below their own sticky
+  scroll container — the reference page simply lost everything from "Data
+  Formats" down. The rule had been copied byte-identically into three
+  stylesheets, which is how the same bug ended up on all three pages
+
+### Internals
+
+Not user-visible, but it is why the list above is as long as it is: the same
+walk was written once per target, so a feature added to emission was added four
+times and three of them were forgotten.
+
+- The walk from IR to target code exists once. A target is an `Emitter` — flat
+  data and plain functions, one per node kind, each handed its children already
+  emitted. `src/compilers`: 1800 → 1618 lines
+- All three targets build their emitted type parser from the same combinators,
+  rather than two of them emitting 120 lines of hand-written loops as a string
+  template in a language TypeScript cannot check
+- The parser lost 263 lines: one way to read a comma-separated list instead of
+  fifteen, the precedence ladder as data, and guard/check told apart by three
+  tokens of lookahead rather than by three save/restore pairs
+- Five registries of what a function accepts are pinned to each other by a
+  test, in both directions. Thirty-two documented stdlib functions had no type
+  entry at all and inferred `any`, poisoning everything downstream
+- The SQL acceptance runner installs the prelude from the compiler and stops
+  passing on psql errors. The acceptance corpus now executes four ways per run,
+  the fourth being every fixture recompiled under `--optimize` and executed,
+  which is what holds the annotations equivalent to the unannotated emission
+
+### Known limitations
+
+- The acceptance suite is green only under `TZ=UTC`, because a period boundary
+  is an instant in the host's zone on JavaScript and Ruby and in the input's
+  zone on PostgreSQL: `startOfDay(t)` does not agree across targets off UTC.
+  Deciding what a boundary means is a language question and is still open
+- A divided duration has three nominal lengths across the four targets:
+  `inDays(P1Y / 2)` is 182.5 on JavaScript, Ruby and Python and 180 on
+  PostgreSQL, which divides the calendar components. Underneath it, a month is
+  30 days on three targets and 30.436875 on Ruby. Scaling and subtraction are
+  fixed in this release; division needs a rule chosen between three defensible
+  ones and is still open
+- The acceptance suite is green only under `TZ=UTC` (see above), which is the
+  same open question seen from the test runner
+- Arithmetic on a fetched value — `fetch(d, .n) + 1` — needs a cast SQL cannot
+  infer, so it works under `--optimize` with a declared schema and not otherwise
+- `typeOf` inspects the value, so a whole-valued Float reports as `'Int'` on
+  JavaScript, which has a single number type. It is the one case where `typeOf`
+  is target-dependent
+
 ## [1.1.1] - 2026-11-01
 
 A patch release: one security fix and one portability fix, no behaviour
