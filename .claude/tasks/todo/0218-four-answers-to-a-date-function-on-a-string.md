@@ -1,60 +1,109 @@
-# Four answers to a date function applied to a string
+# Four answers to a date function on a string, and the check that knew better
 
 > The smaller thing found alongside 0216, which that task deliberately did not
-> fold in. 0216 was about a wrong *value* ; this one is about four different
-> refusals for one call.
+> fold in. 0216 was about a wrong *value* ; this one is about one call having
+> four different answers depending on the target.
+
+## Decided
+
+`startOfMonth(String)` must raise a **"no signature" error**. Not coercion:
+`startOfMonth` wants a Date or a DateTime, a String is not one, and the author
+writes `startOfMonth(Date(_.d))` if that is what they meant. Coercion is the
+kind of powerfulness the design principles say to restrict — it is what makes
+Ruby quietly accept `startOfMonth([1])` as well.
 
 ## Symptom
 
 ```elo
-startOfMonth(_.d)        # with _.d = "2026-03-15", a String
+startOfMonth('2026-03-15')
 ```
 
-| Target | What happens |
+| Target | What happens today |
 | --- | --- |
-| Ruby | succeeds — `2026-03-01T00:00:00+00:00`, coercing the string |
-| JavaScript | `TypeError: _.d.startOf is not a function` |
-| Python | `TypeError: replace() takes at most 3 keyword arguments (5 given)` |
-| SQL | `ERROR: function date_trunc(unknown, text) does not exist` |
+| JavaScript | refused: `No signature of startOfMonth accepts startOfMonth(String). Known: startOfMonth(Date), startOfMonth(Datetime)` |
+| Python | refused, same message |
+| SQL | refused, same message |
+| **Ruby** | **compiles**, to `"2026-03-15".to_datetime.beginning_of_month` |
 
-Four behaviours for one call, and three of the four are internal errors from
-inside the prelude rather than a refusal naming the argument. The Python one is
-the worst: nothing in `replace() takes at most 3 keyword arguments` tells the
-reader that `_.d` was a string where a date was wanted.
+So the wanted error already exists, with the wanted wording. It just does not
+fire on all four targets.
 
-Nothing in the compiler refuses it either — with no declared input type, `_.d`
-is `any`, so the call type-checks and the failure is deferred to runtime on
-whichever target happens to run it.
+## Why Ruby is the odd one out
 
-## The real question
+`src/bindings/ruby.ts:85` registers the whole period-boundary family on
+`[Types.any]`:
 
-Which of the four is correct? Two defensible answers, and the choice belongs to
-the language rather than to each target's prelude:
+```ts
+rubyLib.register(fn, [Types.any], (args, ctx) => `${ctx.emit(args[0])}.to_datetime.${method}`);
+```
 
-1. **Refuse it.** `startOfMonth` wants a Date or a DateTime ; a String is not
-   one, and the diagnostic should say so, naming the argument and its type.
-   Coercion is the kind of powerfulness the design principles say to restrict:
-   it is what makes Ruby silently accept `"not a date"`-shaped input too.
-2. **Coerce it**, as Ruby does, on every target — an ISO string is a date in
-   every practical sense, and `Date(_.d)` is noise the author should not have
-   to write.
+That registration is load-bearing and should stay — the comment above it
+explains why an unknown type must not fall back to the Datetime emission. The
+problem is where the check lives. `StdLib.lookup` generalizes concrete types to
+`any` (`src/stdlib.ts:135`), so `String` finds the `any` implementation, and the
+"No signature" error at `src/stdlib.ts:179` only ever fires when *no* binding
+on that target happened to register something permissive. The refusal is an
+accident of each target's bindings, not a property of the language.
 
-Either way it must be the same on four targets, and the failure must be a
-refusal that names the argument, not a `TypeError` escaping the prelude.
+The same hole is open elsewhere, so this is not a `startOfMonth` patch:
 
-Worth checking the whole temporal family while in here — `startOfDay`,
-`endOfMonth`, `year`, `month`, `day` — not just `startOfMonth`. The same
-question applies to every function whose argument the compiler cannot type
-statically, so the answer is probably one mechanism rather than one patch per
-function.
+| | Ruby | JavaScript |
+| --- | --- | --- |
+| `round('x')` | `"x".round` | `kRound('x')` |
+| `floor(true)` | `true.floor` | `Math.floor(true)` |
+| `ceil([1])` | `[1].ceil` | `Math.ceil([1])` |
+| `startOfMonth([1])` | `[1].to_datetime.beginning_of_month` | refused |
+
+## What it should be
+
+The signature check belongs to the language, and the language already has it.
+`src/typecheck.ts:722` reports `no-matching-signature` against the one
+signature table in `src/typedefs.ts`, above every target binding, and it gets
+every case above right:
+
+```
+$ eloc --typecheck -t ruby -e "startOfMonth('2026-03-15')"
+1:1: error: No signature of startOfMonth accepts startOfMonth(String). Known: startOfMonth(Date), startOfMonth(Datetime) [no-matching-signature]
+$ echo $?
+1
+```
+
+The defect is that this is opt-in behind `--typecheck`. A call whose argument
+types are known and match no declared signature should be refused on every
+compile, on every target. `StdLib`'s own error then becomes a backstop for a
+binding that is missing an implementation the table declares — a compiler bug,
+not an author's mistake — rather than the thing the author relies on.
+
+Out of scope, and should stay opt-in: `startOfMonth(_.d)` where `_.d` is `any`.
+The checker already has the right answer there too — `startOfMonth needs a
+known argument type, got Any`, with the hint to coerce through a declared type
+— but that is `unresolved-any` under `--strict`, which is a separate decision
+about how much Elo demands to be typed.
+
+## Blast radius
+
+None on the corpus: all 124 fixtures already pass `--typecheck` on Ruby.
+
+```
+$ for f in $(find test/fixtures -name '*.elo' -not -path '*/modules/*'); do
+    eloc --typecheck --lines -t ruby "$f" >/dev/null 2>&1 || echo "$f"; done
+$    # (no output)
+```
 
 ## Tests
 
-Not a value assertion — a *refusal* assertion. See `test/acceptance/failures`
-and `test/acceptance/test-failures.sh` for the existing shape: a program that
-must fail, and the structure the failure must have on every target.
+A refusal assertion, not a value one — the program must fail to *compile*, on
+every target, with `no-matching-signature`. Seen red on Ruby first, where it
+compiles today.
 
-If the answer is (1), the test is that a declared `_ : {d: String}` is refused
-at compile time, and that an undeclared one fails identically on the four
-targets at runtime. If it is (2), the test is that the four agree on
-`2026-03-01`, plus a refusal assertion for a string that is not a date at all.
+- `startOfMonth('2026-03-15')` — the case this task is named for
+- `startOfMonth([1])`, `round('x')`, `floor(true)` — the same hole on other
+  functions, red on Ruby and JavaScript
+- a declared input: `let Row = { d: String } in startOfMonth((_ |> Row).d)`,
+  which is where a real program meets this
+- and, still green, `startOfMonth(_.d)` undeclared, to pin that this task did
+  not quietly turn `any` into an error
+
+Integration tests over the four targets are the natural level, since the
+refusal is now a compile-time one. See `test/unit/typecheck.unit.test.ts` for
+the `no-matching-signature` cases already pinned there.
