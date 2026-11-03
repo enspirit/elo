@@ -369,28 +369,34 @@ reasons. Functions that genuinely accept anything — `isNull`, `typeOf`,
 
 ### Compiling with the checker's types
 
-`--optimize` hands what the checker found back to the code generator. Without
-it, a coerced value is opaque to the compiler: it knows the shape was validated
-at runtime but not what the fields are, so every operation on one is decided at
-runtime by a dispatcher.
+`--optimize` hands what the checker found back to the code generator.
+
+A declared type needs no flag: the compiler reads the declaration itself, so a
+field of a declared schema is emitted as the type it was declared to be.
 
 ```bash
 ./bin/eloc -t ruby -e "let T = { a: Int, b: Int }, k = _ |> T in k.a - k.b"
-# ... k_sub(k[:a], k[:b])
-
-./bin/eloc -t ruby --optimize -e "let T = { a: Int, b: Int }, k = _ |> T in k.a - k.b"
 # ... k[:a] - k[:b]
 ```
 
+What the flag adds is what the checker works out and the compiler does not —
+chiefly a lambda parameter typed from the element type of a declared list,
+which is inference about a *call* rather than the shape of a declaration:
+
+```bash
+./bin/eloc -t js -e "let S = { xs: [Int] }, s = _ |> S in map(s.xs, fn( x ~> x * 2 ))"
+# ... s.xs.map((x) => kMul(x, 2))
+
+./bin/eloc -t js --optimize -e "let S = { xs: [Int] }, s = _ |> S in map(s.xs, fn( x ~> x * 2 ))"
+# ... s.xs.map((x) => x * 2)
+```
+
 So the gain is a real operation instead of a function call per operation, and a
-smaller output — on the six declared-schema programs it was measured against,
-23% smaller on JavaScript, where the dispatchers ship inline.
+smaller output, wherever a type is known.
 
 **The benefit is proportional to how much the program declares.** An undeclared
 `_` tells the checker no more than it tells the compiler, so `--optimize`
-changes nothing at all for it. Declared schemas, lambda parameters typed from a
-declared list's element type, and `let`-bound values carrying a field through
-are where it applies.
+changes nothing at all for it.
 
 It refuses to compile from the types of a program it reported on: on a node
 with a diagnostic the recorded type is a guess rather than a conclusion, and

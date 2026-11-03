@@ -915,22 +915,32 @@ People = [Person]
         <h3>Compiling with the checker's types</h3>
         <p>
           <code>--optimize</code> hands what the checker found back to the code
-          generator. Without it, a coerced value is opaque to the compiler: it
-          knows the shape was validated at runtime, but not what the fields
-          are, so every operation on one is decided at runtime by a dispatcher.
+          generator.
+        </p>
+        <p>
+          A declared type needs no flag: the compiler reads the declaration
+          itself, so a field of a declared schema is emitted as the type it was
+          declared to be.
         </p>
         <pre class="language-shell">eloc -t ruby -e "let T = &#123; a: Int, b: Int &#125;, k = _ |> T in k.a - k.b"
-# ... k_sub(k[:a], k[:b])
-
-eloc -t ruby --optimize -e "let T = &#123; a: Int, b: Int &#125;, k = _ |> T in k.a - k.b"
 # ... k[:a] - k[:b]</pre>
         <p>
+          What the flag adds is what the checker works out and the compiler does
+          not — chiefly a lambda parameter typed from the element type of a
+          declared list, which is inference about a <em>call</em> rather than the
+          shape of a declaration.
+        </p>
+        <pre class="language-shell">eloc -t js -e "let S = &#123; xs: [Int] &#125;, s = _ |> S in map(s.xs, fn( x ~> x * 2 ))"
+# ... s.xs.map((x) => kMul(x, 2))
+
+eloc -t js --optimize -e "let S = &#123; xs: [Int] &#125;, s = _ |> S in map(s.xs, fn( x ~> x * 2 ))"
+# ... s.xs.map((x) => x * 2)</pre>
+        <p>
           The gain is a real operation instead of a function call per operation,
-          and a smaller output — 23% smaller on JavaScript for the declared
-          schema programs it was measured against, where the dispatchers ship
-          inline. The benefit is proportional to <em>how much the program
-          declares</em>: for an undeclared <code>_</code> the checker knows no
-          more than the compiler, so the flag changes nothing.
+          and a smaller output, wherever a type is known. The benefit is
+          proportional to <em>how much the program declares</em>: for an
+          undeclared <code>_</code> the checker knows no more than the compiler,
+          so the flag changes nothing.
         </p>
         <p>
           It refuses to compile from the types of a program it reported on. On a

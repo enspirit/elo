@@ -114,7 +114,9 @@ If the narrow version does not clearly pay for itself, move this to
 `analyzed` with the measurement recorded, and leave the workaround documented
 where it is. A measured decision not to do it is a good outcome for this task.
 
-## Step 1 is done, 2026-11-03
+## Done, 2026-11-03 — in three steps
+
+### Step 1: EloType gained field and element types
 
 `EloType` gained `props` and `element`, and the transform propagates them from
 the object literals and type expressions it already walks. Measured again over
@@ -134,7 +136,7 @@ Two bugs fell out, both now fixed and pinned:
 
 - `{a: 'x'}.a + {b: 'y'}.b` cast two strings to `numeric` on SQL and errored on
   PostgreSQL, where the other three concatenate. The residual case — an
-  untyped `jsonb` value — is ideation **0216**.
+  untyped `jsonb` value — is ideation **0217**.
 - A json read did not parenthesise itself, and PostgreSQL binds `||` tighter
   than `->>`, so `a->>'x' || b->>'y'` parsed as `a ->> ('x' || b) ->> 'y'`. A
   cast had been hiding it by parenthesising as a side effect, which held only
@@ -144,15 +146,65 @@ Emitted JavaScript shrank 2.6% over the corpus, because a read off a known
 shape dispatches statically: `kEq(kMul(o.price, o.quantity), 100)` became
 `o.price * o.quantity == 100`.
 
-### What is left
+### Step 2: one type system, the richer one
 
-Collapsing `CheckType` into `EloType` — the other half of "collapse
-representations 1 and 2". `CheckType` still carries `optional`, `extras`,
-`nullable` and unions, which only the checker reads. The fork to decide:
-whether `EloType` grows those too (which is representation 2 again, inside 1)
-or whether the compiler's type keeps only what it dispatches and emits on, and
-`CheckType` stays the checker's richer view of the same thing. Step 1 is a
-prerequisite either way and is independent of the answer.
+The fork step 1 left — whether `EloType` grows `optional`/`extras`/`nullable`
+or whether `CheckType` stays the checker's richer view — was decided by the
+owner: one type, the richer one.
+
+`EloType` now carries `props` (with their optional flags), `extras`, `element`,
+`members` and `result`. `checktypes.ts` is gone, and `project()` with it.
+
+The invariant that keeps this simple, and the reason no assignability relation
+had to be invented: **`kind` is always the kind dispatch sees.** Everything
+else is precision hanging off it. `signatureKey` and `typeGeneralizations` key
+on `kind` alone through `typeName`, so the signature table has no notion of
+field or element types and `{a: Int}` and `{b: String}` are both `object` to
+every signature in it. Nothing matches structurally to choose an
+implementation, so "does `{a: Int, b: Int}` satisfy `{a: Int}`?" never arises.
+A union whose members disagree has kind `any`, because that is precisely what
+dispatch means by "I cannot resolve this", and it still carries its members so
+the checker can resolve it one at a time.
+
+The projection is therefore *materialised* rather than computed — there is no
+longer a `project()` anyone can forget to call.
+
+Two equalities, because there are two questions: `typeEquals` compares kinds,
+which is what dispatch means by equal; `structurallyEquals` compares all the
+way down. The annotation path needed the latter — comparing two visits to one
+node by kind would call two different schemas the same and never poison the
+entry.
+
+### Step 3: the transform reads the declaration itself
+
+Which is what the collapse was *for*: before it, the transform had nowhere to
+put a schema. `typeExprType` turns an `IRTypeExpr` into the type it stands for,
+the transform records it against the name, and applying a type selector yields
+what it parses to. So `let T = { a: Int, b: Int }, k = _ |> T in k.a - k.b`
+emits `k[:a] - k[:b]` with **no flag**, and a definition building on an earlier
+one resolves too.
+
+That is the asymmetry this task was really about: `--optimize` no longer
+changes emission *semantics* for a declared program. It is left with what the
+checker genuinely works out and the compiler does not — chiefly a lambda
+parameter typed from a declared list's element type, which is inference about a
+*call* rather than the shape of a declaration. Both tests that used to assert
+"the flag makes the difference" are re-pointed at that case; if it ever stops
+needing the flag, `--optimize` has nothing left to do.
+
+README and the reference page are updated: their headline example no longer
+needs the flag, so it was showing something false.
+
+### Measured
+
+| | before 0214 | after |
+| --- | --- | --- |
+| `OPERATOR_DEMAND` guesses over the corpus | 8 | **0** |
+| emitted JavaScript over the corpus | 985 409 | 939 913 (−4.6%) |
+| type representations | 3 | **1** |
+
+`checktypes.ts` deleted (224 lines). The residual guessing — an untyped `jsonb`
+value, where no shape exists to know — is ideation **0217**.
 
 ## Measured, 2026-11-02 — and the answer changed the task
 
