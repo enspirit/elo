@@ -215,9 +215,10 @@ function emitJS(ir: IRExpr, requiredHelpers?: Set<string>, options?: EmitOptions
 
     case 'member_access': {
       const object = ctx.emit(ir.object);
-      const needsParensForMember = ir.object.type === 'call';
-      const objectExpr = needsParensForMember ? `(${object})` : object;
-      return `${objectExpr}.${assertSafeIdentifier(ir.property, 'member_access property')}`;
+      // A plain obj.prop read walks the prototype chain, so naming a host
+      // builtin hands back a live function. kMember reads an own property only.
+      ctx.requireHelper?.('kMember');
+      return `kMember(${object}, ${JSON.stringify(assertSafeIdentifier(ir.property, 'member_access property'))})`;
     }
 
     case 'let': {
