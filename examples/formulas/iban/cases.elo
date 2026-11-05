@@ -1,0 +1,64 @@
+{
+  cases: [
+    {
+      name: 'Belgian, grouped',
+      input: {iban: 'BE68 5390 0754 7034'},
+      expect: {valid: true, country: 'BE', formatted: 'BE68 5390 0754 7034'}
+    },
+    {
+      name: 'Belgian, bare',
+      input: {iban: 'BE68539007547034'},
+      expect: {valid: true, country: 'BE', formatted: 'BE68 5390 0754 7034'}
+    },
+    {
+      name: 'lowercase',
+      input: {iban: 'be68539007547034'},
+      expect: {valid: true, country: 'BE', formatted: 'BE68 5390 0754 7034'}
+    },
+    {
+      name: 'German, 22 chars',
+      input: {iban: 'DE89370400440532013000'},
+      expect: {valid: true, country: 'DE', formatted: 'DE89 3704 0044 0532 0130 00'}
+    },
+    {
+      name: 'French, with letters',
+      input: {iban: 'FR1420041010050500013M02606'},
+      expect: {valid: true, country: 'FR', formatted: 'FR14 2004 1010 0505 0001 3M02 606'}
+    },
+    {
+      name: 'British',
+      input: {iban: 'GB82WEST12345698765432'},
+      expect: {valid: true, country: 'GB', formatted: 'GB82 WEST 1234 5698 7654 32'}
+    },
+    {
+      name: 'one digit changed',
+      input: {iban: 'BE68539007547035'},
+      expect: {valid: false, country: 'BE', formatted: 'BE68 5390 0754 7035'}
+    },
+    {
+      name: 'two digits swapped',
+      input: {iban: 'BE68539007540734'},
+      expect: {valid: false, country: 'BE', formatted: 'BE68 5390 0754 0734'}
+    },
+    {
+      name: 'too short',
+      input: {iban: 'BE6853900754'},
+      expect: {valid: false, country: null, formatted: null}
+    },
+    {
+      name: 'country is not letters',
+      input: {iban: '1268539007547034'},
+      expect: {valid: false, country: null, formatted: null}
+    },
+    {
+      name: 'check is not digits',
+      input: {iban: 'BEAB539007547034'},
+      expect: {valid: false, country: null, formatted: null}
+    },
+    {
+      name: 'punctuation inside',
+      input: {iban: 'BE68-5390-0754-7034'},
+      expect: {valid: false, country: null, formatted: null}
+    }
+  ]
+}

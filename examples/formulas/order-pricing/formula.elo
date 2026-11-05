@@ -1,0 +1,42 @@
+# What does this order cost?
+#
+# A small discount engine: a volume discount from the quantity, a loyalty
+# discount from the customer tier, an optional coupon, the whole thing capped,
+# then VAT on what is left. Every amount is rounded to the cent once, at the
+# end of each line, which is what an invoice does.
+
+let
+  maxDiscount = 0.25,
+  volumeDiscount = fn( quantity ~>
+    if quantity >= 100 then 0.15
+    else if quantity >= 50 then 0.10
+    else if quantity >= 10 then 0.05
+    else 0.0
+  ),
+  tierDiscount = fn( tier ~>
+    if tier == 'gold' then 0.07
+    else if tier == 'silver' then 0.03
+    else 0.0
+  ),
+  orderPricing = fn( input ~>
+    let
+      subtotal = round(input.unitPrice * input.quantity, 2),
+      asked = volumeDiscount(input.quantity)
+              + tierDiscount(input.tier)
+              + (input.couponPercent | 0) / 100,
+      rate = min(asked, maxDiscount),
+      discount = round(subtotal * rate, 2),
+      net = round(subtotal - discount, 2),
+      vat = round(net * input.vatRate, 2)
+    in
+      {
+        subtotal: subtotal,
+        discountRate: round(rate * 100, 1),
+        discount: discount,
+        net: net,
+        vat: vat,
+        total: round(net + vat, 2)
+      }
+  )
+in
+  { formula: orderPricing }

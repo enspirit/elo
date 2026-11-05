@@ -1,0 +1,20 @@
+{
+  fields: [
+    {
+      path: 'weightKg',
+      label: 'Weight (kg)',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['plausible']
+    },
+    {
+      path: 'heightCm',
+      label: 'Height (cm)',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['plausible']
+    }
+  ]
+}

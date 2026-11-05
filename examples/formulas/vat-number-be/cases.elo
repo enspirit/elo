@@ -1,0 +1,54 @@
+{
+  cases: [
+    {
+      name: 'plain ten digits',
+      input: {number: '0123456749'},
+      expect: {valid: true, formatted: 'BE 0123.456.749'}
+    },
+    {
+      name: 'prefixed and dotted',
+      input: {number: 'BE 0123.456.749'},
+      expect: {valid: true, formatted: 'BE 0123.456.749'}
+    },
+    {
+      name: 'lowercase prefix',
+      input: {number: 'be0123456749'},
+      expect: {valid: true, formatted: 'BE 0123.456.749'}
+    },
+    {
+      name: 'nine digits, pre-2008',
+      input: {number: '123456749'},
+      expect: {valid: true, formatted: 'BE 0123.456.749'}
+    },
+    {
+      name: 'dashes and spaces',
+      input: {number: ' BE-0123-456-749 '},
+      expect: {valid: true, formatted: 'BE 0123.456.749'}
+    },
+    {
+      name: 'wrong check digits',
+      input: {number: 'BE0123456748'},
+      expect: {valid: false, formatted: 'BE 0123.456.748'}
+    },
+    {
+      name: 'transposed digits',
+      input: {number: 'BE0123456794'},
+      expect: {valid: false, formatted: 'BE 0123.456.794'}
+    },
+    {
+      name: 'too short',
+      input: {number: 'BE012345'},
+      expect: {valid: false, formatted: null}
+    },
+    {
+      name: 'not digits at all',
+      input: {number: 'BE01234567XY'},
+      expect: {valid: false, formatted: null}
+    },
+    {
+      name: 'another valid number',
+      input: {number: 'BE0403200393'},
+      expect: {valid: true, formatted: 'BE 0403.200.393'}
+    }
+  ]
+}

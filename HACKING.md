@@ -74,6 +74,14 @@ test/
   acceptance/    # Cross-runtime execution tests
   fixtures/      # Test fixtures (.elo files)
 
+examples/
+  formulas/      # A catalogue of formula bundles: one directory per formula,
+                 # holding types.elo (Input and Output), formula.elo,
+                 # fields.elo (the form), cases.elo and bundle.json. The
+                 # format is formulas/BUNDLE.md,
+                 # read by examples/formula-bundle.ts, and run by
+                 # test/acceptance/test-formulas.sh
+
 web/             # Try Elo website (Astro)
 ```
 

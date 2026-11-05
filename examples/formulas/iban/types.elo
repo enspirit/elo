@@ -1,0 +1,9 @@
+Input = {
+  iban: String(s | notBlank: !isBlank(s))
+}
+
+Output = {
+  valid: Bool,
+  country: String|Null,
+  formatted: String|Null
+}

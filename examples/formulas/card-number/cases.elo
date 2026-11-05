@@ -1,0 +1,54 @@
+{
+  cases: [
+    {
+      name: 'Visa test number',
+      input: {number: '4539578763621486'},
+      expect: {valid: true, brand: 'Visa', masked: '************1486'}
+    },
+    {
+      name: 'Visa, spaced',
+      input: {number: '4539 5787 6362 1486'},
+      expect: {valid: true, brand: 'Visa', masked: '************1486'}
+    },
+    {
+      name: 'Visa, dashed',
+      input: {number: '4539-5787-6362-1486'},
+      expect: {valid: true, brand: 'Visa', masked: '************1486'}
+    },
+    {
+      name: 'Mastercard test number',
+      input: {number: '5425233430109903'},
+      expect: {valid: true, brand: 'Mastercard', masked: '************9903'}
+    },
+    {
+      name: 'Amex test number',
+      input: {number: '374245455400126'},
+      expect: {valid: true, brand: 'American Express', masked: '***********0126'}
+    },
+    {
+      name: 'last digit wrong',
+      input: {number: '4539578763621487'},
+      expect: {valid: false, brand: 'Visa', masked: '************1487'}
+    },
+    {
+      name: 'two digits transposed',
+      input: {number: '4539578763624186'},
+      expect: {valid: false, brand: 'Visa', masked: '************4186'}
+    },
+    {
+      name: 'all zeros passes Luhn',
+      input: {number: '0000000000000000'},
+      expect: {valid: true, brand: 'unknown', masked: '************0000'}
+    },
+    {
+      name: 'too short',
+      input: {number: '45395787'},
+      expect: {valid: false, brand: null, masked: null}
+    },
+    {
+      name: 'letters inside',
+      input: {number: '4539578763621X86'},
+      expect: {valid: false, brand: null, masked: null}
+    }
+  ]
+}

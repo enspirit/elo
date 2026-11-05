@@ -1,0 +1,34 @@
+{
+  cases: [
+    {
+      name: 'small order, no discount',
+      input: {unitPrice: 19.99, quantity: 3, tier: 'standard', vatRate: 0.21},
+      expect: {subtotal: 59.97, discountRate: 0, discount: 0, net: 59.97, vat: 12.59, total: 72.56}
+    },
+    {
+      name: 'ten items, volume 5%',
+      input: {unitPrice: 19.99, quantity: 10, tier: 'standard', vatRate: 0.21},
+      expect: {subtotal: 199.9, discountRate: 5, discount: 10, net: 189.9, vat: 39.88, total: 229.78}
+    },
+    {
+      name: 'gold customer, volume and loyalty',
+      input: {unitPrice: 19.99, quantity: 10, tier: 'gold', vatRate: 0.21},
+      expect: {subtotal: 199.9, discountRate: 12, discount: 23.99, net: 175.91, vat: 36.94, total: 212.85}
+    },
+    {
+      name: 'coupon pushes past the cap',
+      input: {unitPrice: 19.99, quantity: 100, tier: 'gold', vatRate: 0.21, couponPercent: 20},
+      expect: {subtotal: 1999, discountRate: 25, discount: 499.75, net: 1499.25, vat: 314.84, total: 1814.09}
+    },
+    {
+      name: 'exempt, no VAT',
+      input: {unitPrice: 50, quantity: 2, tier: 'standard', vatRate: 0},
+      expect: {subtotal: 100, discountRate: 0, discount: 0, net: 100, vat: 0, total: 100}
+    },
+    {
+      name: 'reduced rate, silver',
+      input: {unitPrice: 12.5, quantity: 50, tier: 'silver', vatRate: 0.06},
+      expect: {subtotal: 625, discountRate: 13, discount: 81.25, net: 543.75, vat: 32.63, total: 576.38}
+    }
+  ]
+}

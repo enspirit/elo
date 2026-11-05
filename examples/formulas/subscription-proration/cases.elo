@@ -1,0 +1,34 @@
+{
+  cases: [
+    {
+      name: 'first of a 31-day month',
+      input: {monthlyPrice: 31, startDate: '2026-01-01'},
+      expect: {billedDays: 31, daysInMonth: 31, amount: 31, dailyRate: 1, nextRenewal: D2026-02-01}
+    },
+    {
+      name: 'mid-month, 31 days',
+      input: {monthlyPrice: 31, startDate: '2026-01-20'},
+      expect: {billedDays: 12, daysInMonth: 31, amount: 12, dailyRate: 1, nextRenewal: D2026-02-01}
+    },
+    {
+      name: 'last day of the month',
+      input: {monthlyPrice: 31, startDate: '2026-01-31'},
+      expect: {billedDays: 1, daysInMonth: 31, amount: 1, dailyRate: 1, nextRenewal: D2026-02-01}
+    },
+    {
+      name: 'February, 28 days',
+      input: {monthlyPrice: 28, startDate: '2026-02-15'},
+      expect: {billedDays: 14, daysInMonth: 28, amount: 14, dailyRate: 1, nextRenewal: D2026-03-01}
+    },
+    {
+      name: 'February in a leap year',
+      input: {monthlyPrice: 29, startDate: '2024-02-01'},
+      expect: {billedDays: 29, daysInMonth: 29, amount: 29, dailyRate: 1, nextRenewal: D2024-03-01}
+    },
+    {
+      name: 'a 30-day month, realistic price',
+      input: {monthlyPrice: 49.99, startDate: '2026-04-21'},
+      expect: {billedDays: 10, daysInMonth: 30, amount: 16.66, dailyRate: 1.6663, nextRenewal: D2026-05-01}
+    }
+  ]
+}

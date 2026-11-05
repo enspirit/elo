@@ -1,0 +1,12 @@
+Input = {
+  monthlyPrice: Float(p | positive: p > 0),
+  startDate: Date
+}
+
+Output = {
+  billedDays: Float,
+  daysInMonth: Float,
+  amount: Float,
+  dailyRate: Float,
+  nextRenewal: Date
+}

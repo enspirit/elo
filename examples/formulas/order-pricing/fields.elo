@@ -1,0 +1,46 @@
+{
+  fields: [
+    {
+      path: 'unitPrice',
+      label: 'Unit price',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['positive']
+    },
+    {
+      path: 'quantity',
+      label: 'Quantity',
+      type: 'Int',
+      widget: 'number',
+      required: true,
+      constraints: ['atLeastOne']
+    },
+    {
+      path: 'tier',
+      label: 'Customer tier',
+      type: 'String',
+      widget: 'select',
+      required: true,
+      constraints: ['known'],
+      options: ['standard', 'silver', 'gold']
+    },
+    {
+      path: 'vatRate',
+      label: 'VAT rate',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['aRate'],
+      help: '0.21 for 21%'
+    },
+    {
+      path: 'couponPercent',
+      label: 'Coupon (%)',
+      type: 'Float',
+      widget: 'number',
+      required: false,
+      constraints: ['aPercentage']
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+Input = {
+  weightKg: Float(w | plausible: w > 0 && w < 500),
+  heightCm: Float(h | plausible: h > 50 && h < 280)
+}
+
+Output = {
+  bmi: Float,
+  category: String
+}

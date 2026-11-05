@@ -1,0 +1,5 @@
+Input = {
+  year: Int(y | gregorian: y >= 1583 && y <= 9999)
+}
+
+Output = Bool

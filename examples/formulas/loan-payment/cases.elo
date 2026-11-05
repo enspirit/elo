@@ -1,0 +1,29 @@
+{
+  cases: [
+    {
+      name: 'textbook 30-year mortgage',
+      input: {principal: 200000, annualRatePercent: 6, years: 30},
+      expect: {monthlyPayment: 1199.1, totalPaid: 431676, totalInterest: 231676, payments: 360}
+    },
+    {
+      name: 'same loan, 15 years',
+      input: {principal: 200000, annualRatePercent: 6, years: 15},
+      expect: {monthlyPayment: 1687.71, totalPaid: 303787.8, totalInterest: 103787.8, payments: 180}
+    },
+    {
+      name: 'car loan',
+      input: {principal: 25000, annualRatePercent: 3.9, years: 5},
+      expect: {monthlyPayment: 459.29, totalPaid: 27557.4, totalInterest: 2557.4, payments: 60}
+    },
+    {
+      name: 'interest free',
+      input: {principal: 12000, annualRatePercent: 0, years: 2},
+      expect: {monthlyPayment: 500, totalPaid: 12000, totalInterest: 0, payments: 24}
+    },
+    {
+      name: 'one year, small',
+      input: {principal: 1000, annualRatePercent: 12, years: 1},
+      expect: {monthlyPayment: 88.85, totalPaid: 1066.2, totalInterest: 66.2, payments: 12}
+    }
+  ]
+}

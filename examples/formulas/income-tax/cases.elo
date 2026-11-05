@@ -1,0 +1,34 @@
+{
+  cases: [
+    {
+      name: 'no income',
+      input: {taxableIncome: 0},
+      expect: {tax: 0, net: 0, marginalRate: 0, effectiveRate: 0}
+    },
+    {
+      name: 'inside the first bracket',
+      input: {taxableIncome: 10000},
+      expect: {tax: 2500, net: 7500, marginalRate: 25, effectiveRate: 25}
+    },
+    {
+      name: 'exactly the first top',
+      input: {taxableIncome: 15820},
+      expect: {tax: 3955, net: 11865, marginalRate: 25, effectiveRate: 25}
+    },
+    {
+      name: 'into the second',
+      input: {taxableIncome: 20000},
+      expect: {tax: 5627, net: 14373, marginalRate: 40, effectiveRate: 28.1}
+    },
+    {
+      name: 'into the third',
+      input: {taxableIncome: 40000},
+      expect: {tax: 14231, net: 25769, marginalRate: 45, effectiveRate: 35.6}
+    },
+    {
+      name: 'into the top bracket',
+      input: {taxableIncome: 60000},
+      expect: {tax: 23815, net: 36185, marginalRate: 50, effectiveRate: 39.7}
+    }
+  ]
+}

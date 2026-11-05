@@ -1,0 +1,19 @@
+{
+  fields: [
+    {
+      path: 'birthDate',
+      label: 'Date of birth',
+      type: 'Date',
+      widget: 'date',
+      required: true
+    },
+    {
+      path: 'on',
+      label: 'On this day',
+      type: 'Date',
+      widget: 'date',
+      required: true,
+      help: 'The day the age is computed for'
+    }
+  ]
+}

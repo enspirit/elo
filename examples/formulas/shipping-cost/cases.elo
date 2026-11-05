@@ -1,0 +1,39 @@
+{
+  cases: [
+    {
+      name: 'small domestic parcel',
+      input: {weightKg: 1.2, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'domestic', express: false, orderValue: 40},
+      expect: {billableWeight: 1.2, volumetric: 0.6, freeShipping: false, cost: 4.95, etaDays: 2}
+    },
+    {
+      name: 'heavy domestic parcel',
+      input: {weightKg: 8, lengthCm: 30, widthCm: 20, heightCm: 20, zone: 'domestic', express: false, orderValue: 40},
+      expect: {billableWeight: 8, volumetric: 2.4, freeShipping: false, cost: 9.75, etaDays: 2}
+    },
+    {
+      name: 'light but bulky, billed by volume',
+      input: {weightKg: 1, lengthCm: 60, widthCm: 40, heightCm: 40, zone: 'domestic', express: false, orderValue: 40},
+      expect: {billableWeight: 19.2, volumetric: 19.2, freeShipping: false, cost: 18.71, etaDays: 2}
+    },
+    {
+      name: 'European, express',
+      input: {weightKg: 3, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'eu', express: true, orderValue: 40},
+      expect: {billableWeight: 3, volumetric: 0.6, freeShipping: false, cost: 17.33, etaDays: 1}
+    },
+    {
+      name: 'free shipping over the threshold',
+      input: {weightKg: 3, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'eu', express: false, orderValue: 200},
+      expect: {billableWeight: 3, volumetric: 0.6, freeShipping: true, cost: 0, etaDays: 4}
+    },
+    {
+      name: 'free shipping still pays for express',
+      input: {weightKg: 3, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'eu', express: true, orderValue: 200},
+      expect: {billableWeight: 3, volumetric: 0.6, freeShipping: true, cost: 5.78, etaDays: 1}
+    },
+    {
+      name: 'rest of the world',
+      input: {weightKg: 5, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'world', express: false, orderValue: 90},
+      expect: {billableWeight: 5, volumetric: 0.6, freeShipping: false, cost: 37.55, etaDays: 9}
+    }
+  ]
+}

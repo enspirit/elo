@@ -3,6 +3,9 @@ dist/
 *.log
 .DS_Store
 
+# The case runner test-formulas.sh generates inside a bundle, and removes
+_cases.run.elo
+
 # Astro
 web/node_modules/
 web/dist/

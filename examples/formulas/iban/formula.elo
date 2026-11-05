@@ -1,0 +1,50 @@
+# Is this a valid IBAN?
+#
+# ISO 13616: move the first four characters to the end, replace each letter by
+# its position in the alphabet plus 10 (A = 10 … Z = 35), read the result as one
+# long decimal number, and check that it leaves 1 modulo 97.
+#
+# That number has up to 36 digits, which no target has an integer type for, so
+# the remainder is folded one digit at a time — `(acc * 10 + d) % 97` — which
+# keeps every intermediate value under 1000.
+
+let
+  letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  digits = '0123456789',
+  isLetter = fn( c ~> !isNull(indexOf(letters, c)) ),
+  isDigit = fn( c ~> !isNull(indexOf(digits, c)) ),
+  # A digit stands for itself, a letter for its alphabet position plus 10.
+  expand = fn( s ~>
+    reduce(split(s, ''), '', fn( acc, c ~>
+      acc + (if isLetter(c) then String(indexOf(letters, c) + 10) else c)
+    ))
+  ),
+  # The remainder of a number too long to hold, one digit at a time.
+  mod97 = fn( s ~>
+    reduce(split(s, ''), 0, fn( acc, d ~> (acc * 10 + Int(d)) % 97 ))
+  ),
+  groupsOfFour = fn( s ~>
+    reduce(split(s, ''), '', fn( acc, c ~>
+      acc + (if length(acc) % 5 == 4 then ' ' else '') + c
+    ))
+  ),
+  iban = fn( input ~>
+    let
+      bare = replaceAll(upper(trim(input.iban)), ' ', ''),
+      # Two letters for the country, two digits for the check, then 11 to 30
+      # alphanumerics the country decides the shape of.
+      wellFormed = length(bare) >= 15 && length(bare) <= 34
+                   && all(split(bare, ''), fn( c ~> isLetter(c) || isDigit(c) ))
+                   && all(split(substring(bare, 0, 2), ''), isLetter)
+                   && all(split(substring(bare, 2, 2), ''), isDigit)
+    in
+      {
+        valid: if wellFormed
+               then mod97(expand(substring(bare, 4, length(bare) - 4) + substring(bare, 0, 4))) == 1
+               else false,
+        country: if wellFormed then substring(bare, 0, 2) else null,
+        formatted: if wellFormed then groupsOfFour(bare) else null
+      }
+  )
+in
+  { formula: iban }

@@ -1,0 +1,61 @@
+{
+  fields: [
+    {
+      path: 'weightKg',
+      label: 'Weight (kg)',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['positive']
+    },
+    {
+      path: 'lengthCm',
+      label: 'Length (cm)',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['positive']
+    },
+    {
+      path: 'widthCm',
+      label: 'Width (cm)',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['positive']
+    },
+    {
+      path: 'heightCm',
+      label: 'Height (cm)',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['positive']
+    },
+    {
+      path: 'zone',
+      label: 'Destination',
+      type: 'String',
+      widget: 'select',
+      required: true,
+      constraints: ['known'],
+      options: ['domestic', 'eu', 'world']
+    },
+    {
+      path: 'express',
+      label: 'Express delivery',
+      type: 'Bool',
+      widget: 'checkbox',
+      required: true
+    },
+    {
+      path: 'orderValue',
+      label: 'Order value',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['notNegative'],
+      help: 'Shipping is free from 150'
+    }
+  ]
+}

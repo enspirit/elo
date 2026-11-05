@@ -1,0 +1,22 @@
+# Body mass index, and what the number is called
+#
+# The smallest formula that still has everything a published one needs: two
+# numbers in a form, a unit the author has to get right (centimetres in,
+# metres in the formula), a rounded number out, and a label.
+
+let
+  bmi = fn( input ~>
+    let
+      metres = input.heightCm / 100,
+      value = round(input.weightKg / metres ^ 2, 1)
+    in
+      {
+        bmi: value,
+        category: if value < 18.5 then 'underweight'
+                  else if value < 25 then 'normal'
+                  else if value < 30 then 'overweight'
+                  else 'obese'
+      }
+  )
+in
+  { formula: bmi }

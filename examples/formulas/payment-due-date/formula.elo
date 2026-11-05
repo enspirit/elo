@@ -1,0 +1,27 @@
+# When is this invoice due, and is it late?
+#
+# Payment terms as they are actually written on invoices: so many days from the
+# invoice date, or so many days from the end of the month it falls in — the
+# European "end of month" terms, which is why a date library is not optional.
+
+let
+  paymentDueDate = fn( input ~>
+    let
+      invoiced = input.invoiceDate,
+      due = if input.terms == 'NET15' then invoiced + P15D
+            else if input.terms == 'NET30' then invoiced + P30D
+            else if input.terms == 'NET60' then invoiced + P60D
+            # endOfMonth answers the last instant of the month, so the day it
+            # falls on is what a due date is counted from.
+            else startOfDay(endOfMonth(invoiced)) + P30D,
+      daysLeft = inDays(startOfDay(due) - startOfDay(input.today))
+    in
+      {
+        dueDate: due,
+        daysLeft: daysLeft,
+        overdue: daysLeft < 0,
+        dueThisWeek: due >= startOfWeek(input.today) && due <= endOfWeek(input.today)
+      }
+  )
+in
+  { formula: paymentDueDate }

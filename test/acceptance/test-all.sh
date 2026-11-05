@@ -43,6 +43,15 @@ fi
 
 echo ""
 
+# The formula catalogue: whole programs rather than one-line assertions, each
+# checking its own case table on every target that has lambdas.
+echo "Formula Catalogue Tests:"
+if ! "$SCRIPTS_DIR/test-formulas.sh"; then
+    EXIT_CODE=1
+fi
+
+echo ""
+
 # Failure structure across targets. Not fixture-driven: a fixture assertion
 # cannot see a failure's kind, because Elo cannot either.
 echo "Failure Structure Tests:"

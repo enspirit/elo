@@ -1,0 +1,30 @@
+# What does this loan cost per month?
+#
+# The annuity formula: a constant monthly payment that clears the principal
+# over n months at a monthly rate r.
+#
+#     payment = principal * r / (1 - (1 + r) ^ -n)
+#
+# A zero-interest loan is the case that formula cannot take — it divides by
+# zero — so it is answered directly.
+
+let
+  loanPayment = fn( input ~>
+    let
+      months = input.years * 12,
+      rate = input.annualRatePercent / 100 / 12,
+      payment = if rate == 0
+                then input.principal / months
+                else input.principal * rate / (1 - (1 + rate) ^ -months),
+      monthly = round(payment, 2),
+      total = round(monthly * months, 2)
+    in
+      {
+        monthlyPayment: monthly,
+        totalPaid: total,
+        totalInterest: round(total - input.principal, 2),
+        payments: months
+      }
+  )
+in
+  { formula: loanPayment }

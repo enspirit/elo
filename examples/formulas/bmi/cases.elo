@@ -1,0 +1,34 @@
+{
+  cases: [
+    {
+      name: 'light',
+      input: {weightKg: 50, heightCm: 175},
+      expect: {bmi: 16.3, category: 'underweight'}
+    },
+    {
+      name: 'average',
+      input: {weightKg: 70, heightCm: 175},
+      expect: {bmi: 22.9, category: 'normal'}
+    },
+    {
+      name: 'just over 25',
+      input: {weightKg: 77, heightCm: 175},
+      expect: {bmi: 25.1, category: 'overweight'}
+    },
+    {
+      name: 'heavy',
+      input: {weightKg: 95, heightCm: 175},
+      expect: {bmi: 31, category: 'obese'}
+    },
+    {
+      name: 'short',
+      input: {weightKg: 60, heightCm: 155},
+      expect: {bmi: 25, category: 'overweight'}
+    },
+    {
+      name: 'tall',
+      input: {weightKg: 90, heightCm: 200},
+      expect: {bmi: 22.5, category: 'normal'}
+    }
+  ]
+}

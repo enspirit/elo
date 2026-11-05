@@ -1,0 +1,39 @@
+{
+  cases: [
+    {
+      name: 'fifteen days',
+      input: {invoiceDate: '2026-01-10', terms: 'NET15', today: '2026-01-10'},
+      expect: {dueDate: D2026-01-25, daysLeft: 15, overdue: false, dueThisWeek: false}
+    },
+    {
+      name: 'thirty days',
+      input: {invoiceDate: '2026-01-10', terms: 'NET30', today: '2026-01-10'},
+      expect: {dueDate: D2026-02-09, daysLeft: 30, overdue: false, dueThisWeek: false}
+    },
+    {
+      name: 'sixty days over a month end',
+      input: {invoiceDate: '2026-01-10', terms: 'NET60', today: '2026-01-10'},
+      expect: {dueDate: D2026-03-11, daysLeft: 60, overdue: false, dueThisWeek: false}
+    },
+    {
+      name: 'end of month plus thirty',
+      input: {invoiceDate: '2026-01-10', terms: 'EOM30', today: '2026-01-10'},
+      expect: {dueDate: D2026-03-02, daysLeft: 51, overdue: false, dueThisWeek: false}
+    },
+    {
+      name: 'end of a short month',
+      input: {invoiceDate: '2026-02-03', terms: 'EOM30', today: '2026-04-02'},
+      expect: {dueDate: D2026-03-30, daysLeft: -3, overdue: true, dueThisWeek: true}
+    },
+    {
+      name: 'already overdue',
+      input: {invoiceDate: '2026-01-10', terms: 'NET30', today: '2026-03-01'},
+      expect: {dueDate: D2026-02-09, daysLeft: -20, overdue: true, dueThisWeek: false}
+    },
+    {
+      name: 'due today',
+      input: {invoiceDate: '2026-01-10', terms: 'NET30', today: '2026-02-09'},
+      expect: {dueDate: D2026-02-09, daysLeft: 0, overdue: false, dueThisWeek: true}
+    }
+  ]
+}

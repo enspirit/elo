@@ -1,0 +1,39 @@
+# How strong is this password, and what is missing from it?
+#
+# A checklist rather than a score out of a hat: each rule is a row with a label,
+# so the formula can answer *which* rules failed. `filter` and `map` over that
+# list turn the same data into both the score and the advice, which is the
+# thing a list of records is for.
+
+let
+  digits = '0123456789',
+  lowers = 'abcdefghijklmnopqrstuvwxyz',
+  uppers = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  # Anything that is not a letter or a digit counts as a symbol.
+  hasAny = fn( s, alphabet ~> any(split(s, ''), fn( c ~> contains(alphabet, c) )) ),
+  passwordStrength = fn( input ~>
+    let
+      p = input.password,
+      rules = [
+        { rule: 'at least 12 characters', ok: length(p) >= 12 },
+        { rule: 'a lowercase letter',     ok: hasAny(p, lowers) },
+        { rule: 'an uppercase letter',    ok: hasAny(p, uppers) },
+        { rule: 'a digit',                ok: hasAny(p, digits) },
+        { rule: 'a symbol',               ok: !all(split(p, ''), fn( c ~>
+                                            contains(lowers + uppers + digits, c) )) },
+        { rule: 'no run of three',        ok: !any(split(p, ''), fn( c ~>
+                                            contains(p, c + c + c) )) }
+      ],
+      passed = count(filter(rules, fn( r ~> r.ok )))
+    in
+      {
+        score: passed,
+        level: if passed <= 2 then 'weak'
+               else if passed <= 4 then 'fair'
+               else if passed == 5 then 'good'
+               else 'strong',
+        missing: map(filter(rules, fn( r ~> !r.ok )), fn( r ~> r.rule ))
+      }
+  )
+in
+  { formula: passwordStrength }

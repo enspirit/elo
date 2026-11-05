@@ -1,0 +1,34 @@
+# Is this a valid Belgian VAT number?
+#
+# A Belgian VAT number is ten digits, written `BE 0123.456.749`. The last two
+# are a check: 97 minus the first eight read as a number, modulo 97. Numbers
+# issued before 2008 are nine digits and gained a leading zero, so both lengths
+# are accepted and normalised to ten.
+#
+# This is the shape every European VAT check has — strip the country prefix,
+# then a national checksum — and the one most no-code tools end up writing by
+# hand in each of their runtimes.
+
+let
+  isAllDigits = fn( s ~>
+    all(split(s, ''), fn( c ~> !isNull(indexOf('0123456789', c)) ))
+  ),
+  vatNumberBe = fn( input ~>
+    let
+      bare = replaceAll(replaceAll(replaceAll(upper(trim(input.number)), ' ', ''), '.', ''), '-', ''),
+      body = if startsWith(bare, 'BE') then substring(bare, 2, length(bare) - 2) else bare,
+      digits = if length(body) == 9 then padStart(body, 10, '0') else body,
+      wellFormed = length(digits) == 10 && isAllDigits(digits),
+      valid = if wellFormed
+              then 97 - (Int(substring(digits, 0, 8)) % 97) == Int(substring(digits, 8, 2))
+              else false
+    in
+      {
+        valid: valid,
+        formatted: if wellFormed
+                   then 'BE ' + join([substring(digits, 0, 4), substring(digits, 4, 3), substring(digits, 7, 3)], '.')
+                   else null
+      }
+  )
+in
+  { formula: vatNumberBe }

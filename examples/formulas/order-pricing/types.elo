@@ -1,0 +1,18 @@
+Tier = String(t | known: t == 'standard' || t == 'silver' || t == 'gold')
+
+Input = {
+  unitPrice: Float(p | positive: p > 0),
+  quantity: Int(q | atLeastOne: q >= 1),
+  tier: Tier,
+  vatRate: Float(r | aRate: r >= 0 && r <= 1),
+  couponPercent :? Float(c | aPercentage: c >= 0 && c <= 100)
+}
+
+Output = {
+  subtotal: Float,
+  discountRate: Float,
+  discount: Float,
+  net: Float,
+  vat: Float,
+  total: Float
+}

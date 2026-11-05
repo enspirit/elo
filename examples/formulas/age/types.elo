@@ -1,0 +1,10 @@
+Input = {
+  birthDate: Date,
+  on: Date
+}
+
+Output = {
+  years: Int,
+  isAdult: Bool,
+  birthdayToday: Bool
+}

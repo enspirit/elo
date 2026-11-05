@@ -1,0 +1,9 @@
+Input = {
+  number: String(s | notBlank: !isBlank(s))
+}
+
+Output = {
+  valid: Bool,
+  brand: String|Null,
+  masked: String|Null
+}

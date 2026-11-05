@@ -1,0 +1,39 @@
+{
+  cases: [
+    {
+      name: 'divisible by 4',
+      input: {year: 2024},
+      expect: true
+    },
+    {
+      name: 'not divisible by 4',
+      input: {year: 2026},
+      expect: false
+    },
+    {
+      name: 'century, not by 400',
+      input: {year: 1900},
+      expect: false
+    },
+    {
+      name: 'century divisible by 400',
+      input: {year: 2000},
+      expect: true
+    },
+    {
+      name: 'the Gregorian first year',
+      input: {year: 1583},
+      expect: false
+    },
+    {
+      name: 'far future century',
+      input: {year: 2400},
+      expect: true
+    },
+    {
+      name: 'far future century, not 400',
+      input: {year: 2300},
+      expect: false
+    }
+  ]
+}

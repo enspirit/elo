@@ -1,0 +1,13 @@
+{
+  fields: [
+    {
+      path: 'number',
+      label: 'Card number',
+      type: 'String',
+      widget: 'text',
+      required: true,
+      constraints: ['notBlank'],
+      placeholder: '4539 5787 6362 1486'
+    }
+  ]
+}

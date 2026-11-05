@@ -1,0 +1,29 @@
+{
+  fields: [
+    {
+      path: 'principal',
+      label: 'Amount borrowed',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['positive']
+    },
+    {
+      path: 'annualRatePercent',
+      label: 'Annual rate (%)',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['notNegative'],
+      placeholder: '3.9'
+    },
+    {
+      path: 'years',
+      label: 'Term (years)',
+      type: 'Int',
+      widget: 'number',
+      required: true,
+      constraints: ['atLeastOne']
+    }
+  ]
+}

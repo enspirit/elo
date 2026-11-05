@@ -1,0 +1,27 @@
+{
+  fields: [
+    {
+      path: 'invoiceDate',
+      label: 'Invoice date',
+      type: 'Date',
+      widget: 'date',
+      required: true
+    },
+    {
+      path: 'terms',
+      label: 'Payment terms',
+      type: 'String',
+      widget: 'select',
+      required: true,
+      constraints: ['known'],
+      options: ['NET15', 'NET30', 'NET60', 'EOM30']
+    },
+    {
+      path: 'today',
+      label: 'Today',
+      type: 'Date',
+      widget: 'date',
+      required: true
+    }
+  ]
+}

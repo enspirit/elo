@@ -1,0 +1,19 @@
+Zone = String(z | known: z == 'domestic' || z == 'eu' || z == 'world')
+
+Input = {
+  weightKg: Float(w | positive: w > 0 && w <= 70),
+  lengthCm: Float(l | positive: l > 0),
+  widthCm: Float(w | positive: w > 0),
+  heightCm: Float(h | positive: h > 0),
+  zone: Zone,
+  express: Bool,
+  orderValue: Float(v | notNegative: v >= 0)
+}
+
+Output = {
+  billableWeight: Float,
+  volumetric: Float,
+  freeShipping: Bool,
+  cost: Float,
+  etaDays: Int
+}

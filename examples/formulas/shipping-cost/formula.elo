@@ -1,0 +1,42 @@
+# What does it cost to ship this parcel?
+#
+# A rate card: a base price per zone, a price per kilo over the first two, a
+# surcharge for express, and a free-shipping threshold on the order value that
+# the express surcharge survives. Volumetric weight — the carrier charges for
+# the space a light, bulky parcel takes — is the part people forget.
+
+let
+  freeFrom = 150.0,
+  baseOf = fn( zone ~>
+    if zone == 'domestic' then 4.95
+    else if zone == 'eu' then 9.95
+    else 24.95
+  ),
+  perKiloOf = fn( zone ~>
+    if zone == 'domestic' then 0.80
+    else if zone == 'eu' then 1.60
+    else 4.20
+  ),
+  shippingCost = fn( input ~>
+    let
+      # The carrier bills whichever is heavier: the scale, or the box.
+      volumetric = input.lengthCm * input.widthCm * input.heightCm / 5000,
+      billable = round(max(input.weightKg, volumetric), 1),
+      overweight = max(0.0, billable - 2.0),
+      base = baseOf(input.zone) + round(overweight * perKiloOf(input.zone), 2),
+      freeShipping = input.orderValue >= freeFrom,
+      surcharge = if input.express then round(base * 0.5, 2) else 0.0
+    in
+      {
+        billableWeight: billable,
+        volumetric: round(volumetric, 1),
+        freeShipping: freeShipping,
+        cost: round((if freeShipping then 0.0 else base) + surcharge, 2),
+        etaDays: if input.express then 1
+                 else if input.zone == 'domestic' then 2
+                 else if input.zone == 'eu' then 4
+                 else 9
+      }
+  )
+in
+  { formula: shippingCost }

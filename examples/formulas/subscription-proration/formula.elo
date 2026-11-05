@@ -1,0 +1,28 @@
+# What does a subscription cost for part of a month?
+#
+# A subscription started mid-month is billed for the days that are left, and
+# "the days that are left" depends on which month it is — the whole point of
+# pro-rating. `startOfMonth` and `endOfMonth` give the bounds, so the formula
+# never has to know that February is short or that the year might be a leap
+# one.
+
+let
+  subscriptionProration = fn( input ~>
+    let
+      start = input.startDate,
+      firstDay = startOfMonth(start),
+      lastDay = startOfDay(endOfMonth(start)),
+      daysInMonth = inDays(lastDay - firstDay) + 1,
+      billedDays = inDays(lastDay - start) + 1,
+      amount = round(input.monthlyPrice * billedDays / daysInMonth, 2)
+    in
+      {
+        billedDays: billedDays,
+        daysInMonth: daysInMonth,
+        amount: amount,
+        dailyRate: round(input.monthlyPrice / daysInMonth, 4),
+        nextRenewal: firstDay + P1M
+      }
+  )
+in
+  { formula: subscriptionProration }

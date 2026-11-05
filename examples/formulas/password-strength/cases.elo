@@ -1,0 +1,39 @@
+{
+  cases: [
+    {
+      name: 'short and lowercase',
+      input: {password: 'secret'},
+      expect: {score: 2, level: 'weak', missing: ['at least 12 characters', 'an uppercase letter', 'a digit', 'a symbol']}
+    },
+    {
+      name: 'long but one class',
+      input: {password: 'abcdefghijklm'},
+      expect: {score: 3, level: 'fair', missing: ['an uppercase letter', 'a digit', 'a symbol']}
+    },
+    {
+      name: 'mixed case and digits',
+      input: {password: 'Passw0rdLong'},
+      expect: {score: 5, level: 'good', missing: ['a symbol']}
+    },
+    {
+      name: 'everything',
+      input: {password: 'Passw0rd!Long'},
+      expect: {score: 6, level: 'strong', missing: []}
+    },
+    {
+      name: 'a run of three',
+      input: {password: 'Paaassw0rd!xy'},
+      expect: {score: 5, level: 'good', missing: ['no run of three']}
+    },
+    {
+      name: 'empty',
+      input: {password: ''},
+      expect: {score: 1, level: 'weak', missing: ['at least 12 characters', 'a lowercase letter', 'an uppercase letter', 'a digit', 'a symbol']}
+    },
+    {
+      name: 'symbols only',
+      input: {password: '!@#$%^&*()-='},
+      expect: {score: 3, level: 'fair', missing: ['a lowercase letter', 'an uppercase letter', 'a digit']}
+    }
+  ]
+}

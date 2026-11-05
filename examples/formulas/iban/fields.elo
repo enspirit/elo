@@ -1,0 +1,13 @@
+{
+  fields: [
+    {
+      path: 'iban',
+      label: 'IBAN',
+      type: 'String',
+      widget: 'text',
+      required: true,
+      constraints: ['notBlank'],
+      placeholder: 'BE68 5390 0754 7034'
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  fields: [
+    {
+      path: 'monthlyPrice',
+      label: 'Monthly price',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['positive']
+    },
+    {
+      path: 'startDate',
+      label: 'Start date',
+      type: 'Date',
+      widget: 'date',
+      required: true
+    }
+  ]
+}

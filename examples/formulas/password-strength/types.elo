@@ -1,0 +1,9 @@
+Input = {
+  password: String
+}
+
+Output = {
+  score: Int,
+  level: String,
+  missing: [String]
+}

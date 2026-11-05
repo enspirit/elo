@@ -1,0 +1,11 @@
+{
+  fields: [
+    {
+      path: 'password',
+      label: 'Password',
+      type: 'String',
+      widget: 'password',
+      required: true
+    }
+  ]
+}

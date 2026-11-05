@@ -1,0 +1,14 @@
+Terms = String(t | known: t == 'NET15' || t == 'NET30' || t == 'NET60' || t == 'EOM30')
+
+Input = {
+  invoiceDate: Date,
+  terms: Terms,
+  today: Date
+}
+
+Output = {
+  dueDate: Date,
+  daysLeft: Float,
+  overdue: Bool,
+  dueThisWeek: Bool
+}

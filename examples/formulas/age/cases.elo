@@ -1,0 +1,44 @@
+{
+  cases: [
+    {
+      name: 'birthday already passed',
+      input: {birthDate: '1990-03-15', on: '2026-11-05'},
+      expect: {years: 36, isAdult: true, birthdayToday: false}
+    },
+    {
+      name: 'birthday still to come',
+      input: {birthDate: '1990-12-15', on: '2026-11-05'},
+      expect: {years: 35, isAdult: true, birthdayToday: false}
+    },
+    {
+      name: 'birthday today',
+      input: {birthDate: '1990-11-05', on: '2026-11-05'},
+      expect: {years: 36, isAdult: true, birthdayToday: true}
+    },
+    {
+      name: 'the day before',
+      input: {birthDate: '1990-11-06', on: '2026-11-05'},
+      expect: {years: 35, isAdult: true, birthdayToday: false}
+    },
+    {
+      name: 'born on a 29th of February',
+      input: {birthDate: '2000-02-29', on: '2026-02-28'},
+      expect: {years: 25, isAdult: true, birthdayToday: false}
+    },
+    {
+      name: 'the day after that',
+      input: {birthDate: '2000-02-29', on: '2026-03-01'},
+      expect: {years: 26, isAdult: true, birthdayToday: false}
+    },
+    {
+      name: 'born today',
+      input: {birthDate: '2026-11-05', on: '2026-11-05'},
+      expect: {years: 0, isAdult: false, birthdayToday: true}
+    },
+    {
+      name: 'just under eighteen',
+      input: {birthDate: '2008-11-06', on: '2026-11-05'},
+      expect: {years: 17, isAdult: false, birthdayToday: false}
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+# How old is someone on a given day?
+#
+# Not `(on - birthDate) / P1Y`: a duration converted to years is approximate,
+# because a year is not a fixed number of days. An age in whole years is a
+# question about calendar components — the years between the two dates, minus
+# one if the birthday has not come round yet.
+#
+# The reference day is an input rather than TODAY, so that the answer is a
+# function of its arguments and the case table below can be written at all.
+
+let
+  age = fn( input ~>
+    let
+      birth = input.birthDate,
+      on = input.on,
+      beforeBirthday = month(on) < month(birth)
+                       || (month(on) == month(birth) && day(on) < day(birth)),
+      years = year(on) - year(birth) - (if beforeBirthday then 1 else 0)
+    in
+      {
+        years: years,
+        isAdult: years >= 18,
+        birthdayToday: month(on) == month(birth) && day(on) == day(birth)
+      }
+  )
+in
+  { formula: age }

@@ -1,0 +1,12 @@
+Input = {
+  principal: Float(p | positive: p > 0),
+  annualRatePercent: Float(r | notNegative: r >= 0 && r < 100),
+  years: Int(y | atLeastOne: y >= 1 && y <= 50)
+}
+
+Output = {
+  monthlyPayment: Float,
+  totalPaid: Float,
+  totalInterest: Float,
+  payments: Int
+}

@@ -1,0 +1,10 @@
+Input = {
+  taxableIncome: Float(i | notNegative: i >= 0)
+}
+
+Output = {
+  tax: Float,
+  net: Float,
+  marginalRate: Float,
+  effectiveRate: Float
+}

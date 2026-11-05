@@ -1,0 +1,42 @@
+# Is this a plausible payment card number?
+#
+# The Luhn checksum (ISO/IEC 7812): reading from the right, double every second
+# digit, subtract 9 from anything over 9, and the total must be a multiple of
+# ten. It catches every single-digit typo and almost every transposition, which
+# is what it is for — it says nothing about whether the card exists.
+#
+# `reduce` carries the position along with the running total, because the rule
+# depends on how far from the right each digit is.
+
+let
+  digits = '0123456789',
+  cardNumber = fn( input ~>
+    let
+      bare = replaceAll(replaceAll(trim(input.number), ' ', ''), '-', ''),
+      wellFormed = length(bare) >= 12 && length(bare) <= 19
+                   && all(split(bare, ''), fn( c ~> !isNull(indexOf(digits, c)) )),
+      folded = if wellFormed
+               then reduce(reverse(split(bare, '')), { at: 0, sum: 0 }, fn( acc, c ~>
+                 let
+                   d = Int(c),
+                   doubled = if d * 2 > 9 then d * 2 - 9 else d * 2
+                 in
+                   { at: acc.at + 1, sum: acc.sum + (if acc.at % 2 == 1 then doubled else d) }
+               ))
+               # Nothing to fold, and a total no multiple of ten.
+               else { at: 0, sum: 1 },
+      brand = if startsWith(bare, '4') then 'Visa'
+              else if startsWith(bare, '34') || startsWith(bare, '37') then 'American Express'
+              else if contains('51 52 53 54 55', substring(bare, 0, 2)) then 'Mastercard'
+              else 'unknown'
+    in
+      {
+        valid: wellFormed && folded.sum % 10 == 0,
+        brand: if wellFormed then brand else null,
+        masked: if wellFormed
+                then padStart(substring(bare, length(bare) - 4, 4), length(bare), '*')
+                else null
+      }
+  )
+in
+  { formula: cardNumber }

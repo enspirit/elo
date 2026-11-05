@@ -1,0 +1,39 @@
+# What does a progressive income tax come to?
+#
+# The brackets are the Belgian federal ones, but the shape is every country's:
+# each slice of income is taxed at its own rate, and what people call "their
+# tax rate" is two different numbers — the one on the last euro (marginal) and
+# the one on all of them (effective).
+#
+# `reduce` walks the brackets carrying the top of the previous one, which is
+# how a slice knows where it starts.
+
+let
+  brackets = [
+    { upTo: 15820.0,     rate: 0.25 },
+    { upTo: 27920.0,     rate: 0.40 },
+    { upTo: 48320.0,     rate: 0.45 },
+    { upTo: 99999999.0,  rate: 0.50 }
+  ],
+  incomeTax = fn( input ~>
+    let
+      income = input.taxableIncome,
+      folded = reduce(brackets, { from: 0.0, tax: 0.0, marginal: 0.0 }, fn( acc, bracket ~>
+        let slice = max(0.0, min(income, bracket.upTo) - acc.from)
+        in {
+          from: bracket.upTo,
+          tax: acc.tax + slice * bracket.rate,
+          marginal: if slice > 0 then bracket.rate else acc.marginal
+        }
+      )),
+      tax = round(folded.tax, 2)
+    in
+      {
+        tax: tax,
+        net: round(income - tax, 2),
+        marginalRate: round(folded.marginal * 100, 1),
+        effectiveRate: if income > 0 then round(tax / income * 100, 1) else 0.0
+      }
+  )
+in
+  { formula: incomeTax }

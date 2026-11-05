@@ -762,7 +762,30 @@ conventions.
 
 ## Examples
 
-Run the examples:
+### A catalogue of formulas
+
+[`examples/formulas/`](examples/formulas) holds thirteen real formulas — an
+IBAN and a VAT number validator, a discount engine, a progressive tax, a loan
+payment, payment terms, a prorated subscription, a password checklist — each
+one a **formula bundle**: a directory with the data it takes and answers
+(`Input` and `Output`, in their own `types.elo`), the formula and its
+documentation, the input form as data, its cases as data, and a small
+manifest.
+
+```bash
+npm run build
+node dist/examples/formula-bundle.js order-pricing
+```
+
+That prints the documentation, the **input form**, and every case with its
+result — the things a catalogue of formulas needs. The form is a data file a
+form builder can read on its own, generated from `Input` and checked against it
+on every test run, so the half a human writes (labels, widgets, a dropdown's
+options) sits beside a half that cannot drift. The format is
+[`examples/formulas/BUNDLE.md`](examples/formulas/BUNDLE.md) and its reference
+implementation is [`examples/formula-bundle.ts`](examples/formula-bundle.ts).
+
+### Using the API
 
 ```bash
 npm run build
@@ -791,6 +814,8 @@ elo/
 │   ├── integration/  # Compilation tests
 │   └── acceptance/   # Runtime execution tests
 ├── examples/         # Usage examples
+│   ├── formulas/     # A catalogue of formula bundles (see its BUNDLE.md)
+│   └── formula-bundle.ts  # The bundle format's reference implementation
 ├── bin/eloc          # Compiler CLI
 ├── bin/elo           # Evaluator CLI
 └── CLAUDE.md         # Developer guide

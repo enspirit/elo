@@ -1,0 +1,13 @@
+{
+  fields: [
+    {
+      path: 'year',
+      label: 'Year',
+      type: 'Int',
+      widget: 'number',
+      required: true,
+      constraints: ['gregorian'],
+      placeholder: '2026'
+    }
+  ]
+}
