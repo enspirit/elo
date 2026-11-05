@@ -472,13 +472,15 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   // Float - identity for float, convert for int, parse for string
   rubyLib.register('Float', [Types.float], identity());
   rubyLib.register('Float', [Types.int], rubyMethod('to_f'));
+  // k_float rather than Kernel#Float: what a numeric string is must not depend
+  // on which Ruby the host runs. See the helper in src/runtime.ts.
   rubyLib.register('Float', [Types.string], (args, ctx) => {
-    const v = ctx.emit(args[0]);
-    return `(->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call(${v})`;
+    ctx.requireHelper('k_float');
+    return `(->(s) { k_float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call(${ctx.emit(args[0])})`;
   });
   rubyLib.register('Float', [Types.any], (args, ctx) => {
-    const v = ctx.emit(args[0]);
-    return `(->(v) { case v when Float; v when Integer; v.to_f when String; Float(v) rescue raise ".: expected Float, got #{v.inspect}" else raise ".: expected Float, got #{v.class}" end }).call(${v})`;
+    ctx.requireHelper('k_float');
+    return `(->(v) { case v when Numeric; k_float(v) when String; k_float(v) rescue raise ".: expected Float, got #{v.inspect}" else raise ".: expected Float, got #{v.class}" end }).call(${ctx.emit(args[0])})`;
   });
 
   // Bool - identity for bool, parse "true"/"false" for string

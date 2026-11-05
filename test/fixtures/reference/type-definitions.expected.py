@@ -58,8 +58,13 @@
 
 (lambda _: kAssert(kEq((_p_Ints := pArray(pInt), Ints := lambda v: pUnwrap(_p_Ints(v, '')), Ints([]))[-1], [])))(None)
 
+
 (lambda _: kAssert((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T("3.14"))[-1] == 3.14))(None)
 (lambda _: kAssert((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T(42))[-1] == 42.0))(None)
+(lambda _: kAssert((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T("1."))[-1] == 1.0))(None)
+(lambda _: kAssert((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T(".5"))[-1] == 0.5))(None)
+(lambda _: kAssert((_p_T := pFloat, T := lambda v: pUnwrap(_p_T(v, '')), T("1e3"))[-1] == 1000.0))(None)
+(lambda _: kAssert(kEq((_p_T := pSchema([("a", pFloat, False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"a": "1."}))[-1], {"a": 1.0})))(None)
 
 (lambda _: kAssert(kEq((_p_Config := pSchema([("enabled", pBool, False)], "closed", None), Config := lambda v: pUnwrap(_p_Config(v, '')), Config({"enabled": "true"}))[-1], {"enabled": True})))(None)
 (lambda _: kAssert(kEq((_p_Config := pSchema([("enabled", pBool, False)], "closed", None), Config := lambda v: pUnwrap(_p_Config(v, '')), Config({"enabled": "false"}))[-1], {"enabled": False})))(None)

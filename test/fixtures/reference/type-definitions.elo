@@ -57,9 +57,14 @@ assert((let x = 5, check x > 0 in x * 2) == 10)
 # Sceptic tests: boundary cases and missing type coverage
 # Empty array with typed elements
 assert((let Ints = [Int] in [] |> Ints) == [])
-# Float type coercion
+# Float type coercion. The spellings a host's own number parser may disagree
+# about are the ones worth coercing here, not the easy one.
 assert((let T = Float in '3.14' |> T) == 3.14)
 assert((let T = Float in 42 |> T) == 42.0)
+assert((let T = Float in '1.' |> T) == 1.0)
+assert((let T = Float in '.5' |> T) == 0.5)
+assert((let T = Float in '1e3' |> T) == 1000.0)
+assert((let T = { a: Float } in { a: '1.' } |> T) == { a: 1.0 })
 # Bool type coercion in schema
 assert((let Config = { enabled: Bool } in { enabled: 'true' } |> Config) == { enabled: true })
 assert((let Config = { enabled: Bool } in { enabled: 'false' } |> Config) == { enabled: false })

@@ -450,13 +450,14 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   k_div: [],
   k_str_mul: [],
   k_pad: [],
+  k_float: [],
   p_any: ['p_ok'],
   p_null: ['p_ok', 'p_fail'],
   p_string: ['p_ok', 'p_fail'],
   p_int: ['p_ok', 'p_fail'],
   p_bool: ['p_ok', 'p_fail'],
   p_datetime: ['p_ok', 'p_fail'],
-  p_float: ['p_ok', 'p_fail'],
+  p_float: ['p_ok', 'p_fail', 'k_float'],
   p_date: ['p_ok', 'p_fail'],
   p_duration: ['p_ok', 'p_fail'],
   p_data: ['p_ok', 'p_fail'],
@@ -469,6 +470,16 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  // What a String has to look like to be a Float. Kernel#Float is not that
+  // question: it answers 1.0 for "1." on Ruby 3.4 and raises on 3.2, so the
+  // same Elo program would mean two things depending on the host's Ruby. The
+  // grammar is the one the other three targets accept.
+  k_float: `def k_float(v)
+  return v.to_f if v.is_a?(Numeric)
+  s = v.to_s.strip
+  raise ArgumentError, "not a Float: #{s.inspect}" unless s.match?(/\\A[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?\\z/)
+  s.to_f
+end`,
   k_str_mul: `def k_str_mul(s, n)
   return '' if n <= 0
   raise "String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > ${MAX_STRING_LENGTH}
@@ -638,7 +649,7 @@ end`,
 end`,
   p_float: `def p_float(v, p)
   return p_ok(v, p) if v.is_a?(Numeric)
-  return p_ok(Float(v), p) if v.is_a?(String) rescue nil
+  return p_ok(k_float(v), p) if v.is_a?(String) rescue nil
   p_fail(p, "expected Float, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
 end`,
   p_date: `def p_date(v, p)

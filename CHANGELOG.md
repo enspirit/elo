@@ -6,6 +6,16 @@ All notable changes to Elo are documented in this file.
 
 ### Fixed
 
+- `Float()` of a string meant **two things on two Rubies**: `Kernel#Float("1.")`
+  raises on Ruby 2.7 to 3.3 and answers `1.0` on 3.4 and later, so the same Elo
+  program depended on the host's Ruby — where JavaScript, Python and PostgreSQL
+  all answer `1.0`. Both places that asked the question were affected: the
+  `Float()` selector and the schema parser behind `{ a: Float }`. Ruby now
+  decides it with a `k_float` helper over Elo's own grammar — the one the
+  JavaScript parser got in the entry below — so the four targets accept the same
+  set, whatever Ruby is installed. The whole Ruby corpus is checked on 2.7, 3.2,
+  3.3, 3.4 and 4.0. `Integer()` was checked the same way and needed nothing
+
 - A string function whose **receiver is an expression** lost the parentheses
   around it. `startsWith('ab' + 'cd', 'abc')` raised on **Python** and
   `substring('ab' + 'cd', 1, 2)` answered `'abd'` there, because only the
