@@ -36,3 +36,22 @@ assert((let f = fn( x ~> x + (if false then 10 else 20) ) in f(1)) == 21)
 assert((let f = fn( x ~> (if false then 10 else 20) + x ) in f(1)) == 21)
 assert((let f = fn( x ~> x * (if false then 3 else 4) ) in f(2)) == 8)
 assert((let f = fn( x ~> -(if false then x else x + 1) ) in f(3)) == -4)
+
+# A string function whose receiver is an expression, and whose other argument
+# has no statically known type. The receiver has to keep its parentheses in
+# that dispatch too: it is the same emission, reached through a different
+# signature. See stdlib/string/concatenated-receiver.elo for the typed cases.
+assert((let a = 'ab' in map(['abc'], fn( x ~> startsWith(a + 'cd', x) ))) == [true])
+assert((let a = 'ab' in map(['bcd'], fn( x ~> endsWith(a + 'cd', x) ))) == [true])
+assert((let a = 'ab' in map(['bc'], fn( x ~> contains(a + 'cd', x) ))) == [true])
+assert((let a = 'ab' in map(['z'], fn( x ~> contains(a + 'cd', x) ))) == [false])
+assert((let a = 'ab' in map(['c'], fn( x ~> indexOf(a + 'cd', x) ))) == [2])
+assert((let a = 'ab' in map(['e'], fn( x ~> concat(a + 'cd', x) ))) == ['abcde'])
+assert((let a = 'ab' in map([1], fn( x ~> substring(a + 'cd', x, 2) ))) == ['bc'])
+assert((let a = 'ab' in map([1], fn( x ~> slice(a + 'cd', x, 3) ))) == ['bc'])
+assert((let a = 'ab' in map(['c'], fn( x ~> replace(a + 'cd', x, 'Z') ))) == ['abZd'])
+assert((let a = 'ab' in map(['c'], fn( x ~> replaceAll(a + 'cdc', x, 'Z') ))) == ['abZdZ'])
+assert((let a = 'ab' in map(['0'], fn( x ~> padStart(a + 'cd', 6, x) ))) == ['00abcd'])
+assert((let a = 'ab' in map([','], fn( x ~> split(a + ',cd', x) ))) == [['ab', 'cd']])
+assert((let a = [1] in map([2], fn( x ~> contains(a + [3], x) ))) == [false])
+assert((let a = [1] in map([3], fn( x ~> contains(a + [3], x) ))) == [true])

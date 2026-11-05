@@ -204,11 +204,19 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   });
 
   // String functions
+  // A receiver that is itself an expression keeps its parentheses: a method
+  // call, a subscript and a slice all bind tighter than the operator that
+  // built it, so `a + 'cd'.startswith(x)` is `a + ('cd'.startswith(x))`.
+  const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
+    const operand = ctx.emit(args[0]);
+    return isBinaryOp(args[0]) ? `(${operand})` : operand;
+  };
+
   pyLib.register('length', [Types.string], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('length', [Types.array], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('count', [Types.array], (args, ctx) => `len(${ctx.emit(args[0])})`);
   pyLib.register('isEmpty', [Types.string], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
-  pyLib.register('isBlank', [Types.string], (args, ctx) => `(len(${ctx.emit(args[0])}.strip()) == 0)`);
+  pyLib.register('isBlank', [Types.string], (args, ctx) => `(len(${wrapReceiver(args, ctx)}.strip()) == 0)`);
   pyLib.register('isEmpty', [Types.array], (args, ctx) => `(len(${ctx.emit(args[0])}) == 0)`);
   pyLib.register('contains', [Types.array, Types.any], (args, ctx) =>
     `(${ctx.emit(args[1])} in ${ctx.emit(args[0])})`);
@@ -219,11 +227,11 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('trim', [Types.string], pyMethod('strip()'));
   pyLib.register('trimStart', [Types.string], pyMethod('lstrip()'));
   pyLib.register('trimEnd', [Types.string], pyMethod('rstrip()'));
-  pyLib.register('reverse', [Types.string], (args, ctx) => `${ctx.emit(args[0])}[::-1]`);
+  pyLib.register('reverse', [Types.string], (args, ctx) => `${wrapReceiver(args, ctx)}[::-1]`);
   pyLib.register('startsWith', [Types.string, Types.string], (args, ctx) =>
-    `${ctx.emit(args[0])}.startswith(${ctx.emit(args[1])})`);
+    `${wrapReceiver(args, ctx)}.startswith(${ctx.emit(args[1])})`);
   pyLib.register('endsWith', [Types.string, Types.string], (args, ctx) =>
-    `${ctx.emit(args[0])}.endswith(${ctx.emit(args[1])})`);
+    `${wrapReceiver(args, ctx)}.endswith(${ctx.emit(args[1])})`);
   pyLib.register('contains', [Types.string, Types.string], (args, ctx) =>
     `(${ctx.emit(args[1])} in ${ctx.emit(args[0])})`);
   pyLib.register('indexOf', [Types.string, Types.string], (args, ctx) => {
@@ -231,17 +239,17 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     return `kIndexOf(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('replace', [Types.string, Types.string, Types.string], (args, ctx) =>
-    `${ctx.emit(args[0])}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])}, 1)`);
+    `${wrapReceiver(args, ctx)}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])}, 1)`);
   pyLib.register('replaceAll', [Types.string, Types.string, Types.string], (args, ctx) =>
-    `${ctx.emit(args[0])}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+    `${wrapReceiver(args, ctx)}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   pyLib.register('split', [Types.string, Types.string], (args, ctx) => {
     ctx.requireHelper('kSplit');
     return `kSplit(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   pyLib.register('substring', [Types.string, Types.int, Types.int], (args, ctx) =>
-    `${ctx.emit(args[0])}[${ctx.emit(args[1])}:${ctx.emit(args[1])} + ${ctx.emit(args[2])}]`);
+    `${wrapReceiver(args, ctx)}[${ctx.emit(args[1])}:${ctx.emit(args[1])} + ${ctx.emit(args[2])}]`);
   pyLib.register('slice', [Types.string, Types.int, Types.int], (args, ctx) =>
-    `${ctx.emit(args[0])}[${ctx.emit(args[1])}:${ctx.emit(args[2])}]`);
+    `${wrapReceiver(args, ctx)}[${ctx.emit(args[1])}:${ctx.emit(args[2])}]`);
   pyLib.register('concat', [Types.string, Types.string], simpleBinaryOp('+'));
   pyLib.register('padStart', [Types.string, Types.int, Types.string], (args, ctx) => {
     ctx.requireHelper('kPad');

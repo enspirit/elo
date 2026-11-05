@@ -266,8 +266,16 @@ export function createJavaScriptBinding(): StdLib<string> {
     `(a => a[a.length - 1] ?? null)(${ctx.emit(args[0])})`);
   jsLib.register('isEmpty', [Types.array], (args, ctx) =>
     `(${ctx.emit(args[0])}.length === 0)`);
+  // Helper for method calls with arguments - wraps receiver in parens if needed
+  const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
+    const operand = ctx.emit(args[0]);
+    return isNativeBinaryOp(args[0]) ? `(${operand})` : operand;
+  };
+
+  // The fallback for a receiver or a needle whose type is not known, as well
+  // as the list case: `.includes` reads a string and a list alike.
   jsLib.register('contains', [Types.array, Types.any], (args, ctx) =>
-    `${ctx.emit(args[0])}.includes(${ctx.emit(args[1])})`);
+    `${wrapReceiver(args, ctx)}.includes(${ctx.emit(args[1])})`);
   jsLib.register('sort', [Types.array], (args, ctx) =>
     `[...${ctx.emit(args[0])}].sort((a, b) => a < b ? -1 : a > b ? 1 : 0)`);
   jsLib.register('min', [Types.array], (args, ctx) =>
@@ -338,12 +346,6 @@ export function createJavaScriptBinding(): StdLib<string> {
     jsLib.register('trimStart', [t], methodCall('.trimStart()'));
     jsLib.register('trimEnd', [t], methodCall('.trimEnd()'));
   }
-  // Helper for method calls with arguments - wraps receiver in parens if needed
-  const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
-    const operand = ctx.emit(args[0]);
-    return isNativeBinaryOp(args[0]) ? `(${operand})` : operand;
-  };
-
   // String functions with two args (register for string and any)
   for (const t of [Types.string, Types.any]) {
     jsLib.register('startsWith', [t, Types.string], (args, ctx) =>

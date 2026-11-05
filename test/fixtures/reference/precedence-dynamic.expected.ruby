@@ -36,3 +36,22 @@
 ->(_) { (raise "Assertion failed" unless (f = ->(x) { ((false) ? (10) : (20)) + x }; f.call(1)) == 21; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(x) { x * ((false) ? (3) : (4)) }; f.call(2)) == 8; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(x) { -((false) ? (x) : (x + 1)) }; f.call(3)) == -4; true) }.call(nil);
+
+
+
+
+
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["abc"].map(&->(x) { (a + "cd").start_with?(x) })) == [true]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["bcd"].map(&->(x) { (a + "cd").end_with?(x) })) == [true]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["bc"].map(&->(x) { (a + "cd").include?(x) })) == [true]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["z"].map(&->(x) { (a + "cd").include?(x) })) == [false]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["c"].map(&->(x) { (a + "cd").index(x) })) == [2]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["e"].map(&->(x) { (a + "cd").concat(x) })) == ["abcde"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; [1].map(&->(x) { (a + "cd")[x, 2] })) == ["bc"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; [1].map(&->(x) { (a + "cd")[x...3] })) == ["bc"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["c"].map(&->(x) { (a + "cd").sub(x, "Z") })) == ["abZd"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; ["c"].map(&->(x) { (a + "cdc").gsub(x, "Z") })) == ["abZdZ"]; true) }.call(nil);
+->(_) { def k_pad(s, n, p, at_start); raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if n > 10000000; at_start ? s.rjust(n, p) : s.ljust(n, p) end; (raise "Assertion failed" unless (a = "ab"; ["0"].map(&->(x) { k_pad((a + "cd"), 6, x, true) })) == ["00abcd"]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = "ab"; [","].map(&->(x) { (a + ",cd").split(x) })) == [["ab", "cd"]]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = [1]; [2].map(&->(x) { (a + [3]).include?(x) })) == [false]; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (a = [1]; [3].map(&->(x) { (a + [3]).include?(x) })) == [true]; true) }.call(nil);

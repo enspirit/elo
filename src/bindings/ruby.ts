@@ -249,8 +249,16 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('first', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.first`);
   rubyLib.register('last', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.last`);
   rubyLib.register('isEmpty', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.empty?`);
+  // Helper for method calls with arguments - wraps receiver in parens if needed
+  const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
+    const operand = ctx.emit(args[0]);
+    return isBinaryOp(args[0]) ? `(${operand})` : operand;
+  };
+
+  // The fallback for a receiver or a needle whose type is not known, as well
+  // as the list case: `.include?` reads a string and a list alike.
   rubyLib.register('contains', [Types.array, Types.any], (args, ctx) =>
-    `${ctx.emit(args[0])}.include?(${ctx.emit(args[1])})`);
+    `${wrapReceiver(args, ctx)}.include?(${ctx.emit(args[1])})`);
   rubyLib.register('sort', [Types.array], rubyMethod('sort'));
   rubyLib.register('min', [Types.array], rubyMethod('min'));
   rubyLib.register('max', [Types.array], rubyMethod('max'));
@@ -303,12 +311,6 @@ export function createRubyBinding(): StdLib<string> {
     rubyLib.register('isEmpty', [t], rubyMethod('empty?'));
     rubyLib.register('isBlank', [t], rubyMethod('strip.empty?'));
   }
-  // Helper for method calls with arguments - wraps receiver in parens if needed
-  const wrapReceiver = (args: IRExpr[], ctx: { emit: (e: IRExpr) => string }) => {
-    const operand = ctx.emit(args[0]);
-    return isBinaryOp(args[0]) ? `(${operand})` : operand;
-  };
-
   // String functions with two args
   for (const t of [Types.string, Types.any]) {
     rubyLib.register('startsWith', [t, Types.string], (args, ctx) =>

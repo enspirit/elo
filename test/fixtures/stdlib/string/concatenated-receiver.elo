@@ -1,0 +1,26 @@
+# A string function whose receiver is itself an expression.
+#
+# Every target but SQL emits these as a method call, a subscript or a slice,
+# and each of those binds tighter than the operator that built the receiver:
+# `a + 'cd'.startswith(x)` is `a + ('cd'.startswith(x))`, which is a different
+# program. `numeric-receiver.elo` pins the one-argument family; this one pins
+# the rest, where a target that wrapped the receiver for `upper` forgot to for
+# `startsWith`.
+
+assert(startsWith('ab' + 'cd', 'abc') == true)
+assert(endsWith('ab' + 'cd', 'bcd') == true)
+assert(contains('ab' + 'cd', 'bc') == true)
+assert(indexOf('ab' + 'cd', 'c') == 2)
+assert(concat('ab' + 'cd', 'e') == 'abcde')
+assert(substring('ab' + 'cd', 1, 2) == 'bc')
+assert(slice('ab' + 'cd', 1, 3) == 'bc')
+assert(replace('ab' + 'cd', 'c', 'Z') == 'abZd')
+assert(replaceAll('ab' + 'cdc', 'c', 'Z') == 'abZdZ')
+assert(padStart('a' + 'b', 4, '0') == '00ab')
+assert(padEnd('a' + 'b', 4, '0') == 'ab00')
+assert(split('a,' + 'b', ',') == ['a', 'b'])
+assert(reverse('ab' + 'cd') == 'dcba')
+assert(isEmpty('a' + 'b') == false)
+assert(isBlank(' ' + ' ') == true)
+assert(length('ab' + 'cd') == 4)
+assert(upper('ab' + 'cd') == 'ABCD')

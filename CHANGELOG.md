@@ -6,6 +6,14 @@ All notable changes to Elo are documented in this file.
 
 ### Fixed
 
+- A string function whose **receiver is an expression** lost the parentheses
+  around it. `startsWith('ab' + 'cd', 'abc')` raised on **Python** and
+  `substring('ab' + 'cd', 1, 2)` answered `'abd'` there, because only the
+  one-argument family (`upper`, `trim`, …) wrapped its receiver. And
+  `contains(a + 'cd', x)` with an `x` the compiler cannot type fell through to
+  the list registration, which did not wrap either: `["abfalse"]` on
+  **JavaScript**, a `TypeError` on **Ruby**. PostgreSQL was right throughout
+
 - An `if` expression used as an **operand** was mis-emitted on JavaScript, Ruby
   and Python: a conditional operator binds looser than almost everything, and
   the emission did not parenthesise itself, so the operator around it swallowed
