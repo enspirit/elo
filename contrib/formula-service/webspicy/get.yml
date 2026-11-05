@@ -1,0 +1,104 @@
+---
+name: |-
+  Catalogue
+
+url: |-
+  /
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Lists the formulas of the catalogue: one entry per formula, its latest
+    version, and where to go next. An entry is read from `bundle.json` and the
+    doc comment's first line and from nothing else, because an index of a
+    thousand formulas should be a thousand file reads rather than a thousand
+    compiles.
+
+  postconditions:
+    - The index is revalidated rather than cached, the latest version of a formula being free to change
+
+  input_schema: |-
+    {
+      tag      :? String
+      q        :? String
+      page     :? Integer
+      per_page :? Integer
+    }
+  output_schema: |-
+    Catalogue.Index
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        asked for the whole catalogue
+      it: |-
+        lists the thirteen formulas, and no folder, this catalogue being flat
+      input: {}
+      expected:
+        content_type: application/json
+        status: 200
+        headers:
+          Cache-Control: no-cache
+      assert:
+        - size('formulas', 13)
+        - size('folders', 0)
+        - idIn('formulas', 'age', 'bmi', 'card-number', 'iban', 'income-tax', 'leap-year', 'loan-payment', 'order-pricing', 'password-strength', 'payment-due-date', 'shipping-cost', 'subscription-proration', 'vat-number-be')
+        - "idFD('formulas', 'iban', version: '1.0.0', title: 'Is this a valid IBAN?')"
+        - "pathFD('formulas/3/links', self: '/iban@1.0.0', latest: '/iban', call: '/iban@1.0.0/call')"
+
+    - when: |-
+        filtered on a tag
+      it: |-
+        keeps the formulas carrying it
+      input:
+        tag: banking
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - size('formulas', 1)
+        - idIn('formulas', 'iban')
+        - includes('formulas/0/tags', 'banking')
+
+    - when: |-
+        filtered on a word of the title or the documentation
+      it: |-
+        keeps the formulas that say it
+      input:
+        q: IBAN
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - idIn('formulas', 'iban')
+
+    - when: |-
+        asked for the second page of three
+      it: |-
+        answers three entries, counting pages from one
+      input:
+        page: 2
+        per_page: 3
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - idIn('formulas', 'iban', 'income-tax', 'leap-year')
+
+    - when: |-
+        filtered on a tag nothing carries
+      it: |-
+        answers an empty catalogue rather than a 404 — the index exists either way
+      input:
+        tag: no-such-tag
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - size('formulas', 0)

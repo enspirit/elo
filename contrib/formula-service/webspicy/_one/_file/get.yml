@@ -1,0 +1,142 @@
+---
+name: |-
+  Formula file
+
+url: |-
+  /{formula}/{file}
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers one file of the bundle, verbatim: `types.elo`, `formula.elo`,
+    `fields.elo`, `cases.elo` or `bundle.json`.
+
+    These are what make the URL space load-bearing rather than decorative. The
+    program of `Accept: application/x-elo` opens with `import { Input, Output }
+    from './types'`, and relative to `/iban@1.0.0/` that resolves to
+    `/iban@1.0.0/types.elo` — a URL served here. So a client may fetch the
+    program, resolve its imports over HTTP, and compile the formula itself,
+    knowing nothing of the bundle layout beyond what the source says.
+
+    The body is source text rather than data, which is why there is no output
+    schema worth writing: what a client does with it is read it or compile it.
+    `bundle.json` is the exception — the one file of a bundle that is data —
+    and it has its own specification next to this one.
+
+  postconditions:
+    - It supports the ETag/If-None-Match caching protocol
+
+  input_schema: |-
+    {
+      formula : String
+      file    : String
+    }
+  output_schema: |-
+    .
+  error_schema: |-
+    Error
+
+  default_example:
+    input:
+      formula: iban@1.0.0
+    expected:
+      status: 200
+
+  examples:
+    - when: |-
+        the types are asked for
+      it: |-
+        answers the module declaring Input and Output
+      input:
+        file: types.elo
+      expected:
+        content_type: application/x-elo
+      assert:
+        - match('', /^Input = \{/)
+        - match('', /^Output = \{/)
+        - |-
+          match('', /iban: String\(s \| notBlank: !isBlank\(s\)\)/)
+
+    - when: |-
+        the formula is asked for
+      it: |-
+        answers the documentation and the formula, which is where both live
+      input:
+        file: formula.elo
+      expected:
+        content_type: application/x-elo
+      assert:
+        - match('', /^# Is this a valid IBAN\?/)
+        - |-
+          match('', /\{ formula: iban \}/)
+
+    - when: |-
+        the form is asked for
+      it: |-
+        answers it as data, generated from Input and labelled by hand
+      input:
+        file: fields.elo
+      expected:
+        content_type: application/x-elo
+      assert:
+        - "match('', /label: 'IBAN'/)"
+        - "match('', /widget: 'text'/)"
+
+    - when: |-
+        the cases are asked for
+      it: |-
+        answers them as data, in Elo rather than in JSON
+      input:
+        file: cases.elo
+      expected:
+        content_type: application/x-elo
+      assert:
+        - "match('', /name: 'Belgian, grouped'/)"
+
+    - when: |-
+        a file is asked for under the unversioned name
+      it: |-
+        answers the latest version's copy, and names the version it came from
+      input:
+        formula: iban
+        file: types.elo
+      expected:
+        content_type: application/x-elo
+        headers:
+          Content-Location: /iban@1.0.0/types.elo
+
+  counterexamples:
+    - when: |-
+        a file the bundle does not have is asked for
+      it: |-
+        fails with a 404 — the five files are the whole of it
+      input:
+        file: service.elo
+      expected:
+        content_type: application/json
+        status: 404
+
+    - when: |-
+        the form fragment is asked for, which is not built yet
+      it: |-
+        fails with a 404, named in the descriptor's links and a later phase
+      input:
+        file: form
+      expected:
+        content_type: application/json
+        status: 404
+
+    - when: |-
+        the OpenAPI document is asked for, which is not built yet
+      it: |-
+        fails with a 404, for the same reason
+      input:
+        file: openapi.json
+      expected:
+        content_type: application/json
+        status: 404

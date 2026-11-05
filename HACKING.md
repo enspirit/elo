@@ -76,6 +76,7 @@ test/
 
 contrib/
   formula-service/ # A REST API over a catalogue of formula bundles
+    webspicy/      # Its black-box specification: npm run test:webspicy
     formulas/      # The catalogue: one directory per formula, holding
                    # types.elo (Input and Output), formula.elo, fields.elo
                    # (the form), cases.elo and bundle.json. The format is

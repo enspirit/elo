@@ -6,6 +6,11 @@ dist/
 # The case runner test-formulas.sh generates inside a bundle, and removes
 _cases.run.elo
 
+# The webspicy suite's lock. Its Gemfile pins what matters (see the comment in
+# it); a lock would also pin the platform of whoever ran `bundle install`
+# first, and this suite is run from a developer's machine rather than built.
+contrib/formula-service/webspicy/Gemfile.lock
+
 # Astro
 web/node_modules/
 web/dist/

@@ -1,0 +1,88 @@
+---
+name: |-
+  Formula source
+
+url: |-
+  /{formula}
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers the program the service runs, rather than a description of it —
+    `Accept` chooses the language. This is the whole of what algorithmic
+    transparency can mean for a formula service: not a paraphrase of the
+    computation, but the exact source that produced the answer, compiled with
+    its prelude so that a client may run it and check for itself.
+
+    The Elo representation is three lines, and the two modules it imports are
+    URLs this service also serves.
+
+  input_schema: |-
+    {
+      formula : String
+    }
+  output_schema: |-
+    .
+  error_schema: |-
+    Error
+
+  default_example:
+    input:
+      formula: iban@1.0.0
+    expected:
+      status: 200
+
+  examples:
+    - when: |-
+        Elo is asked for
+      it: |-
+        answers the three lines that apply the formula, imports included
+      headers:
+        Accept: application/x-elo
+      expected:
+        content_type: application/x-elo
+      assert:
+        - match('', /import \{ Input, Output \} from '\.\/types'/)
+        - match('', /import \{ formula \} from '\.\/formula'/)
+        - match('', /formula\(_ \|> Input\) \|> Output/)
+
+    - when: |-
+        JavaScript is asked for
+      it: |-
+        answers it compiled, prelude included, as one self-contained expression
+      headers:
+        Accept: application/javascript
+      expected:
+        content_type: application/javascript
+      assert:
+        - match('', /require\('luxon'\)/)
+        - match('', /^\(function\(_\)/)
+
+    - when: |-
+        Ruby is asked for
+      it: |-
+        answers the same program for that runtime, with that runtime's prelude
+      headers:
+        Accept: text/x-ruby
+      expected:
+        content_type: text/x-ruby
+      assert:
+        - match('', /require 'date'/)
+        - match('', /->\(_\)/)
+
+    - when: |-
+        Python is asked for
+      it: |-
+        answers the same program for that runtime, with that runtime's prelude
+      headers:
+        Accept: text/x-python
+      expected:
+        content_type: text/x-python
+      assert:
+        - match('', /import datetime as _dt/)
+        - match('', /lambda _/)

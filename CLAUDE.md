@@ -37,7 +37,10 @@ Elo currently has the following components :
   the sandboxes, and the formula service
 * A catalogue of formula bundles (`contrib/formula-service/formulas/`), read by
   `contrib/formula-service/src/bundle.ts` and served by `src/service.ts` beside
-  it. **CRITICAL** the format is `contrib/formula-service/formulas/BUNDLE.md`:
+  it. That service also has a **black-box webspicy suite**
+  (`contrib/formula-service/webspicy/`, run with `npm run test:webspicy`): it
+  needs Ruby gems and a running service, so it is not part of `npm test` — run
+  it when changing the service, and keep it green. **CRITICAL** the format is `contrib/formula-service/formulas/BUNDLE.md`:
   a bundle's `fields.elo` is *generated* from its `Input` and checked against
   it, so after changing a type, refresh it with
   `contrib/formula-service/bin/elo-formulas --fields <id>` (which writes the

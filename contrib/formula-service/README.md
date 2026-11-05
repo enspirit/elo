@@ -25,6 +25,7 @@ src/service.ts    the HTTP contract: routing, negotiation, the error mapping
 src/sandbox.ts    one call, under a time and a memory cap
 src/answer.ts     how an answer becomes JSON, from what Output declares
 src/server.ts     node:http, and the command line
+webspicy/         the black-box specification of all of it
 ```
 
 ## What it serves
@@ -201,3 +202,44 @@ ELO_FORMULAS=./my-formulas contrib/formula-service/bin/elo-formulas
 - `test/acceptance/test-formulas.sh` — every case of every bundle, run on
   JavaScript, Ruby and Python. That is where a formula is proved right; the
   service tests prove it is *served* right
+- [`webspicy/`](./webspicy) — the **black-box specification**, below
+
+## The specification
+
+[`webspicy/`](./webspicy) specifies this service the way a client sees it: one
+`.yml` per resource, each an operation with an input, an output and an error
+schema in [Finitio](https://www.finitio.io/), its pre- and postconditions in
+prose, and examples and counterexamples that illustrate both.
+
+```bash
+gem install webspicy bundler
+npm run test:webspicy                             # boots a service, runs the suite
+contrib/formula-service/webspicy/run.sh _one/call/post.yml   # one specification
+LOG_LEVEL=DEBUG npm run test:webspicy             # with the requests and responses
+```
+
+Seven files, 28 examples and 21 counterexamples over every service the MVP has:
+the index, the descriptor, the four compiled representations, the bundle files,
+the manifest, and `/call` both ways. Two conditions are automated rather than
+documentary:
+
+- **`It supports the ETag/If-None-Match caching protocol`** — webspicy's own,
+  which re-requests with the validator and expects a `304`, then with a wrong
+  one and expects a body.
+- **`Every case it documents is the answer the call gives`** — ours
+  (`webspicy/support/postconditions/`), which POSTs every case of the formula
+  just described to its own `call` link and compares. That is §3's claim that
+  the documentation of the API is its test suite, turned into a check — and it
+  is what found the bug fixed in the commit before this one.
+
+It is **not** wired into `npm test`: it needs a second toolchain (Ruby) and a
+running service, which is the point of a black-box suite rather than a defect
+in it. The in-process integration tests are the ones CI runs.
+
+Why specify twice? The two suites fail for different reasons. The TypeScript
+one knows what the service is made of and pins its internals; this one knows
+only what it answers, and its Finitio types are written in the client's type
+system rather than Elo's — so it catches what a client would trip over, which
+is exactly what happened. It is also the format webspicy generates an OpenAPI
+document and a mock server from, which is phase 6 of the plan arriving for
+free.

@@ -1,0 +1,237 @@
+---
+name: |-
+  Call
+
+url: |-
+  /{formula}/call
+
+openapi:
+  tag: Call
+
+services:
+- method: |-
+    POST
+
+  description: |-
+    Applies the formula to one input and answers one answer.
+
+    One request is one call: the body is the formula's `Input`, the answer is
+    its `Output`, and there is no envelope around either — so a client may read
+    the answer with code generated from the type, and nothing has to be
+    unwrapped first. Bulk, when it comes, will be a second resource rather than
+    a mode of this one, which is why this one can stay envelope-free.
+
+    The body is **untrusted and is the only untrusted thing**: it is plain data
+    handed to a compiled expression that cannot do I/O, cannot `eval` and
+    cannot reach a host global. It is `Input` that decides whether it is
+    acceptable, and a refusal is a 422 naming the field — see the
+    counterexamples, which are the specification of that mapping.
+
+    Illustrated here on `iban`, whose `Input` is one constrained string and
+    whose `Output` is a record of three keys.
+
+  preconditions:
+    - The formula must be in the catalogue, at the version named
+    - The input must be acceptable to the formula's own Input type
+
+  postconditions:
+    - An answer is never stored, purity being a question this service cannot answer for a formula
+
+  input_schema: |-
+    Call.Iban
+  output_schema: |-
+    Iban.Answer
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        a valid IBAN is sent, grouped as a human writes it
+      it: |-
+        answers that it is valid, with the country and the number in groups of four
+      input:
+        formula: iban
+        iban: BE68 5390 0754 7034
+      expected:
+        content_type: application/json
+        status: 200
+        headers:
+          Cache-Control: no-store
+          Content-Location: /iban@1.0.0/call
+      assert:
+        - "pathFD('', valid: true, country: 'BE', formatted: 'BE68 5390 0754 7034')"
+
+    - when: |-
+        the same IBAN is sent bare
+      it: |-
+        answers the same thing, formatted the one way
+      input:
+        formula: iban@1.0.0
+        iban: BE68539007547034
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('', valid: true, country: 'BE', formatted: 'BE68 5390 0754 7034')"
+
+    - when: |-
+        a number that fails the check digits is sent
+      it: |-
+        answers that it is not valid — which is an answer, and not an error
+      input:
+        formula: iban@1.0.0
+        iban: BE68 5390 0754 7035
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('', valid: false, country: 'BE', formatted: 'BE68 5390 0754 7035')"
+
+    - when: |-
+        something that is not the shape of an IBAN at all is sent
+      it: |-
+        answers not valid, and nothing it cannot read off the number
+      input:
+        formula: iban@1.0.0
+        iban: BE6853900754
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('', valid: false, country: nil, formatted: nil)"
+
+  counterexamples:
+    - for: |-
+        The input must be acceptable to the formula's own Input type
+      when: |-
+        a value is sent that the type's constraint refuses
+      it: |-
+        fails with a 422 naming the constraint and the field it was declared on
+      input:
+        formula: iban@1.0.0
+        iban: "   "
+      expected:
+        content_type: application/json
+        status: 422
+      assert:
+        - "pathFD('', kind: 'constraint', path: '.iban', field: 'iban', label: 'notBlank')"
+
+    - for: |-
+        The input must be acceptable to the formula's own Input type
+      when: |-
+        a required field is not sent at all
+      it: |-
+        fails with a 422 of its own kind, absence not being a wrong value
+      input:
+        formula: iban@1.0.0
+      validate_input: false
+      expected:
+        content_type: application/json
+        status: 422
+      assert:
+        - "pathFD('', kind: 'missing', field: 'iban')"
+
+    - for: |-
+        The input must be acceptable to the formula's own Input type
+      when: |-
+        a value of the wrong type is sent
+      it: |-
+        fails with a 422 of kind schema
+      input:
+        formula: iban@1.0.0
+        iban: 42
+      validate_input: false
+      expected:
+        content_type: application/json
+        status: 422
+      assert:
+        - "pathFD('', kind: 'schema', path: '.iban', field: 'iban')"
+
+    - for: |-
+        The input must be acceptable to the formula's own Input type
+      when: |-
+        an attribute the input does not declare is sent along
+      it: |-
+        fails with a 422 — the schema is closed, so a typo is reported rather than ignored
+      input:
+        formula: iban@1.0.0
+        iban: BE68 5390 0754 7034
+        iBAN: BE68 5390 0754 7034
+      validate_input: false
+      expected:
+        content_type: application/json
+        status: 422
+      assert:
+        - "pathFD('', kind: 'schema')"
+
+    - when: |-
+        the body is not JSON at all
+      it: |-
+        fails with a 400, which is about the envelope rather than about the value
+      input:
+        formula: iban@1.0.0
+      validate_input: false
+      body: |-
+        { not json
+      expected:
+        content_type: application/json
+        status: 400
+      assert:
+        - match('message', /not JSON/)
+
+    - when: |-
+        a tabular body is sent for a formula whose Input is a record
+      it: |-
+        fails with a 415 saying so, rather than reading it as many calls
+      input:
+        formula: iban@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: text/csv
+      body: |-
+        iban
+        BE68539007547034
+      expected:
+        content_type: application/json
+        status: 415
+      assert:
+        - match('message', /text\/csv/)
+
+    - when: |-
+        an answer is asked for in a format this call cannot write
+      it: |-
+        fails with a 406
+      input:
+        formula: iban@1.0.0
+        iban: BE68 5390 0754 7034
+      headers:
+        Accept: text/csv
+      expected:
+        content_type: application/json
+        status: 406
+
+    - for: |-
+        The formula must be in the catalogue, at the version named
+      when: |-
+        the formula is not in the catalogue
+      it: |-
+        fails with a 404, there being nothing to call
+      input:
+        formula: no-such-formula
+        iban: BE68 5390 0754 7034
+      expected:
+        content_type: application/json
+        status: 404
+
+    - for: |-
+        The formula must be in the catalogue, at the version named
+      when: |-
+        the version is not one this service serves
+      it: |-
+        fails with a 404 rather than falling back to the latest
+      input:
+        formula: iban@2.0.0
+        iban: BE68 5390 0754 7034
+      expected:
+        content_type: application/json
+        status: 404

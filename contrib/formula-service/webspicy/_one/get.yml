@@ -1,0 +1,166 @@
+---
+name: |-
+  Formula
+
+url: |-
+  /{formula}
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Describes one formula: its documentation, the input form as data, the keys
+    of its answer, its cases, the targets it compiles to, and where to go next.
+
+    `{formula}` is the formula's id — its path in the catalogue — optionally
+    pinned to a version with `@`. Unpinned, it is an alias for the latest
+    version, answered directly rather than redirected, with `Content-Location`
+    naming the version that answered.
+
+  postconditions:
+    - Every case it documents is the answer the call gives
+    - It supports the ETag/If-None-Match caching protocol
+
+  input_schema: |-
+    {
+      formula : String
+    }
+  output_schema: |-
+    Formula.Descriptor
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        a version is pinned
+      it: |-
+        describes that version, and says it may be cached forever
+      input:
+        formula: iban@1.0.0
+      expected:
+        content_type: application/json
+        status: 200
+        headers:
+          Cache-Control: public, max-age=31536000, immutable
+      assert:
+        - "pathFD('', id: 'iban', version: '1.0.0', deprecated: false, license: 'MIT')"
+        - eq('title', 'Is this a valid IBAN?')
+        - notEmpty('doc')
+        - size('fields', 1)
+        - "pathFD('fields/0', path: 'iban', label: 'IBAN', type: 'String', widget: 'text', required: true)"
+        - includes('fields/0/constraints', 'notBlank')
+        - size('answers', 3)
+        - "pathFD('answers/0', path: 'valid', type: 'Bool', required: true)"
+        - "pathFD('answers/1', path: 'country', type: 'String', required: false)"
+        - size('cases', 12)
+        - eq('targets', ['js', 'ruby', 'python'])
+        - "pathFD('links', self: '/iban@1.0.0', latest: '/iban', call: '/iban@1.0.0/call')"
+
+    - when: |-
+        no version is pinned
+      it: |-
+        describes the latest one, and names it, so a client may pin by reading one header
+      input:
+        formula: iban
+      expected:
+        content_type: application/json
+        status: 200
+        headers:
+          Content-Location: /iban@1.0.0
+          Cache-Control: no-cache
+      assert:
+        - "pathFD('', id: 'iban', version: '1.0.0')"
+
+    - when: |-
+        the formula answers a Date
+      it: |-
+        states the case the way the call writes it, and not in the server's timezone
+      input:
+        formula: payment-due-date
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('answers/0', path: 'dueDate', type: 'Date', required: true)"
+        - match('cases/0/expect', /2026-01-25/)
+        - notMatch('cases/0/expect', /T00:00/)
+
+    - when: |-
+        the formula answers one value rather than a record
+      it: |-
+        describes that value as the whole answer
+      input:
+        formula: leap-year
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - size('answers', 1)
+        - "pathFD('answers/0', path: 'value', type: 'Bool', required: true)"
+
+    - when: |-
+        a browser asks for anything
+      it: |-
+        answers the descriptor, a wildcard range taking the first representation offered
+      input:
+        formula: iban@1.0.0
+      headers:
+        Accept: text/html,application/xhtml+xml,*/*;q=0.8
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('', id: 'iban')"
+
+  counterexamples:
+    - when: |-
+        the formula is not in the catalogue
+      it: |-
+        fails with a 404
+      input:
+        formula: no-such-formula
+      expected:
+        content_type: application/json
+        status: 404
+      assert:
+        - notEmpty('message')
+
+    - when: |-
+        the version is not one this service serves
+      it: |-
+        fails with a 404 — a version is pinned or it is not there
+      input:
+        formula: iban@9.9.9
+      expected:
+        content_type: application/json
+        status: 404
+
+    - when: |-
+        a representation is asked for that this service does not have
+      it: |-
+        fails with a 406 rather than answering something else
+      input:
+        formula: iban@1.0.0
+      headers:
+        Accept: application/pdf
+      expected:
+        content_type: application/json
+        status: 406
+      assert:
+        - match('message', /application\/json/)
+
+    - when: |-
+        the HTML page is asked for, which is not built yet
+      it: |-
+        fails with a 406, the page being a later phase
+      input:
+        formula: iban@1.0.0
+      headers:
+        Accept: text/html
+      expected:
+        content_type: application/json
+        status: 406

@@ -1,0 +1,166 @@
+---
+name: |-
+  Call
+
+url: |-
+  /{formula}/call
+
+openapi:
+  tag: Call
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Applies the formula to an input read from the query string.
+
+    It exists because a formula is a function of its arguments and nothing
+    else, which makes its answer **linkable**: a computed result has a URL, and
+    that URL can be mailed, bookmarked and — where a deployment knows the
+    formula is pure — cached by anything that speaks HTTP.
+
+    Every parameter arrives as a string, and it is the formula's own `Input`
+    that turns one into the value it declares: that is the whole of why this
+    endpoint can take `?birthDate=1990-03-15` and a `Date` reach the formula.
+    A nested field uses its dotted path, and a field the form declares repeated
+    repeats its parameter.
+
+    Illustrated here on `age`, which takes two dates and the day to count from,
+    so that the coercion is what the examples are about.
+
+  preconditions:
+    - The formula must be in the catalogue, at the version named
+    - The input must be acceptable to the formula's own Input type
+
+  postconditions:
+    - An answer is never stored, purity being a question this service cannot answer for a formula
+
+  input_schema: |-
+    Call.Age
+  output_schema: |-
+    Age.Answer
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        two dates are given as strings in the query
+      it: |-
+        coerces them and answers the age in whole years
+      input:
+        formula: age@1.0.0
+        birthDate: '1990-03-15'
+        'on': '2026-11-05'
+      expected:
+        content_type: application/json
+        status: 200
+        headers:
+          Cache-Control: no-store
+      assert:
+        - "pathFD('', years: 36, isAdult: true, birthdayToday: false)"
+
+    - when: |-
+        the birthday has not come round yet in the year asked about
+      it: |-
+        answers one year less, which is what whole years means
+      input:
+        formula: age@1.0.0
+        birthDate: '1990-12-15'
+        'on': '2026-11-05'
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('', years: 35, isAdult: true, birthdayToday: false)"
+
+    - when: |-
+        the day asked about is the birthday
+      it: |-
+        says so, and counts the year
+      input:
+        formula: age@1.0.0
+        birthDate: '1990-11-05'
+        'on': '2026-11-05'
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('', years: 36, birthdayToday: true)"
+
+    - when: |-
+        no version is pinned
+      it: |-
+        answers from the latest, and names the version that answered, query included
+      input:
+        formula: age
+        birthDate: '1990-03-15'
+        'on': '2026-11-05'
+      expected:
+        content_type: application/json
+        status: 200
+        headers:
+          Content-Location: /age@1.0.0/call?birthDate=1990-03-15&on=2026-11-05
+      assert:
+        - "pathFD('', years: 36)"
+
+  counterexamples:
+    - for: |-
+        The input must be acceptable to the formula's own Input type
+      when: |-
+        a parameter cannot be read as the type the formula declares
+      it: |-
+        fails with a 422 naming the field, exactly as the POST does
+      input:
+        formula: age@1.0.0
+        birthDate: 'not-a-date'
+        'on': '2026-11-05'
+      expected:
+        content_type: application/json
+        status: 422
+      assert:
+        - "pathFD('', kind: 'schema', path: '.birthDate', field: 'birthDate')"
+
+    - for: |-
+        The input must be acceptable to the formula's own Input type
+      when: |-
+        a required parameter is not in the query at all
+      it: |-
+        fails with a 422 of kind missing
+      input:
+        formula: age@1.0.0
+        birthDate: '1990-03-15'
+      validate_input: false
+      expected:
+        content_type: application/json
+        status: 422
+      assert:
+        - "pathFD('', kind: 'missing', field: 'on')"
+
+    - when: |-
+        the query is longer than a sane URL
+      it: |-
+        fails with a 414, and the client is to use POST instead
+      input:
+        formula: age@1.0.0
+        birthDate: '1990-03-15'
+        'on': '2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222'
+      expected:
+        content_type: application/json
+        status: 414
+      assert:
+        - match('message', /POST/)
+
+    - for: |-
+        The formula must be in the catalogue, at the version named
+      when: |-
+        the formula is not in the catalogue
+      it: |-
+        fails with a 404
+      input:
+        formula: no-such-formula
+        birthDate: '1990-03-15'
+        'on': '2026-11-05'
+      expected:
+        content_type: application/json
+        status: 404

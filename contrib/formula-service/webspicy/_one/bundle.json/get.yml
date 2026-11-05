@@ -1,0 +1,58 @@
+---
+name: |-
+  Formula manifest
+
+url: |-
+  /{formula}/bundle.json
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers the bundle's manifest: the format version, the formula's own
+    version, and the little that no Elo source could say — a licence, a tag, an
+    author.
+
+    It is the one file of a bundle that is not Elo, and the reason is this
+    service's own index: listing a thousand formulas means reading a thousand
+    names, versions and tags, which is a plain parse. Everything a formula
+    *means* needs Elo to read it anyway, so the rest is Elo.
+
+  input_schema: |-
+    {
+      formula : String
+    }
+  output_schema: |-
+    Bundle.Manifest
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        asked on a pinned version
+      it: |-
+        answers the manifest, and the version in it is the one in the URL
+      input:
+        formula: iban@1.0.0
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - "pathFD('', bundle: 1, version: '1.0.0', license: 'MIT')"
+        - includes('tags', 'banking')
+        - size('tags', 2)
+
+  counterexamples:
+    - when: |-
+        asked on a formula that is not in the catalogue
+      it: |-
+        fails with a 404
+      input:
+        formula: no-such-formula
+      expected:
+        content_type: application/json
+        status: 404

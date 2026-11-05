@@ -18,7 +18,12 @@ All notable changes to Elo are documented in this file.
   so a service that is up has demonstrated that its formulas answer what their
   documentation says. Nothing of it is in the compiler: a bundle is a
   convention over files, which is why the bundle format's reference
-  implementation and the thirteen formulas moved there too, from `examples/`
+  implementation and the thirteen formulas moved there too, from `examples/`.
+  It comes with a **black-box specification** in
+  `contrib/formula-service/webspicy` — one file per resource, Finitio schemas
+  for what it takes and answers, and a postcondition that POSTs every case a
+  formula documents to its own `call` link and compares, which is §3's claim
+  that the documentation of the API is its test suite made into a check
 
 ### Fixed
 

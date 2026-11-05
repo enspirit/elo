@@ -1,0 +1,179 @@
+@import webspicy/scalars
+
+# The data the formula service exchanges, as a client sees it.
+#
+# Two halves. The first is the service's own vocabulary — the index, the
+# descriptor, the error body — which is the same for every formula and is what
+# §3, §5 and §7 of the contract are about. The second is per-formula, and
+# restates the `types.elo` of the two formulas the examples use: `iban` for a
+# POST and `age` for a GET.
+
+Any = .
+
+# ---------------------------------------------------------------------------
+# §5 The error body
+# ---------------------------------------------------------------------------
+
+# One shape for every failure of the whole suite, which is what lets a client
+# write one error reader. `kind`, `path` and `label` are what Elo promises
+# about a refusal; `message` is for a human and its wording is not part of the
+# contract. `field` is `path` without its leading dot — the key of
+# `fields.elo`, so a form can put the message under the input that caused it.
+Error = {
+  /- For a human. Not part of the contract: read `kind`. -/
+  message : String
+  /- Which construct refused: schema, missing, constraint, guard, check. -/
+  kind    :? String
+  /- Where in the input, as a dotted path. -/
+  path    :? String
+  /- `path` without its dot, which is the key of the form. -/
+  field   :? String
+  /- The name the constraint, guard or check was written under. -/
+  label   :? String
+  /- Which cap a 503 hit: time, or memory. -/
+  cap     :? String
+}
+
+# ---------------------------------------------------------------------------
+# §3 and §7 The catalogue's own vocabulary
+# ---------------------------------------------------------------------------
+
+# Where to go next. An index entry carries the first three; a descriptor
+# carries all five, the last two naming what is not served yet.
+Links = {
+  self    : String
+  latest  : String
+  call    : String
+  form    :? String
+  openapi :? String
+}
+
+# One field of the input form, as `fields.elo` holds it: half derived from
+# `Input` and half written by a human, which is why a form builder can read
+# this and never walk a type.
+Form.Field = {
+  path        : String
+  label       : String
+  type        : String
+  widget      : String
+  required    : Boolean
+  repeated    :? Boolean
+  constraints :? [String]
+  options     :? [Any]
+  help        :? String
+  placeholder :? String
+}
+
+# One key of the answer, derived from `Output`. No label and no widget: an
+# answer is rendered, not filled in.
+Form.Answer = {
+  path     : String
+  type     : String
+  required : Boolean
+  repeated :? Boolean
+}
+
+# A case: a request body, and the response body that goes with it.
+Formula.Case = {
+  name   : String
+  input  : Any
+  expect : Any
+}
+
+# What `GET /{id}@{version}` answers: the bundle, flattened.
+Formula.Descriptor = {
+  id         : String
+  version    : String
+  title      : String
+  doc        : String
+  tags       : [String]
+  deprecated : Boolean
+  fields     : [Form.Field]
+  answers    : [Form.Answer]
+  cases      : [Formula.Case]
+  targets    : [String]
+  links      : Links
+  license    :? String
+}
+
+# One line of the index: read from `bundle.json` and the doc comment's first
+# line, because an index of a thousand formulas is a thousand file reads.
+Formula.Entry = {
+  id       : String
+  version  : String
+  title    : String
+  tags     : [String]
+  versions : [String]
+  links    : Links
+}
+
+# What `GET /` and `GET /foo/bar/` answer.
+Catalogue.Index = {
+  formulas : [Formula.Entry]
+  folders  : [String]
+}
+
+# `bundle.json`, the one file of a bundle that is not Elo. A label belongs in
+# `fields.elo`, a type in `types.elo`, a rule in a predicate: what is left is
+# what no source could say.
+Bundle.Manifest = {
+  /- The format version, 1. -/
+  bundle   : Integer
+  /- The formula's own version, semver. -/
+  version  : String
+  tags     :? [String]
+  license  :? String
+  author   :? String
+  homepage :? String
+}
+
+# ---------------------------------------------------------------------------
+# The two formulas the examples use
+# ---------------------------------------------------------------------------
+
+# `iban/types.elo`. The constraint `notBlank` is deliberately not restated
+# here: a bound lives in an Elo predicate, and §5 is how it is reported — so
+# the counterexample that violates it expects a 422, rather than this schema
+# refusing to send it.
+Iban.Input = {
+  iban : String
+}
+
+# What one call *takes*, as webspicy counts it: the `{formula}` of the URL,
+# which names the resource, and then the formula's own `Input`, which is the
+# body. Webspicy strips the placeholder out of the params before sending, so
+# what reaches the service is `Iban.Input` and nothing else.
+Call.Iban = {
+  formula : String
+  iban    : String
+}
+
+Iban.Answer = {
+  valid     : Boolean
+  country   : String|Nil
+  formatted : String|Nil
+}
+
+# `age/types.elo`, with one difference that is the whole point of a GET call:
+# `birthDate` and `on` are declared `Date` there and `String` here, because a
+# query string carries strings and the coercion under test is the service's own
+# — `_ |> Input` is what turns '1990-03-15' into a Date. Dressing them into
+# Ruby Dates here would test Finitio instead.
+Age.Input = {
+  birthDate : String
+  on        : String
+}
+
+Age.Answer = {
+  years         : Integer
+  isAdult       : Boolean
+  birthdayToday : Boolean
+}
+
+# The `{formula}` of the URL, then the query string — which is `Age.Input`,
+# every parameter of it a string because a query string has nothing else.
+Call.Age = {
+  formula   : String
+  birthDate : String
+  on        : String
+}

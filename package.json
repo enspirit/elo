@@ -29,6 +29,7 @@
     "test:unit": "npm run build && node --test 'dist/test/unit/*.unit.test.js' 'dist/test/unit/**/*.unit.test.js'",
     "test:integration": "npm run build && node --test 'dist/test/integration/*.integration.test.js' 'dist/test/integration/**/*.integration.test.js'",
     "test:acceptance": "./test/acceptance/test-all.sh",
+    "test:webspicy": "./contrib/formula-service/webspicy/run.sh",
     "test:acceptance:optimize": "ELO_OPTIMIZE=1 ./test/acceptance/test-all.sh",
     "test:watch": "tsc --watch & node --test --watch --test-only dist/**/*.test.js",
     "docker:up": "docker compose up -d",

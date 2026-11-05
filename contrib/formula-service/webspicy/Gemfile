@@ -1,0 +1,12 @@
+# The suite's own toolchain. Webspicy is a Ruby gem, and this is the only
+# Ruby in the repository that is not a compilation target — hence a Gemfile
+# here rather than at the root.
+#
+# `http` is pinned to 5.x on purpose: webspicy 1.1 allows `>= 5.0, < 7.0` but
+# calls the verb methods with options as a positional argument, which http 6
+# removed — every request then fails with `wrong number of arguments`. Pin it
+# until webspicy's own dependency says 6.
+source 'https://rubygems.org'
+
+gem 'webspicy', '~> 1.1'
+gem 'http', '~> 5.3'
