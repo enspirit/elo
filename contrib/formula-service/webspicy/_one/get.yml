@@ -103,13 +103,13 @@ services:
         - "pathFD('answers/0', path: 'value', type: 'Bool', required: true)"
 
     - when: |-
-        a browser asks for anything
+        a client asks for anything at all
       it: |-
         answers the descriptor, a wildcard range taking the first representation offered
       input:
         formula: iban@1.0.0
       headers:
-        Accept: text/html,application/xhtml+xml,*/*;q=0.8
+        Accept: "*/*"
       expected:
         content_type: application/json
         status: 200
@@ -152,15 +152,3 @@ services:
         status: 406
       assert:
         - match('message', /application\/json/)
-
-    - when: |-
-        the HTML page is asked for, which is not built yet
-      it: |-
-        fails with a 406, the page being a later phase
-      input:
-        formula: iban@1.0.0
-      headers:
-        Accept: text/html
-      expected:
-        content_type: application/json
-        status: 406

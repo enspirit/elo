@@ -1,0 +1,128 @@
+---
+name: |-
+  Formula form
+
+url: |-
+  /{formula}/form
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers the formula's input form, as an HTML `<form>` fragment — a thing to
+    embed in a page of your own.
+
+    It is built from `fields.elo` and from nothing else, which is the whole
+    reason that file exists as *data*: a host that wants to render its own form
+    reads one file and never walks a type. This fragment is the reference
+    rendering of it.
+
+    Its method is `GET` and its action is the formula's `call`, so **the form
+    works with no JavaScript** and submitting it lands on a URL that is the
+    answer. What it cannot do by itself is pre-validate: a bound lives in an
+    Elo predicate, not in an HTML attribute — and it does not need to, since a
+    refusal comes back naming the field that caused it.
+
+  postconditions:
+    - It supports the ETag/If-None-Match caching protocol
+
+  input_schema: |-
+    {
+      formula : String
+    }
+  output_schema: |-
+    .
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        asked for a formula whose fields are a number, a choice and a flag
+      it: |-
+        answers a form that posts nowhere — it reads the call
+      input:
+        formula: order-pricing@1.0.0
+      expected:
+        content_type: text/html
+        status: 200
+      assert:
+        - |-
+          match('', /<form [^>]*action="\/order-pricing@1\.0\.0\/call"/)
+        - |-
+          match('', /method="get"/)
+        - |-
+          notMatch('', /<script/)
+
+    - when: |-
+        a field is a choice with options
+      it: |-
+        answers a select carrying them, and the label a human wrote
+      input:
+        formula: order-pricing@1.0.0
+      expected:
+        content_type: text/html
+        status: 200
+      assert:
+        - |-
+          match('', /<select [^>]*name="tier"/)
+        - |-
+          match('', /<option value="gold">gold<\/option>/)
+        - |-
+          match('', /<label for="f-tier">Customer tier<\/label>/)
+        - |-
+          match('', /0\.21 for 21%/)
+
+    - when: |-
+        a field is a date
+      it: |-
+        answers a date control, which is the widget fields.elo asked for
+      input:
+        formula: age@1.0.0
+      expected:
+        content_type: text/html
+        status: 200
+      assert:
+        - |-
+          match('', /<input [^>]*name="birthDate"[^>]*type="date"/)
+
+    - when: |-
+        a field is a flag
+      it: |-
+        answers a checkbox, and a hidden false under it so that the field always arrives
+      input:
+        formula: shipping-cost@1.0.0
+      expected:
+        content_type: text/html
+        status: 200
+      assert:
+        - |-
+          match('', /<input type="hidden" name="express" value="false">/)
+        - |-
+          match('', /<input type="checkbox" [^>]*name="express"/)
+
+    - when: |-
+        asked under the unversioned name
+      it: |-
+        answers the latest version's form, and names the version it came from
+      input:
+        formula: iban
+      expected:
+        content_type: text/html
+        status: 200
+        headers:
+          Content-Location: /iban@1.0.0/form
+
+  counterexamples:
+    - when: |-
+        the formula is not in the catalogue
+      it: |-
+        fails with a 404
+      input:
+        formula: no-such-formula
+      expected:
+        content_type: application/json
+        status: 404

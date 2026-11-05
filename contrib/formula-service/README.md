@@ -37,8 +37,13 @@ webspicy/         the black-box specification of all of it
 | `GET /{id}` | the latest version, named in `Content-Location` |
 | `GET /{id}@{version}` | the descriptor — or the program, by `Accept` |
 | `GET /{id}@{version}/types.elo` | the five files of the bundle, verbatim |
+| `GET /{id}@{version}/form` | the input form, as an HTML fragment |
 | `POST /{id}@{version}/call` | one input, one answer |
 | `GET /{id}@{version}/call?…` | the same, linkable |
+
+`GET /` and `GET /{id}` answer **HTML** to a client that asks for it by name —
+a browser following a link — so the catalogue is browsable and every formula
+has a page you can use. Anything else gets JSON.
 
 A formula's **id is its path**: a catalogue organised in folders serves
 `/tax/be/vat`, and the URL space mirrors the directory space on purpose. The
@@ -62,6 +67,7 @@ knowing nothing about the bundle layout beyond what the source says.
 | `Accept` | |
 | --- | --- |
 | `application/json` (default) | the descriptor: documentation, `fields`, `answers`, `cases`, links |
+| `text/html` | the page: the documentation, the form, the cases, the source |
 | `application/x-elo` | the program above |
 | `application/javascript` | it compiled, prelude included |
 | `text/x-ruby`, `text/x-python` | the same, for those |
@@ -74,6 +80,31 @@ the compiler is already there.
 `cases` matters more than it looks. A case's `input` is a request body by
 construction, so "try this example" is a POST of one unchanged — and the
 documentation of the API is its test suite.
+
+### The form, and the page
+
+`GET /{id}/form` answers an HTML `<form>` built from `fields.elo` — the
+file is data precisely so that this is a read rather than a walk over a type,
+and a host that wants its own rendering reads the same file. `GET /{id}`
+with `Accept: text/html` answers the page: the doc comment as Markdown, that
+form, the case table with a link per case that *runs* it, what the answer
+holds, and the program itself behind a disclosure.
+
+**The form works with no JavaScript.** Its method is `GET` and its action is
+the call, so submitting it lands on a URL that is the answer — the same
+resource a program would call, linkable and bookmarkable. There is no script
+on the page.
+
+Two things follow from a form being HTML, and they are rules of `GET …/call`
+rather than of the markup: a parameter whose value is **empty** counts as not
+given (an untouched optional box sends `name=`), and when a field is given
+**twice** the last value wins (a checkbox sends a hidden `false`, then `true`
+over it if it is ticked, so a `Bool` always arrives).
+
+What the form cannot do is pre-validate: a bound lives in an Elo predicate,
+not in an HTML attribute, and the one place it could be copied to is the one
+place it would fall out of step. It does not need to — a refusal comes back
+naming the field that caused it, which is what a page puts the message under.
 
 ### Calling it
 
@@ -165,8 +196,6 @@ formula in it answers what its documentation says.
 This is phases 1 to 3 of the plan. Deliberately absent, each answering `404`
 or `406` rather than something approximate:
 
-- **the HTML page and `/form`** — `fields.elo` is a form as data, so this is a
-  template over data, not per-formula code
 - **formats past JSON** — YAML, and `text/csv`/XLSX for a formula whose `Input`
   and `Output` are lists, over Elo's own `FormatAdapter` registry
 - **`openapi.json`**, per formula and for the catalogue
@@ -218,9 +247,10 @@ contrib/formula-service/webspicy/run.sh _one/call/post.yml   # one specification
 LOG_LEVEL=DEBUG npm run test:webspicy             # with the requests and responses
 ```
 
-Seven files, 28 examples and 21 counterexamples over every service the MVP has:
-the index, the descriptor, the four compiled representations, the bundle files,
-the manifest, and `/call` both ways. Two conditions are automated rather than
+Ten files, 41 examples and 21 counterexamples over every service there is: the
+index and its page, the descriptor, the page, the four compiled
+representations, the bundle files, the manifest, the form, and `/call` both
+ways. Two conditions are automated rather than
 documentary:
 
 - **`It supports the ETag/If-None-Match caching protocol`** — webspicy's own,

@@ -1,0 +1,126 @@
+---
+name: |-
+  Formula page
+
+url: |-
+  /{formula}
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers the formula's page, for a client that asked for `text/html` by
+    name — which is what a browser following a link does. A client that says
+    `*/*`, or says nothing, gets the descriptor instead.
+
+    One template for the whole catalogue, and no per-formula markup anywhere:
+    the prose is the doc comment rendered as Markdown, the form is
+    `fields.elo`, the table is `cases.elo`, and the program behind the
+    disclosure is what the service runs. Every one of those comes from a file
+    in a repository, so every one of them is escaped — a label is text, not
+    markup.
+
+  input_schema: |-
+    {
+      formula : String
+    }
+  output_schema: |-
+    .
+  error_schema: |-
+    Error
+
+  default_example:
+    headers:
+      Accept: text/html
+    expected:
+      content_type: text/html
+      status: 200
+
+  examples:
+    - when: |-
+        a browser asks for the page
+      it: |-
+        answers a document titled after the question the formula answers
+      input:
+        formula: iban@1.0.0
+      assert:
+        - |-
+          match('', /^<!doctype html>/)
+        - |-
+          match('', /<title>Is this a valid IBAN\? — iban 1\.0\.0<\/title>/)
+
+    - when: |-
+        the doc comment holds prose and inline code
+      it: |-
+        renders it as Markdown rather than showing the comment
+      input:
+        formula: iban@1.0.0
+      assert:
+        - |-
+          match('', /ISO 13616/)
+        - |-
+          match('', /<code>/)
+
+    - when: |-
+        the formula has a form
+      it: |-
+        carries it, so the page is the thing you use and not only the thing you read
+      input:
+        formula: order-pricing@1.0.0
+      assert:
+        - |-
+          match('', /<form [^>]*action="\/order-pricing@1\.0\.0\/call"/)
+        - |-
+          match('', /<select [^>]*name="tier"/)
+
+    - when: |-
+        the formula documents cases
+      it: |-
+        tabulates them, each with a link that runs it
+      input:
+        formula: leap-year@1.0.0
+      assert:
+        - |-
+          match('', /divisible by 4/)
+        - |-
+          match('', /href="\/leap-year@1\.0\.0\/call\?year=2024"/)
+
+    - when: |-
+        the page is asked what it runs
+      it: |-
+        shows the program itself, behind a disclosure, and links the files it came from
+      input:
+        formula: iban@1.0.0
+      assert:
+        - |-
+          match('', /<details>/)
+        - |-
+          match('', /formula\(_ \|&gt; Input\) \|&gt; Output/)
+        - |-
+          match('', /<a href="\/iban@1\.0\.0\/types\.elo">/)
+
+    - when: |-
+        asked under the unversioned name
+      it: |-
+        answers the latest version's page, and names the version it came from
+      input:
+        formula: iban
+      expected:
+        headers:
+          Content-Location: /iban@1.0.0
+          Cache-Control: no-cache
+
+  counterexamples:
+    - when: |-
+        the formula is not in the catalogue
+      it: |-
+        fails with a 404, in JSON — an error is data whatever was asked for
+      input:
+        formula: no-such-formula
+      expected:
+        content_type: application/json
+        status: 404

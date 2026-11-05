@@ -1,0 +1,68 @@
+---
+name: |-
+  Catalogue page
+
+url: |-
+  /
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers the catalogue as a page, for a client that asked for `text/html` by
+    name. It is the entry point a human gets: a table of questions, each one
+    linking to the formula that answers it.
+
+    Everything the JSON index takes — `?tag`, `?q`, `?page`, `?per_page` —
+    applies here too, this being the same resource in another representation.
+
+  input_schema: |-
+    {
+      tag      :? String
+      q        :? String
+      page     :? Integer
+      per_page :? Integer
+    }
+  output_schema: |-
+    .
+  error_schema: |-
+    Error
+
+  default_example:
+    headers:
+      Accept: text/html
+    expected:
+      content_type: text/html
+      status: 200
+
+  examples:
+    - when: |-
+        a browser asks for the catalogue
+      it: |-
+        answers a page linking every formula under its own question
+      input: {}
+      assert:
+        - |-
+          match('', /^<!doctype html>/)
+        - |-
+          match('', /<a href="\/iban">/)
+        - |-
+          match('', /Is this a valid IBAN\?/)
+        - |-
+          match('', /13 formulas/)
+
+    - when: |-
+        a tag is given
+      it: |-
+        pages the same way the JSON index does
+      input:
+        tag: banking
+      assert:
+        - |-
+          match('', /1 formula\b/)
+        - |-
+          match('', /<a href="\/iban">/)

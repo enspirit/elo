@@ -288,11 +288,158 @@ describe('Formula service - the program it runs', () => {
     assert.equal((await get('/iban@1.0.0', { accept: 'application/pdf' })).status, 406);
   });
 
-  it('has no HTML page yet, and says so rather than guessing', async () => {
-    // Phase 4 of the plan. A browser asking for anything (`*/*`) still gets JSON.
-    assert.equal((await get('/iban@1.0.0', { accept: 'text/html' })).status, 406);
-    assert.equal((await get('/iban@1.0.0', { accept: 'text/html,*/*;q=0.8' })).status, 200);
-    assert.equal((await get('/iban@1.0.0/form')).status, 404);
+  it('answers a browser with the page, and everything else with the descriptor', async () => {
+    // A browser ranks `text/html` above the wildcard it also sends, so it gets
+    // the page; a client that says nothing, or `*/*`, gets the descriptor.
+    assert.equal(
+      (await get('/iban@1.0.0', { accept: 'text/html,application/xhtml+xml,*/*;q=0.8' }))
+        .headers.get('content-type'),
+      'text/html; charset=utf-8'
+    );
+    assert.equal(
+      (await get('/iban@1.0.0', { accept: '*/*' })).headers.get('content-type'),
+      'application/json; charset=utf-8'
+    );
+    assert.equal(
+      (await get('/iban@1.0.0')).headers.get('content-type'),
+      'application/json; charset=utf-8'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §6 The form, and the page
+// ---------------------------------------------------------------------------
+
+describe('Formula service - the form', () => {
+  it('is an HTML fragment built from fields.elo', async () => {
+    const response = await get('/order-pricing@1.0.0/form');
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+    const html = await response.text();
+
+    // Its action is the call and its method is GET, so the form works with no
+    // JavaScript at all and its result is a URL.
+    assert.match(html, /<form [^>]*action="\/order-pricing@1\.0\.0\/call"/);
+    assert.match(html, /method="get"/);
+    assert.doesNotMatch(html, /<script/, 'a fragment is markup, and nothing else');
+  });
+
+  it('renders a control per widget, and says what the type requires', async () => {
+    const html = await (await get('/order-pricing@1.0.0/form')).text();
+    // A number, required, and a step that says Float rather than Int.
+    assert.match(html, /<input [^>]*name="unitPrice"[^>]*type="number"/);
+    assert.match(html, /<input [^>]*name="quantity"[^>]*step="1"/);
+    assert.match(html, /<input [^>]*name="unitPrice"[^>]*required/);
+    // A select, from the options of fields.elo.
+    assert.match(html, /<select [^>]*name="tier"/);
+    assert.match(html, /<option value="gold">gold<\/option>/);
+    // And the half a human wrote: the label, the help, the placeholder.
+    assert.match(html, /<label for="f-tier">Customer tier<\/label>/);
+    assert.match(html, /0\.21 for 21%/, 'the help of vatRate');
+    assert.match(html, /<input [^>]*name="couponPercent"(?![^>]*required)/, 'an optional field');
+  });
+
+  it('renders a date, a checkbox and a duration as themselves', async () => {
+    const age = await (await get('/age@1.0.0/form')).text();
+    assert.match(age, /<input [^>]*name="birthDate"[^>]*type="date"/);
+    assert.match(age, /The day the age is computed for/, 'the help of `on`');
+
+    const shipping = await (await get('/shipping-cost@1.0.0/form')).text();
+    assert.match(shipping, /<input type="checkbox" [^>]*name="express"/);
+    // A checkbox that is not ticked sends nothing, so a hidden false goes with
+    // it: a Bool field then always arrives, which is what the type wants.
+    assert.match(shipping, /<input type="hidden" name="express" value="false">/);
+  });
+
+  it('escapes what a bundle wrote, labels and options included', async () => {
+    const catalogue = temporaryCatalogue();
+    try {
+      const dir = copyBundle(catalogue.dir, 'leap-year', 'leap-year');
+      const fields = join(dir, 'fields.elo');
+      writeFileSync(fields, readFileSync(fields, 'utf-8')
+        .replace("label: 'Year'", "label: 'Year <script>alert(1)</script> & \"more\"'"));
+      const { server: own, url } = await serve({ catalogue: catalogue.dir, port: 0 });
+      try {
+        const html = await (await fetch(`${url}/leap-year@1.0.0/form`)).text();
+        assert.doesNotMatch(html, /<script>alert/, 'a label is text, not markup');
+        assert.match(html, /Year &lt;script&gt;alert\(1\)&lt;\/script&gt; &amp; &quot;more&quot;/);
+      } finally {
+        own.close();
+      }
+    } finally {
+      catalogue.cleanup();
+    }
+  });
+
+  it('is cached like the bundle it is built from', async () => {
+    const response = await get('/iban@1.0.0/form');
+    assert.match(response.headers.get('cache-control') ?? '', /immutable/);
+    assert.ok(response.headers.get('etag'));
+
+    const alias = await get('/iban/form');
+    assert.equal(alias.headers.get('content-location'), '/iban@1.0.0/form');
+    assert.equal(alias.headers.get('cache-control'), 'no-cache');
+  });
+
+  it('has no form for a formula that is not in the catalogue', async () => {
+    assert.equal((await get('/no-such-formula/form')).status, 404);
+  });
+});
+
+describe('Formula service - the page', () => {
+  it('is what a browser gets when it asks for HTML by name', async () => {
+    const response = await get('/iban@1.0.0', { accept: 'text/html' });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+    const html = await response.text();
+    assert.match(html, /^<!doctype html>/);
+    assert.match(html, /<title>Is this a valid IBAN\? — iban 1\.0\.0<\/title>/);
+  });
+
+  it('renders the doc comment as Markdown', async () => {
+    const html = await (await get('/iban@1.0.0', { accept: 'text/html' })).text();
+    // The doc of `iban` names ISO 13616 in prose and `1` in backticks.
+    assert.match(html, /ISO 13616/);
+    assert.match(html, /<code>/, 'inline code is rendered rather than shown');
+    assert.doesNotMatch(html, /^#/m, 'and the comment markers are gone');
+  });
+
+  it('carries the form, so the page is the thing you use', async () => {
+    const html = await (await get('/order-pricing@1.0.0', { accept: 'text/html' })).text();
+    assert.match(html, /<form [^>]*action="\/order-pricing@1\.0\.0\/call"/);
+    assert.match(html, /<select [^>]*name="tier"/);
+  });
+
+  it('tabulates the cases, each with a link that runs it', async () => {
+    const html = await (await get('/leap-year@1.0.0', { accept: 'text/html' })).text();
+    assert.match(html, /divisible by 4/, 'the name of a case');
+    // A case input is a request body by construction, so it is also a query.
+    assert.match(html, /href="\/leap-year@1\.0\.0\/call\?year=2024"/);
+    assert.match(html, /<code>true<\/code>/, 'what the case expects');
+  });
+
+  it('shows the program it runs, and links the compiled forms', async () => {
+    const html = await (await get('/iban@1.0.0', { accept: 'text/html' })).text();
+    assert.match(html, /<details>/);
+    assert.match(html, /formula\(_ \|&gt; Input\) \|&gt; Output/, 'the Elo program, escaped');
+    assert.match(html, /<a href="\/iban@1\.0\.0\/types\.elo">/);
+  });
+
+  it('is revalidated under the alias, like every other representation of it', async () => {
+    const response = await get('/iban', { accept: 'text/html' });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-location'), '/iban@1.0.0');
+    assert.equal(response.headers.get('cache-control'), 'no-cache');
+  });
+
+  it('indexes the catalogue in HTML too, so the service is browsable', async () => {
+    const response = await get('/', { accept: 'text/html' });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+    const html = await response.text();
+    assert.match(html, /<a href="\/iban">/);
+    assert.match(html, /Is this a valid IBAN\?/);
   });
 });
 
@@ -477,6 +624,28 @@ describe('Formula service - GET /call', () => {
     const response = await get('/leap-year@1.0.0/call?year=1500');
     assert.equal(response.status, 422);
     assert.equal((await bodyOf(response)).label, 'gregorian');
+  });
+
+  it('reads a field left empty as a field not given, which is what a form sends', async () => {
+    // `couponPercent` is optional, and an untouched box sends `name=`. Reading
+    // that as the empty string would make the type refuse a form nobody filled
+    // in wrongly — see §6: the form has to work with no JavaScript.
+    const response = await get(
+      '/order-pricing@1.0.0/call?unitPrice=19.99&quantity=10&tier=gold&vatRate=0.21&couponPercent='
+    );
+    assert.equal(response.status, 200);
+    assert.equal((await bodyOf(response)).total, 212.85);
+  });
+
+  it('takes the last value of a field given twice, which is what a checkbox sends', async () => {
+    // The form sends a hidden `false` and then `true` if the box is ticked, so
+    // a Bool always arrives. The two together must read as the tick.
+    const parcel = 'weightKg=1.2&lengthCm=20&widthCm=15&heightCm=10&zone=domestic&orderValue=40';
+    const unticked = await bodyOf(get(`/shipping-cost@1.0.0/call?${parcel}&express=false`));
+    const ticked = await bodyOf(get(`/shipping-cost@1.0.0/call?${parcel}&express=false&express=true`));
+    assert.equal(unticked.etaDays, 2);
+    assert.equal(ticked.etaDays, 1, 'express was not read');
+    assert.ok(ticked.cost > unticked.cost, 'express costs more');
   });
 
   it('answers 414 past a sane URL length, so the client uses POST', async () => {

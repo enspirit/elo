@@ -19,7 +19,12 @@ All notable changes to Elo are documented in this file.
   documentation says. Nothing of it is in the compiler: a bundle is a
   convention over files, which is why the bundle format's reference
   implementation and the thirteen formulas moved there too, from `examples/`.
-  It comes with a **black-box specification** in
+  A browser gets more than JSON: `GET /` and `GET /{formula}` answer **HTML**
+  when it is asked for by name, and `GET /{formula}/form` answers the input
+  form as a fragment — one template for the whole catalogue, built from
+  `fields.elo`, with a `GET` form whose action is the call, so it works with
+  no JavaScript and its result is a URL. It comes with a **black-box
+  specification** in
   `contrib/formula-service/webspicy` — one file per resource, Finitio schemas
   for what it takes and answers, and a postcondition that POSTs every case a
   formula documents to its own `call` link and compares, which is §3's claim

@@ -34,6 +34,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { loadServedCatalogue, type ServedCatalogue, type ServedFormula } from './catalogue';
+import { cataloguePage, formFragment, formulaPage } from './html';
 import { runCall } from './sandbox';
 import type { FieldDescriptor } from './bundle';
 
@@ -62,9 +63,17 @@ const DEFAULTS = {
   maxUrlLength: 2048,
 };
 
-/** The media types of the four representations of §3, by `Accept`. */
+/**
+ * The representations of §3 and §6, by `Accept`.
+ *
+ * The order is the order of preference, so a client that says `*​/*` — a
+ * browser asking for anything, a `curl` saying nothing — gets the descriptor.
+ * HTML is answered when it is asked for by name, which is what a browser
+ * following a link does.
+ */
 const REPRESENTATIONS: Record<string, { key: string; type: string }> = {
   'application/json': { key: 'descriptor', type: 'application/json' },
+  'text/html': { key: 'page', type: 'text/html' },
   'application/x-elo': { key: 'elo', type: 'application/x-elo' },
   'application/javascript': { key: 'js', type: 'application/javascript' },
   'text/x-ruby': { key: 'ruby', type: 'text/x-ruby' },
@@ -118,6 +127,8 @@ export function createService(options: ServiceOptions): Service {
         return describe(request, response, formula, pinned);
       case 'call':
         return call(request, response, formula, pinned, url);
+      case 'form':
+        return form(request, response, formula, pinned);
       case 'types.elo':
       case 'formula.elo':
       case 'fields.elo':
@@ -125,8 +136,8 @@ export function createService(options: ServiceOptions): Service {
       case 'bundle.json':
         return file(request, response, formula, pinned, sub);
       default:
-        // `form` and `openapi.json`: named in the descriptor's links, and not
-        // served yet. A 404 is the honest answer; see phases 4 and 6.
+        // `openapi.json`: named in the descriptor's links, and not served yet.
+        // A 404 is the honest answer; see phase 6.
         return notFound(request, response);
     }
   }
@@ -174,7 +185,39 @@ export function createService(options: ServiceOptions): Service {
     header(response, 'Cache-Control', 'no-cache');
     header(response, 'ETag', catalogue.etag);
     if (noneMatch(request, catalogue.etag)) return notModified(response);
-    send(request, response, 200, { formulas: shown.map(formula => formula.entry), folders });
+
+    const chosen = negotiate(request, ['application/json', 'text/html']);
+    if (!chosen) return notAcceptable(request, response, ['application/json', 'text/html']);
+    const entries = shown.map(formula => formula.entry);
+    if (chosen === 'text/html') {
+      return sendText(request, response, 200, 'text/html', cataloguePage(entries, folders, prefix));
+    }
+    send(request, response, 200, { formulas: entries, folders });
+  }
+
+  // -------------------------------------------------------------------------
+  // §6 The form
+  // -------------------------------------------------------------------------
+
+  /**
+   * The `<form>` of a formula, as an HTML fragment — a thing to embed, which
+   * is why it is its own resource and not only part of the page.
+   *
+   * It is built from `fields.elo`, so a host that wants its own page can read
+   * that file instead and render it however it likes; this is the reference
+   * rendering, and the one the page of §3 uses.
+   */
+  function form(
+    request: IncomingMessage,
+    response: ServerResponse,
+    formula: ServedFormula,
+    pinned: boolean
+  ): void {
+    if (!isReadMethod(request)) return methodNotAllowed(request, response, 'GET, HEAD');
+    if (!negotiate(request, ['text/html'])) return notAcceptable(request, response, ['text/html']);
+    cacheable(request, response, formula, pinned, pinned ? undefined : `${formula.descriptor.links.self}/form`);
+    if (noneMatch(request, formula.etag)) return notModified(response);
+    sendText(request, response, 200, 'text/html', `${formFragment(formula)}\n`);
   }
 
   // -------------------------------------------------------------------------
@@ -193,7 +236,7 @@ export function createService(options: ServiceOptions): Service {
     // offered, rather than offered and then refused.
     const offers = Object.keys(REPRESENTATIONS).filter(media => {
       const { key } = REPRESENTATIONS[media];
-      return key === 'descriptor' || formula.representations[key] !== undefined;
+      return key === 'descriptor' || key === 'page' || formula.representations[key] !== undefined;
     });
     const chosen = negotiate(request, offers);
     if (!chosen) return notAcceptable(request, response, offers);
@@ -202,6 +245,7 @@ export function createService(options: ServiceOptions): Service {
     cacheable(request, response, formula, pinned, pinned ? undefined : formula.descriptor.links.self);
     if (noneMatch(request, formula.etag)) return notModified(response);
     if (key === 'descriptor') return send(request, response, 200, formula.descriptor);
+    if (key === 'page') return sendText(request, response, 200, type, formulaPage(formula));
     return sendText(request, response, 200, type, formula.representations[key]);
   }
 
@@ -345,8 +389,15 @@ export function inputFromQuery(query: URLSearchParams, fields: FieldDescriptor[]
   const repeated = new Set(fields.filter(field => field.repeated).map(field => field.path));
   const input: Record<string, unknown> = {};
   for (const path of new Set(query.keys())) {
-    const values = query.getAll(path);
-    const value = repeated.has(path) || values.length > 1 ? values : values[0];
+    // Two rules, and both of them are what an HTML form needs to work with no
+    // JavaScript (§6). An **empty** value is a box left alone, so it counts as
+    // not given — an optional field then stays optional, where `''` would be a
+    // value its type has to refuse. And the **last** value of a field given
+    // twice wins, which is what makes a checkbox possible: unticked it sends
+    // the hidden `false` alone, ticked it sends `true` after it.
+    const values = query.getAll(path).filter(value => value !== '');
+    if (values.length === 0) continue;
+    const value = repeated.has(path) ? values : values[values.length - 1];
     const keys = path.split('.');
     let holder = input;
     for (const key of keys.slice(0, -1)) {
