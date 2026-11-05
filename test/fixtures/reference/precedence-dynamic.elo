@@ -29,3 +29,10 @@ assert(24 / (6 / 2) == 8)
 assert((let f = fn( x, y ~> (x + y) > 10 ) in f(6, 5)) == true)
 assert((let f = fn( x, y ~> (x > y) == true ) in f(2, 1)) == true)
 assert((let f = fn( x, y ~> !(x > y) ) in f(1, 2)) == true)
+
+# An if expression as an operand, where the operand types are not known either.
+assert((let f = fn( x ~> x + (if true then 10 else 20) ) in f(1)) == 11)
+assert((let f = fn( x ~> x + (if false then 10 else 20) ) in f(1)) == 21)
+assert((let f = fn( x ~> (if false then 10 else 20) + x ) in f(1)) == 21)
+assert((let f = fn( x ~> x * (if false then 3 else 4) ) in f(2)) == 8)
+assert((let f = fn( x ~> -(if false then x else x + 1) ) in f(3)) == -4)

@@ -6,6 +6,16 @@ All notable changes to Elo are documented in this file.
 
 ### Fixed
 
+- An `if` expression used as an **operand** was mis-emitted on JavaScript, Ruby
+  and Python: a conditional operator binds looser than almost everything, and
+  the emission did not parenthesise itself, so the operator around it swallowed
+  the condition — `1 + (if false then 10 else 20)` answered `20` on JavaScript
+  and Python and raised a `TypeError` on Ruby, where the answer is `21` (and
+  was, on PostgreSQL, whose `CASE … END` closes itself). Every arithmetic,
+  string and unary operator was affected, with or without known operand types.
+  The nine assertions the corpus already had passed by accident: `(if c then a
+  else b) == x` groups as `c ? a : (b == x)`, which is truthy either way
+
 - `split(s, '')` did not split a string into its characters, the only way Elo
   has to walk one: **Python** raised `empty separator` and **PostgreSQL**
   silently answered the whole string as a one-element list, where JavaScript and

@@ -173,7 +173,10 @@ const rubyEmitter: Emitter = {
     return `(${assignments}; ${body})`;
   },
 
-  ifExpr: (condition, then, otherwise) => `(${condition}) ? (${then}) : (${otherwise})`,
+  // Parenthesised as a whole: a conditional operator binds looser than
+  // almost everything, so an unwrapped one lets the operator around it
+  // swallow the condition — `a + cond ? x : y` is `(a + cond) ? x : y`.
+  ifExpr: (condition, then, otherwise) => `((${condition}) ? (${then}) : (${otherwise}))`,
 
   lambda: (params, body) =>
     `->(${params.map(p => assertSafeIdentifier(p, 'lambda parameter')).join(', ')}) { ${body} }`,

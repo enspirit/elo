@@ -9,7 +9,7 @@
 (lambda _: kAssert(kTypeOf(lambda _: kMul(_.get("budget"), 1.21)) == "Function"))(None)
 (lambda _: kAssert(kTypeOf(lambda item: kAdd(item.get("price"), item.get("tax"))) == "Function"))(None)
 (lambda _: kAssert(kTypeOf(lambda x: (doubled := kMul(x, 2), kAdd(doubled, 1))[-1]) == "Function"))(None)
-(lambda _: kAssert(kTypeOf(lambda x: (x) if ((x > 0)) else (kSub(0, x))) == "Function"))(None)
+(lambda _: kAssert(kTypeOf(lambda x: ((x) if ((x > 0)) else (kSub(0, x)))) == "Function"))(None)
 (lambda _: kAssert(kEq((double := lambda x: kMul(x, 2), double(5))[-1], 10)))(None)
 (lambda _: kAssert(kEq((add := lambda x, y: kAdd(x, y), add(3, 4))[-1], 7)))(None)
 (lambda _: kAssert(kEq((double := lambda x: kMul(x, 2), double(2))[-1], 4)))(None)

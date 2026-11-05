@@ -159,7 +159,10 @@ const pyEmitter: Emitter = {
     return `(${[...assignments, body].join(', ')})[-1]`;
   },
 
-  ifExpr: (condition, then, otherwise) => `(${then}) if (${condition}) else (${otherwise})`,
+  // Parenthesised as a whole: a conditional expression binds looser than
+  // almost everything, so an unwrapped one lets the operator around it
+  // swallow the then-branch — `a + x if cond else y` is `(a + x) if cond else y`.
+  ifExpr: (condition, then, otherwise) => `((${then}) if (${condition}) else (${otherwise}))`,
 
   lambda: (params, body) =>
     `lambda ${params.map(p => assertSafeIdentifier(p, 'lambda parameter')).join(', ')}: ${body}`,

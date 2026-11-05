@@ -29,3 +29,10 @@
 (lambda _: kAssert(kEq((f := lambda x, y: (kAdd(x, y) > 10), f(6, 5))[-1], True)))(None)
 (lambda _: kAssert(kEq((f := lambda x, y: ((x > y)) == True, f(2, 1))[-1], True)))(None)
 (lambda _: kAssert(kEq((f := lambda x, y: not ((x > y)), f(1, 2))[-1], True)))(None)
+
+
+(lambda _: kAssert(kEq((f := lambda x: kAdd(x, ((10) if (True) else (20))), f(1))[-1], 11)))(None)
+(lambda _: kAssert(kEq((f := lambda x: kAdd(x, ((10) if (False) else (20))), f(1))[-1], 21)))(None)
+(lambda _: kAssert(kEq((f := lambda x: kAdd(((10) if (False) else (20)), x), f(1))[-1], 21)))(None)
+(lambda _: kAssert(kEq((f := lambda x: kMul(x, ((3) if (False) else (4))), f(2))[-1], 8)))(None)
+(lambda _: kAssert(kEq((f := lambda x: kNeg(((x) if (False) else (kAdd(x, 1)))), f(3))[-1], -4)))(None)

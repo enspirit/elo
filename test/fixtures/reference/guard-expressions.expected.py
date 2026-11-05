@@ -35,5 +35,5 @@
 (lambda _: kAssert((pAssert(True, "guard", None, "guard failed"), (pAssert(True, "guard", None, "guard failed"), 7)[-1])[-1] == 7))(None)
 
 
-(lambda _: kAssert((pAssert(True, "guard", None, "guard failed"), (1) if (True) else (2))[-1] == 1))(None)
+(lambda _: kAssert((pAssert(True, "guard", None, "guard failed"), ((1) if (True) else (2)))[-1] == 1))(None)
 

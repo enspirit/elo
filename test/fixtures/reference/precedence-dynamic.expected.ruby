@@ -29,3 +29,10 @@
 ->(_) { (raise "Assertion failed" unless (f = ->(x, y) { x + y > 10 }; f.call(6, 5)) == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(x, y) { x > y == true }; f.call(2, 1)) == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(x, y) { !(x > y) }; f.call(1, 2)) == true; true) }.call(nil);
+
+
+->(_) { (raise "Assertion failed" unless (f = ->(x) { x + ((true) ? (10) : (20)) }; f.call(1)) == 11; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (f = ->(x) { x + ((false) ? (10) : (20)) }; f.call(1)) == 21; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (f = ->(x) { ((false) ? (10) : (20)) + x }; f.call(1)) == 21; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (f = ->(x) { x * ((false) ? (3) : (4)) }; f.call(2)) == 8; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (f = ->(x) { -((false) ? (x) : (x + 1)) }; f.call(3)) == -4; true) }.call(nil);

@@ -35,5 +35,5 @@
 ->(_) { def p_err(m, k, pa, l); e = StandardError.new(m); e.define_singleton_method(:kind) { k }; e.define_singleton_method(:path) { pa }; e.define_singleton_method(:label) { l }; e end; def p_raise(k, l, m); raise p_err(m, k, nil, l) end; (raise "Assertion failed" unless (p_raise('guard', nil, "guard failed") unless true; (p_raise('guard', nil, "guard failed") unless true; 7)) == 7; true) }.call(nil);
 
 
-->(_) { def p_err(m, k, pa, l); e = StandardError.new(m); e.define_singleton_method(:kind) { k }; e.define_singleton_method(:path) { pa }; e.define_singleton_method(:label) { l }; e end; def p_raise(k, l, m); raise p_err(m, k, nil, l) end; (raise "Assertion failed" unless (p_raise('guard', nil, "guard failed") unless true; (true) ? (1) : (2)) == 1; true) }.call(nil);
+->(_) { def p_err(m, k, pa, l); e = StandardError.new(m); e.define_singleton_method(:kind) { k }; e.define_singleton_method(:path) { pa }; e.define_singleton_method(:label) { l }; e end; def p_raise(k, l, m); raise p_err(m, k, nil, l) end; (raise "Assertion failed" unless (p_raise('guard', nil, "guard failed") unless true; ((true) ? (1) : (2))) == 1; true) }.call(nil);
 
