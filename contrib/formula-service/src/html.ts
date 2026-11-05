@@ -431,11 +431,26 @@ const ENHANCEMENT = `<script>
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
-    clearRefusals();
-
     var query = new URLSearchParams(new FormData(form)).toString();
-    var url = form.getAttribute('action') + (query ? '?' + query : '');
+    call(form.getAttribute('action') + (query ? '?' + query : ''));
+  });
 
+  // A case is a request by construction, so clicking one fills the form with
+  // it and answers — the same two things a reader would otherwise do by hand.
+  // Without this, the link goes to the answer's own URL, which is also right.
+  Array.prototype.forEach.call(document.querySelectorAll('a[data-elo-case]'), function (link) {
+    link.addEventListener('click', function (event) {
+      var href = link.getAttribute('href');
+      if (!href) return;
+      event.preventDefault();
+      fill(new URL(href, window.location.href).searchParams);
+      if (form.scrollIntoView) form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      call(href);
+    });
+  });
+
+  function call(url) {
+    clearRefusals();
     status.textContent = 'Calling…';
     panel.hidden = false;
     panel.classList.remove('is-refused');
@@ -449,7 +464,33 @@ const ENHANCEMENT = `<script>
       .catch(function (error) {
         show('The call could not be made: ' + error.message, true);
       });
-  });
+  }
+
+  /**
+   * Put a query string back into the form it came from.
+   *
+   * Every control is assigned, not only the ones the query names — so a second
+   * case does not inherit the first one's values. A checkbox reads 'true'
+   * rather than a value, and the hidden 'false' beside it is left alone: it is
+   * there so that the field arrives at all.
+   */
+  function fill(params) {
+    var byName = {};
+    Array.prototype.forEach.call(form.querySelectorAll('[name]'), function (control) {
+      if (control.type === 'hidden') return;
+      (byName[control.name] = byName[control.name] || []).push(control);
+    });
+    Object.keys(byName).forEach(function (name) {
+      var values = params.getAll(name);
+      byName[name].forEach(function (control, index) {
+        if (control.type === 'checkbox') {
+          control.checked = values.indexOf('true') !== -1;
+        } else {
+          control.value = values[index] === undefined ? '' : values[index];
+        }
+      });
+    });
+  }
 
   function render(code, body, url) {
     rows.textContent = '';
@@ -531,9 +572,14 @@ function caseTable(formula: ServedFormula): string {
   const rows = formula.descriptor.cases.map(testCase => {
     const link = tryLink(formula, testCase);
     const name = escapeHtml(testCase.name);
+    // `data-elo-case` is what the enhancement hooks: clicking fills the form
+    // with this case and answers in place. The `href` is what happens without
+    // it, and the two are the same request — the link *is* the case.
+    const anchor = `<a href="${escapeHtml(link ?? '')}" data-elo-case`
+      + ` title="Fill the form with this case, and answer it">${name}</a>`;
     return [
       '<tr>',
-      `<td>${link === undefined ? name : `<a href="${escapeHtml(link)}">${name}</a>`}</td>`,
+      `<td>${link === undefined ? name : anchor}</td>`,
       `<td><code>${escapeHtml(JSON.stringify(testCase.input))}</code></td>`,
       `<td><code>${escapeHtml(stringify(testCase.expect))}</code></td>`,
       '</tr>',

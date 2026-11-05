@@ -26,9 +26,11 @@ services:
 
     The page **enhances** its form with a script: the same request, made with
     `fetch`, answered under the form, with a refusal put back on the field that
-    caused it. Written that way round on purpose — turn the script off and the
-    form still submits to the call and still answers, which is what the
-    fragment of `/{id}/form` does for a host that wants no script at all.
+    caused it, and a click on a case filling the form with that case before
+    answering it. Written that way round on purpose — turn the script off and
+    the form still submits to the call, and a case is still a link to its own
+    answer. The fragment of `/{id}/form` carries no script at all, for a host
+    that wants none.
 
   input_schema: |-
     {
@@ -86,14 +88,14 @@ services:
     - when: |-
         the formula documents cases
       it: |-
-        tabulates them, each with a link that runs it
+        tabulates them, each one a link that fills the form and answers it
       input:
         formula: leap-year@1.0.0
       assert:
         - |-
           match('', /divisible by 4/)
         - |-
-          match('', /href="\/leap-year@1\.0\.0\/call\?year=2024"/)
+          match('', /href="\/leap-year@1\.0\.0\/call\?year=2024" data-elo-case/)
 
     - when: |-
         the page is asked what it runs

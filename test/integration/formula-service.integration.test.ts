@@ -456,16 +456,36 @@ describe('Formula service - the page', () => {
     assert.doesNotThrow(() => new Function(script), 'the enhancement does not parse');
 
     // And a renamed class is the other way an enhancement dies quietly: every
-    // selector it reaches for has to be something this page renders.
+    // class and every attribute it reaches for has to be something this page
+    // renders. `tbody` and bare tag names are not worth checking for.
     const selectors = [...script.matchAll(/querySelector(?:All)?\('([^']+)'\)/g)]
-      .map(match => match[1])
-      .flatMap(selector => selector.split(' '));
+      .map(match => match[1]);
     assert.ok(selectors.length >= 4, 'no selectors found');
-    for (const selector of selectors) {
-      const token = selector.replace(/^[.#]/, '').replace(/^\[.*$/, '');
-      if (token === '' || token === 'tbody') continue;
-      assert.ok(page.includes(token), `the script looks for '${selector}', which the page has not`);
+    const hooks = selectors.flatMap(selector => [
+      ...[...selector.matchAll(/\.([a-z-]+)/g)].map(match => match[1]),
+      ...[...selector.matchAll(/\[([a-z-]+)[\]=]/g)].map(match => match[1]),
+    ]);
+    assert.ok(hooks.length >= 5, `too few hooks to check: ${hooks.join(', ')}`);
+    for (const hook of hooks) {
+      assert.ok(page.includes(hook), `the script looks for '${hook}', which the page has not`);
     }
+  });
+
+  it('makes a case fill the form, and still be a URL of its own', async () => {
+    const page = await (await get('/leap-year@1.0.0', { accept: 'text/html' })).text();
+    // The hook the script clicks…
+    assert.match(
+      page,
+      /<a href="\/leap-year@1\.0\.0\/call\?year=2024" data-elo-case title="[^"]+">divisible by 4<\/a>/
+    );
+    // …and the script that uses it to fill the form rather than navigate.
+    const script = /<script>([\s\S]*?)<\/script>/.exec(page)?.[1] ?? '';
+    assert.match(script, /querySelectorAll\('a\[data-elo-case\]'\)/);
+    assert.match(script, /function fill\(/);
+    // A case whose input a query cannot carry stays text: nothing to click,
+    // and nothing claiming otherwise.
+    const lines = await (await get('/order-lines@1.0.0', { accept: 'text/html' })).text();
+    assert.doesNotMatch(lines, /data-elo-case/);
   });
 
   it('carries a runnable snippet in each of the four things people reach for', async () => {

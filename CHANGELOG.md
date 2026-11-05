@@ -38,7 +38,8 @@ All notable changes to Elo are documented in this file.
   `fields.elo`, with a `GET` form whose action is the call, so it works with
   no JavaScript and its result is a URL. The page then **enhances** that form
   with a script: the same request over `fetch`, answered under the form rather
-  than navigated to, with a refusal put back on the field it names — and every
+  than navigated to, with a refusal put back on the field it names and a click
+  on a case filling the form with that case before answering it — and every
   page carries a **curl, JavaScript, Ruby and Python snippet** for calling the
   formula from somewhere else, filled in with its first case and pointed at the
   host the request came in on. It comes with a **black-box

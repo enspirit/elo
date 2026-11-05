@@ -100,12 +100,16 @@ request with `fetch`, and answers under the form instead of navigating away:
 the page stays, the form keeps what was typed, and a second call is one click.
 It shows the URL it called, so nothing is lost by enhancing.
 
-Two things the script does that a plain form cannot:
+Three things the script does that a plain form cannot:
 
 - **A refusal lands on the field that caused it.** §5 answers `field`, which is
   the key of `fields.elo` and therefore the `name` of a control on the page —
   so the message goes under that control, which is the whole reason the error
   body carries it.
+- **Clicking a case fills the form with it**, and answers it. A case is a
+  request by construction, so the two gestures a reader would otherwise make by
+  hand — copy the input in, press the button — are the click. Without the
+  script the same link goes to that case's own answer, which is also right.
 - **The answer is read rather than navigated to**, which is what makes trying a
   second input bearable.
 
@@ -375,7 +379,7 @@ linking to the formula that answers it.
 | `/order-pricing` | fill the form, press **Answer**: the answer appears under it, and the URL it called is shown. Turn JavaScript off and the same form navigates to that URL instead |
 | `/order-pricing` with a bad value | a refusal lands under the field that caused it — that is §5's `field` key doing its job |
 | any page, bottom half | **Call it from your code**: curl, JavaScript, Ruby and Python, filled in with a real case |
-| `/leap-year` | the case table, where each case name is a link that runs that case |
+| `/leap-year` | click a case: it fills the form and answers, so the next thing you try starts from a real input |
 | `/order-lines` | no form — its input is a table — but its columns and the `curl` that sends one |
 | `/iban` | open **What runs**: the program itself, and links to the five files it came from |
 
