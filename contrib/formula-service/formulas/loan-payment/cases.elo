@@ -25,5 +25,41 @@
       input: {principal: 1000, annualRatePercent: 12, years: 1},
       expect: {monthlyPayment: 88.85, totalPaid: 1066.2, totalInterest: 66.2, payments: 12}
     }
+  ],
+  refusals: [
+    {
+      name: 'nothing borrowed',
+      input: {principal: 0, annualRatePercent: 3.5, years: 20},
+      kind: 'constraint',
+      path: '.principal',
+      label: 'positive'
+    },
+    {
+      name: 'a rate of more than a hundred percent',
+      input: {principal: 250000, annualRatePercent: 120, years: 20},
+      kind: 'constraint',
+      path: '.annualRatePercent',
+      label: 'notNegative'
+    },
+    {
+      name: 'a loan over no years',
+      input: {principal: 250000, annualRatePercent: 3.5, years: 0},
+      kind: 'constraint',
+      path: '.years',
+      label: 'atLeastOne'
+    },
+    {
+      name: 'a term in half years, where the term is whole months of payments',
+      input: {principal: 250000, annualRatePercent: 3.5, years: 20.5},
+      kind: 'schema',
+      path: '.years'
+    },
+    {
+      name: 'no term at all',
+      input: {principal: 250000, annualRatePercent: 3.5},
+      kind: 'missing',
+      path: '.years'
+    }
   ]
+
 }

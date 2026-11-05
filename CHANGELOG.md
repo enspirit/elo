@@ -24,7 +24,14 @@ All notable changes to Elo are documented in this file.
   first run of those found the Ruby path bug below. The service publishes them
   in the descriptor, documents them as the `422` examples of its OpenAPI, and
   tabulates them on the page with a row that fills the form so the message can
-  be watched landing on the field
+  be watched landing on the field.
+
+  **Every formula in the catalogue documents both halves**: 103 cases and 55
+  refusals, with a test holding each bundle to a `schema` refusal, a `missing`
+  one, and one refusal per *named constraint* of its form — a constraint
+  nobody has seen refuse anything is a constraint nobody has checked. The
+  format itself keeps `refusals` optional; the catalogue holds itself to more,
+  being the worked example of it
 
 - **A REST API over a catalogue of formula bundles**,
   `contrib/formula-service`: an index, a descriptor per formula, the five files

@@ -52,6 +52,33 @@
       input: {description: 'Widget', unitPrice: 1, quantity: 1},
       kind: 'schema',
       path: '.'
+    },
+    {
+      name: 'a line with no description',
+      input: [{description: '  ', unitPrice: 1.0, quantity: 1}],
+      kind: 'constraint',
+      path: '.0.description',
+      label: 'notBlank'
+    },
+    {
+      name: 'a line of none of it',
+      input: [{description: 'Widget', unitPrice: 1.0, quantity: 0}],
+      kind: 'constraint',
+      path: '.0.quantity',
+      label: 'atLeastOne'
+    },
+    {
+      name: 'a discount of more than everything',
+      input: [{description: 'Widget', unitPrice: 1.0, quantity: 1, discountPercent: 120}],
+      kind: 'constraint',
+      path: '.0.discountPercent',
+      label: 'aPercentage'
+    },
+    {
+      name: 'a row with no quantity column',
+      input: [{description: 'Widget', unitPrice: 1.0}],
+      kind: 'missing',
+      path: '.0.quantity'
     }
   ]
 

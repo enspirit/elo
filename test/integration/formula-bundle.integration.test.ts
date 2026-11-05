@@ -267,10 +267,36 @@ describe('Formula bundles - the refusals', () => {
 
   it('are in the catalogue, over every kind Elo reports', () => {
     const kinds = new Set(catalogue.flatMap(bundle => bundle.refusals.map(refusal => refusal.kind)));
-    // Not every bundle has refusals, but the catalogue has to show each kind
-    // at least once: they are what a client branches on.
+    // Every kind a client branches on is demonstrated somewhere in the
+    // catalogue. `check` is the one that is not: it is a postcondition on an
+    // answer, and no formula here has one worth asserting.
     for (const kind of ['schema', 'missing', 'constraint', 'guard'] as const) {
       assert.ok(kinds.has(kind), `no bundle demonstrates a ${kind} refusal`);
+    }
+  });
+
+  it('cover both halves of every formula in this catalogue', () => {
+    // The format leaves `refusals` optional — a bundle is a bundle without
+    // them. This catalogue holds itself to more than that, because it is the
+    // worked example of the format and a formula documented only by what it
+    // answers is documented by half.
+    for (const bundle of catalogue) {
+      const refusals = bundle.refusals;
+      assert.ok(bundle.cases.length > 0, `${bundle.id}: no cases`);
+      assert.ok(refusals.length > 0, `${bundle.id}: no refusals`);
+
+      const kinds = new Set(refusals.map(refusal => refusal.kind));
+      assert.ok(kinds.has('schema'), `${bundle.id}: nothing shows a value of the wrong shape`);
+      assert.ok(kinds.has('missing'), `${bundle.id}: nothing shows a field left out`);
+
+      // And every rule the form says may refuse a value has a refusal that
+      // makes it. A constraint nobody has seen refuse anything is a
+      // constraint nobody has checked.
+      const labelled = new Set(refusals.map(refusal => refusal.label).filter(label => label !== undefined));
+      const declared = new Set(bundle.form.flatMap(field => field.constraints ?? []));
+      for (const constraint of declared) {
+        assert.ok(labelled.has(constraint), `${bundle.id}: nothing violates '${constraint}'`);
+      }
     }
   });
 

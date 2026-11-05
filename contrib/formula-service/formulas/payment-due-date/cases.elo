@@ -35,5 +35,27 @@
       input: {invoiceDate: '2026-01-10', terms: 'NET30', today: '2026-02-09'},
       expect: {dueDate: D2026-02-09, daysLeft: 0, overdue: false, dueThisWeek: true}
     }
+  ],
+  refusals: [
+    {
+      name: 'terms nobody agreed',
+      input: {invoiceDate: '2026-01-10', terms: 'NET45', today: '2026-01-10'},
+      kind: 'constraint',
+      path: '.terms',
+      label: 'known'
+    },
+    {
+      name: 'an invoice date in words',
+      input: {invoiceDate: 'the tenth of January', terms: 'NET30', today: '2026-01-10'},
+      kind: 'schema',
+      path: '.invoiceDate'
+    },
+    {
+      name: 'no day to count from',
+      input: {invoiceDate: '2026-01-10', terms: 'NET30'},
+      kind: 'missing',
+      path: '.today'
+    }
   ]
+
 }

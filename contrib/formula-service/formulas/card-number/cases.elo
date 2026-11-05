@@ -50,5 +50,27 @@
       input: {number: '4539578763621X86'},
       expect: {valid: false, brand: null, masked: null}
     }
+  ],
+  refusals: [
+    {
+      name: 'a blank number',
+      input: {number: '   '},
+      kind: 'constraint',
+      path: '.number',
+      label: 'notBlank'
+    },
+    {
+      name: 'the number sent as a number, which loses a leading zero',
+      input: {number: 4539148803436467},
+      kind: 'schema',
+      path: '.number'
+    },
+    {
+      name: 'nothing sent at all',
+      input: {},
+      kind: 'missing',
+      path: '.number'
+    }
   ]
+
 }

@@ -248,7 +248,14 @@ the bundle states them, so a refusal may promise just the kind where that is
 all there is to promise.
 
 `refusals` is optional, so a bundle that has none is still a bundle, and this
-is still format `1`.
+is still format `1`. A *good* bundle has them, and the catalogue in this
+directory holds itself to a rule the format does not impose on everyone —
+`test/integration/formula-bundle.integration.test.ts`:
+
+- at least one refusal of kind `schema` (a value of the wrong shape) and one of
+  kind `missing` (a field left out), which every formula can be given;
+- and one refusal per **named constraint** of the form. A constraint nobody has
+  seen refuse anything is a constraint nobody has checked.
 
 **A refusal cannot be checked from inside Elo**, and that is a language
 decision rather than a gap in this format: an expression that refuses its input

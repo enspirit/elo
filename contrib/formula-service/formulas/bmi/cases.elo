@@ -30,5 +30,34 @@
       input: {weightKg: 90, heightCm: 200},
       expect: {bmi: 22.5, category: 'normal'}
     }
+  ],
+  refusals: [
+    {
+      name: 'a weight nobody has',
+      input: {weightKg: 0, heightCm: 180},
+      kind: 'constraint',
+      path: '.weightKg',
+      label: 'plausible'
+    },
+    {
+      name: 'a height in metres, by mistake',
+      input: {weightKg: 70, heightCm: 1.8},
+      kind: 'constraint',
+      path: '.heightCm',
+      label: 'plausible'
+    },
+    {
+      name: 'a weight in words',
+      input: {weightKg: 'heavy', heightCm: 180},
+      kind: 'schema',
+      path: '.weightKg'
+    },
+    {
+      name: 'no weight at all',
+      input: {heightCm: 180},
+      kind: 'missing',
+      path: '.weightKg'
+    }
   ]
+
 }

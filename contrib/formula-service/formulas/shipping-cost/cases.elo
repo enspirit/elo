@@ -35,5 +35,48 @@
       input: {weightKg: 5, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'world', express: false, orderValue: 90},
       expect: {billableWeight: 5, volumetric: 0.6, freeShipping: false, cost: 37.55, etaDays: 9}
     }
+  ],
+  refusals: [
+    {
+      name: 'a parcel of no weight',
+      input: {weightKg: 0, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'domestic', express: false, orderValue: 40},
+      kind: 'constraint',
+      path: '.weightKg',
+      label: 'positive'
+    },
+    {
+      name: 'a parcel over the seventy kilos a carrier takes',
+      input: {weightKg: 100, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'domestic', express: false, orderValue: 40},
+      kind: 'constraint',
+      path: '.weightKg',
+      label: 'positive'
+    },
+    {
+      name: 'a zone nobody ships to',
+      input: {weightKg: 1.2, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'moon', express: false, orderValue: 40},
+      kind: 'constraint',
+      path: '.zone',
+      label: 'known'
+    },
+    {
+      name: 'an order worth less than nothing',
+      input: {weightKg: 1.2, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'domestic', express: false, orderValue: -5},
+      kind: 'constraint',
+      path: '.orderValue',
+      label: 'notNegative'
+    },
+    {
+      name: 'express asked for with a word rather than a flag',
+      input: {weightKg: 1.2, lengthCm: 20, widthCm: 15, heightCm: 10, zone: 'domestic', express: 'yes', orderValue: 40},
+      kind: 'schema',
+      path: '.express'
+    },
+    {
+      name: 'no zone at all',
+      input: {weightKg: 1.2, lengthCm: 20, widthCm: 15, heightCm: 10, express: false, orderValue: 40},
+      kind: 'missing',
+      path: '.zone'
+    }
   ]
+
 }

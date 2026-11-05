@@ -74,6 +74,12 @@
       input: {iban: 'BE68539007547034', country: 'BE'},
       kind: 'schema',
       path: '.country'
+    },
+    {
+      name: 'nothing sent at all',
+      input: {},
+      kind: 'missing',
+      path: '.iban'
     }
   ]
 

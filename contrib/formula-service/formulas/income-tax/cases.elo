@@ -30,5 +30,27 @@
       input: {taxableIncome: 60000},
       expect: {tax: 23815, net: 36185, marginalRate: 50, effectiveRate: 39.7}
     }
+  ],
+  refusals: [
+    {
+      name: 'an income below zero',
+      input: {taxableIncome: -1},
+      kind: 'constraint',
+      path: '.taxableIncome',
+      label: 'notNegative'
+    },
+    {
+      name: 'an income written the way people say it',
+      input: {taxableIncome: '30k'},
+      kind: 'schema',
+      path: '.taxableIncome'
+    },
+    {
+      name: 'no income at all',
+      input: {},
+      kind: 'missing',
+      path: '.taxableIncome'
+    }
   ]
+
 }

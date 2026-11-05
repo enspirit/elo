@@ -104,7 +104,12 @@ refusals: [
 ```
 
 The second one is the interesting kind: a `guard` refuses a *combination* of
-fields that no single type can describe, which is why `age` has one. See
+fields that no single type can describe, which is why `age` has one.
+
+**Every formula here documents both halves**, and a test holds them to it: a
+`schema` refusal, a `missing` one, and one refusal per *named constraint* of
+the form — 55 of them over the fourteen formulas, beside 103 cases. A
+constraint nobody has seen refuse anything is a constraint nobody has checked. See
 [`BUNDLE.md`](BUNDLE.md) for the rules, and note the structural one — a refusal
 cannot be checked from inside Elo, because Elo cannot catch a failure, so the
 host applies each one.

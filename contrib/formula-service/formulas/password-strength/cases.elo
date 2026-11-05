@@ -35,5 +35,20 @@
       input: {password: '!@#$%^&*()-='},
       expect: {score: 3, level: 'fair', missing: ['a lowercase letter', 'an uppercase letter', 'a digit']}
     }
+  ],
+  refusals: [
+    {
+      name: 'a password sent as a number',
+      input: {password: 12345678},
+      kind: 'schema',
+      path: '.password'
+    },
+    {
+      name: 'no password at all, which is not an empty one',
+      input: {},
+      kind: 'missing',
+      path: '.password'
+    }
   ]
+
 }

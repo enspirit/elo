@@ -59,6 +59,12 @@
       input: {birthDate: '1990-03-15'},
       kind: 'missing',
       path: '.on'
+    },
+    {
+      name: 'a birth date sent as a number',
+      input: {birthDate: 19900315, on: '2026-11-05'},
+      kind: 'schema',
+      path: '.birthDate'
     }
   ]
 

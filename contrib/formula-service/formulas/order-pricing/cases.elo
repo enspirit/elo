@@ -52,6 +52,32 @@
       kind: 'constraint',
       path: '.couponPercent',
       label: 'aPercentage'
+    },
+    {
+      name: 'a price of nothing',
+      input: {unitPrice: 0, quantity: 1, tier: 'standard', vatRate: 0.21},
+      kind: 'constraint',
+      path: '.unitPrice',
+      label: 'positive'
+    },
+    {
+      name: 'a VAT rate given as a percentage',
+      input: {unitPrice: 19.99, quantity: 1, tier: 'standard', vatRate: 21},
+      kind: 'constraint',
+      path: '.vatRate',
+      label: 'aRate'
+    },
+    {
+      name: 'a price in words',
+      input: {unitPrice: 'nineteen ninety-nine', quantity: 1, tier: 'standard', vatRate: 0.21},
+      kind: 'schema',
+      path: '.unitPrice'
+    },
+    {
+      name: 'no VAT rate at all',
+      input: {unitPrice: 19.99, quantity: 1, tier: 'standard'},
+      kind: 'missing',
+      path: '.vatRate'
     }
   ]
 

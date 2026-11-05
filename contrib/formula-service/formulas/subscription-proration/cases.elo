@@ -30,5 +30,27 @@
       input: {monthlyPrice: 49.99, startDate: '2026-04-21'},
       expect: {billedDays: 10, daysInMonth: 30, amount: 16.66, dailyRate: 1.6663, nextRenewal: D2026-05-01}
     }
+  ],
+  refusals: [
+    {
+      name: 'a subscription that costs nothing',
+      input: {monthlyPrice: 0, startDate: '2026-01-15'},
+      kind: 'constraint',
+      path: '.monthlyPrice',
+      label: 'positive'
+    },
+    {
+      name: 'a start date in words',
+      input: {monthlyPrice: 30, startDate: 'mid-January'},
+      kind: 'schema',
+      path: '.startDate'
+    },
+    {
+      name: 'no start date at all',
+      input: {monthlyPrice: 30},
+      kind: 'missing',
+      path: '.startDate'
+    }
   ]
+
 }

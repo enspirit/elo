@@ -50,5 +50,27 @@
       input: {number: 'BE0403200393'},
       expect: {valid: true, formatted: 'BE 0403.200.393'}
     }
+  ],
+  refusals: [
+    {
+      name: 'a blank number',
+      input: {number: ' '},
+      kind: 'constraint',
+      path: '.number',
+      label: 'notBlank'
+    },
+    {
+      name: 'the number sent as a number, which loses its leading zero',
+      input: {number: 123456749},
+      kind: 'schema',
+      path: '.number'
+    },
+    {
+      name: 'nothing sent at all',
+      input: {},
+      kind: 'missing',
+      path: '.number'
+    }
   ]
+
 }
