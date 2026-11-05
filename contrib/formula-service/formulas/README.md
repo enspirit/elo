@@ -27,10 +27,10 @@ this is what is in the catalogue.
 npm run build
 
 # Every bundle, with its case count
-node dist/examples/formula-bundle.js
+contrib/formula-service/bin/elo-formulas
 
 # One bundle: its documentation, its form, its cases and their results
-node dist/examples/formula-bundle.js order-pricing
+contrib/formula-service/bin/elo-formulas order-pricing
 ```
 
 ```
@@ -57,7 +57,7 @@ constraint names cannot drift:
 
 ```bash
 # after changing Input: refresh in place, keeping every label already written
-node dist/examples/formula-bundle.js --fields order-pricing
+contrib/formula-service/bin/elo-formulas --fields order-pricing
 ```
 
 ## Running one on your own data
@@ -76,14 +76,16 @@ It is generated rather than stored, for the same reason the case runner is —
 so ask for it, next to the bundle it applies to:
 
 ```bash
-node dist/examples/formula-bundle.js --service > examples/formulas/iban/service.elo
-echo '{"iban": "BE68 5390 0754 7034"}' | ./bin/elo examples/formulas/iban/service.elo --stdin
+contrib/formula-service/bin/elo-formulas --service > contrib/formula-service/formulas/iban/service.elo
+echo '{"iban": "BE68 5390 0754 7034"}' | ./bin/elo contrib/formula-service/formulas/iban/service.elo --stdin
 # {"valid":true,"country":"BE","formatted":"BE68 5390 0754 7034"}
 ```
 
-`eloc examples/formulas/iban/service.elo -t ruby -p` compiles the same thing to
-Ruby, Python or JavaScript as one self-contained expression, with nothing to
-install beside it.
+`eloc contrib/formula-service/formulas/iban/service.elo -t ruby -p` compiles the
+same thing to Ruby, Python or JavaScript as one self-contained expression, with
+nothing to install beside it — and so does
+`GET /iban@1.0.0` with `Accept: text/x-ruby`, which is
+[the service](..) that wraps this catalogue.
 
 ## What checks them
 

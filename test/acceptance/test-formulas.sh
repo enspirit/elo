@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# Run the formula catalogue (examples/formulas) on every target that can take
-# it. Each bundle holds its cases as data; the runner that checks them is
-# generated — `formula-bundle.js --runner` is the one copy of it — and compiled
+# Run the formula catalogue (contrib/formula-service/formulas) on every target
+# that can take it. Each bundle holds its cases as data; the runner that checks
+# them is generated — `elo-formulas --runner` is the one copy of it — and compiled
 # inside the bundle, so `./formula` and `./cases` resolve. It ends in a `check`,
 # so a target answering something else exits non-zero on its own and there is
 # nothing here to compare against a recorded output.
 #
 # SQL is absent on purpose: a formula is a lambda and `Input` is a type
-# definition, and that target takes neither. See examples/formulas/BUNDLE.md.
+# definition, and that target takes neither. See the catalogue's BUNDLE.md.
 
 set -e
 
-FORMULA_DIR="${1:-examples/formulas}"
+FORMULA_DIR="${1:-contrib/formula-service/formulas}"
 ELOC="./bin/eloc"
-RUNNER_SOURCE=$(node dist/examples/formula-bundle.js --runner)
+RUNNER_SOURCE=$(contrib/formula-service/bin/elo-formulas --runner)
 FAILED=0
 PASSED=0
 

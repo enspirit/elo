@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+require('../../../dist/contrib/formula-service/src/server.js')
+  .main(process.argv.slice(2))
+  .catch((error) => {
+    console.error(`elo-formula-service: ${error.message}`);
+    process.exit(1);
+  });

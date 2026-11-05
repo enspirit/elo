@@ -15,14 +15,15 @@ import {
   refreshFieldsFile,
   docComment,
   caseRunnerSource,
-} from '../../examples/formula-bundle';
+  EXAMPLE_CATALOGUE,
+} from '../../contrib/formula-service/src/bundle';
 import { parseTypeExpr } from '../../src';
 
 /**
  * The formula bundle format, over every bundle of the catalogue.
  *
- * `examples/formulas/BUNDLE.md` is the specification; this is what holds the
- * catalogue to it. The acceptance suite runs the same cases on Ruby, Python
+ * `contrib/formula-service/formulas/BUNDLE.md` is the specification; this is
+ * what holds the catalogue to it. The acceptance suite runs the same cases on Ruby, Python
  * and JavaScript (test/acceptance/test-formulas.sh); what is checked here is
  * the *format* — that a bundle says what a catalogue needs, and says it once.
  *
@@ -30,7 +31,7 @@ import { parseTypeExpr } from '../../src';
  * seen reject anything is a lint that passes everything.
  */
 
-const CATALOGUE = join(__dirname, '..', '..', '..', 'examples', 'formulas');
+const CATALOGUE = EXAMPLE_CATALOGUE;
 
 const catalogue = loadCatalogue(CATALOGUE);
 

@@ -1,6 +1,6 @@
 /**
  * The reference implementation of the formula bundle — see
- * `examples/formulas/BUNDLE.md` for the format it reads.
+ * `../formulas/BUNDLE.md` for the format it reads.
  *
  * A bundle is five files: `types.elo` (`Input` and `Output`, the data the
  * formula takes and answers), `formula.elo` (the doc comment and the exported
@@ -16,19 +16,25 @@
  *
  * Nothing here belongs in the compiler: a bundle is a convention over files,
  * and the only thing it asks of Elo is to read a program's type prelude, which
- * `loadProgram` already does. That makes this file a host's code — copy it.
+ * `loadProgram` already does. That is why it is a contrib rather than part of
+ * `src/` — it is a host's code, and a host may copy it.
+ *
+ * It imports Elo over a relative path because it lives in this repository and
+ * is built by its `tsconfig.json`. Copied into a project of your own, the two
+ * imports below become `@enspirit/elo` and `@enspirit/elo/node`.
  *
  * Run it over a bundle:
  *
- *     npm run build && node dist/examples/formula-bundle.js iban
+ *     npm run build && contrib/formula-service/bin/elo-formulas iban
  */
 
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, relative, sep } from 'node:path';
 import { DateTime, Duration, Interval } from 'luxon';
-import { compile, loadProgram, toEloCode } from '../src';
-import type { TypeExpr } from '../src';
-import { nodeLoader } from '../src/node';
+import { compile, loadProgram, toEloCode } from '../../../src';
+import type { TypeExpr } from '../../../src';
+import { nodeLoader } from '../../../src/node';
+import type { AnswerShape } from './answer';
 
 const RUNTIME = { DateTime, Duration, Interval };
 
@@ -90,7 +96,11 @@ export interface CaseResult extends FormulaCase {
 }
 
 export interface Bundle {
-  /** The directory name. */
+  /**
+   * The formula's identifier: its directory, relative to the catalogue it was
+   * read from, slash-separated — `age`, or `tax/be/vat`. A bundle read on its
+   * own has its directory name for an id.
+   */
   id: string;
   dir: string;
   manifest: BundleManifest;
@@ -132,8 +142,10 @@ export function docComment(source: string): { title: string; doc: string } {
   return { title, doc };
 }
 
-export function loadBundle(dir: string): Bundle {
-  const id = basename(dir);
+export function loadBundle(dir: string, root?: string): Bundle {
+  // Under a catalogue, a formula is identified by its path rather than by its
+  // last segment: `tax/be/vat` and `tax/fr/vat` are two formulas.
+  const id = root ? relative(root, dir).split(sep).join('/') : basename(dir);
   const typesFile = join(dir, 'types.elo');
   const formulaFile = join(dir, 'formula.elo');
   const fieldsFile = join(dir, 'fields.elo');
@@ -188,13 +200,42 @@ function inputOf(bundle: Bundle): TypeExpr {
   return input;
 }
 
-/** Every bundle of a catalogue directory, by id. */
-export function loadCatalogue(dir: string): Bundle[] {
+/** `Output`, likewise. */
+function outputOf(bundle: Bundle): TypeExpr {
+  const output = bundle.types.get('Output');
+  if (!output) throw new Error(`${bundle.id}: types.elo does not declare 'Output'`);
+  return output;
+}
+
+/**
+ * This repository's own catalogue — the thirteen bundles beside this file.
+ *
+ * `__dirname` is the *built* module, under `dist/`, while a bundle is source
+ * rather than build output: the path climbs out of `dist/` and back down the
+ * tree it mirrors. A host serving its own catalogue passes its directory
+ * instead, which is what the `ELO_FORMULAS` of the CLI below does.
+ */
+export const EXAMPLE_CATALOGUE = join(
+  __dirname, '..', '..', '..', '..', 'contrib', 'formula-service', 'formulas'
+);
+
+/**
+ * Every bundle under a catalogue directory, in id order.
+ *
+ * A directory holding a `bundle.json` is a bundle; one that does not is a
+ * folder of them, however deep — so a catalogue may be organised by subject
+ * (`tax/be/vat`) and a formula's id is its path.
+ */
+export function loadCatalogue(dir: string, root: string = dir): Bundle[] {
   return readdirSync(dir)
     .filter(entry => statSync(join(dir, entry)).isDirectory())
-    .filter(entry => existsSync(join(dir, entry, 'bundle.json')))
     .sort()
-    .map(entry => loadBundle(join(dir, entry)));
+    .flatMap(entry => {
+      const child = join(dir, entry);
+      return existsSync(join(child, 'bundle.json'))
+        ? [loadBundle(child, root)]
+        : loadCatalogue(child, root);
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -291,6 +332,78 @@ export function describeFields(
     fields.push(field(path, resolved, property.optional === true));
   }
   return fields;
+}
+
+/**
+ * One key of the answer: what a client renders a result with.
+ *
+ * It is not a form — `Output` has none, an answer being rendered rather than
+ * filled in — so there is no label and no widget here. It is the column list,
+ * and the same walk `Input` gets, which is what keeps the two readings of a
+ * type the same one.
+ */
+export interface AnswerDescriptor {
+  path: string;
+  type: string;
+  required: boolean;
+  repeated?: boolean;
+}
+
+/** What `Output` says about the answer. */
+export function describeAnswers(bundle: Bundle): AnswerDescriptor[] {
+  return describeFields(outputOf(bundle), bundle.types).map(answer => ({
+    path: answer.path,
+    type: answer.type,
+    required: answer.required,
+    ...(answer.repeated ? { repeated: true } : {}),
+  }));
+}
+
+/**
+ * How to write the answer as JSON, from `Output` — see `./answer`, which
+ * applies it where the answer is produced.
+ *
+ * Driven by the declared type on purpose: a `Date` and a `Datetime` are the
+ * same runtime value on JavaScript, and only the type says which was meant.
+ */
+export function answerShape(bundle: Bundle): AnswerShape {
+  return shapeOf(outputOf(bundle), bundle.types);
+}
+
+const TEMPORAL_SHAPES: Record<string, AnswerShape> = {
+  Date: { kind: 'date' },
+  Datetime: { kind: 'datetime' },
+  Duration: { kind: 'duration' },
+};
+
+function shapeOf(expr: TypeExpr, types: Map<string, TypeExpr>, seen: Set<string> = new Set()): AnswerShape {
+  switch (expr.kind) {
+    case 'type_ref': {
+      const target = types.get(expr.name);
+      if (target && !seen.has(expr.name)) {
+        seen.add(expr.name);
+        return shapeOf(target, types, seen);
+      }
+      return TEMPORAL_SHAPES[expr.name] ?? { kind: 'value' };
+    }
+    case 'subtype_constraint':
+      return shapeOf(expr.baseType, types, seen);
+    case 'array_type':
+      return { kind: 'list', of: shapeOf(expr.elementType, types, seen) };
+    case 'union_type': {
+      // `T|Null` is a `T` that may be absent, and absent needs no writing. A
+      // union of several real types has no one writing, so it gets none.
+      const real = expr.types.filter(t => !(t.kind === 'type_ref' && t.name === 'Null'));
+      return real.length === 1 ? shapeOf(real[0], types, new Set(seen)) : { kind: 'value' };
+    }
+    case 'type_schema': {
+      const properties: Record<string, AnswerShape> = {};
+      for (const property of expr.properties) {
+        properties[property.key] = shapeOf(property.typeExpr, types, new Set(seen));
+      }
+      return { kind: 'object', properties };
+    }
+  }
 }
 
 function field(path: string, resolved: Resolved, optional: boolean): FieldDescriptor {
@@ -609,9 +722,15 @@ function show(bundle: Bundle): void {
   console.log(`\n## Validity\n  ${problems.length === 0 ? 'valid' : problems.join('\n  ')}`);
 }
 
-if (require.main === module) {
-  const root = join(__dirname, '..', '..', 'examples', 'formulas');
-  const id = process.argv[2];
+/**
+ * The command line over a catalogue: `bin/elo-formulas`. It is exported rather
+ * than run on load because this module is a library first — the service of
+ * `./service.ts` imports it — and a `require.main` check would not see the two
+ * lines of `bin/` that call it.
+ */
+export function main(args: string[]): void {
+  const root = process.env.ELO_FORMULAS ?? EXAMPLE_CATALOGUE;
+  const id = args[0];
   if (id === '--runner') {
     // For a runner that is not a TypeScript host: the acceptance script writes
     // this into a bundle and compiles it, rather than keeping a second copy.
@@ -620,11 +739,11 @@ if (require.main === module) {
     process.stdout.write(serviceSource());
   } else if (id === '--fields') {
     // Refresh a bundle's fields.elo from its Input, keeping what was written by
-    // hand. Writes the file:  formula-bundle.js --fields iban
-    const { file, changed } = refreshFieldsFile(join(root, process.argv[3]));
+    // hand. Writes the file:  elo-formulas --fields iban
+    const { file, changed } = refreshFieldsFile(join(root, args[1]));
     console.log(changed ? `${file} refreshed` : `${file} was already up to date`);
   } else if (id?.startsWith('--')) {
-    console.error('usage: formula-bundle [<bundle-id> | --fields <bundle-id> | --runner | --service]');
+    console.error('usage: elo-formulas [<bundle-id> | --fields <bundle-id> | --runner | --service]');
     process.exitCode = 1;
   } else if (!id) {
     for (const bundle of loadCatalogue(root)) {
@@ -637,6 +756,8 @@ if (require.main === module) {
       );
     }
   } else {
-    show(loadBundle(join(root, id)));
+    show(loadBundle(join(root, id), root));
   }
 }
+
+if (require.main === module) main(process.argv.slice(2));

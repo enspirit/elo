@@ -4,6 +4,22 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **A REST API over a catalogue of formula bundles**,
+  `contrib/formula-service`: an index, a descriptor per formula, the five files
+  of each bundle, the program it runs compiled to JavaScript, Ruby and Python,
+  and `POST`/`GET …/call` to apply one. A formula's id is its path, an
+  unversioned name is an alias for the latest with `Content-Location` naming
+  what answered, and Elo's refusals map onto `422` with the `kind`, `path`,
+  `field` and `label` a form needs to put a message under the input that
+  caused it. Each call runs in a worker thread under a time and memory cap,
+  over code compiled once at boot — and boot runs every case of every bundle,
+  so a service that is up has demonstrated that its formulas answer what their
+  documentation says. Nothing of it is in the compiler: a bundle is a
+  convention over files, which is why the bundle format's reference
+  implementation and the thirteen formulas moved there too, from `examples/`
+
 ### Fixed
 
 - The **Node sandbox** of `contrib/sandboxes/node` could not see luxon. It

@@ -143,14 +143,14 @@ The **order of the list is the order of the form**, and it is the file's own —
 a form may put its fields in any order, whatever order `Input` declares them
 in.
 
-The derived half is not hand-written. `formula-bundle.js --fields <id>`
+The derived half is not hand-written. `elo-formulas --fields <id>`
 regenerates the file from `Input`, keeping every written key it already had —
 and **writes it in place**, because `> fields.elo` would truncate the file
 before the generator could read those keys out of it:
 
 ```bash
-node dist/examples/formula-bundle.js --fields iban
-# examples/formulas/iban/fields.elo refreshed
+contrib/formula-service/bin/elo-formulas --fields iban
+# contrib/formula-service/formulas/iban/fields.elo refreshed
 ```
 
 A bundle with no `fields.elo` yet gets one, every field unlabelled, which is
@@ -311,7 +311,8 @@ that is a Float, while JavaScript, which has one number type, says nothing.
 | `kind: 'guard'` or `'check'` | `422`, with `label` |
 
 Run it under a memory limit and a timeout — a legal formula can still be
-expensive. See [`contrib/sandboxes/`](../../contrib/sandboxes).
+expensive. See [`contrib/sandboxes/`](../../sandboxes), and [the service](..),
+which is that table implemented over this format.
 
 ## Validity
 
@@ -330,7 +331,7 @@ A bundle is valid when:
 5. `bundle.json` has `bundle` and `version`;
 6. every case passes, on JavaScript, Ruby and Python.
 
-`examples/formula-bundle.ts` is the reference implementation of all six, and
+`../src/bundle.ts` is the reference implementation of all six, and
 `test/integration/formula-bundle.integration.test.ts` runs it over every bundle
 in this directory on every test run.
 

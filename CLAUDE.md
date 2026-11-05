@@ -33,12 +33,16 @@ Elo currently has the following components :
 * One compiler per target language (`src/compilers/*.ts`)
 * A binary command (`bin/eloc` and `src/cli.ts`)
 * A try-elo website to demonstrate Elo (`web/`)
-* A catalogue of formula bundles (`examples/formulas/`), read by
-  `examples/formula-bundle.ts`. **CRITICAL** the format is
-  `examples/formulas/BUNDLE.md`: a bundle's `fields.elo` is *generated* from its
-  `Input` and checked against it, so after changing a type, refresh it with
-  `node dist/examples/formula-bundle.js --fields <id>` (which writes the file:
-  redirecting into it would truncate the labels before they could be read)
+* Contribs (`contrib/`), which are hosts rather than compiler: editor plugins,
+  the sandboxes, and the formula service
+* A catalogue of formula bundles (`contrib/formula-service/formulas/`), read by
+  `contrib/formula-service/src/bundle.ts` and served by `src/service.ts` beside
+  it. **CRITICAL** the format is `contrib/formula-service/formulas/BUNDLE.md`:
+  a bundle's `fields.elo` is *generated* from its `Input` and checked against
+  it, so after changing a type, refresh it with
+  `contrib/formula-service/bin/elo-formulas --fields <id>` (which writes the
+  file: redirecting into it would truncate the labels before they could be
+  read)
 
 ### Compilation Pipeline
 

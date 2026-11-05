@@ -1,0 +1,32 @@
+{
+  "name": "@enspirit/elo-formula-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A REST API over a catalogue of Elo formula bundles",
+  "bin": {
+    "elo-formulas": "./bin/elo-formulas",
+    "elo-formula-service": "./bin/elo-formula-service"
+  },
+  "scripts": {
+    "build": "cd ../.. && npm run build",
+    "start": "./bin/elo-formula-service",
+    "test": "cd ../.. && node --test dist/test/integration/formula-service.integration.test.js dist/test/integration/formula-bundle.integration.test.js"
+  },
+  "keywords": [
+    "elo",
+    "formula",
+    "faas",
+    "rest"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enspirit/elo.git",
+    "directory": "contrib/formula-service"
+  },
+  "homepage": "https://elo-lang.org",
+  "license": "MIT",
+  "peerDependencies": {
+    "@enspirit/elo": "^1.2.0",
+    "luxon": "^3.5.0"
+  }
+}

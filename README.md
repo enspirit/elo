@@ -762,19 +762,19 @@ conventions.
 
 ## Examples
 
-### A catalogue of formulas
+### A catalogue of formulas, and a service over it
 
-[`examples/formulas/`](examples/formulas) holds thirteen real formulas — an
-IBAN and a VAT number validator, a discount engine, a progressive tax, a loan
-payment, payment terms, a prorated subscription, a password checklist — each
-one a **formula bundle**: a directory with the data it takes and answers
-(`Input` and `Output`, in their own `types.elo`), the formula and its
-documentation, the input form as data, its cases as data, and a small
+[`contrib/formula-service/formulas/`](contrib/formula-service/formulas) holds
+thirteen real formulas — an IBAN and a VAT number validator, a discount engine,
+a progressive tax, a loan payment, payment terms, a prorated subscription, a
+password checklist — each one a **formula bundle**: a directory with the data it
+takes and answers (`Input` and `Output`, in their own `types.elo`), the formula
+and its documentation, the input form as data, its cases as data, and a small
 manifest.
 
 ```bash
 npm run build
-node dist/examples/formula-bundle.js order-pricing
+contrib/formula-service/bin/elo-formulas order-pricing
 ```
 
 That prints the documentation, the **input form**, and every case with its
@@ -782,8 +782,22 @@ result — the things a catalogue of formulas needs. The form is a data file a
 form builder can read on its own, generated from `Input` and checked against it
 on every test run, so the half a human writes (labels, widgets, a dropdown's
 options) sits beside a half that cannot drift. The format is
-[`examples/formulas/BUNDLE.md`](examples/formulas/BUNDLE.md) and its reference
-implementation is [`examples/formula-bundle.ts`](examples/formula-bundle.ts).
+[`BUNDLE.md`](contrib/formula-service/formulas/BUNDLE.md) and its reference
+implementation is
+[`src/bundle.ts`](contrib/formula-service/src/bundle.ts) beside it.
+
+[`contrib/formula-service/`](contrib/formula-service) is a **REST API** over
+such a catalogue: an index, a descriptor per formula, its five files, the
+program it runs compiled to each target, and `POST`/`GET …/call` to apply one.
+
+```bash
+contrib/formula-service/bin/elo-formula-service --port 3000
+curl 'http://localhost:3000/iban/call?iban=BE68+5390+0754+7034'
+# {"valid":true,"country":"BE","formatted":"BE68 5390 0754 7034"}
+```
+
+It compiles each formula once at boot, runs every case before it listens, and
+runs each call in a worker thread under a time and memory cap.
 
 ### Using the API
 
@@ -814,8 +828,11 @@ elo/
 │   ├── integration/  # Compilation tests
 │   └── acceptance/   # Runtime execution tests
 ├── examples/         # Usage examples
-│   ├── formulas/     # A catalogue of formula bundles (see its BUNDLE.md)
-│   └── formula-bundle.ts  # The bundle format's reference implementation
+├── contrib/          # Hosts and integrations, none of them the compiler
+│   ├── formula-service/  # A REST API over a catalogue of formula bundles,
+│   │                     # the bundle format, and thirteen formulas
+│   ├── sandboxes/    # Running compiled code under a time and memory cap
+│   └── …             # Editor and highlighter plugins
 ├── bin/eloc          # Compiler CLI
 ├── bin/elo           # Evaluator CLI
 └── CLAUDE.md         # Developer guide
