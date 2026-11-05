@@ -1,0 +1,18 @@
+# A type selector applied to a value whose type is not statically known goes
+# through the dynamic dispatcher instead of the typed emission. The two must
+# answer the same thing — a lambda parameter is typed `any`, which is how a
+# fixture reaches that path.
+assert((let f = fn( s ~> Int(s) ) in f('42')) == 42)
+assert((let f = fn( s ~> Int(s) ) in f('-42')) == -42)
+assert((let f = fn( s ~> Int(s) ) in f('08')) == 8)
+assert((let f = fn( s ~> Int(s) ) in f('010')) == 10)
+assert((let f = fn( s ~> Int(s) ) in f('-08')) == -8)
+assert((let f = fn( s ~> Int(s) ) in f(3.7)) == 3)
+assert((let f = fn( s ~> Float(s) ) in f('2.5')) == 2.5)
+assert((let f = fn( s ~> Float(s) ) in f('08.5')) == 8.5)
+assert((let f = fn( s ~> Float(s) ) in f(3)) == 3.0)
+assert((let f = fn( s ~> String(s) ) in f(42)) == '42')
+assert((let f = fn( s ~> Bool(s) ) in f('true')) == true)
+assert((let f = fn( s ~> Date(s) ) in f('2025-01-15')) == D2025-01-15)
+assert((let f = fn( s ~> Duration(s) ) in f('P1D')) == P1D)
+assertFails(fn( ~> let f = fn( s ~> Int(s) ) in f('abc') ))

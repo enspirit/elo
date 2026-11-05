@@ -18,4 +18,4 @@
 ->(_) { (raise "Assertion failed" unless 3.7.to_i == 3; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 42.to_s == "42"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("2.5") == 2.5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (->(s) { Integer(s) rescue raise ".: expected Int, got #{s.inspect}" }).call("42") == 42; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("42") == 42; true) }.call(nil);

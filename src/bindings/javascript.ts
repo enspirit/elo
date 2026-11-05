@@ -504,7 +504,12 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
   jsLib.register('Int', [Types.int], identity());
   jsLib.register('Int', [Types.float], (args, ctx) => `Math.trunc(${ctx.emit(args[0])})`);
   jsLib.register('Int', [Types.string], parserUnwrap('pInt'));
-  jsLib.register('Int', [Types.any], parserUnwrap('pInt'));
+  // An untyped value may still be a Float, which Int() truncates — the schema
+  // parser alone would refuse it, and the typed emission above does not.
+  jsLib.register('Int', [Types.any], (args, ctx) => {
+    ctx.requireHelper('kInt');
+    return `kInt(${ctx.emit(args[0])})`;
+  });
 
   // Float - identity for float/int, parse for string
   jsLib.register('Float', [Types.float], identity());

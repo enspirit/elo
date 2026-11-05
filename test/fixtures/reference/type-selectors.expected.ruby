@@ -1,12 +1,28 @@
 ->(_) { (raise "Assertion failed" unless 123 == 123; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (->(s) { Integer(s) rescue raise ".: expected Int, got #{s.inspect}" }).call("123") == 123; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (->(s) { Integer(s) rescue raise ".: expected Int, got #{s.inspect}" }).call("-42") == -42; true) }.call(nil);
-->(_) { (begin; (->() { (->(s) { Integer(s) rescue raise ".: expected Int, got #{s.inspect}" }).call("abc") }).call; raise "Expected error but none thrown"; rescue => e; raise e if e.message == "Expected error but none thrown"; true; end) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("123") == 123; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("-42") == -42; true) }.call(nil);
+->(_) { (begin; (->() { (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("abc") }).call; raise "Expected error but none thrown"; rescue => e; raise e if e.message == "Expected error but none thrown"; true; end) }.call(nil);
+
+
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("08") == 8; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("09") == 9; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("010") == 10; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("007") == 7; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("-08") == -8; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("01234567") == 1234567; true) }.call(nil);
+
+->(_) { (begin; (->() { (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("12abc") }).call; raise "Expected error but none thrown"; rescue => e; raise e if e.message == "Expected error but none thrown"; true; end) }.call(nil);
+->(_) { (begin; (->() { (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call("1.5") }).call; raise "Expected error but none thrown"; rescue => e; raise e if e.message == "Expected error but none thrown"; true; end) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 3.14 == 3.14; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("3.14") == 3.14; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("-2.5") == -2.5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("123") == 123.0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("08.5") == 8.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("1e3") == 1000.0; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call(".5") == 0.5; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("1.") == 1.0; true) }.call(nil);
 ->(_) { (begin; (->() { (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("abc") }).call; raise "Expected error but none thrown"; rescue => e; raise e if e.message == "Expected error but none thrown"; true; end) }.call(nil);
+->(_) { (begin; (->() { (->(s) { Float(s) rescue raise ".: expected Float, got #{s.inspect}" }).call("2.5abc") }).call; raise "Expected error but none thrown"; rescue => e; raise e if e.message == "Expected error but none thrown"; true; end) }.call(nil);
 ->(_) { (raise "Assertion failed" unless true == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless false == false; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { case s when 'true'; true when 'false'; false else raise ".: expected Bool, got #{s.inspect}" end }).call("true") == true; true) }.call(nil);

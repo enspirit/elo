@@ -4,6 +4,20 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `Int()` of a string meant three different things. **Ruby** read a leading
+  zero as an octal prefix, so `Int('08')` raised and `Int('010')` was `8` where
+  the other three targets answer `10` — every formula that parses a zero-padded
+  identifier (a VAT number, a national register number, a postal code) was
+  wrong or refused there. **JavaScript** parsed with `parseInt`/`parseFloat`,
+  which stop at the first character they do not understand, so `Int('12abc')`
+  was `12` and `Float('2.5abc')` was `2.5` where the other three refuse — and
+  since that is the schema parser too, `{"age": "30 years"} |> { age: Int }`
+  validated to `30` on JavaScript and failed on Ruby and Python. **JavaScript**
+  also refused `Int(x)` on a Float it could not type statically, while its own
+  typed `Int(3.7)` truncates, as all four targets do
+
 ## [1.2.1] - 2026-11-03
 
 ### Security

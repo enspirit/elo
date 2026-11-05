@@ -458,11 +458,13 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   rubyLib.register('Int', [Types.float], rubyMethod('to_i'));
   rubyLib.register('Int', [Types.string], (args, ctx) => {
     const v = ctx.emit(args[0]);
-    return `(->(s) { Integer(s) rescue raise ".: expected Int, got #{s.inspect}" }).call(${v})`;
+    // Base 10 explicitly: Kernel#Integer reads a leading zero as octal, so a
+    // zero-padded decimal string would be a different number, or a refusal.
+    return `(->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call(${v})`;
   });
   rubyLib.register('Int', [Types.any], (args, ctx) => {
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when Integer; v when Float; v.to_i when String; Integer(v) rescue raise ".: expected Int, got #{v.inspect}" else raise ".: expected Int, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when Integer; v when Float; v.to_i when String; Integer(v, 10) rescue raise ".: expected Int, got #{v.inspect}" else raise ".: expected Int, got #{v.class}" end }).call(${v})`;
   });
 
   // Float - identity for float, convert for int, parse for string

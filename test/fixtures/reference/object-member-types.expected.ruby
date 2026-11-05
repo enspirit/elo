@@ -48,7 +48,7 @@
 
 ->(_) { (raise "Assertion failed" unless (o = {n: 10}; o[:n]) == 10; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (o = {n: 10}; o[:n] + 5) == 15; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (o = {x: "12"}; (->(s) { Integer(s) rescue raise ".: expected Int, got #{s.inspect}" }).call(->() { v = o[:x]; return v unless v.nil?; 0 }.call)) == 12; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (o = {x: "12"}; (->(s) { Integer(s, 10) rescue raise ".: expected Int, got #{s.inspect}" }).call(->() { v = o[:x]; return v unless v.nil?; 0 }.call)) == 12; true) }.call(nil);
 
 
 

@@ -70,6 +70,7 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   kMax2: [],
   kRound: [],
   kRoundTo: ['kRound'],
+  kInt: ['pInt', 'pUnwrap', 'pOk', 'pFail'],
   kNeq: ['kEq'],
   kMember: [],
   kFetch: ['kMember'],
@@ -253,19 +254,10 @@ export const JS_HELPERS: Record<string, string> = {
   }
   return result;
 }`,
-  // Type selectors
-  kInt: `function kInt(v) {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'number') return Math.trunc(v);
-  if (typeof v === 'string') { const n = parseInt(v, 10); return isNaN(n) ? null : n; }
-  return null;
-}`,
-  kFloat: `function kFloat(v) {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'number') return v;
-  if (typeof v === 'string') { const n = parseFloat(v); return isNaN(n) ? null : n; }
-  return null;
-}`,
+  // Type selectors. The Int() selector on a value the compiler could not type:
+  // a number truncates, as the typed Int(Float) emission does; anything else
+  // goes through the schema parser, which is strict about what a String holds.
+  kInt: `function kInt(v) { return typeof v === 'number' ? Math.trunc(v) : pUnwrap(pInt(v, '')); }`,
   kBool: `function kBool(v) {
   if (v === null || v === undefined) return null;
   if (typeof v === 'boolean') return v;
@@ -335,7 +327,7 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   pInt: `function pInt(v, p) {
   if (typeof v === 'number' && Number.isInteger(v)) return pOk(v, p);
-  if (typeof v === 'string') { const n = parseInt(v, 10); if (!isNaN(n)) return pOk(n, p); }
+  if (typeof v === 'string' && /^[+-]?\\d+$/.test(v.trim())) return pOk(parseInt(v.trim(), 10), p);
   return pFail(p, 'expected Int, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pBool: `function pBool(v, p) {
@@ -351,7 +343,7 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   pFloat: `function pFloat(v, p) {
   if (typeof v === 'number') return pOk(v, p);
-  if (typeof v === 'string') { const n = parseFloat(v); if (!isNaN(n)) return pOk(n, p); }
+  if (typeof v === 'string' && /^[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?$/.test(v.trim())) return pOk(parseFloat(v.trim()), p);
   return pFail(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pDate: `function pDate(v, p) {

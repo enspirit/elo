@@ -47,8 +47,8 @@ import Footer from '../components/Footer.astro';
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Int</div>
             <div class="fn-sig">(value: String | Int | Float) → Int</div>
-            <p class="fn-desc">Parses a string to an integer. Throws on invalid input.</p>
-            <div class="fn-example"><code class="language-elo">Int('123')</code><span class="fn-result">→ 123</span></div>
+            <p class="fn-desc">Parses a decimal string to an integer — a leading zero is a zero, not a base. Truncates a float. Throws on anything else, including a string with trailing characters.</p>
+            <div class="fn-example"><code class="language-elo">Int('0123')</code><span class="fn-result">→ 123</span></div>
           </div>
           <div class="stdlib-fn" data-action="click->doc#tryExample">
             <div class="fn-name">Float</div>
