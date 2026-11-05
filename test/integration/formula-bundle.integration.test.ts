@@ -7,6 +7,7 @@ import {
   loadBundle,
   loadCatalogue,
   runCases,
+  runRefusals,
   validateBundle,
   apply,
   describeFields,
@@ -62,6 +63,14 @@ describe('Formula bundles - the catalogue', () => {
       it('passes its own cases', () => {
         const wrong = runCases(bundle).filter(row => !row.ok);
         assert.deepEqual(wrong.map(row => row.name), []);
+      });
+
+      it('refuses what it says it refuses', () => {
+        // The other half of the contract. A refusal cannot be checked from
+        // inside Elo — there is no catching a failure there — so the host
+        // applies each one and reads the kind, path and label off it.
+        const wrong = runRefusals(bundle).filter(row => !row.ok);
+        assert.deepEqual(wrong.map(row => `${row.name}: ${JSON.stringify(row.got)}`), []);
       });
 
       it('answers a case input through the service expression', () => {
@@ -247,6 +256,63 @@ describe('Formula bundles - refreshing the fields file', () => {
   });
 });
 
+describe('Formula bundles - the refusals', () => {
+  /** A copy of a real bundle, to put a wrong refusal in. */
+  function copyOf(id: string) {
+    const dir = mkdtempSync(join(tmpdir(), 'elo-bundle-'));
+    const copy = join(dir, id);
+    cpSync(join(CATALOGUE, id), copy, { recursive: true });
+    return { copy, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+  }
+
+  it('are in the catalogue, over every kind Elo reports', () => {
+    const kinds = new Set(catalogue.flatMap(bundle => bundle.refusals.map(refusal => refusal.kind)));
+    // Not every bundle has refusals, but the catalogue has to show each kind
+    // at least once: they are what a client branches on.
+    for (const kind of ['schema', 'missing', 'constraint', 'guard'] as const) {
+      assert.ok(kinds.has(kind), `no bundle demonstrates a ${kind} refusal`);
+    }
+  });
+
+  it('say only what Elo promises about a refusal', () => {
+    for (const bundle of catalogue) {
+      for (const refusal of bundle.refusals) {
+        assert.deepEqual(
+          Object.keys(refusal).filter(key => !['name', 'input', 'kind', 'path', 'label'].includes(key)),
+          [],
+          `${bundle.id}: '${refusal.name}' says more than kind, path and label`
+        );
+      }
+    }
+  });
+
+  it('report what the formula actually did when they are wrong', () => {
+    const { copy, cleanup } = copyOf('leap-year');
+    try {
+      const cases = join(copy, 'cases.elo');
+      writeFileSync(cases, readFileSync(cases, 'utf-8').replace("label: 'gregorian'", "label: 'notQuite'"));
+      const [wrong] = runRefusals(loadBundle(copy)).filter(row => !row.ok);
+      assert.equal(wrong.answered, false, 'it refused, just not the way the bundle said');
+      assert.equal(wrong.got?.label, 'gregorian');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('are wrong when the formula answers instead of refusing', () => {
+    const { copy, cleanup } = copyOf('leap-year');
+    try {
+      const cases = join(copy, 'cases.elo');
+      // 2024 is a year the formula is perfectly happy with.
+      writeFileSync(cases, readFileSync(cases, 'utf-8').replace('input: {year: 1500}', 'input: {year: 2024}'));
+      const [wrong] = runRefusals(loadBundle(copy)).filter(row => !row.ok);
+      assert.equal(wrong.answered, true, 'the formula answered an input the bundle called a refusal');
+    } finally {
+      cleanup();
+    }
+  });
+});
+
 describe('Formula bundles - what the lint refuses', () => {
   /** A copy of a real bundle, to break one rule of. */
   function brokenCopy(id: string, edit: (dir: string) => void) {
@@ -334,6 +400,36 @@ describe('Formula bundles - what the lint refuses', () => {
     const { copy, cleanup } = brokenCopy('leap-year', dir => rmSync(join(dir, 'fields.elo')));
     try {
       assert.throws(() => loadBundle(copy), /fields\.elo is missing/);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('refuses a refusal whose kind is not one Elo reports', () => {
+    const { copy, cleanup } = brokenCopy('leap-year', dir =>
+      patch(join(dir, 'cases.elo'), "kind: 'constraint'", "kind: 'wrong'"));
+    try {
+      assert.match(validateBundle(loadBundle(copy)).join('\n'), /has kind "wrong", not one of/);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('refuses a refusal that carries an expect, which is what a case has', () => {
+    const { copy, cleanup } = brokenCopy('leap-year', dir =>
+      patch(join(dir, 'cases.elo'), "kind: 'missing',\n      path: '.year'", "kind: 'missing',\n      expect: true"));
+    try {
+      assert.match(validateBundle(loadBundle(copy)).join('\n'), /has an expect, which is what a case has/);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('refuses a refusal whose path is not a path', () => {
+    const { copy, cleanup } = brokenCopy('leap-year', dir =>
+      patch(join(dir, 'cases.elo'), "path: '.year',\n      label: 'gregorian'", "path: 'year',\n      label: 'gregorian'"));
+    try {
+      assert.match(validateBundle(loadBundle(copy)).join('\n'), /does not start with a dot/);
     } finally {
       cleanup();
     }

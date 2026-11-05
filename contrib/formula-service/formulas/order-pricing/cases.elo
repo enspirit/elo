@@ -30,5 +30,29 @@
       input: {unitPrice: 12.5, quantity: 50, tier: 'silver', vatRate: 0.06},
       expect: {subtotal: 625, discountRate: 13, discount: 81.25, net: 543.75, vat: 32.63, total: 576.38}
     }
+  ],
+  refusals: [
+    {
+      name: 'a tier nobody is on',
+      input: {unitPrice: 19.99, quantity: 1, tier: 'platinum', vatRate: 0.21},
+      kind: 'constraint',
+      path: '.tier',
+      label: 'known'
+    },
+    {
+      name: 'none of it ordered',
+      input: {unitPrice: 19.99, quantity: 0, tier: 'standard', vatRate: 0.21},
+      kind: 'constraint',
+      path: '.quantity',
+      label: 'atLeastOne'
+    },
+    {
+      name: 'a coupon of more than everything',
+      input: {unitPrice: 19.99, quantity: 1, tier: 'standard', vatRate: 0.21, couponPercent: 150},
+      kind: 'constraint',
+      path: '.couponPercent',
+      label: 'aPercentage'
+    }
   ]
+
 }

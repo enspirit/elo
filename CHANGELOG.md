@@ -6,6 +6,26 @@ All notable changes to Elo are documented in this file.
 
 ### Added
 
+- A formula bundle can now write down **what it refuses**, not only what it
+  answers. Beside `cases`, `cases.elo` holds `refusals`: inputs the formula
+  does not take, each with the `kind`, `path` and `label` Elo reports for one —
+  a field missing, a value of the wrong shape, a constraint that does not hold,
+  or a **`guard`** over something no type can express, like one date having to
+  be on or after another (`age` gained exactly that precondition). The message
+  is deliberately not among them: it is prose, and a bundle that pinned it
+  would break on a reworded sentence. `refusals` is optional, so every existing
+  bundle stays valid and this is still bundle format `1`.
+
+  A refusal cannot be checked from inside Elo — an expression that refuses its
+  input stops, and there is no catching it — so the host applies each one:
+  `runRefusals` in the reference implementation, and
+  `test/acceptance/test-formulas.sh` against JavaScript, Ruby and Python
+  through a driver that catches the failure and prints `kind|path|label`. The
+  first run of those found the Ruby path bug below. The service publishes them
+  in the descriptor, documents them as the `422` examples of its OpenAPI, and
+  tabulates them on the page with a row that fills the form so the message can
+  be watched landing on the field
+
 - **A REST API over a catalogue of formula bundles**,
   `contrib/formula-service`: an index, a descriptor per formula, the five files
   of each bundle, the program it runs compiled to JavaScript, Ruby and Python,

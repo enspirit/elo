@@ -7,9 +7,15 @@
 #
 # The reference day is an input rather than TODAY, so that the answer is a
 # function of its arguments and the case table below can be written at all.
+#
+# The one precondition no type can carry: `on` has to be on or after
+# `birthDate`. A type constrains a field, and this is a relation between two of
+# them — so it is a `guard`, and a caller that gets it wrong is told which rule
+# refused rather than handed a negative age.
 
 let
   age = fn( input ~>
+    guard bornFirst: input.on >= input.birthDate in
     let
       birth = input.birthDate,
       on = input.on,

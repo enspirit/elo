@@ -83,6 +83,16 @@ the compiler is already there.
 construction, so "try this example" is a POST of one unchanged — and the
 documentation of the API is its test suite.
 
+`refusals` is the other half of that, and the half a client writes error
+handling against: the inputs the formula **does not take**, each with the
+`kind`, `path` and `label` it answers for one. What refuses is either the
+declared type — a field missing, a value of the wrong shape, a constraint that
+does not hold — or the formula itself, through a `guard` over something no type
+can express, like one date having to be on or after another. Both are
+preconditions, and a caller needs both. They are also the examples of the
+`422` in the OpenAPI document, and a table on the page whose rows fill the form
+so you can watch the message land on the field.
+
 ### The form, and the page
 
 `GET /{id}/form` answers an HTML `<form>` built from `fields.elo` — the
@@ -380,6 +390,7 @@ linking to the formula that answers it.
 | `/order-pricing` with a bad value | a refusal lands under the field that caused it — that is §5's `field` key doing its job |
 | any page, bottom half | **Call it from your code**: curl, JavaScript, Ruby and Python, filled in with a real case |
 | `/leap-year` | click a case: it fills the form and answers, so the next thing you try starts from a real input |
+| `/leap-year`, **What it refuses** | click one of those: the form fills with an input that is *supposed* to fail, and the message lands on the field |
 | `/order-lines` | no form — its input is a table — but its columns and the `curl` that sends one |
 | `/iban` | open **What runs**: the program itself, and links to the five files it came from |
 

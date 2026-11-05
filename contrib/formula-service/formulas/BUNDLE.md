@@ -199,6 +199,67 @@ shape is part of what it promises, and a case that checks three of six fields
 promises nothing about the other three. `Output` says what those fields are;
 the cases say what is in them.
 
+### `refusals`: the other half of the contract
+
+A formula promises two things, and a case table that writes down only the first
+is half a specification. Beside `cases`, the same file holds the inputs the
+formula **does not take**:
+
+```elo
+{
+  cases: [ … ],
+
+  refusals: [
+    {
+      name: 'a year before the Gregorian calendar',
+      input: { year: 1500 },
+      kind: 'constraint',
+      path: '.year',
+      label: 'gregorian'
+    },
+    {
+      name: 'a day before the birth, which no age answers',
+      input: { birthDate: '1990-03-15', on: '1989-01-01' },
+      kind: 'guard',
+      label: 'bornFirst'
+    }
+  ]
+}
+```
+
+What refuses is either the **declared type** — a field missing, a value of the
+wrong shape, a constraint that does not hold — or the **formula itself**,
+through a `guard` over something no type can express: a relation between two
+fields, like one date having to be on or after another. Both are preconditions,
+and a caller needs to know both.
+
+| Key | | |
+| --- | --- | --- |
+| `name` | required | what the refusal is about, in words |
+| `input` | required | JSON-shaped, exactly as for a case |
+| `kind` | required | `schema`, `missing`, `constraint`, `guard` or `check` |
+| `path` | optional | where in the input, dotted; `.` is the whole of it |
+| `label` | optional | the name the constraint, guard or check was written under |
+
+Those are precisely the three things Elo promises about a refusal. The
+**message is not among them** on purpose: it is prose, and a bundle that pinned
+it would break on a reworded sentence. `path` and `label` are checked only when
+the bundle states them, so a refusal may promise just the kind where that is
+all there is to promise.
+
+`refusals` is optional, so a bundle that has none is still a bundle, and this
+is still format `1`.
+
+**A refusal cannot be checked from inside Elo**, and that is a language
+decision rather than a gap in this format: an expression that refuses its input
+stops, and Elo has no way to catch that. So where the case runner is generated
+*as Elo* (below), the refusals are applied by the **host**, one at a time, in
+whatever language it is written in. `runRefusals` in the reference
+implementation is that, and `test/acceptance/test-formulas.sh` does the same
+against JavaScript, Ruby and Python — because a `kind` or a `label` that only
+one target reports is a bug worth finding. The first run of those checks found
+one.
+
 ## `bundle.json`
 
 ```json
@@ -327,9 +388,12 @@ A bundle is valid when:
    whether it is required, whether it repeats and what may refuse it, and each
    option accepted by the type that names it;
 4. `cases.elo` exports `cases`, a non-empty list of `{ name, input, expect }`,
-   every `input` JSON-shaped;
+   every `input` JSON-shaped — and, optionally, `refusals`, a list of
+   `{ name, input, kind }` with an optional `path` and `label`, every `kind`
+   one of the five Elo reports and every `input` JSON-shaped;
 5. `bundle.json` has `bundle` and `version`;
-6. every case passes, on JavaScript, Ruby and Python.
+6. every case passes, and every refusal refuses what it says it does, on
+   JavaScript, Ruby and Python.
 
 `../src/bundle.ts` is the reference implementation of all six, and
 `test/integration/formula-bundle.integration.test.ts` runs it over every bundle

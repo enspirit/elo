@@ -219,10 +219,44 @@ function responses(formula: ServedFormula, key: string): Record<string, unknown>
   for (const [status, description] of FAILURES) {
     answered[status] = {
       description,
-      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/Error' },
+          // The 422 gets examples, because the bundle has real ones: a
+          // refusal is an input that really is refused, and what it answers
+          // is the body a client has to be ready for.
+          ...(status === '422' ? refusalExamples(formula) : {}),
+        },
+      },
     };
   }
   return answered;
+}
+
+/**
+ * The refusals, as examples of the `422`.
+ *
+ * Each one is what the service answers for that input — the `kind`, the
+ * `path`, the `field` that §5 derives from it, and the `label` where there is
+ * one. The message is left out: it is prose, and the bundle does not promise
+ * it either.
+ */
+function refusalExamples(formula: ServedFormula): Record<string, unknown> {
+  const refusals = formula.descriptor.refusals;
+  if (refusals.length === 0) return {};
+  const examples: Record<string, unknown> = {};
+  for (const refusal of refusals) {
+    examples[refusal.name] = {
+      summary: `${refusal.name} — for input ${JSON.stringify(refusal.input)}`,
+      value: {
+        kind: refusal.kind,
+        ...(refusal.path ? { path: refusal.path, field: refusal.path.replace(/^\./, '') } : {}),
+        ...(refusal.label ? { label: refusal.label } : {}),
+        message: '…',
+      },
+    };
+  }
+  return { examples };
 }
 
 /**

@@ -88,6 +88,17 @@ Formula.Case = {
   expect : Any
 }
 
+# A refusal: a request body, and what the service says about it instead of
+# answering. `kind`, `path` and `label` are what Elo promises about a refusal;
+# the message is prose and is not here, in the bundle or in the descriptor.
+Formula.Refusal = {
+  name  : String
+  input : Any
+  kind  : String
+  path  :? String
+  label :? String
+}
+
 # What `GET /{id}@{version}` answers: the bundle, flattened.
 Formula.Descriptor = {
   id         : String
@@ -99,6 +110,7 @@ Formula.Descriptor = {
   fields     : [Form.Field]
   answers    : [Form.Answer]
   cases      : [Formula.Case]
+  refusals   : [Formula.Refusal]
   targets    : [String]
   links      : Links
   license    :? String

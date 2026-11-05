@@ -42,6 +42,10 @@ Webspicy::Configuration.new(Path.dir) do |c|
   # test suite. `support/postconditions/` has the condition that proves it.
   c.postcondition CaseIsWhatTheCallAnswers
 
+  # And the other half of that table: what the formula refuses, which is what
+  # a client writes its error handling against.
+  c.postcondition RefusalIsWhatTheCallRefuses
+
   # §9: a generated OpenAPI document is either valid or useless, and only a
   # parser can say which. Webspicy brings one.
   c.postcondition IsAValidOpenapiDocument

@@ -82,11 +82,49 @@ export interface FieldDescriptor {
   placeholder?: string;
 }
 
-/** One case of `cases.elo`. */
+/** One case of `cases.elo`: an input, and the answer it gets. */
 export interface FormulaCase {
   name: string;
   input: unknown;
   expect: unknown;
+}
+
+/**
+ * One **refusal** of `cases.elo`: an input the formula does not take, and what
+ * it says about it.
+ *
+ * A formula's contract has two halves and a case table that only writes down
+ * the first one is only half a specification. What refuses can be the declared
+ * type — a field missing, a value of the wrong shape, a constraint that does
+ * not hold — or the formula itself, through a `guard` over something no type
+ * can express, like one field having to be before another.
+ *
+ * `kind`, `path` and `label` are exactly what Elo promises about a refusal, so
+ * they are what a refusal is written in terms of. The *message* is prose and
+ * is deliberately absent: pinning it here would make a reworded sentence a
+ * broken bundle.
+ */
+export interface FormulaRefusal {
+  name: string;
+  input: unknown;
+  /** Which construct refused. */
+  kind: RefusalKind;
+  /** Where in the input, for a `schema` or a `missing`. */
+  path?: string;
+  /** The name the constraint, guard or check was written under. */
+  label?: string;
+}
+
+export const REFUSAL_KINDS = ['schema', 'missing', 'constraint', 'guard', 'check'] as const;
+export type RefusalKind = (typeof REFUSAL_KINDS)[number];
+
+/** One refusal, run: what the formula did, and whether that was the promise. */
+export interface RefusalResult extends FormulaRefusal {
+  /** What was raised, or nothing when the formula answered instead. */
+  got?: { kind?: string; path?: string; label?: string };
+  /** True when the formula answered an input it was supposed to refuse. */
+  answered: boolean;
+  ok: boolean;
 }
 
 /** One case, run. */
@@ -115,6 +153,8 @@ export interface Bundle {
   /** The input form, as `fields.elo` holds it. */
   form: FieldDescriptor[];
   cases: FormulaCase[];
+  /** The inputs it refuses, and what it says about them. */
+  refusals: FormulaRefusal[];
   /**
    * What `types.elo` declares, by name, `Input` and `Output` among them.
    *
@@ -172,8 +212,11 @@ export function loadBundle(dir: string, root?: string): Bundle {
   if (!input) throw new Error(`${id}: types.elo does not declare 'Input'`);
   if (!output) throw new Error(`${id}: types.elo does not declare 'Output'`);
 
-  const cases = (compile<(input: null) => { cases?: unknown }>(casesSource, { runtime: RUNTIME })(null)
-    ?.cases ?? []) as FormulaCase[];
+  const declared = compile<(input: null) => { cases?: unknown; refusals?: unknown }>(
+    casesSource, { runtime: RUNTIME }
+  )(null);
+  const cases = (declared?.cases ?? []) as FormulaCase[];
+  const refusals = (declared?.refusals ?? []) as FormulaRefusal[];
   const form = (compile<(input: null) => { fields?: unknown }>(fieldsSource, { runtime: RUNTIME })(null)
     ?.fields ?? []) as FieldDescriptor[];
 
@@ -189,6 +232,7 @@ export function loadBundle(dir: string, root?: string): Bundle {
     casesSource,
     form,
     cases,
+    refusals,
     types,
   };
 }
@@ -619,6 +663,49 @@ export function runCases(bundle: Bundle): CaseResult[] {
   return compileInBundle<CaseResult[]>(bundle, caseRunnerSource())(null);
 }
 
+/**
+ * The refusals, run — which the host has to do, and the generated Elo runner
+ * cannot.
+ *
+ * Elo has no way to catch a failure. That is a language decision rather than a
+ * gap: a formula is an expression, and an expression that refuses its input
+ * stops. So a refusal cannot be checked from inside Elo the way a case is; it
+ * takes a host that can `try`, and this is the reference one. The acceptance
+ * suite does the same thing against JavaScript, Ruby and Python, because a
+ * `kind` or a `label` that only one target reports is the bug this catches.
+ */
+export function runRefusals(bundle: Bundle): RefusalResult[] {
+  const apply = compileInBundle<unknown>(bundle, serviceSource());
+  return bundle.refusals.map(refusal => {
+    try {
+      apply(refusal.input);
+      // It answered. Whatever that answer was, the bundle said there would not
+      // be one, and that is the most interesting way for this to fail.
+      return { ...refusal, answered: true, ok: false };
+    } catch (error) {
+      const failure = error as { kind?: string; path?: string; label?: string };
+      const got = { kind: failure.kind, path: failure.path, label: failure.label };
+      return { ...refusal, got, answered: false, ok: agrees(refusal, got) };
+    }
+  });
+}
+
+/**
+ * Whether a refusal is the one the bundle wrote down.
+ *
+ * `kind` is compared always; `path` and `label` only when the bundle says
+ * what they should be. A refusal that names just the kind is a weaker promise
+ * on purpose — it is the one worth making where Elo promises nothing more.
+ */
+export function agrees(
+  refusal: FormulaRefusal,
+  got: { kind?: string; path?: string; label?: string }
+): boolean {
+  return got.kind === refusal.kind
+    && (refusal.path === undefined || got.path === refusal.path)
+    && (refusal.label === undefined || got.label === refusal.label);
+}
+
 /** Apply the formula to one input, as the web service would. */
 export function apply(bundle: Bundle, input: unknown): unknown {
   return compileInBundle<unknown>(bundle, serviceSource())(input);
@@ -773,6 +860,22 @@ export function validateBundle(bundle: Bundle): string[] {
     if (!isJsonShaped(testCase.input)) say(`${where} has an input that is not JSON-shaped`);
   });
 
+  // A refusal says what Elo promises about one — and nothing else. `message`
+  // in particular: it is prose, and a bundle that pinned it would break on a
+  // reworded sentence.
+  bundle.refusals.forEach((refusal, index) => {
+    const where = refusal.name ? `refusal '${refusal.name}'` : `refusal ${index + 1}`;
+    if (typeof refusal.name !== 'string' || refusal.name === '') say(`refusal ${index + 1} has no name`);
+    if (!REFUSAL_KINDS.includes(refusal.kind)) {
+      say(`${where} has kind ${JSON.stringify(refusal.kind)}, not one of ${REFUSAL_KINDS.join(', ')}`);
+    }
+    if (!isJsonShaped(refusal.input)) say(`${where} has an input that is not JSON-shaped`);
+    if ('expect' in refusal) say(`${where} has an expect, which is what a case has`);
+    if (refusal.path !== undefined && !refusal.path.startsWith('.')) {
+      say(`${where} has path '${refusal.path}', which does not start with a dot`);
+    }
+  });
+
   return problems;
 }
 
@@ -805,6 +908,22 @@ function show(bundle: Bundle): void {
     if (!row.ok) console.log(`      want ${toEloCode(row.expect)}`);
   }
 
+  if (bundle.refusals.length > 0) {
+    console.log('\n## What it refuses');
+    for (const row of runRefusals(bundle)) {
+      const promised = [row.kind, row.path, row.label].filter(part => part !== undefined).join(' ');
+      console.log(`  ${row.ok ? '✓' : '✗'} ${row.name}`);
+      console.log(`      in   ${JSON.stringify(row.input)}`);
+      console.log(`      ${row.ok ? 'refused' : 'wanted '} ${promised}`);
+      if (row.answered) console.log('      but it answered');
+      else if (!row.ok) {
+        const got = [row.got?.kind, row.got?.path, row.got?.label]
+          .filter(part => part !== undefined).join(' ');
+        console.log(`      got     ${got}`);
+      }
+    }
+  }
+
   const problems = validateBundle(bundle);
   console.log(`\n## Validity\n  ${problems.length === 0 ? 'valid' : problems.join('\n  ')}`);
 }
@@ -824,13 +943,27 @@ export function main(args: string[]): void {
     process.stdout.write(caseRunnerSource({ assert: true }));
   } else if (id === '--service') {
     process.stdout.write(serviceSource());
+  } else if (id === '--refusals') {
+    // For a runner that is not a TypeScript host: the acceptance script reads
+    // this and applies each input on every target, because a `kind` or a
+    // `label` that only one of them reports is the bug worth catching.
+    //
+    //     <name> TAB <kind>|<path>|<label> TAB <input as JSON>
+    //
+    // An unstated path or label is empty, which is how `guard||bornFirst`
+    // says "a guard, with a label and no path".
+    for (const refusal of loadBundle(join(root, args[1]), root).refusals) {
+      const promised = [refusal.kind, refusal.path ?? '', refusal.label ?? ''].join('|');
+      process.stdout.write(`${refusal.name}\t${promised}\t${JSON.stringify(refusal.input)}\n`);
+    }
   } else if (id === '--fields') {
     // Refresh a bundle's fields.elo from its Input, keeping what was written by
     // hand. Writes the file:  elo-formulas --fields iban
     const { file, changed } = refreshFieldsFile(join(root, args[1]));
     console.log(changed ? `${file} refreshed` : `${file} was already up to date`);
   } else if (id?.startsWith('--')) {
-    console.error('usage: elo-formulas [<bundle-id> | --fields <bundle-id> | --runner | --service]');
+    console.error('usage: elo-formulas [<bundle-id> | --fields <bundle-id> | --refusals <bundle-id>'
+      + ' | --runner | --service]');
     process.exitCode = 1;
   } else if (!id) {
     for (const bundle of loadCatalogue(root)) {

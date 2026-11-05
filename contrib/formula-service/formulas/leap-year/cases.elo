@@ -35,5 +35,27 @@
       input: {year: 2300},
       expect: false
     }
+  ],
+  refusals: [
+    {
+      name: 'a year before the Gregorian calendar',
+      input: {year: 1500},
+      kind: 'constraint',
+      path: '.year',
+      label: 'gregorian'
+    },
+    {
+      name: 'a year that is not a number',
+      input: {year: 'MMXXIV'},
+      kind: 'schema',
+      path: '.year'
+    },
+    {
+      name: 'no year at all',
+      input: {},
+      kind: 'missing',
+      path: '.year'
+    }
   ]
+
 }

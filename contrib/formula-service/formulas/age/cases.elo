@@ -40,5 +40,26 @@
       input: {birthDate: '2008-11-06', on: '2026-11-05'},
       expect: {years: 17, isAdult: false, birthdayToday: false}
     }
+  ],
+  refusals: [
+    {
+      name: 'a day before the birth, which no age answers',
+      input: {birthDate: '1990-03-15', on: '1989-01-01'},
+      kind: 'guard',
+      label: 'bornFirst'
+    },
+    {
+      name: 'a date that is not one',
+      input: {birthDate: 'the fifteenth', on: '2026-11-05'},
+      kind: 'schema',
+      path: '.birthDate'
+    },
+    {
+      name: 'the reference day left out',
+      input: {birthDate: '1990-03-15'},
+      kind: 'missing',
+      path: '.on'
+    }
   ]
+
 }

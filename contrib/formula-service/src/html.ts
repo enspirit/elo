@@ -259,6 +259,7 @@ export function formulaPage(formula: ServedFormula, origin = ''): string {
     resultPanel(),
     answerTable(formula),
     caseTable(formula),
+    refusalTable(formula),
     snippets(formula, origin),
     sources(formula),
     // Only where there is a form to enhance. A formula that takes a table has
@@ -572,14 +573,9 @@ function caseTable(formula: ServedFormula): string {
   const rows = formula.descriptor.cases.map(testCase => {
     const link = tryLink(formula, testCase);
     const name = escapeHtml(testCase.name);
-    // `data-elo-case` is what the enhancement hooks: clicking fills the form
-    // with this case and answers in place. The `href` is what happens without
-    // it, and the two are the same request — the link *is* the case.
-    const anchor = `<a href="${escapeHtml(link ?? '')}" data-elo-case`
-      + ` title="Fill the form with this case, and answer it">${name}</a>`;
     return [
       '<tr>',
-      `<td>${link === undefined ? name : anchor}</td>`,
+      `<td>${tryAnchor(formula, name, link, 'case')}</td>`,
       `<td><code>${escapeHtml(JSON.stringify(testCase.input))}</code></td>`,
       `<td><code>${escapeHtml(stringify(testCase.expect))}</code></td>`,
       '</tr>',
@@ -592,6 +588,30 @@ function caseTable(formula: ServedFormula): string {
     `<tbody>${rows.join('')}</tbody>`,
     '</table>',
   ].join('\n');
+}
+
+/**
+ * One row's name, as a link where a query string can carry its input.
+ *
+ * `data-elo-case` is what the enhancement hooks: clicking fills the form with
+ * this input and answers in place. It is only there where there *is* a form —
+ * a formula that takes a table has none, so its rows are plain links to the
+ * answer, which is still the useful thing about them.
+ */
+function tryAnchor(
+  formula: ServedFormula,
+  name: string,
+  link: string | undefined,
+  what: 'case' | 'refusal'
+): string {
+  if (link === undefined) return name;
+  if (formula.tabular.input) {
+    return `<a href="${escapeHtml(link)}" title="Call it, and see what it answers">${name}</a>`;
+  }
+  const title = what === 'case'
+    ? 'Fill the form with this case, and answer it'
+    : 'Fill the form with this input, and see it refused';
+  return `<a href="${escapeHtml(link)}" data-elo-case title="${title}">${name}</a>`;
 }
 
 /** A `GET …/call?…` for a case whose input a query string can carry. */
@@ -611,7 +631,50 @@ function tryLink(formula: ServedFormula, testCase: FormulaCase): string | undefi
     if (typeof value === 'object') return undefined;
     query.append(key, String(value));
   }
-  return `${formula.descriptor.links.call}?${query.toString()}`;
+  const search = query.toString();
+  return `${formula.descriptor.links.call}${search === '' ? '' : `?${search}`}`;
+}
+
+/**
+ * What it refuses, and what it says about each — the other half of the
+ * contract, and the half a caller has to write code for.
+ *
+ * The rows are links too: clicking one fills the form with an input that is
+ * *supposed* to be refused, so the message lands on the field and you can see
+ * what your own client will have to render.
+ */
+function refusalTable(formula: ServedFormula): string {
+  const refusals = formula.descriptor.refusals;
+  if (refusals.length === 0) return '';
+
+  const rows = refusals.map(refusal => {
+    const link = tryLink(formula, { name: refusal.name, input: refusal.input, expect: null });
+    const name = escapeHtml(refusal.name);
+    const says = [
+      `<code>${escapeHtml(refusal.kind)}</code>`,
+      ...(refusal.path ? [`at <code>${escapeHtml(refusal.path)}</code>`] : []),
+      ...(refusal.label ? [`by <code>${escapeHtml(refusal.label)}</code>`] : []),
+    ].join(' ');
+    return [
+      '<tr>',
+      `<td>${tryAnchor(formula, name, link, 'refusal')}</td>`,
+      `<td><code>${escapeHtml(JSON.stringify(refusal.input))}</code></td>`,
+      `<td>${says}</td>`,
+      '</tr>',
+    ].join('');
+  });
+
+  return [
+    '<h2>What it refuses</h2>',
+    '<p class="elo-note">Every one of these answers <code>422</code>, with the'
+    + ' <code>kind</code> and the <code>label</code> below and the field in'
+    + ' <code>field</code>. A type refuses a value; a <code>guard</code> refuses a'
+    + ' combination of them that no type can describe.</p>',
+    '<table>',
+    '<thead><tr><th>Refusal</th><th>Input</th><th>Says</th></tr></thead>',
+    `<tbody>${rows.join('')}</tbody>`,
+    '</table>',
+  ].join('\n');
 }
 
 /** What the answer holds, from `Output` — the column list of §3. */

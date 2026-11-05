@@ -38,5 +38,21 @@
       input: [],
       expect: []
     }
+  ],
+  refusals: [
+    {
+      name: 'a row with a negative price',
+      input: [{description: 'Widget', unitPrice: -1, quantity: 1}],
+      kind: 'constraint',
+      path: '.0.unitPrice',
+      label: 'notNegative'
+    },
+    {
+      name: 'a record where a table was declared',
+      input: {description: 'Widget', unitPrice: 1, quantity: 1},
+      kind: 'schema',
+      path: '.'
+    }
   ]
+
 }

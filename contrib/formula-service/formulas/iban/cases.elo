@@ -60,5 +60,21 @@
       input: {iban: 'BE68-5390-0754-7034'},
       expect: {valid: false, country: null, formatted: null}
     }
+  ],
+  refusals: [
+    {
+      name: 'a blank number, which is not a short one',
+      input: {iban: '   '},
+      kind: 'constraint',
+      path: '.iban',
+      label: 'notBlank'
+    },
+    {
+      name: 'a field the input does not declare',
+      input: {iban: 'BE68539007547034', country: 'BE'},
+      kind: 'schema',
+      path: '.country'
+    }
   ]
+
 }

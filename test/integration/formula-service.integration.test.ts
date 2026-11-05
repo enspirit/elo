@@ -168,6 +168,7 @@ describe('Formula service - the descriptor', () => {
         { path: 'formatted', type: 'String', required: false },
       ],
       cases: bundle.cases,
+      refusals: bundle.refusals,
       targets: ['js', 'ruby', 'python'],
       links: {
         self: '/iban@1.0.0',
@@ -182,6 +183,40 @@ describe('Formula service - the descriptor', () => {
   it('describes an answer that is not a record as the one value it is', async () => {
     const body = await bodyOf(get('/leap-year@1.0.0'));
     assert.deepEqual(body.answers, [{ path: 'value', type: 'Bool', required: true }]);
+  });
+
+  it('documents what it refuses, and refuses exactly that', async () => {
+    // The other half of the contract, and the half a client writes error
+    // handling against: every refusal the descriptor publishes is a 422 with
+    // the kind, path, field and label it published.
+    for (const id of ['leap-year', 'age', 'order-pricing', 'order-lines']) {
+      const descriptor = await bodyOf(get(`/${id}`));
+      assert.ok(descriptor.refusals.length > 0, `${id} documents no refusal`);
+      for (const refusal of descriptor.refusals) {
+        const response = await post(`/${id}/call`, JSON.stringify(refusal.input));
+        assert.equal(response.status, 422, `${id}: '${refusal.name}' answered ${response.status}`);
+        const body = await bodyOf(response);
+        assert.equal(body.kind, refusal.kind, `${id}: '${refusal.name}' kind`);
+        if (refusal.path !== undefined) {
+          assert.equal(body.path, refusal.path, `${id}: '${refusal.name}' path`);
+          assert.equal(body.field, refusal.path.replace(/^\./, ''), `${id}: '${refusal.name}' field`);
+        }
+        if (refusal.label !== undefined) {
+          assert.equal(body.label, refusal.label, `${id}: '${refusal.name}' label`);
+        }
+      }
+    }
+  });
+
+  it('distinguishes a type refusing a value from a guard refusing a combination', async () => {
+    const age = await bodyOf(get('/age@1.0.0'));
+    const byKind = new Map(age.refusals.map((r: { kind: string; name: string }) => [r.kind, r]));
+    // A field that is not a date, a field that is not there, and a relation
+    // between two fields that no type can describe.
+    assert.ok(byKind.has('schema'));
+    assert.ok(byKind.has('missing'));
+    assert.ok(byKind.has('guard'), 'no guard refusal, which is the one a type cannot carry');
+    assert.equal((byKind.get('guard') as { label: string }).label, 'bornFirst');
   });
 
   it('states a case the way the call answers it, temporal values included', async () => {
@@ -410,6 +445,16 @@ describe('Formula service - the page', () => {
     const html = await (await get('/order-pricing@1.0.0', { accept: 'text/html' })).text();
     assert.match(html, /<form [^>]*action="\/order-pricing@1\.0\.0\/call"/);
     assert.match(html, /<select [^>]*name="tier"/);
+  });
+
+  it('tabulates what it refuses too, each row an input to try', async () => {
+    const html = await (await get('/leap-year@1.0.0', { accept: 'text/html' })).text();
+    assert.match(html, /<h2>What it refuses<\/h2>/);
+    assert.match(html, /a year before the Gregorian calendar/);
+    assert.match(html, /<code>constraint<\/code> at <code>\.year<\/code> by <code>gregorian<\/code>/);
+    // And it fills the form, like a case does: the message then lands on the
+    // field, which is the thing worth seeing.
+    assert.match(html, /href="\/leap-year@1\.0\.0\/call\?year=1500" data-elo-case/);
   });
 
   it('tabulates the cases, each with a link that runs it', async () => {
@@ -935,6 +980,23 @@ describe('Formula service - the OpenAPI of one formula', () => {
       country: 'BE',
       formatted: 'BE68 5390 0754 7034',
     });
+  });
+
+  it('gives the 422 real examples, which are the refusals of the bundle', async () => {
+    const document = await bodyOf(get('/leap-year@1.0.0/openapi.json'));
+    const refused = document.paths['/leap-year@1.0.0/call'].post
+      .responses['422'].content['application/json'];
+    assert.ok(refused.examples['a year before the Gregorian calendar'], 'a refusal by name');
+    assert.deepEqual(refused.examples['a year before the Gregorian calendar'].value, {
+      kind: 'constraint',
+      path: '.year',
+      field: 'year',
+      label: 'gregorian',
+      message: '…',
+    });
+    // The 200 keeps the cases, so the two halves are both documented.
+    assert.ok(document.paths['/leap-year@1.0.0/call'].post
+      .responses['200'].content['application/json'].examples['divisible by 4']);
   });
 
   it('describes every way a call can fail, with the error schema of §5', async () => {

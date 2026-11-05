@@ -14,7 +14,13 @@ services:
 
   description: |-
     Describes one formula: its documentation, the input form as data, the keys
-    of its answer, its cases, the targets it compiles to, and where to go next.
+    of its answer, the inputs it answers and the inputs it **refuses**, the
+    targets it compiles to, and where to go next.
+
+    The two halves of the case table are the two halves of the contract. A
+    client generating code reads `cases` to know what it gets and `refusals`
+    to know what it has to handle — a type refusing a value, or a `guard`
+    refusing a combination of them that no type can describe.
 
     `{formula}` is the formula's id — its path in the catalogue — optionally
     pinned to a version with `@`. Unpinned, it is an alias for the latest
@@ -23,6 +29,7 @@ services:
 
   postconditions:
     - Every case it documents is the answer the call gives
+    - Every refusal it documents is a refusal the call makes
     - It supports the ETag/If-None-Match caching protocol
 
   input_schema: |-

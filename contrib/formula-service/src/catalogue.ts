@@ -45,6 +45,7 @@ import {
   type Bundle,
   type FieldDescriptor,
   type FormulaCase,
+  type FormulaRefusal,
 } from './bundle';
 
 /** The targets a formula is served compiled to, in the order a client sees. */
@@ -66,6 +67,12 @@ export interface FormulaDescriptor {
   fields: FieldDescriptor[];
   answers: AnswerDescriptor[];
   cases: FormulaCase[];
+  /**
+   * The other half of the contract: the inputs it refuses, and what it says
+   * about each. A client reads these to know what a `422` will look like
+   * before it causes one — and they are the examples of §9's error response.
+   */
+  refusals: FormulaRefusal[];
   targets: Target[];
   links: Record<string, string>;
 }
@@ -188,6 +195,7 @@ function serveBundle(bundle: Bundle): ServedFormula {
     fields: bundle.form,
     answers: describeAnswers(bundle),
     cases,
+    refusals: bundle.refusals,
     targets,
     links: {
       self: `/${bundle.id}@${version}`,

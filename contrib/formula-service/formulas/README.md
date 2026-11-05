@@ -88,11 +88,35 @@ nothing to install beside it — and so does
 `GET /iban@1.0.0` with `Accept: text/x-ruby`, which is
 [the service](..) that wraps this catalogue.
 
+## Both halves of a contract
+
+A bundle's `cases.elo` holds two lists. `cases` are the inputs a formula
+answers; `refusals` are the inputs it **does not take**, each with the `kind`,
+`path` and `label` Elo reports for one:
+
+```elo
+refusals: [
+  { name: 'a year before the Gregorian calendar',
+    input: { year: 1500 }, kind: 'constraint', path: '.year', label: 'gregorian' },
+  { name: 'a day before the birth, which no age answers',
+    input: { birthDate: '1990-03-15', on: '1989-01-01' }, kind: 'guard', label: 'bornFirst' }
+]
+```
+
+The second one is the interesting kind: a `guard` refuses a *combination* of
+fields that no single type can describe, which is why `age` has one. See
+[`BUNDLE.md`](BUNDLE.md) for the rules, and note the structural one — a refusal
+cannot be checked from inside Elo, because Elo cannot catch a failure, so the
+host applies each one.
+
 ## What checks them
 
 - `test/acceptance/test-formulas.sh` generates the case runner into each
   bundle, type-checks it, and runs every case on **JavaScript, Ruby and
-  Python**. A case that answers differently on one target fails the suite.
+  Python**. A case that answers differently on one target fails the suite. It
+  then applies every **refusal** on each target through a driver that catches
+  it and prints `kind|path|label` — which is how a `path` that was empty on
+  Ruby alone was found.
 - `test/integration/formula-bundle.integration.test.ts` holds every bundle to
   the format: the doc comment, the declared `Input` and `Output`, the exported
   `formula`, the shape of the cases, and a `fields.elo` that still agrees with
