@@ -5,11 +5,11 @@ fourteen formulas it ships with.
 
 ```bash
 npm run build                                   # from the repository root
-contrib/formula-service/bin/elo-formula-service --port 3000
+contrib/formula-service/bin/elo-formula-service
 
-curl 'http://localhost:3000/'
-curl 'http://localhost:3000/iban@1.0.0'
-curl 'http://localhost:3000/iban/call?iban=BE68+5390+0754+7034'
+curl 'http://localhost:8080/'
+curl 'http://localhost:8080/iban@1.0.0'
+curl 'http://localhost:8080/iban/call?iban=BE68+5390+0754+7034'
 # {"valid":true,"country":"BE","formatted":"BE68 5390 0754 7034"}
 ```
 
@@ -304,7 +304,107 @@ contrib/formula-service/bin/elo-formulas --service         # the program a servi
 ELO_FORMULAS=./my-formulas contrib/formula-service/bin/elo-formulas
 ```
 
+## Trying it by hand
+
+Boot it once, in one terminal:
+
+```bash
+npm run build                                   # from the repository root
+contrib/formula-service/bin/elo-formula-service
+# elo-formula-service: 14 formulas from …/formulas, on http://127.0.0.1:8080
+```
+
+`--port N` if 8080 is taken, `--timeout MS` and `--max-heap MB` for the caps,
+and a directory of your own as the one argument to serve that catalogue
+instead.
+
+Starting is itself a check: it refuses to come up unless every bundle validates
+*and* every case of every formula passes.
+
+### In a browser
+
+Open <http://localhost:8080/>, which is the catalogue — fourteen questions, each
+linking to the formula that answers it.
+
+| Open | To see |
+| --- | --- |
+| `/order-pricing` | fill the form, press **Answer**: you land on a URL whose body *is* the answer, with no JavaScript anywhere |
+| `/leap-year` | the case table, where each case name is a link that runs that case |
+| `/order-lines` | no form — its input is a table — but its columns and the `curl` that sends one |
+| `/iban` | open **What runs**: the program itself, and links to the five files it came from |
+
+### With curl
+
+```bash
+curl localhost:8080/ | python3 -m json.tool | head -20        # the index
+curl 'localhost:8080/?tag=banking&per_page=5'                 # filtered, paged
+curl localhost:8080/iban -D- -o /dev/null                     # the alias: Content-Location, no-cache
+curl localhost:8080/iban@1.0.0/types.elo                      # a file of the bundle, verbatim
+curl 'localhost:8080/iban/call?iban=BE68+5390+0754+7034'      # a linkable answer
+curl localhost:8080/iban@1.0.0/openapi.json | python3 -m json.tool | head -30
+```
+
+Every refusal of §5 is one request away:
+
+```bash
+curl -X POST -H 'content-type: application/json' -d '{"year":1500}' \
+     localhost:8080/leap-year/call      # 422 constraint `gregorian`, on field `year`
+curl -X POST -H 'content-type: application/json' -d '{}' \
+     localhost:8080/leap-year/call      # 422 missing
+curl -X POST -H 'content-type: text/csv' -d 'iban' \
+     localhost:8080/iban/call           # 415: a table, for a formula taking a record
+curl -H 'accept: application/pdf' localhost:8080/iban@1.0.0   # 406
+```
+
+A table in and a table out:
+
+```bash
+printf 'description,unitPrice,quantity\nWidget,19.99,3\nGadget,5,10\n' \
+  | curl -s -X POST -H 'content-type: text/csv' -H 'accept: text/csv' \
+         --data-binary @- localhost:8080/order-lines/call
+# description,quantity,gross,discount,amount
+# Widget,3,59.97,0,59.97
+# Gadget,10,50,0,50
+```
+
+### The claim worth checking yourself
+
+`Accept` hands you the exact program that answered, so run it:
+
+```bash
+curl -s -H 'accept: text/x-ruby' localhost:8080/iban@1.0.0 > /tmp/iban.rb
+ruby -e 'f = eval(File.read("/tmp/iban.rb")); p f.call({iban: "BE68539007547034"})'
+# {valid: true, country: "BE", formatted: "BE68 5390 0754 7034"}
+```
+
+Symbol keys there are Elo's Ruby input convention, not this service's.
+`text/x-python` works the same way with string keys, and
+`application/javascript` with node.
+
+### Caching, and the caps
+
+```bash
+E=$(curl -s -D- -o /dev/null localhost:8080/iban@1.0.0 | awk '/^ETag/{print $2}' | tr -d '\r')
+curl -s -o /dev/null -w '%{http_code}\n' -H "If-None-Match: $E" localhost:8080/iban@1.0.0
+# 304
+```
+
+Every formula in the catalogue is fast, so a real timeout cannot be provoked
+with them — give a second service an absurd cap to see the path:
+
+```bash
+contrib/formula-service/bin/elo-formula-service --port 8081 --timeout 1
+curl 'localhost:8081/leap-year/call?year=2024'
+# {"cap":"time","message":"the call did not finish within its time cap of 1ms"}  [503]
+```
+
 ## What checks it
+
+```bash
+npm run test:integration   # the contract, in process: 95 assertions for the service
+npm run test:webspicy      # the black-box suite: 52 examples, 24 counterexamples
+TZ=UTC npm run test:acceptance   # every case of every bundle, on JS, Ruby and Python
+```
 
 - `test/integration/formula-service.integration.test.ts` — the contract: the
   status codes, the headers, the error shapes, the negotiation, the caps. It
@@ -330,11 +430,17 @@ contrib/formula-service/webspicy/run.sh _one/call/post.yml   # one specification
 LOG_LEVEL=DEBUG npm run test:webspicy             # with the requests and responses
 ```
 
-Thirteen files, 52 examples and 24 counterexamples over every service there is:
-the index and its page, the descriptor, the page, the four compiled
+Thirteen files, 52 examples and 24 counterexamples over every service there
+is: the index and its page, the descriptor, the page, the four compiled
 representations, the bundle files, the manifest, the form, the two OpenAPI
-documents, and `/call` three ways — JSON, a query string, and a table. Two conditions are automated rather than
-documentary:
+documents, and `/call` three ways — JSON, a query string, and a table.
+
+**Webspicy needs Ruby gems**, which `run.sh` installs from the suite's own
+`Gemfile` on first use (`gem install bundler` if you have none). The `Gemfile`
+pins `http` to 5.x: webspicy 1.1 allows 6 and calls its verb methods the way
+5 took them, so every request fails with `wrong number of arguments` on 6.
+
+Three conditions are automated rather than documentary:
 
 - **`It supports the ETag/If-None-Match caching protocol`** — webspicy's own,
   which re-requests with the validator and expects a `304`, then with a wrong
@@ -356,6 +462,20 @@ Why specify twice? The two suites fail for different reasons. The TypeScript
 one knows what the service is made of and pins its internals; this one knows
 only what it answers, and its Finitio types are written in the client's type
 system rather than Elo's — so it catches what a client would trip over, which
-is exactly what happened. It is also the format webspicy generates an OpenAPI
-document and a mock server from, which is phase 6 of the plan arriving for
-free.
+is exactly what happened. It is also what webspicy generates a mock server
+from, and a second opinion on the OpenAPI of §9.
+
+### Checking that the suites check anything
+
+A green suite is a claim, and the cheapest way to judge it is to break the
+thing it covers and watch:
+
+| Break | What should go red |
+| --- | --- |
+| `noneMatch` in `src/service.ts`, returning `false` | every ETag example, with `304 expected` |
+| the `toJson` of `cases` in `src/catalogue.ts` | the case/call postcondition, naming the date it now disagrees about |
+| a `description:` added to a media type in `src/openapi.ts` | the OpenAPI validity postcondition |
+| a label in a `fields.elo`, with `<script>` in it | the escaping test in the integration suite |
+
+Each of those is how the corresponding check was arrived at, in that order:
+written, seen red, then believed.

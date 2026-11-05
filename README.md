@@ -793,8 +793,8 @@ document, and `POST`/`GET …/call` to apply one — in JSON, or in CSV where th
 formula's own type is a table.
 
 ```bash
-contrib/formula-service/bin/elo-formula-service --port 3000
-curl 'http://localhost:3000/iban/call?iban=BE68+5390+0754+7034'
+contrib/formula-service/bin/elo-formula-service
+curl 'http://localhost:8080/iban/call?iban=BE68+5390+0754+7034'
 # {"valid":true,"country":"BE","formatted":"BE68 5390 0754 7034"}
 ```
 
@@ -802,6 +802,11 @@ It compiles each formula once at boot, runs every case before it listens, and
 runs each call in a worker thread under a time and memory cap. Nothing in it is
 written per formula: the form comes from `fields.elo`, the schemas from
 `types.elo`, the examples from `cases.elo`.
+
+Open <http://localhost:8080/> in a browser for the catalogue, a page and a
+working form per formula, and an answer that is a URL. Its
+[README](contrib/formula-service/README.md) has the rest, including how to make
+it hand you a formula compiled to Ruby so you can run it yourself.
 
 ### Using the API
 

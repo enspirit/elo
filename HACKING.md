@@ -50,6 +50,44 @@ npm test
 
 All tests must pass before committing.
 
+### Set TZ when you run the acceptance suite
+
+CI runs in **UTC**, and two fixtures only hold there:
+`reference/dynamic-ambiguous-dispatch` and
+`stdlib/datetime/temporal-startof-endof` parse an instant written `Z` and ask
+for the start of its day, which is local midnight. In a zone with an offset
+they fail; in one with a DST transition, `payment-due-date` fails too, on
+JavaScript alone.
+
+```bash
+TZ=UTC npm test              # what CI does
+TZ=America/Los_Angeles npm test   # what a timezone bug looks like
+```
+
+Neither is your change breaking: the second command is the reproduction for
+`.claude/tasks/todo/0240`, which is the open write-up of both. Run the suite
+under UTC, and run it under a transitioning zone when you touch anything
+temporal.
+
+### Two suites outside `npm test`
+
+Both need something `npm test` should not assume, and both are expected to be
+green:
+
+```bash
+# The formula service, specified as a black box. Needs Ruby gems, which it
+# installs from its own Gemfile, and boots a service of its own.
+npm run test:webspicy
+
+# The Node resource sandbox. Needs nothing, takes five seconds.
+node contrib/sandboxes/node/smoke-test.js
+```
+
+Run the first when you change `contrib/formula-service`, the second when you
+change `contrib/sandboxes` or the JavaScript emission. See
+[`contrib/formula-service/README.md`](contrib/formula-service/README.md) for
+what the service is and how to drive it by hand.
+
 ## Project Structure
 
 ```
@@ -121,4 +159,28 @@ cd web
 npm install
 npm run dev    # Start dev server at localhost:4321
 npm run build  # Build for production
+```
+
+## The formula service
+
+A REST API over the catalogue of formula bundles, and the easiest way to see a
+whole Elo program doing something end to end:
+
+```bash
+npm run build
+contrib/formula-service/bin/elo-formula-service
+```
+
+Then <http://localhost:8080/> in a browser: the catalogue, a page and a working
+form per formula, and an answer that is a URL. Its own README has the `curl`
+recipes, including how to make the service hand you the compiled Ruby of a
+formula so you can run it yourself —
+[`contrib/formula-service/README.md`](contrib/formula-service/README.md).
+
+It is also where a *bundle* is checked:
+
+```bash
+contrib/formula-service/bin/elo-formulas              # every bundle, with its case count
+contrib/formula-service/bin/elo-formulas order-lines  # one: doc, form, cases with results
+contrib/formula-service/bin/elo-formulas --fields iban  # refresh fields.elo from Input
 ```
