@@ -691,7 +691,7 @@ decides what changing it costs.
   `@enspirit/elo/node` is where anything touching the filesystem lives
 - Two things that live *inside* the generated code, because a host has to hold
   onto them: a failure's **`kind`, `path` and `label`** (the `message` prose is
-  not promised — that is why the kinds exist), and the ten **`elo_*` PostgreSQL
+  not promised — that is why the kinds exist), and the eleven **`elo_*` PostgreSQL
   prelude function names**, which you install in your database
 
 **Protected — may change in a minor release, always announced in the [changelog](CHANGELOG.md)**

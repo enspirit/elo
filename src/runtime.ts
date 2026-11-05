@@ -959,6 +959,7 @@ def _elo_end_of_year(dt):
     return None if idx == -1 else idx`,
   kSplit: `def kSplit(s, sep):
     if s == '': return []
+    if sep == '': return list(s)
     return s.split(sep)`,
   kData: `def kData(v):
     import json

@@ -928,9 +928,10 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
   sqlLib.register('join', [Types.array, Types.string], (args, ctx) =>
     `array_to_string(${arrayArg(args[0], ctx)}, ${ctx.emit(args[1])})`);
 
-  // Split string into list
+  // Split string into list. elo_split rather than string_to_array: an empty
+  // separator splits into characters, which string_to_array does not do.
   sqlLib.register('split', [Types.string, Types.string], (args, ctx) =>
-    `string_to_array(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+    `elo_split(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
 
   // Extract - pattern matching with mustache-style templates
   sqlLib.register('extract', [Types.string, Types.string], (args, ctx) => {

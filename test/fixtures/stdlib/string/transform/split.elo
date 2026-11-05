@@ -2,3 +2,9 @@ assert(split('a,b,c', ',') == ['a', 'b', 'c'])
 assert(split('hello world', ' ') == ['hello', 'world'])
 assert(split('one', ',') == ['one'])
 assert(split('', ',') == [])
+# An empty separator splits into characters, which is how a checksum walks the
+# digits of an identifier
+assert(split('abc', '') == ['a', 'b', 'c'])
+assert(split('9', '') == ['9'])
+assert(split('', '') == [])
+assert(count(split('BE68539007547034', '')) == 16)

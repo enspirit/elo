@@ -6,6 +6,14 @@ All notable changes to Elo are documented in this file.
 
 ### Fixed
 
+- `split(s, '')` did not split a string into its characters, the only way Elo
+  has to walk one: **Python** raised `empty separator` and **PostgreSQL**
+  silently answered the whole string as a one-element list, where JavaScript and
+  Ruby answer its characters. The SQL target gained an `elo_split` prelude
+  helper for it — the eleventh `elo_*` name, so **reinstall the SQL prelude**
+  (`eloc --prelude-only -t sql | psql "$DATABASE_URL"`) for `split` to keep
+  working there
+
 - `Int()` of a string meant three different things. **Ruby** read a leading
   zero as an octal prefix, so `Int('08')` raised and `Int('010')` was `8` where
   the other three targets answer `10` — every formula that parses a zero-padded

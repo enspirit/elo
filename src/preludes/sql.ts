@@ -253,6 +253,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- split(string, separator). string_to_array answers the whole string for an
+-- empty separator, where the other three targets answer its characters, and it
+-- is the only way Elo has to walk a string. regexp_split_to_array does split
+-- into characters, but answers one empty string for an empty subject.
+CREATE OR REPLACE FUNCTION elo_split(v TEXT, sep TEXT) RETURNS TEXT[] AS $$
+BEGIN
+  IF v = '' THEN RETURN ARRAY[]::TEXT[]; END IF;
+  IF sep = '' THEN RETURN regexp_split_to_array(v, ''); END IF;
+  RETURN string_to_array(v, sep);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
 -- Deep merge two JSONB objects recursively
 CREATE OR REPLACE FUNCTION elo_deep_merge(a JSONB, b JSONB) RETURNS JSONB AS $$
 DECLARE
