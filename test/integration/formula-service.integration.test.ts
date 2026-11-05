@@ -184,6 +184,21 @@ describe('Formula service - the descriptor', () => {
     assert.deepEqual(body.answers, [{ path: 'value', type: 'Bool', required: true }]);
   });
 
+  it('states a case the way the call answers it, temporal values included', async () => {
+    // A case is a request body and its response body, which is the whole of
+    // what makes "try this example" work: a client that POSTs the input and
+    // compares must get what the descriptor told it to expect. So the expect
+    // is written by `Output` too, and not by whatever `JSON.stringify` makes
+    // of a luxon value in the server's own timezone.
+    for (const id of ['payment-due-date', 'subscription-proration']) {
+      const descriptor = await bodyOf(get(`/${id}`));
+      for (const testCase of descriptor.cases) {
+        const answered = await bodyOf(post(`/${id}/call`, JSON.stringify(testCase.input)));
+        assert.deepEqual(answered, testCase.expect, `${id}: case '${testCase.name}'`);
+      }
+    }
+  });
+
   it('caches a pinned version forever, since a published version never changes', async () => {
     const response = await get('/iban@1.0.0');
     assert.match(response.headers.get('cache-control') ?? '', /immutable/);

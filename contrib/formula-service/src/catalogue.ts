@@ -32,7 +32,7 @@ import {
 } from '../../../src';
 import type { Expr } from '../../../src';
 import { nodeLoader } from '../../../src/node';
-import type { AnswerShape } from './answer';
+import { toJson, type AnswerShape } from './answer';
 import {
   answerShape,
   describeAnswers,
@@ -155,6 +155,17 @@ function serveBundle(bundle: Bundle): ServedFormula {
     throw new Error(`${bundle.id}: the service program does not compile to JavaScript, which is what runs it`);
   }
 
+  // A case is a request body and the response body that goes with it, which is
+  // what makes "try this example" worth offering: a client POSTs the input and
+  // compares with the expect. So the expect is written by `Output`, exactly as
+  // the call's own answer is — `cases.elo` holds an Elo value, and a `Date` in
+  // it is a `Date` rather than a moment in whatever timezone the server is in.
+  const shape = answerShape(bundle);
+  const cases = bundle.cases.map(testCase => ({
+    ...testCase,
+    expect: toJson(testCase.expect, shape),
+  }));
+
   const descriptor: FormulaDescriptor = {
     id: bundle.id,
     version,
@@ -165,7 +176,7 @@ function serveBundle(bundle: Bundle): ServedFormula {
     deprecated: false,
     fields: bundle.form,
     answers: describeAnswers(bundle),
-    cases: bundle.cases,
+    cases,
     targets,
     links: {
       self: `/${bundle.id}@${version}`,
@@ -193,7 +204,7 @@ function serveBundle(bundle: Bundle): ServedFormula {
     files,
     representations: { elo, ...withPrelude(compiled) },
     code: compiled.js,
-    shape: answerShape(bundle),
+    shape,
   };
 }
 
