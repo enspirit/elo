@@ -673,6 +673,12 @@ end`,
   end
   p_ok(v, p)
 end`,
+  // `||` is not a default here, because an **empty string is truthy in Ruby**
+  // where it is falsy in JavaScript and Python. `err[:path] || '.'` therefore
+  // left the root path empty on this target alone, and `{a: 1} |> [{a: Int}]`
+  // reported `path: ''` where the other two report `.` — the same program
+  // meaning two things, which is the one thing Elo must not do. Read the two
+  // fields through something that treats empty as absent.
   p_unwrap: `def p_unwrap(r)
   return r[:value] if r[:success]
   find_error = ->(e) {
@@ -681,7 +687,9 @@ end`,
     e
   }
   err = find_error.call(r)
-  raise p_err("#{err[:path] || '.'}: #{err[:message] || 'type error'}", err[:kind] || 'schema', err[:path] || '.', err[:label])
+  given = ->(v, fallback) { v.nil? || (v.respond_to?(:empty?) && v.empty?) ? fallback : v }
+  path = given.call(err[:path], '.')
+  raise p_err("#{path}: #{given.call(err[:message], 'type error')}", given.call(err[:kind], 'schema'), path, err[:label])
 end`,
   k_string: `def k_string(v)
   return 'null' if v.nil?

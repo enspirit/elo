@@ -6,6 +6,18 @@ All notable changes to Elo are documented in this file.
 
 ### Fixed
 
+- A refused value's **path was empty on Ruby** where it is `.` on JavaScript
+  and Python. `{a: 1} |> [{a: Int}]` — a record where a list was declared —
+  reported `path: ''` there and `path: '.'` on the other two, so a host that
+  reads the path to point at the input could not point at the whole of it. The
+  cause is a truthiness difference the helper walked into: `err[:path] || '.'`
+  is not a default in Ruby, where **an empty string is truthy**, and the same
+  line in JavaScript and Python does default. Elo's own promise is that the
+  same program means the same thing on every target, so the Ruby helper now
+  reads `path`, `kind` and `message` through something that treats empty as
+  absent. Found by the formula catalogue's new refusal checks, and pinned by
+  `test/acceptance/failures/root-array-refused.elo`
+
 - The **Node sandbox** of `contrib/sandboxes/node` could not see luxon. It
   evaluated the compiled code with an indirect `eval`, which runs in global
   scope, where the worker's own `require('luxon')` bindings are not visible —

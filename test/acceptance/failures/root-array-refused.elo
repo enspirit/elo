@@ -1,0 +1,2 @@
+Lines = [{ a: Int }]
+{ a: 1 } |> Lines
