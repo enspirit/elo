@@ -10,6 +10,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # A Ruby version is a runtime, and Elo's promise is that the same program
+    # means the same thing on every runtime. Kernel#Float("1.") raises on 3.2
+    # and answers 1.0 on 3.4, which is how a fixture went green here and red on
+    # CI (see .claude/tasks/done/0239); the two versions in the matrix are the
+    # two sides of that change. fail-fast is off so a failure reports *which*
+    # version disagreed rather than cancelling the other.
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version: ['3.2', '3.4']
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -38,7 +49,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.2'
+        ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: false
 
     - name: Install Ruby dependencies

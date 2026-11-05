@@ -84,13 +84,23 @@ versions**: 2.7.8, 3.2.2, 3.3.4, 3.4.1 and 4.0.7.
 Four Ruby expected files: every emission of `Float(String)` gains the helper.
 Nothing else moves — JavaScript, Python and PostgreSQL are untouched.
 
-## What would have caught it earlier
+## The guard
 
-A `ruby-version: ['3.2', '3.4']` matrix in `.github/workflows/ci.yml` is the
-honest guard, and it is one line. It is not in this fix because it doubles the
-job — node, python and postgres run again for a Ruby-only question — and
-because the same argument then applies to Python and PostgreSQL versions. Worth
-deciding on its own; say the word.
+`.github/workflows/ci.yml` now runs the job over
+`ruby-version: ['3.2', '3.4']`, with `fail-fast: false` so a failure reports
+*which* version disagreed instead of cancelling the other leg. The two are the
+two sides of the `Kernel#Float` change, which is why they are the two. It costs
+a second run of node, python and postgres for a Ruby-only question, and that is
+the price of the promise: a Ruby version is a runtime, and the same program has
+to mean the same thing on every runtime.
+
+Both legs were run locally before adding them — the 124 Ruby fixtures, plain
+and under `ELO_OPTIMIZE=1`, plus the failure-structure tests, on 3.2.2 and
+3.4.1 (and the fixtures alone also on 2.7.8, 3.3.4 and 4.0.7).
+
+The same argument now hangs over Python and PostgreSQL, which are pinned to one
+version each. Nothing has gone wrong there yet; when it does, this is the shape
+of the answer.
 
 Smaller thing, same family, noticed while running this: `npm run build` does not
 clean `dist/`, so a test file compiled on one branch keeps running after a
