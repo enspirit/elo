@@ -258,7 +258,9 @@ export function createService(options: ServiceOptions): Service {
     cacheable(request, response, formula, pinned, pinned ? undefined : formula.descriptor.links.self);
     if (noneMatch(request, formula.etag)) return notModified(response);
     if (key === 'descriptor') return send(request, response, 200, formula.descriptor);
-    if (key === 'page') return sendText(request, response, 200, type, formulaPage(formula));
+    if (key === 'page') {
+      return sendText(request, response, 200, type, formulaPage(formula, originOf(request)));
+    }
     return sendText(request, response, 200, type, formula.representations[key]);
   }
 
@@ -606,6 +608,28 @@ function read(request: IncomingMessage, cap: number): Promise<string | undefined
     request.on('end', () => resolve(over ? undefined : Buffer.concat(chunks).toString('utf-8')));
     request.on('error', () => resolve(undefined));
   });
+}
+
+/**
+ * Where this service is answering from, for the snippets of a page to be
+ * pasteable rather than illustrative.
+ *
+ * Read off the request, honouring the two headers a reverse proxy sets — a
+ * service behind one is not on the host it thinks it is. No header at all
+ * (an HTTP/1.0 client) leaves it empty, and the page falls back to relative
+ * URLs, which still work everywhere but in a snippet.
+ */
+function originOf(request: IncomingMessage): string {
+  const host = header1(request, 'x-forwarded-host') ?? request.headers.host;
+  if (!host) return '';
+  const scheme = header1(request, 'x-forwarded-proto') ?? 'http';
+  return `${scheme}://${host}`;
+}
+
+function header1(request: IncomingMessage, name: string): string | undefined {
+  const value = request.headers[name];
+  const first = Array.isArray(value) ? value[0] : value;
+  return first?.split(',')[0].trim() || undefined;
 }
 
 function isReadMethod(request: IncomingMessage): boolean {

@@ -92,10 +92,54 @@ with `Accept: text/html` answers the page: the doc comment as Markdown, that
 form, the case table with a link per case that *runs* it, what the answer
 holds, and the program itself behind a disclosure.
 
-**The form works with no JavaScript.** Its method is `GET` and its action is
-the call, so submitting it lands on a URL that is the answer — the same
-resource a program would call, linkable and bookmarkable. There is no script
-on the page.
+**The form works with no JavaScript, and the page then enhances it.** Its
+method is `GET` and its action is the call, so submitting it lands on a URL
+that is the answer — the same resource a program would call, linkable and
+bookmarkable. The page's script intercepts that submit, makes the *same*
+request with `fetch`, and answers under the form instead of navigating away:
+the page stays, the form keeps what was typed, and a second call is one click.
+It shows the URL it called, so nothing is lost by enhancing.
+
+Two things the script does that a plain form cannot:
+
+- **A refusal lands on the field that caused it.** §5 answers `field`, which is
+  the key of `fields.elo` and therefore the `name` of a control on the page —
+  so the message goes under that control, which is the whole reason the error
+  body carries it.
+- **The answer is read rather than navigated to**, which is what makes trying a
+  second input bearable.
+
+It is written that way round on purpose: turn the script off and the form still
+works. The fragment of `/{id}/form` carries no script at all — it is markup to
+embed, and the host that embeds it has its own ideas. A formula whose input is
+a table has no form, so its page sends no script either.
+
+The script is inline, which a strict `Content-Security-Policy` will refuse; a
+host that needs one serves it from a URL of its own and drops the `<script>`
+block from `html.ts`.
+
+### Calling it from somewhere else
+
+Every page carries a snippet for **curl**, **JavaScript**, **Ruby** and
+**Python**, pointed at the host the request came in on (`X-Forwarded-Host` and
+`X-Forwarded-Proto` are honoured, so a service behind a proxy says where it
+really is) and filled in with the formula's **first case** — a real input that
+really answers, rather than `{"field": "value"}`. A snippet is a thing to paste
+and run, and if one stops working the case table above it is wrong too.
+
+```ruby
+require 'json'
+require 'net/http'
+
+response = Net::HTTP.post(
+  URI('http://localhost:8080/iban@1.0.0/call'),
+  JSON.generate({ 'iban' => "BE68 5390 0754 7034" }),
+  'Content-Type' => 'application/json'
+)
+answer = JSON.parse(response.body)
+raise answer['message'] unless response.code == '200'
+pp answer
+```
 
 Two things follow from a form being HTML, and they are rules of `GET …/call`
 rather than of the markup: a parameter whose value is **empty** counts as not
@@ -328,7 +372,9 @@ linking to the formula that answers it.
 
 | Open | To see |
 | --- | --- |
-| `/order-pricing` | fill the form, press **Answer**: you land on a URL whose body *is* the answer, with no JavaScript anywhere |
+| `/order-pricing` | fill the form, press **Answer**: the answer appears under it, and the URL it called is shown. Turn JavaScript off and the same form navigates to that URL instead |
+| `/order-pricing` with a bad value | a refusal lands under the field that caused it — that is §5's `field` key doing its job |
+| any page, bottom half | **Call it from your code**: curl, JavaScript, Ruby and Python, filled in with a real case |
 | `/leap-year` | the case table, where each case name is a link that runs that case |
 | `/order-lines` | no form — its input is a table — but its columns and the `curl` that sends one |
 | `/iban` | open **What runs**: the program itself, and links to the five files it came from |

@@ -12,7 +12,12 @@
  * - **The form works with no JavaScript.** Its method is `GET` and its action
  *   is the formula's `call`, so submitting it lands on a URL that *is* the
  *   answer — linkable, bookmarkable, and the same resource a program would
- *   call. There is no script on the page for the form's sake.
+ *   call. The page then *enhances* that form with a script: the same request,
+ *   made with `fetch`, rendered under the form, with a refusal put back on the
+ *   field that caused it. Turn the script off and the form still works, which
+ *   is the test of whether the enhancement was written the right way round.
+ *   The fragment of `/{id}/form` carries no script at all — it is markup to
+ *   embed, and the host that embeds it has its own ideas.
  * - **Everything a bundle wrote is text, never markup.** A label, a help
  *   line, an option, a case name and the doc comment all come from files in a
  *   repository, and they are escaped here. The Markdown rendering below runs
@@ -216,10 +221,27 @@ const STYLE = `
   td code { white-space: pre-wrap; word-break: break-word; }
   details { margin: 1rem 0; }
   summary { cursor: pointer; }
+  .elo-result { margin: 1.5rem 0; padding: 0 0 0 .8rem; border-left: 3px solid var(--rule); }
+  .elo-result[hidden] { display: none; }
+  .elo-result-status { font-weight: 600; margin: 0 0 .5rem; }
+  .elo-result.is-refused { border-left-color: #c0392b; }
+  .elo-result.is-refused .elo-result-status { color: #c0392b; }
+  .elo-error { color: #c0392b; font-size: .85em; }
+  [aria-invalid="true"] { outline: 2px solid #c0392b; }
+  .elo-permalink { font-size: .85em; }
+  .elo-snippets h3 { font-size: .95rem; margin: 1.2rem 0 .3rem; }
 `;
 
-/** The page of §6: the documentation, the form, the cases, the source. */
-export function formulaPage(formula: ServedFormula): string {
+/**
+ * The page of §6: the documentation, the form, the cases, the source — and the
+ * snippets that call it from somewhere else.
+ *
+ * `origin` is where this service is answering from (`http://localhost:8080`),
+ * read off the request, so that the snippets are copy-pasteable rather than
+ * illustrative. A page that does not know it falls back to relative URLs,
+ * which still work in the form and in `fetch`.
+ */
+export function formulaPage(formula: ServedFormula, origin = ''): string {
   const { descriptor } = formula;
   const title = `${descriptor.title} — ${descriptor.id} ${descriptor.version}`;
   const tags = descriptor.tags.map(tag =>
@@ -234,11 +256,269 @@ export function formulaPage(formula: ServedFormula): string {
     descriptor.doc === '' ? '' : markdown(descriptor.doc),
     '<h2>Try it</h2>',
     formFragment(formula),
-    caseTable(formula),
+    resultPanel(),
     answerTable(formula),
+    caseTable(formula),
+    snippets(formula, origin),
     sources(formula),
+    // Only where there is a form to enhance. A formula that takes a table has
+    // none, so the script would load, find nothing and return — which is
+    // harmless and still a page that said it needed JavaScript when it did not.
+    formula.tabular.input ? '' : ENHANCEMENT,
   ]);
 }
+
+/**
+ * Where an answer lands when the script is doing the asking.
+ *
+ * Empty and hidden until then: with no script, nothing here is ever shown and
+ * the form navigates to the answer's own URL instead.
+ */
+function resultPanel(): string {
+  return [
+    '<div class="elo-result" hidden>',
+    '  <p class="elo-result-status"></p>',
+    '  <table class="elo-answer"><tbody></tbody></table>',
+    '  <pre class="elo-raw"></pre>',
+    '  <p class="elo-permalink"></p>',
+    '</div>',
+  ].join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Calling it from somewhere else
+// ---------------------------------------------------------------------------
+
+/**
+ * The same call, in the four things people reach for.
+ *
+ * Every snippet is filled in with the formula's **first case** — a real input
+ * that really answers, rather than `{"field": "value"}` — because the case was
+ * already a request body by construction. So a snippet is a thing to paste and
+ * run, and if it stops working the case table above it is wrong too.
+ */
+function snippets(formula: ServedFormula, origin: string): string {
+  const url = `${origin}${formula.descriptor.links.call}`;
+  const example = formula.descriptor.cases[0];
+  const input = example === undefined ? {} : example.input;
+  const json = JSON.stringify(input);
+  const pretty = JSON.stringify(input, null, 2);
+  const link = example === undefined ? undefined : tryLink(formula, example);
+
+  const curl = [
+    `curl -X POST '${url}' \\`,
+    `  -H 'Content-Type: application/json' \\`,
+    `  -d '${json}'`,
+    ...(link === undefined ? [] : ['', '# the same call as a URL, which is linkable and cacheable',
+      `curl '${origin}${link}'`]),
+    ...(formula.tabular.input ? ['', '# or the whole table at once',
+      `curl -X POST '${url}' -H 'Content-Type: text/csv' --data-binary @rows.csv`] : []),
+  ].join('\n');
+
+  const javascript = [
+    `const response = await fetch('${url}', {`,
+    `  method: 'POST',`,
+    `  headers: { 'Content-Type': 'application/json' },`,
+    `  body: JSON.stringify(${pretty.replace(/\n/g, '\n  ')})`,
+    `});`,
+    `const answer = await response.json();`,
+    `if (!response.ok) throw new Error(answer.message);  // 422 carries kind, path, field, label`,
+    `console.log(answer);`,
+  ].join('\n');
+
+  const ruby = [
+    `require 'json'`,
+    `require 'net/http'`,
+    ``,
+    `response = Net::HTTP.post(`,
+    `  URI('${url}'),`,
+    `  JSON.generate(${rubyLiteral(input)}),`,
+    `  'Content-Type' => 'application/json'`,
+    `)`,
+    `answer = JSON.parse(response.body)`,
+    `raise answer['message'] unless response.code == '200'`,
+    `pp answer`,
+  ].join('\n');
+
+  const python = [
+    `import json, urllib.error, urllib.request`,
+    ``,
+    `request = urllib.request.Request(`,
+    `    '${url}',`,
+    `    data=json.dumps(${pythonLiteral(input)}).encode(),`,
+    `    headers={'Content-Type': 'application/json'},`,
+    `)`,
+    `try:`,
+    `    with urllib.request.urlopen(request) as response:`,
+    `        print(json.load(response))`,
+    `except urllib.error.HTTPError as refusal:`,
+    `    print(refusal.code, json.load(refusal))`,
+  ].join('\n');
+
+  return [
+    '<h2>Call it from your code</h2>',
+    '<div class="elo-snippets">',
+    `<p class="elo-note">Filled in with the first case, so each of these answers`
+    + ` <code>${escapeHtml(JSON.stringify(example === undefined ? null : example.expect))}</code>`
+    + ` as it stands.</p>`,
+    ...[['curl', curl], ['JavaScript', javascript], ['Ruby', ruby], ['Python', python]]
+      .map(([name, code]) => `<h3>${escapeHtml(name)}</h3><pre><code>${escapeHtml(code)}</code></pre>`),
+    '</div>',
+  ].join('\n');
+}
+
+/** A JSON-shaped value as Ruby, which is JSON with `=>` and no `null`. */
+function rubyLiteral(value: unknown): string {
+  if (value === null) return 'nil';
+  if (Array.isArray(value)) return `[${value.map(rubyLiteral).join(', ')}]`;
+  if (typeof value === 'object') {
+    const pairs = Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `'${key}' => ${rubyLiteral(item)}`);
+    return `{ ${pairs.join(', ')} }`;
+  }
+  return JSON.stringify(value);
+}
+
+/** The same, as Python: `None`, `True`, `False`. */
+function pythonLiteral(value: unknown): string {
+  if (value === null) return 'None';
+  if (value === true) return 'True';
+  if (value === false) return 'False';
+  if (Array.isArray(value)) return `[${value.map(pythonLiteral).join(', ')}]`;
+  if (typeof value === 'object') {
+    const pairs = Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `'${key}': ${pythonLiteral(item)}`);
+    return `{${pairs.join(', ')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+// ---------------------------------------------------------------------------
+// The enhancement
+// ---------------------------------------------------------------------------
+
+/**
+ * The form, made to answer in place.
+ *
+ * It is an *enhancement*, and written the way round that word implies: the
+ * markup above works without it, and this intercepts the submit it would
+ * otherwise do, makes the same request with `fetch`, and renders the answer
+ * under the form instead of navigating to it. The permalink it shows is the
+ * URL the plain form would have gone to, so nothing is lost by enhancing.
+ *
+ * Two things it does that the plain form cannot:
+ *
+ * - **A refusal lands on the field that caused it.** §5 answers `field`, which
+ *   is the key of `fields.elo` and therefore the `name` of a control on this
+ *   page — so the message goes under that control, which is the whole reason
+ *   the error body carries it.
+ * - **The answer is read rather than replaced by.** The page stays, the form
+ *   keeps what was typed, and a second call is one click away.
+ *
+ * Every value it writes goes in through `textContent`. The service's own
+ * answers are data, and data does not become markup on the way to a page.
+ */
+const ENHANCEMENT = `<script>
+(function () {
+  var form = document.querySelector('form.elo-form');
+  var panel = document.querySelector('.elo-result');
+  if (!form || !panel || !window.fetch) return;
+
+  var status = panel.querySelector('.elo-result-status');
+  var rows = panel.querySelector('.elo-answer tbody');
+  var raw = panel.querySelector('.elo-raw');
+  var permalink = panel.querySelector('.elo-permalink');
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    clearRefusals();
+
+    var query = new URLSearchParams(new FormData(form)).toString();
+    var url = form.getAttribute('action') + (query ? '?' + query : '');
+
+    status.textContent = 'Calling…';
+    panel.hidden = false;
+    panel.classList.remove('is-refused');
+
+    fetch(url, { headers: { Accept: 'application/json' } })
+      .then(function (response) {
+        return response.json().then(function (body) {
+          render(response.status, body, url);
+        });
+      })
+      .catch(function (error) {
+        show('The call could not be made: ' + error.message, true);
+      });
+  });
+
+  function render(code, body, url) {
+    rows.textContent = '';
+    raw.textContent = '';
+    permalink.textContent = '';
+
+    if (code === 200) {
+      show('200 — answered', false);
+      if (body !== null && typeof body === 'object' && !Array.isArray(body)) {
+        Object.keys(body).forEach(function (key) {
+          append(key, body[key]);
+        });
+      } else {
+        append('the answer', body);
+      }
+      raw.textContent = JSON.stringify(body, null, 2);
+      var link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.textContent = url;
+      permalink.appendChild(document.createTextNode('This answer has a URL: '));
+      permalink.appendChild(link);
+      return;
+    }
+
+    show(code + ' — ' + (body && body.message ? body.message : 'refused'), true);
+    if (body && body.label) append('rule', body.label);
+    if (body && body.kind) append('kind', body.kind);
+    if (body && body.field) refuse(body.field, body.message);
+  }
+
+  function append(key, value) {
+    var row = document.createElement('tr');
+    var name = document.createElement('th');
+    var held = document.createElement('td');
+    name.textContent = key;
+    held.textContent = value === null ? 'null' : typeof value === 'object'
+      ? JSON.stringify(value)
+      : String(value);
+    row.appendChild(name);
+    row.appendChild(held);
+    rows.appendChild(row);
+  }
+
+  function show(message, refused) {
+    status.textContent = message;
+    panel.hidden = false;
+    panel.classList.toggle('is-refused', !!refused);
+  }
+
+  function refuse(field, message) {
+    var control = form.querySelector('[name="' + field.replace(/"/g, '') + '"]');
+    if (!control) return;
+    control.setAttribute('aria-invalid', 'true');
+    var said = document.createElement('span');
+    said.className = 'elo-error';
+    said.textContent = message || 'refused';
+    control.parentNode.appendChild(said);
+  }
+
+  function clearRefusals() {
+    Array.prototype.forEach.call(form.querySelectorAll('.elo-error'), function (said) {
+      said.parentNode.removeChild(said);
+    });
+    Array.prototype.forEach.call(form.querySelectorAll('[aria-invalid]'), function (control) {
+      control.removeAttribute('aria-invalid');
+    });
+  }
+})();
+</script>`;
 
 /**
  * The cases, each with a link that runs it.

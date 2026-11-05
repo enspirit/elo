@@ -19,10 +19,16 @@ services:
 
     One template for the whole catalogue, and no per-formula markup anywhere:
     the prose is the doc comment rendered as Markdown, the form is
-    `fields.elo`, the table is `cases.elo`, and the program behind the
-    disclosure is what the service runs. Every one of those comes from a file
-    in a repository, so every one of them is escaped — a label is text, not
-    markup.
+    `fields.elo`, the table is `cases.elo`, the snippets are filled in from the
+    first case, and the program behind the disclosure is what the service runs.
+    Every one of those comes from a file in a repository, so every one of them
+    is escaped — a label is text, not markup.
+
+    The page **enhances** its form with a script: the same request, made with
+    `fetch`, answered under the form, with a refusal put back on the field that
+    caused it. Written that way round on purpose — turn the script off and the
+    form still submits to the call and still answers, which is what the
+    fragment of `/{id}/form` does for a host that wants no script at all.
 
   input_schema: |-
     {
@@ -102,6 +108,52 @@ services:
           match('', /formula\(_ \|&gt; Input\) \|&gt; Output/)
         - |-
           match('', /<a href="\/iban@1\.0\.0\/types\.elo">/)
+
+    - when: |-
+        the formula has a form
+      it: |-
+        enhances it with a script, over the form that works without one
+      input:
+        formula: order-pricing@1.0.0
+      assert:
+        - |-
+          match('', /<script>/)
+        - |-
+          match('', /<div class="elo-result" hidden>/)
+        - |-
+          match('', /<form [^>]*method="get"/)
+
+    - when: |-
+        a reader wants to call it from somewhere else
+      it: |-
+        answers a snippet per language, filled in with the first case
+      input:
+        formula: iban@1.0.0
+      assert:
+        - |-
+          match('', /<h3>curl<\/h3>/)
+        - |-
+          match('', /<h3>JavaScript<\/h3>/)
+        - |-
+          match('', /<h3>Ruby<\/h3>/)
+        - |-
+          match('', /<h3>Python<\/h3>/)
+        - |-
+          match('', /BE68 5390 0754 7034/)
+        - |-
+          match('', /Net::HTTP\.post/)
+
+    - when: |-
+        the formula takes a table, so there is no form to enhance
+      it: |-
+        sends no script at all, and says how to send a table instead
+      input:
+        formula: order-lines@1.0.0
+      assert:
+        - |-
+          notMatch('', /<script>/)
+        - |-
+          match('', /--data-binary @rows\.csv/)
 
     - when: |-
         asked under the unversioned name

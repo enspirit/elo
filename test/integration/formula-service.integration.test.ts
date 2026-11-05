@@ -402,7 +402,8 @@ describe('Formula service - the page', () => {
     // The doc of `iban` names ISO 13616 in prose and `1` in backticks.
     assert.match(html, /ISO 13616/);
     assert.match(html, /<code>/, 'inline code is rendered rather than shown');
-    assert.doesNotMatch(html, /^#/m, 'and the comment markers are gone');
+    assert.doesNotMatch(html, /# Is this a valid IBAN/, 'the comment markers are gone');
+    assert.match(html, /<p>ISO 13616/, 'and the prose is a paragraph');
   });
 
   it('carries the form, so the page is the thing you use', async () => {
@@ -431,6 +432,69 @@ describe('Formula service - the page', () => {
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('content-location'), '/iban@1.0.0');
     assert.equal(response.headers.get('cache-control'), 'no-cache');
+  });
+
+  it('enhances the form with a script rather than depending on one', async () => {
+    const page = await (await get('/order-pricing@1.0.0', { accept: 'text/html' })).text();
+    // The enhancement is on the page…
+    assert.match(page, /<script>/);
+    assert.match(page, /<div class="elo-result" hidden>/);
+    // …and the form it enhances is the same one that works without it.
+    assert.match(page, /<form [^>]*action="\/order-pricing@1\.0\.0\/call"[^>]*method="get"/);
+    // The fragment, which is a thing to embed, carries no script at all.
+    const fragment = await (await get('/order-pricing@1.0.0/form')).text();
+    assert.doesNotMatch(fragment, /<script/);
+  });
+
+  it('ships a script that parses, and looks only for hooks the markup has', async () => {
+    const page = await (await get('/order-pricing@1.0.0', { accept: 'text/html' })).text();
+    const script = /<script>([\s\S]*?)<\/script>/.exec(page)?.[1] ?? '';
+    assert.ok(script.length > 200, 'no script to check');
+
+    // A syntax error in generated JavaScript is silent in a browser console
+    // nobody is watching, so it is worth one line here.
+    assert.doesNotThrow(() => new Function(script), 'the enhancement does not parse');
+
+    // And a renamed class is the other way an enhancement dies quietly: every
+    // selector it reaches for has to be something this page renders.
+    const selectors = [...script.matchAll(/querySelector(?:All)?\('([^']+)'\)/g)]
+      .map(match => match[1])
+      .flatMap(selector => selector.split(' '));
+    assert.ok(selectors.length >= 4, 'no selectors found');
+    for (const selector of selectors) {
+      const token = selector.replace(/^[.#]/, '').replace(/^\[.*$/, '');
+      if (token === '' || token === 'tbody') continue;
+      assert.ok(page.includes(token), `the script looks for '${selector}', which the page has not`);
+    }
+  });
+
+  it('carries a runnable snippet in each of the four things people reach for', async () => {
+    const page = await (await get('/iban@1.0.0', { accept: 'text/html' })).text();
+    for (const language of ['curl', 'JavaScript', 'Ruby', 'Python']) {
+      assert.match(page, new RegExp(`<h3>${language}</h3>`), `no ${language} snippet`);
+    }
+    // Filled in with the first case — a real input that really answers — and
+    // pointed at the host the request came in on, so they paste and run.
+    assert.match(page, /curl -X POST &#39;http:\/\/127\.0\.0\.1:\d+\/iban@1\.0\.0\/call&#39;/);
+    assert.match(page, /BE68 5390 0754 7034/);
+    assert.match(page, /Net::HTTP\.post/);
+    assert.match(page, /urllib\.request\.urlopen/);
+    assert.match(page, /await fetch\(/);
+  });
+
+  it('tells a table how to send one, in the snippets as well as in the form', async () => {
+    const page = await (await get('/order-lines@1.0.0', { accept: 'text/html' })).text();
+    assert.match(page, /--data-binary @rows\.csv/);
+    assert.doesNotMatch(page, /<script>/, 'no form to enhance, so no script');
+  });
+
+  it('believes a reverse proxy about where it is answering from', async () => {
+    const page = await (await get('/iban@1.0.0', {
+      accept: 'text/html',
+      'x-forwarded-proto': 'https',
+      'x-forwarded-host': 'formulas.example.com',
+    })).text();
+    assert.match(page, /curl -X POST &#39;https:\/\/formulas\.example\.com\/iban@1\.0\.0\/call&#39;/);
   });
 
   it('indexes the catalogue in HTML too, so the service is browsable', async () => {

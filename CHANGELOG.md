@@ -36,7 +36,12 @@ All notable changes to Elo are documented in this file.
   when it is asked for by name, and `GET /{formula}/form` answers the input
   form as a fragment — one template for the whole catalogue, built from
   `fields.elo`, with a `GET` form whose action is the call, so it works with
-  no JavaScript and its result is a URL. It comes with a **black-box
+  no JavaScript and its result is a URL. The page then **enhances** that form
+  with a script: the same request over `fetch`, answered under the form rather
+  than navigated to, with a refusal put back on the field it names — and every
+  page carries a **curl, JavaScript, Ruby and Python snippet** for calling the
+  formula from somewhere else, filled in with its first case and pointed at the
+  host the request came in on. It comes with a **black-box
   specification** in
   `contrib/formula-service/webspicy` — one file per resource, Finitio schemas
   for what it takes and answers, and a postcondition that POSTs every case a
