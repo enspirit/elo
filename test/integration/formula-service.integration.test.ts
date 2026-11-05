@@ -757,6 +757,210 @@ describe('Formula service - GET /call', () => {
 });
 
 // ---------------------------------------------------------------------------
+// §9 OpenAPI
+// ---------------------------------------------------------------------------
+
+describe('Formula service - the OpenAPI of one formula', () => {
+  it('describes the call a client would generate', async () => {
+    const response = await get('/iban@1.0.0/openapi.json');
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'application/json; charset=utf-8');
+
+    const document = await bodyOf(response);
+    assert.equal(document.openapi, '3.0.3');
+    assert.equal(document.info.title, 'Is this a valid IBAN?');
+    assert.equal(document.info.version, '1.0.0');
+    assert.ok(document.paths['/iban@1.0.0/call'].post, 'no POST on the call');
+    assert.ok(document.paths['/iban@1.0.0/call'].get, 'no GET on the call');
+  });
+
+  it('turns Input into the request body schema', async () => {
+    const document = await bodyOf(get('/iban@1.0.0/openapi.json'));
+    const schema = document.components.schemas['iban_1_0_0_Input'];
+    assert.deepEqual(schema, {
+      type: 'object',
+      properties: { iban: { type: 'string' } },
+      required: ['iban'],
+      additionalProperties: false,
+    });
+    assert.equal(
+      document.paths['/iban@1.0.0/call'].post.requestBody.content['application/json'].schema.$ref,
+      '#/components/schemas/iban_1_0_0_Input'
+    );
+  });
+
+  it('turns Output into the response schema, Null and all', async () => {
+    const document = await bodyOf(get('/iban@1.0.0/openapi.json'));
+    // `country: String|Null` is a key that is **there** and may be null, which
+    // is a different thing from the `:?` that may be absent — so it is both
+    // required and nullable, and a generated client reading `.country` finds
+    // it every time. Elo's own schema parser draws the line in the same place.
+    assert.deepEqual(document.components.schemas['iban_1_0_0_Output'], {
+      type: 'object',
+      properties: {
+        valid: { type: 'boolean' },
+        country: { type: 'string', nullable: true },
+        formatted: { type: 'string', nullable: true },
+      },
+      required: ['valid', 'country', 'formatted'],
+      additionalProperties: false,
+    });
+    assert.equal(
+      document.paths['/iban@1.0.0/call'].post.responses['200'].content['application/json'].schema.$ref,
+      '#/components/schemas/iban_1_0_0_Output'
+    );
+  });
+
+  it('maps every Elo type the table of §9 names', async () => {
+    const age = await bodyOf(get('/age@1.0.0/openapi.json'));
+    assert.deepEqual(age.components.schemas['age_1_0_0_Input'].properties, {
+      birthDate: { type: 'string', format: 'date' },
+      on: { type: 'string', format: 'date' },
+    });
+
+    const subscription = await bodyOf(get('/subscription-proration@1.0.0/openapi.json'));
+    const output = subscription.components.schemas['subscription_proration_1_0_0_Output'];
+    assert.equal(output.properties.nextRenewal.format, 'date');
+    assert.equal(output.properties.billedDays.type, 'number', 'a Float is a number');
+
+    const lines = await bodyOf(get('/order-lines@1.0.0/openapi.json'));
+    const input = lines.components.schemas['order_lines_1_0_0_Input'];
+    assert.equal(input.type, 'array', 'a formula over a table takes one');
+    assert.equal(input.items.properties.quantity.type, 'integer');
+    assert.deepEqual(input.items.required, ['description', 'unitPrice', 'quantity'], 'not the optional one');
+  });
+
+  it('says nothing about a constraint, which JSON Schema cannot carry', async () => {
+    const document = await bodyOf(get('/leap-year@1.0.0/openapi.json'));
+    const schema = document.components.schemas['leap_year_1_0_0_Input'];
+    // `year` is `Int(y | gregorian: y >= 1583 && y <= 9999)`: the bound lives
+    // in an Elo predicate, so there is no `minimum` to be had — a generated
+    // client checks shape, and the formula checks meaning.
+    assert.deepEqual(schema.properties.year, { type: 'integer' });
+    assert.equal(document.components.schemas['leap_year_1_0_0_Output'].type, 'boolean');
+  });
+
+  it('carries the cases as examples, which is what they already are', async () => {
+    const document = await bodyOf(get('/iban@1.0.0/openapi.json'));
+    const body = document.paths['/iban@1.0.0/call'].post.requestBody.content['application/json'];
+    assert.ok(body.examples['Belgian, grouped'], 'a case by name');
+    assert.deepEqual(body.examples['Belgian, grouped'].value, { iban: 'BE68 5390 0754 7034' });
+    const answer = document.paths['/iban@1.0.0/call'].post.responses['200'].content['application/json'];
+    assert.deepEqual(answer.examples['Belgian, grouped'].value, {
+      valid: true,
+      country: 'BE',
+      formatted: 'BE68 5390 0754 7034',
+    });
+  });
+
+  it('describes every way a call can fail, with the error schema of §5', async () => {
+    const document = await bodyOf(get('/iban@1.0.0/openapi.json'));
+    const responses = document.paths['/iban@1.0.0/call'].post.responses;
+    assert.deepEqual(Object.keys(responses).sort(), ['200', '400', '404', '406', '413', '415', '422', '503']);
+    assert.equal(
+      responses['422'].content['application/json'].schema.$ref,
+      '#/components/schemas/Error'
+    );
+    assert.deepEqual(document.components.schemas.Error.required, ['message']);
+    assert.ok(document.components.schemas.Error.properties.kind, 'the kind a client switches on');
+  });
+
+  it('reads the query of a GET call as parameters, which is what they are', async () => {
+    const document = await bodyOf(get('/age@1.0.0/openapi.json'));
+    const parameters = document.paths['/age@1.0.0/call'].get.parameters;
+    assert.deepEqual(parameters.map((parameter: { name: string }) => parameter.name), ['birthDate', 'on']);
+    assert.equal(parameters[0].in, 'query');
+    assert.equal(parameters[0].required, true);
+    assert.equal(parameters[0].description, 'Date of birth', 'the label of fields.elo');
+    assert.equal(parameters[0].schema.type, 'string', 'a query carries strings, and Input coerces');
+  });
+
+  it('offers a tabular body only where the formula takes a table', async () => {
+    const lines = await bodyOf(get('/order-lines@1.0.0/openapi.json'));
+    const call = lines.paths['/order-lines@1.0.0/call'].post;
+    assert.ok(call.requestBody.content['text/csv'], 'no CSV for a table');
+    assert.ok(call.responses['200'].content['text/csv'], 'no CSV answer for a table');
+    assert.equal(lines.paths['/order-lines@1.0.0/call'].get, undefined, 'a query cannot carry a table');
+
+    const iban = await bodyOf(get('/iban@1.0.0/openapi.json'));
+    assert.equal(iban.paths['/iban@1.0.0/call'].post.requestBody.content['text/csv'], undefined);
+  });
+
+  it('is cached like the bundle it is derived from', async () => {
+    const response = await get('/iban@1.0.0/openapi.json');
+    assert.match(response.headers.get('cache-control') ?? '', /immutable/);
+    const alias = await get('/iban/openapi.json');
+    assert.equal(alias.status, 200);
+    assert.equal(alias.headers.get('content-location'), '/iban@1.0.0/openapi.json');
+  });
+
+  it('has none for a formula that is not in the catalogue', async () => {
+    assert.equal((await get('/no-such-formula/openapi.json')).status, 404);
+  });
+});
+
+describe('Formula service - the OpenAPI of the catalogue', () => {
+  it('is one document over every formula', async () => {
+    const response = await get('/openapi.json');
+    assert.equal(response.status, 200);
+    const document = await bodyOf(response);
+    assert.equal(document.openapi, '3.0.3');
+    assert.equal(Object.keys(document.paths).length, 14, 'one call per formula');
+    assert.ok(document.paths['/iban@1.0.0/call']);
+    assert.ok(document.paths['/age@1.0.0/call']);
+    assert.ok(document.components.schemas['iban_1_0_0_Input']);
+    assert.ok(document.components.schemas['age_1_0_0_Output']);
+    assert.ok(document.components.schemas.Error, 'one error schema for the whole of it');
+  });
+
+  it('is scoped by tag and by prefix, a thousand formulas being a document no tool enjoys', async () => {
+    const banking = await bodyOf(get('/openapi.json?tag=banking'));
+    assert.deepEqual(Object.keys(banking.paths), ['/iban@1.0.0/call']);
+    assert.deepEqual(
+      Object.keys(banking.components.schemas).sort(),
+      ['Error', 'iban_1_0_0_Input', 'iban_1_0_0_Output']
+    );
+
+    const nothing = await bodyOf(get('/openapi.json?prefix=tax'));
+    assert.deepEqual(Object.keys(nothing.paths), []);
+  });
+
+  it('groups a formula under its own tags, so a gateway can navigate it', async () => {
+    const document = await bodyOf(get('/openapi.json'));
+    assert.deepEqual(document.paths['/iban@1.0.0/call'].post.tags, ['validation', 'banking']);
+  });
+
+  it('resolves every reference it makes, for every formula in the catalogue', async () => {
+    // The suite's OpenAPI parser checks the two documents it looks at; this
+    // checks the one invariant that matters over all of them, which is that a
+    // `$ref` points at a schema that is there. A dangling one is a generated
+    // client that does not compile.
+    const index = await bodyOf(get('/'));
+    const documents = [
+      await bodyOf(get('/openapi.json')),
+      ...await Promise.all((index.formulas as { id: string }[])
+        .map(entry => bodyOf(get(`/${entry.id}/openapi.json`)))),
+    ];
+
+    for (const document of documents) {
+      const schemas = Object.keys(document.components.schemas);
+      const refs = [...JSON.stringify(document).matchAll(/"\$ref":"#\/components\/schemas\/([^"]+)"/g)]
+        .map(match => match[1]);
+      assert.ok(refs.length > 0, 'a document that refers to nothing describes nothing');
+      for (const ref of refs) {
+        assert.ok(schemas.includes(ref), `${document.info.title}: $ref to a missing ${ref}`);
+      }
+    }
+  });
+
+  it('is revalidated, since a catalogue is not immutable the way a version is', async () => {
+    const response = await get('/openapi.json');
+    assert.equal(response.headers.get('cache-control'), 'no-cache');
+    assert.ok(response.headers.get('etag'));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // §1 A formula's id is its path; §7 a folder is a folder
 // ---------------------------------------------------------------------------
 

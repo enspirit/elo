@@ -38,6 +38,8 @@ webspicy/         the black-box specification of all of it
 | `GET /{id}@{version}` | the descriptor — or the program, by `Accept` |
 | `GET /{id}@{version}/types.elo` | the five files of the bundle, verbatim |
 | `GET /{id}@{version}/form` | the input form, as an HTML fragment |
+| `GET /{id}@{version}/openapi.json` | that formula, for a client that generates a call |
+| `GET /openapi.json` | the whole catalogue; `?prefix=`, `?tag=` |
 | `POST /{id}@{version}/call` | one input, one answer |
 | `GET /{id}@{version}/call?…` | the same, linkable |
 
@@ -182,6 +184,44 @@ so a client puts the message under the input that caused it without parsing
 anything. `kind`, `path` and `label` are promised by Elo; the `message` prose
 is not.
 
+### OpenAPI
+
+Two documents, because two audiences. `GET /{id}@{version}/openapi.json` is one
+formula, for a client generating a typed call to it: the request body schema
+from `Input`, the response schema from `Output`, the errors of §5, and the
+examples from `cases.elo` — which were already a request body and a response
+body by construction. `GET /openapi.json` is the whole catalogue, for a
+gateway, a Postman collection or an SDK over everything, scoped by `?prefix`
+and `?tag` because a thousand formulas is a document no tool enjoys.
+
+Neither is written: the schemas are the same walk over the same type AST that
+builds the form and writes the answer, so there is no third copy of what a
+formula takes to fall out of step with the other two.
+
+| Elo | JSON Schema |
+| --- | --- |
+| `Int` / `Float` | `integer` / `number` |
+| `String` | `string` |
+| `Bool` | `boolean` |
+| `Date` / `Datetime` | `string`, `format: date` / `date-time` |
+| `Duration` | `string`, `format: duration` |
+| `[T]` | `array`, `items` |
+| `{ … }` | `object`, `properties`, `required`, `additionalProperties: false` |
+| `T\|Null` | `nullable: true`, and still **required** |
+| `Any` / `Data` | `{}` |
+| a predicate | nothing — §5 is how a bound is reported |
+
+The last line is the honest one, and the one before it is the subtle one: a
+`T|Null` key is *there* and may be null, which is a different thing from the
+`:?` that may be absent — so it is required and nullable at once, and a
+generated client reading it finds it every time.
+
+It is **3.0.3** rather than 3.1: `nullable: true` is read by more of the
+tooling these documents exist for than a union with `"null"` is. The suite
+validates both documents with a real OpenAPI parser, which is how a
+`description` on a Media Type Object — a field that does not exist — was caught
+rather than shipped.
+
 ## Caching
 
 A published version is immutable, so `/{id}@{version}` carries a strong `ETag`
@@ -233,15 +273,15 @@ formula in it answers what its documentation says.
 
 ## What is not here yet
 
-This is phases 1 to 3 of the plan. Deliberately absent, each answering `404`
-or `406` rather than something approximate:
+All six phases of the plan are in. What is left is what the plan itself put
+off, plus two things it asked for that need a dependency this repository does
+not have:
 
 - **YAML and XLSX bodies** — a parser each, which is a host's dependency to
   add rather than this repository's (see Formats above)
 - **a file upload on the page** — a table goes in as a body, and an HTML form
   can only send one as `multipart/form-data`, which is a parser and a content
   type this contract does not have. The page shows the `curl` instead
-- **`openapi.json`**, per formula and for the catalogue
 - **more than one version of a formula.** A version is read from `bundle.json`,
   so the catalogue serves one per formula and `versions` has one entry.
   Publishing — the step that copies a bundle into an immutable directory per
@@ -290,10 +330,10 @@ contrib/formula-service/webspicy/run.sh _one/call/post.yml   # one specification
 LOG_LEVEL=DEBUG npm run test:webspicy             # with the requests and responses
 ```
 
-Eleven files, 46 examples and 24 counterexamples over every service there is:
+Thirteen files, 52 examples and 24 counterexamples over every service there is:
 the index and its page, the descriptor, the page, the four compiled
-representations, the bundle files, the manifest, the form, and `/call` three
-ways — JSON, a query string, and a table. Two conditions are automated rather than
+representations, the bundle files, the manifest, the form, the two OpenAPI
+documents, and `/call` three ways — JSON, a query string, and a table. Two conditions are automated rather than
 documentary:
 
 - **`It supports the ETag/If-None-Match caching protocol`** — webspicy's own,
@@ -303,7 +343,10 @@ documentary:
   (`webspicy/support/postconditions/`), which POSTs every case of the formula
   just described to its own `call` link and compares. That is §3's claim that
   the documentation of the API is its test suite, turned into a check — and it
-  is what found the bug fixed in the commit before this one.
+  found a real bug the day it was written.
+- **`It is a valid OpenAPI document`** — ours too, over webspicy's own
+  `openapi3_parser`: a generated document is either valid or useless, and an
+  assertion on a key or two would not have caught the invalid field it did.
 
 It is **not** wired into `npm test`: it needs a second toolchain (Ruby) and a
 running service, which is the point of a black-box suite rather than a defect

@@ -20,6 +20,12 @@ All notable changes to Elo are documented in this file.
   convention over files, which is why the bundle format's reference
   implementation and the catalogue of formulas moved there too, from
   `examples/`.
+  Both **OpenAPI documents** are served: `GET /{id}@{v}/openapi.json` for one
+  formula and `GET /openapi.json` for the catalogue (`?prefix`, `?tag`),
+  derived from the same type walk that builds the form — so `Input`, the form,
+  the answer writer and the generated schema cannot disagree. A constraint
+  becomes nothing there, deliberately: a bound is an Elo predicate, which JSON
+  Schema cannot carry, and §5 is how one is reported.
   A call also speaks **`text/csv`**, in and out, for a formula whose own
   `Input` or `Output` is a list — one call whose argument is a table, not a
   batch of calls, so a refusal names the row by index. Which it is comes from

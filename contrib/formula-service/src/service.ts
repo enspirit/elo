@@ -36,6 +36,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { parseCSV, toCSV } from '../../../src';
 import { loadServedCatalogue, type ServedCatalogue, type ServedFormula } from './catalogue';
 import { cataloguePage, formFragment, formulaPage } from './html';
+import { catalogueOpenapi, formulaOpenapi } from './openapi';
 import { runCall } from './sandbox';
 import type { FieldDescriptor } from './bundle';
 
@@ -114,6 +115,11 @@ export function createService(options: ServiceOptions): Service {
       return index(request, response, pathname.slice(1, -1), url.searchParams);
     }
 
+    // The one resource that belongs to the catalogue rather than to a formula.
+    if (pathname === '/openapi.json') {
+      return catalogueDocument(request, response, url.searchParams);
+    }
+
     const segments = pathname.slice(1).split('/');
     const last = segments[segments.length - 1];
     const sub = SUB_RESOURCES.has(last) ? segments.pop() : undefined;
@@ -130,6 +136,8 @@ export function createService(options: ServiceOptions): Service {
         return call(request, response, formula, pinned, url);
       case 'form':
         return form(request, response, formula, pinned);
+      case 'openapi.json':
+        return openapi(request, response, formula, pinned);
       case 'types.elo':
       case 'formula.elo':
       case 'fields.elo':
@@ -137,8 +145,6 @@ export function createService(options: ServiceOptions): Service {
       case 'bundle.json':
         return file(request, response, formula, pinned, sub);
       default:
-        // `openapi.json`: named in the descriptor's links, and not served yet.
-        // A 404 is the honest answer; see phase 6.
         return notFound(request, response);
     }
   }
@@ -266,6 +272,60 @@ export function createService(options: ServiceOptions): Service {
     if (noneMatch(request, formula.etag)) return notModified(response);
     const type = name.endsWith('.json') ? 'application/json' : 'application/x-elo';
     sendText(request, response, 200, type, formula.files[name]);
+  }
+
+  // -------------------------------------------------------------------------
+  // §9 OpenAPI
+  // -------------------------------------------------------------------------
+
+  /** One formula's document, derived from the bundle and cached with it. */
+  function openapi(
+    request: IncomingMessage,
+    response: ServerResponse,
+    formula: ServedFormula,
+    pinned: boolean
+  ): void {
+    if (!isReadMethod(request)) return methodNotAllowed(request, response, 'GET, HEAD');
+    if (!negotiate(request, ['application/json'])) {
+      return notAcceptable(request, response, ['application/json']);
+    }
+    cacheable(
+      request, response, formula, pinned,
+      pinned ? undefined : `${formula.descriptor.links.self}/openapi.json`
+    );
+    if (noneMatch(request, formula.etag)) return notModified(response);
+    send(request, response, 200, formulaOpenapi(formula));
+  }
+
+  /**
+   * The whole catalogue's document, scoped by `?prefix` and `?tag`.
+   *
+   * It is revalidated rather than cached hard: a *version* is immutable, and
+   * this is about the catalogue, which gains formulas. The `ETag` is the
+   * catalogue's, so a client that has the current one is answered 304 — which
+   * is the cheap half of caching hard, without the half that serves last
+   * week's catalogue.
+   */
+  function catalogueDocument(
+    request: IncomingMessage,
+    response: ServerResponse,
+    query: URLSearchParams
+  ): void {
+    if (!isReadMethod(request)) return methodNotAllowed(request, response, 'GET, HEAD');
+    if (!negotiate(request, ['application/json'])) {
+      return notAcceptable(request, response, ['application/json']);
+    }
+
+    const prefix = query.get('prefix');
+    const tag = query.get('tag');
+    const scoped = catalogue.formulas.filter(formula =>
+      (!prefix || formula.id.startsWith(`${prefix}/`))
+      && (!tag || formula.descriptor.tags.includes(tag)));
+
+    header(response, 'Cache-Control', 'no-cache');
+    header(response, 'ETag', catalogue.etag);
+    if (noneMatch(request, catalogue.etag)) return notModified(response);
+    send(request, response, 200, catalogueOpenapi(scoped));
   }
 
   // -------------------------------------------------------------------------

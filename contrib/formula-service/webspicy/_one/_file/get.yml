@@ -120,13 +120,3 @@ services:
       expected:
         content_type: application/json
         status: 404
-
-    - when: |-
-        the OpenAPI document is asked for, which is not built yet
-      it: |-
-        fails with a 404, named in the descriptor's links and a later phase
-      input:
-        file: openapi.json
-      expected:
-        content_type: application/json
-        status: 404

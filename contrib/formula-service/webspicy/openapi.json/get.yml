@@ -1,0 +1,81 @@
+---
+name: |-
+  Catalogue OpenAPI
+
+url: |-
+  /openapi.json
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers the whole catalogue as one OpenAPI 3.0 document: one path per
+    formula, each with its own request and response schemas under
+    `components.schemas`, keyed by formula and version.
+
+    It is for a gateway, a Postman collection, or an SDK over everything.
+    `?prefix` and `?tag` scope it, because a thousand formulas is a document no
+    tool enjoys — and a formula's own tags become the operation's tags, so what
+    a catalogue is organised by is what a generated client is organised by.
+
+  postconditions:
+    - It is a valid OpenAPI document
+
+  input_schema: |-
+    {
+      prefix :? String
+      tag    :? String
+    }
+  output_schema: |-
+    .
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        asked for the whole catalogue
+      it: |-
+        answers one document over every formula in it
+      input: {}
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - |-
+          match('', /iban_1_0_0_Input/)
+        - |-
+          match('', /age_1_0_0_Output/)
+        - |-
+          match('', /order_lines_1_0_0_Input/)
+
+    - when: |-
+        scoped to a tag
+      it: |-
+        answers the formulas carrying it, and the schemas of those alone
+      input:
+        tag: banking
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - |-
+          match('', /iban_1_0_0_Input/)
+        - |-
+          notMatch('', /age_1_0_0_Input/)
+
+    - when: |-
+        scoped to a folder nothing is under
+      it: |-
+        answers a document with no path in it, which is still a document
+      input:
+        prefix: tax
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - |-
+          notMatch('', /iban_1_0_0_Input/)

@@ -41,4 +41,8 @@ Webspicy::Configuration.new(Path.dir) do |c|
   # response body that goes with it — so the documentation of the API is its
   # test suite. `support/postconditions/` has the condition that proves it.
   c.postcondition CaseIsWhatTheCallAnswers
+
+  # §9: a generated OpenAPI document is either valid or useless, and only a
+  # parser can say which. Webspicy brings one.
+  c.postcondition IsAValidOpenapiDocument
 end

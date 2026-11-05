@@ -383,6 +383,80 @@ export function inputShape(bundle: Bundle): AnswerShape {
   return shapeOf(inputOf(bundle), bundle.types);
 }
 
+/**
+ * A declared type as **JSON Schema** — the third reading of the same type, and
+ * the same walk `describeFields` and `answerShape` do.
+ *
+ * It is JSON Schema as OpenAPI 3.0 speaks it, which is why a nullable type is
+ * `nullable: true` rather than a union with `"null"`: the broader half of the
+ * tooling reads 3.0, and the mapping below is the one §9 of the plan wrote.
+ *
+ * The honest line of that table is the last one: **a predicate becomes
+ * nothing**. A constraint is an Elo expression, so JSON Schema cannot carry it
+ * — a generated client validates shape, and the formula validates meaning. It
+ * would be easy and wrong to emit a `minimum` for the constraints that happen
+ * to look like one.
+ */
+export function jsonSchemaOf(
+  expr: TypeExpr,
+  types: Map<string, TypeExpr>,
+  seen: Set<string> = new Set()
+): Record<string, unknown> {
+  switch (expr.kind) {
+    case 'type_ref': {
+      const target = types.get(expr.name);
+      if (target && !seen.has(expr.name)) {
+        seen.add(expr.name);
+        return jsonSchemaOf(target, types, seen);
+      }
+      return { ...(JSON_SCHEMAS[expr.name] ?? {}) };
+    }
+    case 'subtype_constraint':
+      return jsonSchemaOf(expr.baseType, types, seen);
+    case 'array_type':
+      return { type: 'array', items: jsonSchemaOf(expr.elementType, types, seen) };
+    case 'union_type': {
+      const real = expr.types.filter(member => !(member.kind === 'type_ref' && member.name === 'Null'));
+      const nullable = real.length !== expr.types.length;
+      // A union of several real types has no one JSON Schema worth writing —
+      // `oneOf` over coerced types would promise more than Elo does — so it
+      // is left open, which is what `Any` means here too.
+      const schema = real.length === 1 ? jsonSchemaOf(real[0], types, new Set(seen)) : {};
+      return nullable ? { ...schema, nullable: true } : schema;
+    }
+    case 'type_schema': {
+      const properties: Record<string, unknown> = {};
+      const required: string[] = [];
+      for (const property of expr.properties) {
+        properties[property.key] = jsonSchemaOf(property.typeExpr, types, new Set(seen));
+        if (property.optional !== true) required.push(property.key);
+      }
+      return {
+        type: 'object',
+        properties,
+        ...(required.length > 0 ? { required } : {}),
+        // Elo's schemas are closed: an attribute the type does not declare is
+        // a refusal rather than an extra, and a generated client should know
+        // that before it sends one.
+        additionalProperties: false,
+      };
+    }
+  }
+}
+
+const JSON_SCHEMAS: Record<string, Record<string, unknown>> = {
+  Int: { type: 'integer' },
+  Float: { type: 'number' },
+  String: { type: 'string' },
+  Bool: { type: 'boolean' },
+  Date: { type: 'string', format: 'date' },
+  Datetime: { type: 'string', format: 'date-time' },
+  Duration: { type: 'string', format: 'duration' },
+  // `Any` and `Data` carry whatever the caller sends, and so does their schema.
+  Any: {},
+  Data: {},
+};
+
 const TEMPORAL_SHAPES: Record<string, AnswerShape> = {
   Date: { kind: 'date' },
   Datetime: { kind: 'datetime' },

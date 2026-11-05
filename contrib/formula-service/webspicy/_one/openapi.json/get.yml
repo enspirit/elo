@@ -1,0 +1,94 @@
+---
+name: |-
+  Formula OpenAPI
+
+url: |-
+  /{formula}/openapi.json
+
+openapi:
+  tag: Catalogue
+
+services:
+- method: |-
+    GET
+
+  description: |-
+    Answers one formula as an OpenAPI 3.0 document, for a client that generates
+    a typed call to it: the request body schema from `Input`, the response
+    schema from `Output`, the error schema of §5, and the examples from
+    `cases.elo` — which were already a request body and a response body by
+    construction.
+
+    Nothing in it is written by hand. The schemas are the same walk over the
+    same type AST that builds the form and writes the answer, so there is no
+    third copy of what a formula takes to fall out of step with the other two.
+
+    One line of the mapping is worth knowing: **a constraint becomes nothing**.
+    A bound lives in an Elo predicate, which JSON Schema cannot carry — so a
+    generated client validates shape, and the formula validates meaning. The
+    422 of §5 is how a bound is reported.
+
+  postconditions:
+    - It is a valid OpenAPI document
+    - It supports the ETag/If-None-Match caching protocol
+
+  input_schema: |-
+    {
+      formula : String
+    }
+  output_schema: |-
+    .
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        asked for a formula that takes a record
+      it: |-
+        answers a document whose call has both doors, and schemas for both ends
+      input:
+        formula: iban@1.0.0
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - |-
+          match('', /iban_1_0_0_Input/)
+        - |-
+          match('', /iban_1_0_0_Output/)
+
+    - when: |-
+        asked for a formula that takes a table
+      it: |-
+        answers a document offering a tabular body
+      input:
+        formula: order-lines@1.0.0
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - |-
+          match('', /text\/csv/)
+
+    - when: |-
+        asked under the unversioned name
+      it: |-
+        answers the latest version's document, and names the version it came from
+      input:
+        formula: iban
+      expected:
+        content_type: application/json
+        status: 200
+        headers:
+          Content-Location: /iban@1.0.0/openapi.json
+
+  counterexamples:
+    - when: |-
+        the formula is not in the catalogue
+      it: |-
+        fails with a 404
+      input:
+        formula: no-such-formula
+      expected:
+        content_type: application/json
+        status: 404
