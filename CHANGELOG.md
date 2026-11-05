@@ -6,6 +6,16 @@ All notable changes to Elo are documented in this file.
 
 ### Fixed
 
+- The **Node sandbox** of `contrib/sandboxes/node` could not see luxon. It
+  evaluated the compiled code with an indirect `eval`, which runs in global
+  scope, where the worker's own `require('luxon')` bindings are not visible —
+  and the emitted helpers name `DateTime`, `Duration` and `Interval` as free
+  names, `kMul` among them, so a real program died on its first multiplication
+  with `Duration is not defined`. The three are now bound as parameters of a
+  function built around the code, which is what `compile()` already does. The
+  smoke test had missed it because its code strings are hand-written, on
+  purpose, so that it needs no build; two that name luxon are now in it
+
 - `Float()` of a string meant **two things on two Rubies**: `Kernel#Float("1.")`
   raises on Ruby 2.7 to 3.3 and answers `1.0` on 3.4 and later, so the same Elo
   program depended on the host's Ruby — where JavaScript, Python and PostgreSQL

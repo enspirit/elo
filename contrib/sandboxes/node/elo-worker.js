@@ -9,10 +9,15 @@
 // `workerData.input` — plain, JSON-shaped data (the `_` input).
 const { parentPort, workerData } = require('worker_threads');
 
-// The compiled code references `DateTime` / `Duration` (luxon) as free names;
-// bind them in scope before evaluating. `(0, eval)` uses indirect eval so the
-// code runs in this module's scope with those bindings visible.
-const { DateTime, Duration } = require('luxon');
+// The compiled code references `DateTime`, `Duration` and `Interval` (luxon)
+// as free names — the emitted helpers name them whatever the expression was,
+// `kMul` among them — so they are passed in as *parameters* of a function built
+// around the code. Indirect eval would not do: it evaluates in global scope,
+// where this module's `require`d bindings are not visible, and the first
+// multiplication in a real program then fails with `Duration is not defined`.
+const { DateTime, Duration, Interval } = require('luxon');
 
-const fn = (0, eval)(workerData.code);
+const fn = new Function('DateTime', 'Duration', 'Interval', `return (${workerData.code});`)(
+  DateTime, Duration, Interval
+);
 parentPort.postMessage(fn(workerData.input));

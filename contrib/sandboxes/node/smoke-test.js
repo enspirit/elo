@@ -10,14 +10,23 @@ const { runElo } = require('./run-elo');
   const r = await runElo('(function(_) { return _ * 2; })', 21, { timeoutMs: 1000 });
   assert.strictEqual(r, 42, 'happy path should return 42');
 
-  // 2. Timeout: a runaway synchronous computation is hard-killed.
+  // 2. Luxon is in scope. Emitted helpers name DateTime, Duration and Interval
+  // as free names — `kMul` does, so even `_ * 2` from a real compile needs
+  // them bound. Hand-written here, like the rest, to stay build-independent.
+  const d = await runElo('(function(_) { return Duration.fromISO("P1D").days + _; })', 1, { timeoutMs: 1000 });
+  assert.strictEqual(d, 2, 'compiled code should see luxon');
+  const t = await runElo('(function(_) { return DateTime.fromISO("2026-11-05").year + (Interval ? 0 : 1); })',
+                         null, { timeoutMs: 1000 });
+  assert.strictEqual(t, 2026, 'compiled code should see DateTime and Interval');
+
+  // 3. Timeout: a runaway synchronous computation is hard-killed.
   await assert.rejects(
     runElo('(function(_) { while (true) {} })', null, { timeoutMs: 200 }),
     /timed out/,
     'infinite loop should time out'
   );
 
-  // 3. Memory: an allocation past the heap cap kills the worker (OOM / exit).
+  // 4. Memory: an allocation past the heap cap kills the worker (OOM / exit).
   await assert.rejects(
     runElo('(function(_) { const a = []; while (true) { a.push(new Array(100000).fill(0)); } })',
            null, { timeoutMs: 5000, maxHeapMb: 32 }),
