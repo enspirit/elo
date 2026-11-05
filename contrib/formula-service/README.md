@@ -1,7 +1,7 @@
 # The formula service
 
 A REST API over a catalogue of [formula bundles](./formulas/BUNDLE.md), and the
-thirteen formulas it ships with.
+fourteen formulas it ships with.
 
 ```bash
 npm run build                                   # from the repository root
@@ -18,7 +18,7 @@ convention over files, and a service over bundles is a *host* — so this lives
 beside the editor plugins and the sandboxes rather than in `src/`. Copy it.
 
 ```
-formulas/      the catalogue: thirteen bundles, and BUNDLE.md, the format
+formulas/      the catalogue: fourteen bundles, and BUNDLE.md, the format
 src/bundle.ts  the format's reference implementation: read, check, generate
 src/catalogue.ts  a catalogue, validated and compiled, once, at boot
 src/service.ts    the HTTP contract: routing, negotiation, the error mapping
@@ -121,6 +121,46 @@ in the second one is the server's timezone, which is not the formula's
 business. On JavaScript the two are the same runtime value, and only the type
 says which was meant.
 
+### Formats
+
+`Content-Type` chooses how the request body is read and `Accept` how the answer
+is written, and the two are independent — the same table can go in as CSV and
+come back as JSON.
+
+| Media type | Reads / writes | |
+| --- | --- | --- |
+| `application/json` | any input, any answer | built in |
+| `text/csv` | **only** a list `Input` / `Output` | built in |
+| `application/yaml`, XLSX | any / a list | a host's to add, below |
+
+A tabular format encodes a **table**, so it only means something where the
+formula's own type is one. `Input = [Row]` takes a CSV body as **one** input
+that happens to be a list — not a batch of calls — which the formula declared
+and validates like any other value: a refusal names the row, by index
+(`.1.unitPrice`). A CSV body for a formula whose `Input` is a record is a `415`
+saying so, rather than a body silently read as many calls, and `Accept:
+text/csv` is only offered where `Output` is a list.
+
+Which of those is the case is read from the **type**, never from the form: for
+`Input = [Line]`, `fields.elo` describes a *row* — which is what a table's
+column labels are — so the form is no use for this question and `types.elo`
+is.
+
+Two details of reading a table, both the same rule a form taught us: every cell
+arrives as a **string** and `Input` coerces it, and an **empty** cell counts as
+a cell left alone, so an optional column may be blank. And an empty table still
+answers its header, since a client reading columns off the body should not have
+to guess them.
+
+`order-lines` is the formula in the catalogue whose input is a table, and the
+one all of this is specified against.
+
+**YAML and XLSX need a parser this repository does not depend on** (Elo's only
+dependency is luxon, and a service over it should not be the thing that adds
+two more). Elo has a `FormatAdapter` registry for exactly this — `parseCSV` and
+`toCSV` behind `text/csv` here come from it — so adding one is a registry entry
+in a host's own copy of `service.ts`, not a change to this contract.
+
 ### When it fails
 
 Elo's refusals already carry what an HTTP error needs, so the mapping is total:
@@ -187,7 +227,7 @@ implementation, not a hardened product.
 Boot reads every bundle, validates it against `BUNDLE.md`, and **runs every
 case**. A catalogue that serves a formula whose form disagrees with its type,
 or whose cases do not pass, does not come up: the error belongs to whoever
-published it. For the thirteen that is a few hundred evaluations and
+published it. For the fourteen that is a few hundred evaluations and
 milliseconds, and it means a running service has demonstrated that every
 formula in it answers what its documentation says.
 
@@ -196,8 +236,11 @@ formula in it answers what its documentation says.
 This is phases 1 to 3 of the plan. Deliberately absent, each answering `404`
 or `406` rather than something approximate:
 
-- **formats past JSON** — YAML, and `text/csv`/XLSX for a formula whose `Input`
-  and `Output` are lists, over Elo's own `FormatAdapter` registry
+- **YAML and XLSX bodies** — a parser each, which is a host's dependency to
+  add rather than this repository's (see Formats above)
+- **a file upload on the page** — a table goes in as a body, and an HTML form
+  can only send one as `multipart/form-data`, which is a parser and a content
+  type this contract does not have. The page shows the `curl` instead
 - **`openapi.json`**, per formula and for the catalogue
 - **more than one version of a formula.** A version is read from `bundle.json`,
   so the catalogue serves one per formula and `versions` has one entry.
@@ -247,10 +290,10 @@ contrib/formula-service/webspicy/run.sh _one/call/post.yml   # one specification
 LOG_LEVEL=DEBUG npm run test:webspicy             # with the requests and responses
 ```
 
-Ten files, 41 examples and 21 counterexamples over every service there is: the
-index and its page, the descriptor, the page, the four compiled
-representations, the bundle files, the manifest, the form, and `/call` both
-ways. Two conditions are automated rather than
+Eleven files, 46 examples and 24 counterexamples over every service there is:
+the index and its page, the descriptor, the page, the four compiled
+representations, the bundle files, the manifest, the form, and `/call` three
+ways — JSON, a query string, and a table. Two conditions are automated rather than
 documentary:
 
 - **`It supports the ETag/If-None-Match caching protocol`** — webspicy's own,

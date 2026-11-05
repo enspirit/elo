@@ -1,0 +1,16 @@
+Line = {
+  description: String(d | notBlank: !isBlank(d)),
+  unitPrice: Float(p | notNegative: p >= 0),
+  quantity: Int(q | atLeastOne: q >= 1),
+  discountPercent :? Float(d | aPercentage: d >= 0 && d <= 100)
+}
+
+Input = [Line]
+
+Output = [{
+  description: String,
+  quantity: Int,
+  gross: Float,
+  discount: Float,
+  amount: Float
+}]

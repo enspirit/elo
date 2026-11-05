@@ -32,7 +32,7 @@ after(() => {
   server.close();
 });
 
-/** A catalogue of our own, to put a formula the thirteen do not have in. */
+/** A catalogue of our own, to put a formula the shipped one does not have. */
 function temporaryCatalogue(): { dir: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), 'elo-catalogue-'));
   return { dir, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
@@ -78,7 +78,7 @@ describe('Formula service - the index', () => {
     assert.equal(response.headers.get('content-type'), 'application/json; charset=utf-8');
 
     const body = await bodyOf(response);
-    assert.equal(body.formulas.length, 13);
+    assert.equal(body.formulas.length, 14);
     assert.deepEqual(body.folders, [], 'the shipped catalogue is flat');
     assert.deepEqual(body.formulas.map((f: { id: string }) => f.id).slice(0, 3), ['age', 'bmi', 'card-number']);
   });
@@ -440,6 +440,108 @@ describe('Formula service - the page', () => {
     const html = await response.text();
     assert.match(html, /<a href="\/iban">/);
     assert.match(html, /Is this a valid IBAN\?/);
+    assert.match(html, /14 formulas/);
+  });
+
+  it('offers a table a way in, there being no form for one', async () => {
+    const html = await (await get('/order-lines@1.0.0', { accept: 'text/html' })).text();
+    assert.doesNotMatch(html, /<form/, 'a table is not asked for a value at a time');
+    assert.match(html, /takes a <strong>table<\/strong>/);
+    assert.match(html, /Content-Type: text\/csv/, 'it says how to send one');
+    assert.match(html, /<code>unitPrice<\/code>/, 'and what the columns are');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §4 Formats: a tabular body for a formula whose own type is a table
+// ---------------------------------------------------------------------------
+
+describe('Formula service - CSV', () => {
+  const CSV = 'description,unitPrice,quantity,discountPercent\n'
+    + 'Widget,19.99,3,\n'
+    + 'Gadget,5.00,10,15\n';
+
+  it('reads a table as one input, and coerces every cell', async () => {
+    const response = await post('/order-lines@1.0.0/call', CSV, { 'content-type': 'text/csv' });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'application/json; charset=utf-8');
+    assert.deepEqual(await bodyOf(response), [
+      { description: 'Widget', quantity: 3, gross: 59.97, discount: 0, amount: 59.97 },
+      { description: 'Gadget', quantity: 10, gross: 50, discount: 7.5, amount: 42.5 },
+    ]);
+  });
+
+  it('writes a table when one is asked for', async () => {
+    const response = await post('/order-lines@1.0.0/call', CSV, {
+      'content-type': 'text/csv',
+      accept: 'text/csv',
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'text/csv; charset=utf-8');
+    assert.equal(
+      await response.text(),
+      'description,quantity,gross,discount,amount\n'
+      + 'Widget,3,59.97,0,59.97\n'
+      + 'Gadget,10,50,7.5,42.5'
+    );
+  });
+
+  it('reads JSON for the same formula, a format being a representation and not the thing', async () => {
+    const response = await post(
+      '/order-lines@1.0.0/call',
+      JSON.stringify([{ description: 'Widget', unitPrice: 19.99, quantity: 3 }]),
+      { 'content-type': 'application/json', accept: 'text/csv' }
+    );
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), 'description,quantity,gross,discount,amount\nWidget,3,59.97,0,59.97');
+  });
+
+  it('answers the columns of an empty table, rather than an empty body', async () => {
+    const response = await post('/order-lines@1.0.0/call', 'description,unitPrice,quantity\n', {
+      'content-type': 'text/csv',
+      accept: 'text/csv',
+    });
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), 'description,quantity,gross,discount,amount\n');
+  });
+
+  it('refuses a table for a formula that takes a record', async () => {
+    const response = await post('/iban@1.0.0/call', 'iban\nBE68539007547034\n', {
+      'content-type': 'text/csv',
+    });
+    assert.equal(response.status, 415);
+    assert.match((await bodyOf(response)).message, /takes a record/);
+  });
+
+  it('refuses to write a table for a formula that answers a record', async () => {
+    const response = await post('/iban@1.0.0/call', JSON.stringify({ iban: 'BE68539007547034' }), {
+      'content-type': 'application/json',
+      accept: 'text/csv',
+    });
+    assert.equal(response.status, 406);
+  });
+
+  it('maps a refusal in one row onto the row that caused it', async () => {
+    const response = await post(
+      '/order-lines@1.0.0/call',
+      'description,unitPrice,quantity\nWidget,19.99,3\nGadget,-5,10\n',
+      { 'content-type': 'text/csv' }
+    );
+    assert.equal(response.status, 422);
+    const body = await bodyOf(response);
+    assert.equal(body.kind, 'constraint');
+    assert.equal(body.label, 'notNegative');
+    assert.equal(body.path, '.1.unitPrice', 'the second row, by index');
+  });
+
+  it('calls a table over GET too, a repeated parameter being a list', async () => {
+    // Not a table — a query string cannot carry one — but the same formula
+    // through the linkable door, for a one-row call.
+    const response = await get(
+      '/order-lines@1.0.0/call?description=Widget&unitPrice=19.99&quantity=3'
+    );
+    assert.equal(response.status, 422, 'a record is not a list, however it arrives');
+    assert.equal((await bodyOf(response)).kind, 'schema');
   });
 });
 

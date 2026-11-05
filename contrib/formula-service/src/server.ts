@@ -47,7 +47,7 @@ export async function main(args: string[]): Promise<void> {
     console.log(`usage: elo-formula-service [<catalogue>] [--port N] [--host H] [--timeout MS] [--max-heap MB]
 
 A REST API over a catalogue of formula bundles. The catalogue defaults to the
-thirteen formulas this contrib ships with.`);
+formulas this contrib ships with.`);
     return;
   }
 

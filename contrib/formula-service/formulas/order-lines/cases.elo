@@ -1,0 +1,42 @@
+{
+  cases: [
+    {
+      name: 'one line, no discount',
+      input: [{description: 'Widget', unitPrice: 19.99, quantity: 3}],
+      expect: [{description: 'Widget', quantity: 3, gross: 59.97, discount: 0, amount: 59.97}]
+    },
+    {
+      name: 'several lines, one of them discounted',
+      input: [
+        {description: 'Widget', unitPrice: 19.99, quantity: 3},
+        {description: 'Gadget', unitPrice: 5.0, quantity: 10, discountPercent: 15},
+        {description: 'Sprocket', unitPrice: 0.75, quantity: 100}
+      ],
+      expect: [
+        {description: 'Widget', quantity: 3, gross: 59.97, discount: 0, amount: 59.97},
+        {description: 'Gadget', quantity: 10, gross: 50, discount: 7.5, amount: 42.5},
+        {description: 'Sprocket', quantity: 100, gross: 75, discount: 0, amount: 75}
+      ]
+    },
+    {
+      name: 'a discount that lands on half a cent, rounded where it is produced',
+      input: [{description: 'Bolt', unitPrice: 1.11, quantity: 5, discountPercent: 10}],
+      expect: [{description: 'Bolt', quantity: 5, gross: 5.55, discount: 0.56, amount: 4.99}]
+    },
+    {
+      name: 'a free line',
+      input: [{description: 'Sample', unitPrice: 0, quantity: 1}],
+      expect: [{description: 'Sample', quantity: 1, gross: 0, discount: 0, amount: 0}]
+    },
+    {
+      name: 'the whole line discounted away',
+      input: [{description: 'Goodwill', unitPrice: 12.0, quantity: 2, discountPercent: 100}],
+      expect: [{description: 'Goodwill', quantity: 2, gross: 24, discount: 24, amount: 0}]
+    },
+    {
+      name: 'no lines at all, which is a table with no rows',
+      input: [],
+      expect: []
+    }
+  ]
+}

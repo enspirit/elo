@@ -1,0 +1,184 @@
+---
+name: |-
+  Call
+
+url: |-
+  /{formula}/call
+
+openapi:
+  tag: Call
+
+services:
+- method: |-
+    POST
+
+  description: |-
+    Applies a formula whose own `Input` is a **table** to a table sent as the
+    body, and answers one.
+
+    This is not a batch of calls: it is **one** call whose argument happens to
+    be a list, which the formula declared and validates like any other value —
+    so a refusal names the row that caused it, and there is no envelope of
+    per-row results. Bulk, when it comes, will be a different resource.
+
+    A tabular format therefore only means something where the type is one.
+    `text/csv` for a formula whose `Input` is a record is a `415` that says so,
+    rather than a body silently read as many calls; and `Accept: text/csv` is
+    only offered where `Output` is a list.
+
+    Every cell arrives as a string and `Input` coerces it, exactly as a query
+    string's parameters are — and an empty cell counts as a cell left alone, so
+    an optional column may be blank.
+
+    Illustrated on `order-lines`, whose `Input` is `[Line]`.
+
+  preconditions:
+    - The formula's own Input must be a table for a tabular body to mean anything
+
+  input_schema: |-
+    {
+      formula : String
+    }
+  output_schema: |-
+    Order.Lines.Answer
+  error_schema: |-
+    Error
+
+  examples:
+    - when: |-
+        a CSV table is sent and JSON is asked for
+      it: |-
+        answers one row per row, as data
+      input:
+        formula: order-lines@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: text/csv
+      body: |-
+        description,unitPrice,quantity,discountPercent
+        Widget,19.99,3,
+        Gadget,5.00,10,15
+      expected:
+        content_type: application/json
+        status: 200
+      assert:
+        - size('', 2)
+        - "pathFD('0', description: 'Widget', quantity: 3, gross: 59.97, amount: 59.97)"
+        - "pathFD('1', description: 'Gadget', discount: 7.5, amount: 42.5)"
+
+    - when: |-
+        a CSV table is sent and CSV is asked for
+      it: |-
+        answers a table, whose header is the keys of Output
+      input:
+        formula: order-lines@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: text/csv
+        Accept: text/csv
+      body: |-
+        description,unitPrice,quantity
+        Widget,19.99,3
+      expected:
+        content_type: text/csv
+        status: 200
+      assert:
+        - |-
+          match('', /^description,quantity,gross,discount,amount$/)
+        - |-
+          match('', /^Widget,3,59\.97,0,59\.97$/)
+
+    - when: |-
+        a table with no rows is sent
+      it: |-
+        answers the columns, an empty table still being an answer
+      input:
+        formula: order-lines@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: text/csv
+        Accept: text/csv
+      body: |-
+        description,unitPrice,quantity
+      expected:
+        content_type: text/csv
+        status: 200
+      assert:
+        - |-
+          match('', /^description,quantity,gross,discount,amount$/)
+
+    - when: |-
+        the same table is sent as JSON
+      it: |-
+        answers the same thing — a format is a representation, not the thing
+      input:
+        formula: order-lines@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: application/json
+        Accept: text/csv
+      body: |-
+        [{"description": "Widget", "unitPrice": 19.99, "quantity": 3}]
+      expected:
+        content_type: text/csv
+        status: 200
+      assert:
+        - |-
+          match('', /^Widget,3,59\.97,0,59\.97$/)
+
+  counterexamples:
+    - when: |-
+        a row holds a value its own type refuses
+      it: |-
+        fails with a 422 naming the row and the column, by path
+      input:
+        formula: order-lines@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: text/csv
+      body: |-
+        description,unitPrice,quantity
+        Widget,19.99,3
+        Gadget,-5,10
+      expected:
+        content_type: application/json
+        status: 422
+      assert:
+        - "pathFD('', kind: 'constraint', path: '.1.unitPrice', label: 'notNegative')"
+
+    - for: |-
+        The formula's own Input must be a table for a tabular body to mean anything
+      when: |-
+        a tabular body is sent to a formula that takes a record
+      it: |-
+        fails with a 415 saying so
+      input:
+        formula: iban@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: text/csv
+      body: |-
+        iban
+        BE68539007547034
+      expected:
+        content_type: application/json
+        status: 415
+      assert:
+        - |-
+          match('message', /takes a record/)
+
+    - when: |-
+        a table is asked for from a formula that answers a record
+      it: |-
+        fails with a 406, there being no table to write
+      input:
+        formula: iban@1.0.0
+      validate_input: false
+      headers:
+        Content-Type: application/json
+        Accept: text/csv
+      body: |-
+        {"iban": "BE68539007547034"}
+      expected:
+        content_type: application/json
+        status: 406

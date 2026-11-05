@@ -765,7 +765,7 @@ conventions.
 ### A catalogue of formulas, and a service over it
 
 [`contrib/formula-service/formulas/`](contrib/formula-service/formulas) holds
-thirteen real formulas — an IBAN and a VAT number validator, a discount engine,
+fourteen real formulas — an IBAN and a VAT number validator, a discount engine,
 a progressive tax, a loan payment, payment terms, a prorated subscription, a
 password checklist — each one a **formula bundle**: a directory with the data it
 takes and answers (`Input` and `Output`, in their own `types.elo`), the formula
@@ -830,7 +830,7 @@ elo/
 ├── examples/         # Usage examples
 ├── contrib/          # Hosts and integrations, none of them the compiler
 │   ├── formula-service/  # A REST API over a catalogue of formula bundles,
-│   │                     # the bundle format, and thirteen formulas
+│   │                     # the bundle format, and fourteen formulas
 │   ├── sandboxes/    # Running compiled code under a time and memory cap
 │   └── …             # Editor and highlighter plugins
 ├── bin/eloc          # Compiler CLI

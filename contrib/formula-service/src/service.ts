@@ -33,6 +33,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { parseCSV, toCSV } from '../../../src';
 import { loadServedCatalogue, type ServedCatalogue, type ServedFormula } from './catalogue';
 import { cataloguePage, formFragment, formulaPage } from './html';
 import { runCall } from './sandbox';
@@ -281,9 +282,12 @@ export function createService(options: ServiceOptions): Service {
     if (request.method !== 'POST' && !isReadMethod(request)) {
       return methodNotAllowed(request, response, 'GET, POST');
     }
-    if (!negotiate(request, ['application/json'])) {
-      return notAcceptable(request, response, ['application/json']);
-    }
+    // What a call may answer in: JSON always, CSV where the formula's own
+    // `Output` is a table. A format is offered because the *type* allows it,
+    // never because a client asked nicely.
+    const writable = formula.tabular.output ? ['application/json', 'text/csv'] : ['application/json'];
+    const chosen = negotiate(request, writable);
+    if (!chosen) return notAcceptable(request, response, writable);
 
     let input: unknown;
     if (request.method === 'POST') {
@@ -298,16 +302,34 @@ export function createService(options: ServiceOptions): Service {
         });
       }
       const type = (request.headers['content-type'] ?? 'application/json').split(';')[0].trim();
-      if (type !== 'application/json' && type !== '') {
+      const readable = formula.tabular.input
+        ? ['application/json', 'text/csv', '']
+        : ['application/json', ''];
+      if (!readable.includes(type)) {
         return send(request, response, 415, {
-          message: `this call reads application/json, not ${type}`
-            + (type === 'text/csv' ? ': a tabular body only means something for a formula whose Input is a list' : ''),
+          message: `this call reads ${readable.filter(one => one !== '').join(' and ')}, not ${type}`
+            + (type === 'text/csv'
+              ? ': a tabular body encodes a table, and this formula takes a record'
+              : ''),
         });
       }
-      try {
-        input = body.trim() === '' ? null : JSON.parse(body);
-      } catch (error) {
-        return send(request, response, 400, { message: `the body is not JSON: ${(error as Error).message}` });
+      if (type === 'text/csv') {
+        // One call whose argument happens to be a list — not a batch of calls.
+        // Every cell arrives as a string and `Input` coerces it, exactly as a
+        // query string's parameters are; an empty cell is a cell left alone,
+        // so it counts as not given, which is the rule a form taught us.
+        try {
+          input = parseCSV(body).map(row =>
+            Object.fromEntries(Object.entries(row).filter(([, value]) => value !== '')));
+        } catch (error) {
+          return send(request, response, 400, { message: `the body is not CSV: ${(error as Error).message}` });
+        }
+      } else {
+        try {
+          input = body.trim() === '' ? null : JSON.parse(body);
+        } catch (error) {
+          return send(request, response, 400, { message: `the body is not JSON: ${(error as Error).message}` });
+        }
       }
     } else {
       input = inputFromQuery(url.searchParams, formula.descriptor.fields);
@@ -330,6 +352,9 @@ export function createService(options: ServiceOptions): Service {
     });
 
     if (outcome.ok) {
+      if (chosen === 'text/csv') {
+        return sendText(request, response, 200, 'text/csv', csvOf(outcome.json, formula));
+      }
       return sendText(request, response, 200, 'application/json', outcome.json);
     }
     if ('cap' in outcome) {
@@ -350,6 +375,23 @@ export function createService(options: ServiceOptions): Service {
   }
 
   return { catalogue, handler };
+}
+
+/**
+ * The answer as CSV.
+ *
+ * The rows come from the JSON the sandbox wrote, so every value has already
+ * been written by `Output` — a `Date` is a date here too. The header comes
+ * from `Output` rather than from the first row, which is what lets an empty
+ * table still say what its columns are: a formula that answers no rows has
+ * answered, and a client reading a header off the body should not have to
+ * guess.
+ */
+function csvOf(json: string, formula: ServedFormula): string {
+  const rows = JSON.parse(json) as unknown[];
+  const columns = formula.descriptor.answers.map(answer => answer.path);
+  if (!Array.isArray(rows) || rows.length === 0) return `${columns.join(',')}\n`;
+  return toCSV(rows);
 }
 
 // ---------------------------------------------------------------------------

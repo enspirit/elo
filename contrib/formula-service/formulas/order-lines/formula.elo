@@ -1,0 +1,27 @@
+# What does each line of this order come to?
+#
+# One row in, one row out: the gross of a line, what its own discount takes
+# off, and what is left. A formula whose input is a **table** rather than a
+# record — which is what lets a call take a CSV body and answer a CSV one.
+#
+# Each amount is rounded to the cent where it is produced, so the rows add up
+# to what an invoice would show. Rounding the sum instead would differ by a
+# cent or two, and the line is the thing a customer reads.
+
+let
+  priced = fn( line ~>
+    let
+      gross = round(line.unitPrice * line.quantity, 2),
+      rate = (line.discountPercent | 0) / 100,
+      discount = round(gross * rate, 2)
+    in
+      {
+        description: line.description,
+        quantity: line.quantity,
+        gross: gross,
+        discount: discount,
+        amount: round(gross - discount, 2)
+      }
+  )
+in
+  { formula: fn( input ~> map(input, priced) ) }

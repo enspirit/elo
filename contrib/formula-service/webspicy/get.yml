@@ -38,7 +38,7 @@ services:
     - when: |-
         asked for the whole catalogue
       it: |-
-        lists the thirteen formulas, and no folder, this catalogue being flat
+        lists the fourteen formulas, and no folder, this catalogue being flat
       input: {}
       expected:
         content_type: application/json
@@ -46,9 +46,9 @@ services:
         headers:
           Cache-Control: no-cache
       assert:
-        - size('formulas', 13)
+        - size('formulas', 14)
         - size('folders', 0)
-        - idIn('formulas', 'age', 'bmi', 'card-number', 'iban', 'income-tax', 'leap-year', 'loan-payment', 'order-pricing', 'password-strength', 'payment-due-date', 'shipping-cost', 'subscription-proration', 'vat-number-be')
+        - idIn('formulas', 'age', 'bmi', 'card-number', 'iban', 'income-tax', 'leap-year', 'loan-payment', 'order-lines', 'order-pricing', 'password-strength', 'payment-due-date', 'shipping-cost', 'subscription-proration', 'vat-number-be')
         - "idFD('formulas', 'iban', version: '1.0.0', title: 'Is this a valid IBAN?')"
         - "pathFD('formulas/3/links', self: '/iban@1.0.0', latest: '/iban', call: '/iban@1.0.0/call')"
 

@@ -208,7 +208,7 @@ function outputOf(bundle: Bundle): TypeExpr {
 }
 
 /**
- * This repository's own catalogue — the thirteen bundles beside this file.
+ * This repository's own catalogue — the bundles beside this file.
  *
  * `__dirname` is the *built* module, under `dist/`, while a bundle is source
  * rather than build output: the path climbs out of `dist/` and back down the
@@ -368,6 +368,19 @@ export function describeAnswers(bundle: Bundle): AnswerDescriptor[] {
  */
 export function answerShape(bundle: Bundle): AnswerShape {
   return shapeOf(outputOf(bundle), bundle.types);
+}
+
+/**
+ * The same walk over `Input`, which is what a *format* has to ask about.
+ *
+ * A tabular format encodes a table, so it only means something where the
+ * formula's own type is one — and `describeFields` cannot answer that: for
+ * `Input = [Line]` it reports the fields of a *row*, which is the right thing
+ * for a form's column labels and the wrong thing for this question. The type
+ * is where the answer is.
+ */
+export function inputShape(bundle: Bundle): AnswerShape {
+  return shapeOf(inputOf(bundle), bundle.types);
 }
 
 const TEMPORAL_SHAPES: Record<string, AnswerShape> = {

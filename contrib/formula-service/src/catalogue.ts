@@ -36,6 +36,7 @@ import { toJson, type AnswerShape } from './answer';
 import {
   answerShape,
   describeAnswers,
+  inputShape,
   loadCatalogue,
   runCases,
   serviceSource,
@@ -96,6 +97,16 @@ export interface ServedFormula {
   code: string;
   /** How to write the answer, from `Output`. */
   shape: AnswerShape;
+  /**
+   * Whether the formula's own types are tables — read from `Input` and
+   * `Output`, which is the only place the question has an answer.
+   *
+   * It is what a tabular format is allowed by: `text/csv` encodes a table, so
+   * it means something for `Input = [Row]` and nothing for a record, and a
+   * body sent the wrong way round is a `415` rather than a silent reading of
+   * one call as many.
+   */
+  tabular: { input: boolean; output: boolean };
 }
 
 export interface ServedCatalogue {
@@ -205,6 +216,10 @@ function serveBundle(bundle: Bundle): ServedFormula {
     representations: { elo, ...withPrelude(compiled) },
     code: compiled.js,
     shape,
+    tabular: {
+      input: inputShape(bundle).kind === 'list',
+      output: shape.kind === 'list',
+    },
   };
 }
 

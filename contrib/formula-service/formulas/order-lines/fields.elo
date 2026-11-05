@@ -1,0 +1,38 @@
+{
+  fields: [
+    {
+      path: 'description',
+      label: 'Description',
+      type: 'String',
+      widget: 'text',
+      required: true,
+      constraints: ['notBlank'],
+      placeholder: 'Widget'
+    },
+    {
+      path: 'unitPrice',
+      label: 'Unit price',
+      type: 'Float',
+      widget: 'number',
+      required: true,
+      constraints: ['notNegative']
+    },
+    {
+      path: 'quantity',
+      label: 'Quantity',
+      type: 'Int',
+      widget: 'number',
+      required: true,
+      constraints: ['atLeastOne']
+    },
+    {
+      path: 'discountPercent',
+      label: 'Line discount (%)',
+      type: 'Float',
+      widget: 'number',
+      required: false,
+      constraints: ['aPercentage'],
+      help: 'Per line, not on the order'
+    }
+  ]
+}

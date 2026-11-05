@@ -10,6 +10,14 @@
 
 Any = .
 
+# A number, as JSON carries one.
+#
+# Elo's `Float` does not mean "has a decimal point" on the wire: JavaScript has
+# a single number type, so a whole-valued Float is written `0` and a client
+# reading JSON has to accept both. Saying that here, once, is more honest than
+# writing `Integer` in some places and `Float` in others and hoping.
+Number = Integer|Float
+
 # ---------------------------------------------------------------------------
 # §5 The error body
 # ---------------------------------------------------------------------------
@@ -169,6 +177,20 @@ Age.Answer = {
   isAdult       : Boolean
   birthdayToday : Boolean
 }
+
+# `order-lines/types.elo`: the one formula of the catalogue whose `Input` is a
+# **table**. Its answer is a list of rows — or, when `text/csv` is what was
+# asked for, the CSV text of the same rows, which is why the two are a union
+# here: one service, two representations of one answer.
+Order.Line.Answer = {
+  description : String
+  quantity    : Integer
+  gross       : Number
+  discount    : Number
+  amount      : Number
+}
+
+Order.Lines.Answer = [Order.Line.Answer]|String
 
 # The `{formula}` of the URL, then the query string — which is `Age.Input`,
 # every parameter of it a string because a query string has nothing else.

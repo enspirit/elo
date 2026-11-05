@@ -1,6 +1,6 @@
 # A catalogue of formulas
 
-Thirteen small, real formulas, each as a **formula bundle**: a directory
+Fourteen small, real formulas, each as a **formula bundle**: a directory
 holding `types.elo` (`Input` and `Output`), `formula.elo`, `fields.elo` (the
 form), `cases.elo` and `bundle.json`. The format is [`BUNDLE.md`](BUNDLE.md);
 this is what is in the catalogue.
@@ -20,6 +20,7 @@ this is what is in the catalogue.
 | [`shipping-cost`](shipping-cost) | weight, dimensions, zone, express | billable weight, cost, delivery estimate |
 | [`password-strength`](password-strength) | a password | score, level, and which rules it fails |
 | [`subscription-proration`](subscription-proration) | monthly price, start date | days billed, amount, next renewal |
+| [`order-lines`](order-lines) | a **table** of order lines | one priced row per line |
 
 ## Looking at one
 
@@ -98,8 +99,21 @@ nothing to install beside it — and so does
   `Input` — down to each constraint's name, and to every option of a choice
   being a value its type accepts.
 
-Writing these thirteen found four portability bugs — see the `0227`–`0231`
+Writing the first thirteen found four portability bugs — see the `0227`–`0231`
 tasks. A program is a different test from an expression.
+
+## The one whose input is a table
+
+`order-lines` is the odd one out, on purpose: its `Input` is `[Line]` rather
+than a record, so it is **one call whose argument is a list** — not a batch of
+calls. That is the shape a tabular format means something for, which is why it
+is also the bundle the service's `text/csv` support is specified against: a CSV
+body is one input that happens to be a table, and `|> Input` validates it like
+any other value.
+
+Note what its `fields.elo` then is: the fields of a *row*, which is what a
+table's **column labels** are. There is no form for a table, and a page that
+knows this offers a way to send one instead.
 
 ## The two limits worth knowing
 

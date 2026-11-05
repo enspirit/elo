@@ -263,8 +263,8 @@ reads `types.elo` if it wants the shape in advance.
 
 ### The case table, and its results
 
-The runner is **generated, never stored** — thirteen copies of the same eight
-lines is the duplication this format exists to remove:
+The runner is **generated, never stored** — one copy of the same eight lines
+per bundle is the duplication this format exists to remove:
 
 ```elo
 import { Input, Output } from './types'

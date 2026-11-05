@@ -105,6 +105,25 @@ services:
           match('', /<input type="checkbox" [^>]*name="express"/)
 
     - when: |-
+        the formula's input is a table
+      it: |-
+        answers no form at all, but the columns and a way to send one
+      input:
+        formula: order-lines@1.0.0
+      expected:
+        content_type: text/html
+        status: 200
+      assert:
+        - |-
+          notMatch('', /<form/)
+        - |-
+          match('', /takes a <strong>table<\/strong>/)
+        - |-
+          match('', /Content-Type: text\/csv/)
+        - |-
+          match('', /<code>unitPrice<\/code>/)
+
+    - when: |-
         asked under the unversioned name
       it: |-
         answers the latest version's form, and names the version it came from

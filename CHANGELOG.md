@@ -18,7 +18,14 @@ All notable changes to Elo are documented in this file.
   so a service that is up has demonstrated that its formulas answer what their
   documentation says. Nothing of it is in the compiler: a bundle is a
   convention over files, which is why the bundle format's reference
-  implementation and the thirteen formulas moved there too, from `examples/`.
+  implementation and the catalogue of formulas moved there too, from
+  `examples/`.
+  A call also speaks **`text/csv`**, in and out, for a formula whose own
+  `Input` or `Output` is a list — one call whose argument is a table, not a
+  batch of calls, so a refusal names the row by index. Which it is comes from
+  the type rather than from the form, since `fields.elo` for a `[Row]` input
+  describes a row. The catalogue gained `order-lines`, whose input is a table,
+  to have one to mean it with.
   A browser gets more than JSON: `GET /` and `GET /{formula}` answer **HTML**
   when it is asked for by name, and `GET /{formula}/form` answers the input
   form as a fragment — one template for the whole catalogue, built from

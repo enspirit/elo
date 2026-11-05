@@ -86,16 +86,19 @@ export function formFragment(formula: ServedFormula): string {
   const fields = formula.descriptor.fields;
   const action = formula.descriptor.links.call;
 
-  // A non-record input is reported by `describeFields` as one repeated field,
-  // which is the signal that there is no sensible form for it: a table is not
-  // something a page asks for a value at a time.
-  if (isTabular(fields)) {
+  // A table is not something a page can ask for a value at a time, so a
+  // formula that takes one gets a way to send one instead. Its `fields` are
+  // still worth having: for a tabular input they are the *columns*.
+  if (formula.tabular.input) {
     return [
       '<div class="elo-form">',
-      '  <p class="elo-note">This formula takes a <strong>table</strong>, which no HTML form'
-      + ' can ask for a value at a time — so a call takes one as its body:</p>',
-      `  <pre><code>curl -X POST -H 'Content-Type: text/csv' --data-binary @rows.csv \\\n`
-      + `    "$ELO_FORMULA_SERVICE${escapeHtml(action)}"</code></pre>`,
+      '  <p class="elo-note">This formula takes a <strong>table</strong>: one row in, one row'
+      + ' out. No HTML form can ask for that a value at a time, so a call takes the whole'
+      + ' table as its body — as CSV, whose columns are:</p>',
+      `  <p>${fields.map(field =>
+        `<code>${escapeHtml(field.path)}</code>`).join(', ')}</p>`,
+      `  <pre><code>curl -X POST -H 'Content-Type: text/csv' -H 'Accept: text/csv' \\\n`
+      + `    --data-binary @rows.csv "$ELO_FORMULA_SERVICE${escapeHtml(action)}"</code></pre>`,
       '</div>',
     ].join('\n');
   }
@@ -107,11 +110,6 @@ export function formFragment(formula: ServedFormula): string {
     '  <p><button type="submit">Answer</button></p>',
     '</form>',
   ].join('\n');
-}
-
-/** Whether the whole input is a table rather than a record of fields. */
-export function isTabular(fields: FieldDescriptor[]): boolean {
-  return fields.length === 1 && fields[0].path === 'value' && fields[0].repeated === true;
 }
 
 function control(field: FieldDescriptor): string {
