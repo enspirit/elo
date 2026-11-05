@@ -788,7 +788,9 @@ implementation is
 
 [`contrib/formula-service/`](contrib/formula-service) is a **REST API** over
 such a catalogue: an index, a descriptor per formula, its five files, the
-program it runs compiled to each target, and `POST`/`GET …/call` to apply one.
+program it runs compiled to each target, an HTML page and form, an OpenAPI
+document, and `POST`/`GET …/call` to apply one — in JSON, or in CSV where the
+formula's own type is a table.
 
 ```bash
 contrib/formula-service/bin/elo-formula-service --port 3000
@@ -797,7 +799,9 @@ curl 'http://localhost:3000/iban/call?iban=BE68+5390+0754+7034'
 ```
 
 It compiles each formula once at boot, runs every case before it listens, and
-runs each call in a worker thread under a time and memory cap.
+runs each call in a worker thread under a time and memory cap. Nothing in it is
+written per formula: the form comes from `fields.elo`, the schemas from
+`types.elo`, the examples from `cases.elo`.
 
 ### Using the API
 

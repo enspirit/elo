@@ -1,31 +1,61 @@
 # Restful API on top of a catalog of .elo formula (bundles)
 
-> **Built, as the MVP of §12's phases 1 to 3**, in
-> `contrib/formula-service/` — a contrib rather than compiler, since a service
-> over bundles is a host. The bundle format's reference implementation and the
-> thirteen formulas moved there with it, out of `examples/`.
+> **Built, all six phases of §12**, in `contrib/formula-service/` — a contrib
+> rather than compiler, since a service over bundles is a host. The bundle
+> format's reference implementation and the catalogue moved there with it, out
+> of `examples/`.
 >
-> What landed: the index with its filters and folders, the descriptor and the
-> four representations, the five file sub-resources, `ETag`s and
-> `Content-Location`, `POST` and `GET …/call` with the whole error mapping of
-> §5, the time and memory caps of §10, and the refusal to start of §11. 54
-> assertions in `test/integration/formula-service.integration.test.ts`, which
-> also POSTs every case of every formula.
+> What landed, phase by phase: the index with its filters and folders, the
+> descriptor and the four compiled representations, the five file
+> sub-resources, `ETag`s and `Content-Location` (1); `POST …/call` with the
+> whole error mapping of §5, under the time and memory caps of §10, over code
+> compiled once at boot, and the refusal to start of §11 (2); `GET …/call`,
+> linkable and `no-store` (3); `/form` and the page, plus an HTML index, one
+> template and no per-formula markup (4); `text/csv` in and out for a formula
+> whose own type is a table (5); and both OpenAPI documents (6).
 >
-> What did not, each answering 404 or 406 rather than something approximate:
-> the HTML page and `/form` (phase 4), the formats past JSON (phase 5),
-> `openapi.json` (phase 6) — and publishing, so a catalogue serves the one
-> version each `bundle.json` declares. §14's first question is therefore still
-> open; the other two were answered by building it: `answers` is worth its
-> place (it is the column list a client renders with, and it cost one `map`
-> over `describeFields`), and no `summary` was needed.
+> 95 assertions in `test/integration/formula-service.integration.test.ts`, and
+> a **webspicy suite** in `contrib/formula-service/webspicy` — 13 files, 52
+> examples, 24 counterexamples, 389 assertions — which §12 asked for and which
+> earned its keep twice over (below).
 >
-> One thing the design did not foresee: an answer has to be written by what
-> `Output` *declares*, not by what the value is. A `Date` and a `Datetime` are
-> the same runtime value on JavaScript, so a type-blind writer answers
-> `"2026-01-25T00:00:00.000+01:00"` — an offset that is the server's timezone —
-> where a declared `Date` must be `"2026-01-25"`. That is `src/answer.ts`, and
-> it is the same walk §9 will want for its JSON Schema.
+> Four things the design did not foresee:
+>
+> - **An answer has to be written by what `Output` declares**, not by what the
+>   value is. A `Date` and a `Datetime` are the same runtime value on
+>   JavaScript, so a type-blind writer answers
+>   `"2026-01-25T00:00:00.000+01:00"` — an offset that is the server's timezone
+>   — where a declared `Date` must be `"2026-01-25"`. That is `src/answer.ts`,
+>   and §9's JSON Schema is the third reading of the same walk.
+> - **A case's `expect` is a response body**, so it is written the same way.
+>   The descriptor and the call disagreed about a date until the black-box
+>   suite compared them, which is exactly the claim §3 makes about cases.
+> - **"Is this a table?" is a question for the type, not for the form.** §4
+>   says `describeFields` reports a non-record input as one repeated field; it
+>   does for `[Int]`, but for `[Line]` it reports the fields of a *row* — the
+>   right answer for a form (those are the column labels) and no answer for a
+>   format. `inputShape` reads it off `types.elo`.
+> - **The form's action cannot be `../call`** as §6 wrote: the fragment is
+>   served at `/{id}/form` and embedded in the page at `/{id}`, and no single
+>   relative reference resolves to the call from both.
+>
+> §14's three questions: the first (who is the latest?) is still open, and
+> stays open until publishing exists — the catalogue serves the one version
+> each `bundle.json` declares. The other two were answered by building it:
+> `answers` is worth its place (it is the column list a client renders with, it
+> cost one `map` over `describeFields`, and the CSV writer takes its header
+> from it), and no `summary` was needed.
+>
+> Left out, deliberately: a **YAML or XLSX** body, each needing a parser this
+> repository does not depend on — Elo's `FormatAdapter` registry is where a
+> host adds one; **publishing** (§2's immutable directory per version) and so
+> `deprecated`, which would need a manifest key the bundle format does not
+> have; a **file upload** on the page, an HTML form being able to send a table
+> only as `multipart/form-data`; and **bulk** (§13), which is a second
+> resource rather than a mode of `/call`.
+>
+> The catalogue gained a fourteenth formula, `order-lines`, because §4's
+> tabular path had nothing in the corpus to mean anything with.
 
 Written against the bundle format of 0233–0237 (`examples/formulas/BUNDLE.md`,
 now `contrib/formula-service/formulas/BUNDLE.md`).

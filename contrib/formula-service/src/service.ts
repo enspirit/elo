@@ -14,15 +14,21 @@
  * knowing nothing about the bundle layout beyond what the source says.
  *
  *     GET  /                       the index, and /foo/bar/ for a folder of it
+ *     GET  /openapi.json           the catalogue, for a gateway or an SDK
  *     GET  /{id}                   the latest version, named in Content-Location
- *     GET  /{id}@{version}         that version: descriptor, or Elo, or compiled
+ *     GET  /{id}@{version}         that version: the descriptor, the page, or
+ *                                  the program — `Accept` chooses
  *     GET  /{id}@{version}/*.elo   the files of the bundle, verbatim
+ *     GET  /{id}@{version}/form    the input form, as HTML
+ *     GET  /{id}@{version}/openapi.json   that formula, for a typed client
  *     POST /{id}@{version}/call    one input, one answer
  *     GET  /{id}@{version}/call    the same, linkable and therefore cacheable
  *
- * What is deliberately not here: the HTML page and the form, the formats past
- * JSON, and `openapi.json` — phases 4 to 6 of the plan. Each answers 404 or
- * 406 rather than something approximate.
+ * What is deliberately not here: a YAML or XLSX body (each needs a parser this
+ * repository does not depend on — Elo's `FormatAdapter` registry is where a
+ * host adds one), publishing a second version of a formula, and bulk, which
+ * will be its own resource rather than a mode of `/call`. That is why a single
+ * call has no envelope to grow into one.
  *
  * On the trust boundary: bundles are trusted content, compiled at boot; the
  * caller's **input** is the only untrusted thing, and it is plain data handed
