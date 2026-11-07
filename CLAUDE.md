@@ -40,6 +40,69 @@ Elo currently has the following components :
 2. **Transform**: AST → Typed IR (`transform.ts`) - infers types and rewrites operators as function calls
 3. **Emit**: IR → Target code (`compilers/*.ts`) - uses `StdLib` for type-based dispatch
 
+## Security invariants
+
+Elo's own semantics are safe. Every security bug so far — twelve of them, see
+`.claude/tasks/done/0241`, `0242`, `0243` — came from the seam where Elo's
+semantics are delegated to a target that has **more** semantics than Elo does.
+Not one was a missing idea: in every case the correct code already existed
+elsewhere in this repository and one path did not use it.
+
+So these are not "think about security" reminders. They are keyed to the moment
+you are writing the code, because the person who opens a door is never the
+person reading a section called security.
+
+**When you add or touch an emitter that embeds a value in target syntax**
+(a literal, a key, a label, a regex, an identifier):
+
+* Use the target's escaper. **Never `JSON.stringify` for Ruby** — a Ruby
+  double-quoted string interpolates `#{...}`, `#@ivar`, `#@@cvar` and `#$gvar`,
+  and `JSON.stringify` does not escape `#`. Use `escapeRubyDQ`. For SQL use
+  `sqlStringConstant` (the quote *and* the backslash), never a hand-written
+  `'${...}'`. For an identifier position use `assertSafeIdentifier` — SQL has no
+  identifier escaper, only the whitelist.
+* The threat model covers values arriving through the **compiler AST API**, not
+  only through the parser. "The lexer cannot produce that character" is not a
+  defence; it is a reason the bug is quiet.
+* A JS regex literal is closed by U+2028/U+2029 as well as by `/`.
+
+**When you add a stdlib binding**: register the `any` signature too, and make
+the two paths agree.
+
+* A native operator on an `any` operand reaches overloads Elo never asked for:
+  Ruby/Python `String * Int` repeats unbounded, `String % x` is `sprintf`,
+  `Int ** Int` is an exact bignum. If a bound lives in a prelude helper, **every**
+  path must call it — typed, dynamic, and all four targets.
+* A native accessor on an `any` operand reaches the host object model: the JS
+  prototype chain (`constructor`, `__proto__`), Python dunders. Index through
+  the guard helper, not `x[k]`. The rule, measured over the whole emitted
+  corpus and true today: **emitted JavaScript contains no computed member
+  access outside a prelude helper, except with a numeric-literal index.** If
+  your emitter would break that, it is the bug, not the exception.
+* Assert both paths, as "Testing the dynamic dispatch path" below requires.
+
+**When the checker's type is what makes an emission safe**: it is not enough.
+A declared `--input-type` is a promise, not a runtime check — `_.i` reads the
+raw value uncoerced — so under `--optimize` an attacker can hand a program a
+value its declared type forbids. A bare operation is safe only on a
+**compile-time literal**, never on a runtime-supplied value of a declared type.
+
+**When you add a recursive walk over the AST or IR in `src/`**: make it
+iterative or depth-bounded. The per-node depth guard (100) does not protect a
+walk launched from the outermost node over the whole structure, and a stack
+overflow in the compiler is a compile-host DoS that the security page promises
+cannot happen.
+
+**Red-first applies, harder.** A security fix needs the assertion seen red on
+every affected target, and which targets were green matters: a bug present on
+one target and absent on another *is* the finding — it means the emissions have
+diverged. Verifying by hand in a scratch script and moving on is how it comes
+back.
+
+The eight properties on `web/src/pages/security.astro` are the specification.
+`.claude/tasks/todo/0244-the-matrix-nobody-enumerates.md` is the plan for making
+them machine-checked; until it lands, this section is what stands in for it.
+
 ## Test-Driven Development
 
 Elo is developped in TDD. We have three levels of testing :
