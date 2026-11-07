@@ -8,6 +8,7 @@ import { IRExpr, IRArrayLiteral, inferType } from '../ir';
 import { Types, EloType, typeEquals } from '../types';
 import { StdLib, EmitContext, nullary, fnCall } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
+import { assertSafeIdentifier } from '../compilers/_validate';
 
 /**
  * Map IR function names to SQL operators
@@ -745,10 +746,14 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
     if (pathsObj.type !== 'object_literal') {
       throw new Error('fetch with object requires an object literal');
     }
-    // Build jsonb_build_object with key, fetch pairs
+    // Build jsonb_build_object with key, fetch pairs. The key is interpolated
+    // into a SQL string constant, so it must be a safe identifier — exactly as
+    // the object_literal emitter requires. A parser-produced key is always an
+    // IDENTIFIER token; this only rejects a key injected through the AST API.
     const pairs = pathsObj.properties.map(({ key, value }) => {
+      const safeKey = assertSafeIdentifier(key, 'fetch object key');
       const pathEmitted = ctx.emit(value);
-      return `'${key}', (${data})::jsonb #> (${pathEmitted})::text[]`;
+      return `'${safeKey}', (${data})::jsonb #> (${pathEmitted})::text[]`;
     });
     return `jsonb_build_object(${pairs.join(', ')})`;
   });

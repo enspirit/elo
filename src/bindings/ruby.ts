@@ -246,6 +246,11 @@ export function createRubyBinding(): StdLib<string> {
   // Use lambda to ensure nil for negative indices (Ruby's native [-1] returns last element)
   rubyLib.register('at', [Types.array, Types.int], (args, ctx) =>
     `(->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+  // Dynamic fallback: index only a real Array by an Integer, nil otherwise, so
+  // at() on untyped operands agrees with the other targets (a string key is
+  // not an index). Ruby cannot reach a constructor through [] regardless.
+  rubyLib.register('at', [Types.any, Types.any], (args, ctx) =>
+    `(->(a, i) { a.is_a?(Array) && i.is_a?(Integer) && i >= 0 && i < a.length ? a[i] : nil }).call(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
   rubyLib.register('first', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.first`);
   rubyLib.register('last', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.last`);
   rubyLib.register('isEmpty', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.empty?`);
@@ -331,10 +336,14 @@ export function createRubyBinding(): StdLib<string> {
       `${wrapReceiver(args, ctx)}[${ctx.emit(args[1])}, ${ctx.emit(args[2])}]`);
     rubyLib.register('slice', [t, Types.int, Types.int], (args, ctx) =>
       `${wrapReceiver(args, ctx)}[${ctx.emit(args[1])}...${ctx.emit(args[2])}]`);
+    // Elo replace is *literal*. sub/gsub with a string replacement interpret
+    // backreferences (\1, \&, \', \`), so a replacement of \' ("text after the
+    // match") expands the output superlinearly. The block form returns the
+    // replacement verbatim, so no backreference is honoured.
     rubyLib.register('replace', [t, Types.string, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.sub(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.sub(${ctx.emit(args[1])}) { ${ctx.emit(args[2])} }`);
     rubyLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.gsub(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.gsub(${ctx.emit(args[1])}) { ${ctx.emit(args[2])} }`);
     rubyLib.register('padStart', [t, Types.int, Types.string], (args, ctx) => {
       ctx.requireHelper('k_pad');
       return `k_pad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, true)`;

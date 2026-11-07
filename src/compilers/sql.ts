@@ -189,6 +189,21 @@ export function compileToSQLWithMeta(expr: Expr, options?: SQLCompileOptions): S
  * where SQL's data model genuinely differs and the node is needed too:
  * `member_access`, `array_literal` and `alternative`. See `_emit.ts`.
  */
+/**
+ * A PostgreSQL string constant for an arbitrary value. The single quote is
+ * doubled and the backslash is doubled with an `E'...'` prefix, so the literal
+ * cannot be escaped under either `standard_conforming_strings` setting. The
+ * prefix is added only when it is needed, so a plain value keeps its bare
+ * `'...'` form.
+ */
+function sqlStringConstant(value: string): string {
+  const escaped = value
+    .replace(/\\/g, '\\\\').replace(/'/g, "''")
+    .replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
+  const prefix = escaped !== value.replace(/'/g, "''") ? 'E' : '';
+  return `${prefix}'${escaped}'`;
+}
+
 const sqlEmitter: Emitter = {
   lib: sqlLib,
   needsParens,
@@ -198,23 +213,22 @@ const sqlEmitter: Emitter = {
 
   // Single quotes, with a quote escaped by doubling. E'...' only when the
   // string really holds an escape sequence.
-  stringLiteral: (value) => {
-    const escaped = value
-      .replace(/\\/g, '\\\\').replace(/'/g, "''")
-      .replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
-    const prefix = escaped !== value.replace(/'/g, "''") ? 'E' : '';
-    return `${prefix}'${escaped}'`;
-  },
+  stringLiteral: (value) => sqlStringConstant(value),
 
-  dateLiteral: (value) => `DATE '${value.replace(/'/g, "''")}'`,
+  // A typed temporal literal is `DATE <string constant>`: the value must be
+  // escaped exactly like any other string constant, backslash included.
+  // Doubling the quote alone left a backslash raw, so under
+  // standard_conforming_strings=off a value ending in `\` escaped the closing
+  // quote and let trailing bytes become SQL (AST-API injection).
+  dateLiteral: (value) => `DATE ${sqlStringConstant(value)}`,
 
   // ISO8601 to the PostgreSQL TIMESTAMP format
   datetimeLiteral: (value) => {
     const formatted = value.replace('T', ' ').replace('Z', '').split('.')[0];
-    return `TIMESTAMP '${formatted.replace(/'/g, "''")}'`;
+    return `TIMESTAMP ${sqlStringConstant(formatted)}`;
   },
 
-  durationLiteral: (value) => `INTERVAL '${value.replace(/'/g, "''")}'`,
+  durationLiteral: (value) => `INTERVAL ${sqlStringConstant(value)}`,
 
   objectLiteral: (properties) => {
     if (properties.length === 0) return `'{}'::jsonb`;

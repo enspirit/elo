@@ -2,7 +2,7 @@
 ->(_) { (raise "Assertion failed" unless "  HELLO  ".strip.downcase == "hello"; true) }.call(nil);
 ->(_) { def k_pad(s, n, p, at_start); raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if n > 10000000; at_start ? s.rjust(n, p) : s.ljust(n, p) end; (raise "Assertion failed" unless k_pad("42", 5, "0", true) == "00042"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (0 - 5).abs == 5; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "hello world".sub("world", "elo") == "hello elo"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".sub("world") { "elo" } == "hello elo"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "hello".upcase == "HELLO"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "  HELLO  ".strip.downcase == "hello"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (0 - 5).abs == 5; true) }.call(nil);

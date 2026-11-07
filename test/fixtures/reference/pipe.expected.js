@@ -2,7 +2,7 @@
 (function(_) { return (function() { if (!("  HELLO  ".trim().toLowerCase() == "hello")) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { function kPad(s, n, p, atStart) { if (n > 10000000) throw new Error("String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings"); return atStart ? s.padStart(n, p) : s.padEnd(n, p); } return (function() { if (!(kPad("42", 5, "0", true) == "00042")) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(Math.abs(0 - 5) == 5)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!("hello world".replace("world", "elo") == "hello elo")) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!("hello world".replace("world", () => ("elo")) == "hello elo")) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!("hello".toUpperCase() == "HELLO")) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!("  HELLO  ".trim().toLowerCase() == "hello")) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(Math.abs(0 - 5) == 5)) throw new Error("Assertion failed"); return true; })(); })(null);

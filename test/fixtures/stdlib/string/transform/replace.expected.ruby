@@ -1,7 +1,7 @@
-->(_) { (raise "Assertion failed" unless "hello world".sub("world", "there") == "hello there"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "abab".sub("ab", "x") == "xab"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "abab".gsub("ab", "x") == "xx"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "a.b.c".sub(".", "X") == "aXb.c"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "a.b.c".gsub(".", "X") == "aXbXc"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "1+1".sub("+", "-") == "1-1"; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless "a(b)c".gsub("(", "[") == "a[b)c"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "hello world".sub("world") { "there" } == "hello there"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abab".sub("ab") { "x" } == "xab"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "abab".gsub("ab") { "x" } == "xx"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "a.b.c".sub(".") { "X" } == "aXb.c"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "a.b.c".gsub(".") { "X" } == "aXbXc"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "1+1".sub("+") { "-" } == "1-1"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless "a(b)c".gsub("(") { "[" } == "a[b)c"; true) }.call(nil);

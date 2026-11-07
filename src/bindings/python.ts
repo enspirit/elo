@@ -273,6 +273,11 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     ctx.requireHelper('kAt');
     return `kAt(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
+  // Dynamic fallback: index only a real list by an int (not bool), None
+  // otherwise, so at() on untyped operands agrees with the other targets
+  // instead of raising a TypeError on a string key.
+  pyLib.register('at', [Types.any, Types.any], (args, ctx) =>
+    `(lambda a, i: a[i] if isinstance(a, list) and isinstance(i, int) and not isinstance(i, bool) and 0 <= i < len(a) else None)(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
   pyLib.register('min', [Types.array], (args, ctx) =>
     `(lambda a: min(a) if a else None)(${ctx.emit(args[0])})`);
   pyLib.register('max', [Types.array], (args, ctx) =>

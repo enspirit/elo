@@ -15,6 +15,8 @@
  * String.raw is required: the definitions contain backslash escapes (`\d` in
  * regexes, `'\\'` in elo_string) that a plain template literal would eat.
  */
+import { MAX_STRING_LENGTH } from '../runtime';
+
 export const sqlPrelude = String.raw`-- Elo SQL runtime helper functions
 -- These functions support type coercion and error handling
 --
@@ -174,11 +176,17 @@ BEGIN
     END IF;
     arr := COALESCE(NULLIF(data, 'null'::jsonb), '[]'::jsonb);
     arr_len := jsonb_array_length(arr);
-    -- Extend array with nulls if needed
-    WHILE arr_len <= i LOOP
-      arr := arr || 'null'::jsonb;
-      arr_len := arr_len + 1;
-    END LOOP;
+    -- A short expression (patch([], .N, 1)) must not force an N-element array:
+    -- bound the fill by the same limit as string repeat/pad.
+    IF i >= ${MAX_STRING_LENGTH} THEN
+      RAISE EXCEPTION 'Array length limit (%) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger arrays', ${MAX_STRING_LENGTH};
+    END IF;
+    -- Extend with nulls in a single concatenation. A per-element loop re-copies
+    -- the growing array each step, which is O(N^2) and let a modest index pin a
+    -- database backend for minutes.
+    IF arr_len <= i THEN
+      arr := arr || COALESCE((SELECT jsonb_agg('null'::jsonb) FROM generate_series(arr_len, i)), '[]'::jsonb);
+    END IF;
     existing := arr->i;
     IF existing IS NULL OR jsonb_typeof(existing) = 'null' THEN
       existing := next_default;

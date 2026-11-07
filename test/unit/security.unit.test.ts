@@ -5,6 +5,8 @@ import { dateLiteral, dateTimeLiteral, durationLiteral } from '../../src/ast';
 import { parse } from '../../src/parser';
 import { transform } from '../../src/transform';
 import { defaultFormats } from '../../src/formats';
+import { sqlPrelude } from '../../src/preludes/sql';
+import { MAX_STRING_LENGTH } from '../../src/runtime';
 
 /**
  * Security: Ensure that values in date/datetime/duration literals are properly
@@ -548,5 +550,177 @@ describe('Security - patch() member denylist (JS runtime)', () => {
   it('still patches legitimate keys and indices', () => {
     assert.deepStrictEqual(compile<any>("patch(_, ['b'], 2)", {})({ a: 1 }), { a: 1, b: 2 });
     assert.deepStrictEqual(compile<any>("patch(_, ['user', 'age'], 30)", {})({ user: { age: 1 } }), { user: { age: 30 } });
+  });
+});
+
+/**
+ * Security: the `at()` array accessor must not reach the host prototype chain.
+ *
+ * Reported by squ11z1 (Mykhailo Shushman) under coordinated disclosure.
+ *
+ * `at(array, int)` has a typed binding that indexes an array by an integer.
+ * When the operand types are not statically known (a lambda parameter is
+ * `any`), the stdlib dispatch fell back to that same emitter, which on the
+ * JavaScript target emits a bare `x[k] ?? null`. A string key such as
+ * `'constructor'` then walks the prototype chain: `at(s, 'constructor')` is
+ * the String constructor, and a second hop reaches the Function constructor —
+ * the classic `constructor.constructor('...')()` arbitrary-code escape, with
+ * no supplied data object (a string input is enough).
+ *
+ * The fix adds a dynamic `at(any, any)` binding that indexes only arrays, by
+ * an integer, returning null otherwise — exactly what `at` already means.
+ * Ruby and Python error on the string comparison instead of leaking, and
+ * neither has a Function-from-string escape; the live hole is JavaScript.
+ */
+describe('Security - at() inherited-member sandbox escape (JS, squ11z1)', () => {
+  const run = (src: string): unknown =>
+    compile<(input: unknown) => unknown>(src, {})('hello');
+
+  it('at(x, "constructor") on a string reads no host member', () => {
+    assert.strictEqual(run(`let f = fn( x ~> at(x, 'constructor') ) in f(_)`), null);
+  });
+
+  it('the at().at() -> Function constructor chain does not execute code', () => {
+    const src = `let f = fn( x ~> at(at(x, 'constructor'), 'constructor') ) in (f(_))('return 42')()`;
+    let result: unknown;
+    try { result = compile<(i: unknown) => unknown>(src, {})('hello'); } catch { /* throwing is a safe outcome */ }
+    assert.notStrictEqual(result, 42, 'arbitrary JavaScript ran through the at() constructor chain');
+  });
+
+  it('at(x, "__proto__") does not expose the prototype', () => {
+    assert.strictEqual(compile<(i: unknown) => unknown>(`let f = fn( x ~> at(x, '__proto__') ) in f(_)`, {})({ a: 1 }), null);
+  });
+
+  it('the emitted dynamic at never does a bare bracket read', () => {
+    // A string key must not even be spelled as `[...]` on an untyped operand.
+    const code = compileToJavaScript(parse(`fn( x ~> at(x, 'constructor') )`));
+    assert.doesNotMatch(code, /x\["constructor"\]/, 'dynamic at still emits a raw bracket read');
+  });
+
+  it('at still indexes arrays normally (typed and dynamic)', () => {
+    assert.strictEqual(compile<(i: unknown) => unknown>(`at([10, 20, 30], 1)`, {})(null), 20);
+    assert.strictEqual(compile<(i: unknown) => unknown>(`let f = fn( x ~> at(x, 1) ) in f(_)`, {})([10, 20, 30]), 20);
+    assert.strictEqual(compile<(i: unknown) => unknown>(`let f = fn( x ~> at(x, 5) ) in f(_)`, {})([10, 20, 30]), null);
+  });
+});
+
+/**
+ * Security: SQL date/datetime/duration literals must escape the backslash.
+ *
+ * Reported by squ11z1 (Mykhailo Shushman) under coordinated disclosure.
+ *
+ * `stringLiteral` doubles the backslash and E-prefixes the result; the three
+ * temporal literal emitters only doubled the single quote. A value carrying a
+ * backslash — reachable through the compiler AST API, e.g. dateLiteral(...) —
+ * then breaks out of the literal under `standard_conforming_strings=off`,
+ * where PostgreSQL reads `\'` as an escaped quote: the doubled `''` no longer
+ * closes the string and trailing bytes become SQL. Default PostgreSQL
+ * (`standard_conforming_strings=on`) is not injectable, but Elo must emit a
+ * literal that cannot escape under either setting, as `stringLiteral` already
+ * does.
+ */
+describe('Security - SQL temporal literal backslash injection (squ11z1)', () => {
+  const payload = `2024-01-01\\'; SELECT 424242; --`;
+  const cases: Array<[string, (v: string) => unknown]> = [
+    ['date', dateLiteral],
+    ['datetime', dateTimeLiteral],
+    ['duration', durationLiteral],
+  ];
+
+  for (const [name, make] of cases) {
+    it(`${name} literal doubles the backslash so it cannot escape the quote`, () => {
+      const code = compileToSQL(make(payload) as any);
+      assert.ok(code.includes('\\\\'), `backslash not doubled: ${code}`);
+      // No lone backslash immediately before the string-closing doubled quote.
+      assert.doesNotMatch(code, /[^\\]\\''/, `raw backslash can still escape the quote: ${code}`);
+    });
+  }
+
+  it('a plain temporal literal is unchanged (no needless E-prefix)', () => {
+    assert.strictEqual(compileToSQL(dateLiteral('2024-01-01')), `DATE '2024-01-01'`);
+  });
+});
+
+/**
+ * Security: the SQL `fetch(data, {key: path})` object form must validate keys.
+ *
+ * Reported by squ11z1 (Mykhailo Shushman) under coordinated disclosure.
+ *
+ * The object-literal emitter runs every key through assertSafeIdentifier; the
+ * fetch object form emitted `'${key}'` raw. A key supplied through the AST API
+ * (the source parser rejects a quoted mapping key) then escaped the SQL string
+ * and injected a sub-select — a single-statement read that works under default
+ * `standard_conforming_strings=on`. Keys produced by the parser are always
+ * IDENTIFIER tokens, so validating them rejects no valid program.
+ */
+describe('Security - SQL fetch object-key injection via AST (squ11z1)', () => {
+  function poisonedFetchKey(key: string): any {
+    const ast: any = parse('fetch(_, {name: .a})');
+    ast.args[1].properties[0].key = key;
+    return ast;
+  }
+
+  it('rejects a quote-bearing fetch object key', () => {
+    const key = `x', (SELECT secret FROM secrets)) || jsonb_build_object('y`;
+    assert.throws(() => compileToSQL(poisonedFetchKey(key)), /Invalid/);
+  });
+
+  it('rejects a stacked-statement fetch object key', () => {
+    const key = `x', NULL); SELECT secret FROM secrets; --`;
+    assert.throws(() => compileToSQL(poisonedFetchKey(key)), /Invalid/);
+  });
+
+  it('still compiles a legitimate fetch object form', () => {
+    assert.doesNotThrow(() => compileToSQL(parse('fetch(_, {name: .a, city: .b.c})')));
+  });
+});
+
+/**
+ * Security: patch() array extension and replace() output must be bounded.
+ *
+ * Reported by squ11z1 (Mykhailo Shushman) under coordinated disclosure.
+ *
+ * (1) `patch([], .N, 1)` extends an array to N+1 elements. The SQL prelude did
+ * it with a per-iteration JSONB concatenation (O(N^2), copying the growing
+ * array each step); every target left N unbounded. A short expression could
+ * thus monopolise the database or exhaust the evaluator. The array fill is now
+ * bounded by the same limit as string repeat/pad, and the SQL fill is a single
+ * concatenation rather than a quadratic loop.
+ *
+ * (2) Elo replace/replaceAll are documented as *literal*. JavaScript's
+ * String.prototype.replace and Ruby's gsub interpret special markers in the
+ * replacement ($&, $', \1, ...), so a replacement of `$'` ("text after the
+ * match") expands the output superlinearly. The replacement must be inserted
+ * verbatim; Python and SQL already do.
+ */
+describe('Security - patch array bound & literal replacement (squ11z1)', () => {
+  it('JS patch rejects an out-of-proportion array index', () => {
+    const fn = compile<(i: unknown) => unknown>(`patch([], .${MAX_STRING_LENGTH + 1}, 1)`, {});
+    assert.throws(() => fn(null), /limit/);
+  });
+
+  it('JS patch still extends a reasonable array', () => {
+    assert.deepStrictEqual(compile<(i: unknown) => unknown>(`patch([], .3, 7)`, {})(null), [null, null, null, 7]);
+  });
+
+  it('the SQL prelude bounds and does not quadratically grow the patch array', () => {
+    assert.match(sqlPrelude, new RegExp(String(MAX_STRING_LENGTH)), 'SQL patch is not bounded');
+    // The quadratic per-element `arr || 'null'` concat inside the loop is gone.
+    assert.doesNotMatch(sqlPrelude, /WHILE[\s\S]*?arr\s*:=\s*arr\s*\|\|\s*'null'::jsonb/);
+  });
+
+  it('JS replaceAll inserts the replacement literally, not as a $-pattern', () => {
+    // `$'` as a JS replacement means "the text after the match"; literally it
+    // is the two characters $ and '. Input 'aZZZZ' -> "$'" + "ZZZZ".
+    assert.strictEqual(compile<(i: unknown) => unknown>(`replaceAll(_, 'a', '$\\'')`, {})('aZZZZ'), `$'ZZZZ`);
+    assert.strictEqual(compile<(i: unknown) => unknown>(`replaceAll(_, 'a', '$&')`, {})('abc'), '$&bc');
+    assert.strictEqual(compile<(i: unknown) => unknown>(`replace(_, 'a', '$\\'')`, {})('aZ'), `$'Z`);
+  });
+
+  it('Ruby replace/replaceAll do not interpret backreferences in the replacement', () => {
+    // sub/gsub with a string replacement interpret \1, \&, \'; the block form
+    // does not. Emission must not use the two-argument string form.
+    const code = compileToRuby(parse(`replaceAll(_, 'a', '$\\'')`));
+    assert.doesNotMatch(code, /\.gsub\([^)]*,[^)]*\)/, `Ruby replaceAll still uses the backreference-interpreting 2-arg gsub: ${code}`);
   });
 });

@@ -68,6 +68,7 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   kPad: [],
   kMin2: [],
   kMax2: [],
+  kAt: [],
   kRound: [],
   kRoundTo: ['kRound'],
   kInt: ['pInt', 'pUnwrap', 'pOk', 'pFail'],
@@ -127,6 +128,17 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   kMin2: `function kMin2(a, b) { return a < b ? a : b; }`,
   kMax2: `function kMax2(a, b) { return a > b ? a : b; }`,
+  /* at() is array indexing by an integer. The typed at(List, Int) binding
+     indexes an array directly; this is the fallback for operands whose types
+     are not statically known (a lambda parameter is `any`). A bare a[k] there
+     would let a string key such as 'constructor' walk the prototype chain to
+     the Function constructor — a sandbox escape. Indexing only a real array,
+     by an integer, in range, and null otherwise is exactly what at() means. */
+  kAt: `function kAt(a, i) {
+  if (!Array.isArray(a)) return null;
+  if (typeof i !== 'number' || !Number.isInteger(i) || i < 0 || i >= a.length) return null;
+  return a[i] ?? null;
+}`,
   kRound: `function kRound(x) { return x < 0 ? -Math.round(-x) : Math.round(x); }`,
   kRoundTo: `function kRoundTo(x, n) { const f = Math.pow(10, n); return kRound(x * f) / f; }`,
   /* Reversing a string and reversing a list are different operations in
@@ -226,6 +238,9 @@ export const JS_HELPERS: Record<string, string> = {
   const nextDefault = rest.length === 0 ? null : typeof rest[0] === 'number' ? [] : {};
   if (typeof key === 'number') {
     if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error('cannot patch array index on non-array');
+    /* A short expression (patch([], .N, 1)) must not force an N-element array:
+       bound the fill by the same limit as string repeat/pad. */
+    if (key >= ${MAX_STRING_LENGTH}) throw new Error("Array length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger arrays");
     const arr = Array.isArray(data) ? [...data] : [];
     while (arr.length <= key) arr.push(null);
     const existing = arr[key];
@@ -528,6 +543,7 @@ end`,
   next_default = rest.empty? ? nil : (rest[0].is_a?(Integer) ? [] : {})
   if seg.is_a?(Integer)
     raise 'cannot patch array index on non-array' if !d.nil? && !d.is_a?(Array)
+    raise "Array length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger arrays" if seg >= ${MAX_STRING_LENGTH}
     arr = d.is_a?(Array) ? d.dup : []
     arr[seg] = nil while arr.length <= seg
     existing = arr[seg]
@@ -949,6 +965,7 @@ def _elo_end_of_year(dt):
     next_default = None if len(rest) == 0 else ([] if isinstance(rest[0], int) else {})
     if isinstance(seg, int):
         if data is not None and not isinstance(data, list): raise Exception('cannot patch array index on non-array')
+        if seg >= ${MAX_STRING_LENGTH}: raise Exception("Array length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger arrays")
         arr = list(data) if isinstance(data, list) else []
         while len(arr) <= seg: arr.append(None)
         existing = arr[seg]

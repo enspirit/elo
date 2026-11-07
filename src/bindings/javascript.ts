@@ -260,6 +260,10 @@ export function createJavaScriptBinding(): StdLib<string> {
   jsLib.register('count', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
   jsLib.register('at', [Types.array, Types.int], (args, ctx) =>
     `(${ctx.emit(args[0])}[${ctx.emit(args[1])}] ?? null)`);
+  // Dynamic fallback: when the operand types are not statically known, a bare
+  // `x[k]` would let a string key ('constructor', ...) walk the prototype
+  // chain. kAt indexes only a real array, by an integer — a sandbox guard.
+  jsLib.register('at', [Types.any, Types.any], helperCall('kAt'));
   jsLib.register('first', [Types.array], (args, ctx) =>
     `(${ctx.emit(args[0])}[0] ?? null)`);
   jsLib.register('last', [Types.array], (args, ctx) =>
@@ -381,10 +385,15 @@ export function createJavaScriptBinding(): StdLib<string> {
     });
     jsLib.register('slice', [t, Types.int, Types.int], (args, ctx) =>
       `${wrapReceiver(args, ctx)}.slice(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+    // Elo replace is *literal*. A string replacement passed to
+    // String.prototype.replace/replaceAll interprets $&, $', $`, $n — so a
+    // replacement of `$'` ("text after the match") expands the output
+    // superlinearly. A function replacement returns the string verbatim, so
+    // no `$` pattern is honoured.
     jsLib.register('replace', [t, Types.string, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.replace(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.replace(${ctx.emit(args[1])}, () => (${ctx.emit(args[2])}))`);
     jsLib.register('replaceAll', [t, Types.string, Types.string], (args, ctx) =>
-      `${wrapReceiver(args, ctx)}.replaceAll(${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+      `${wrapReceiver(args, ctx)}.replaceAll(${ctx.emit(args[1])}, () => (${ctx.emit(args[2])}))`);
     jsLib.register('padStart', [t, Types.int, Types.string], (args, ctx) => {
       ctx.requireHelper('kPad');
       return `kPad(${wrapReceiver(args, ctx)}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])}, true)`;
