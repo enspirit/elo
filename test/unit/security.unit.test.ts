@@ -692,6 +692,48 @@ describe('Security - typed at() sandbox escape under --optimize (type confusion)
 });
 
 /**
+ * Security: deepMerge must treat `__proto__` as a data key, like every other
+ * merge/fetch/patch path and the object literal.
+ *
+ * `{__proto__: x}` is a *data property* in Elo, and kFetchObject, kPatch and
+ * the object-literal emitter all use Object.defineProperty to keep it one.
+ * kDeepMerge did a bare `result[key] = …`, which for `__proto__` runs the
+ * [[Prototype]] setter instead — so `deepMerge({a: 1}, parsedJSONWithProtoKey)`
+ * repointed the *result's* prototype to attacker data rather than storing it as
+ * a key. No global Object.prototype pollution (the result is a fresh copy and
+ * JavaScript's setter is per-object), but a host handed the result sees an
+ * attacker-controlled prototype, and Elo's own `__proto__`-is-data contract is
+ * broken. JavaScript only: a Ruby Hash and a Python dict store the key as data.
+ */
+describe('Security - deepMerge __proto__ is a data key (JS)', () => {
+  const run = (src: string, input: unknown): unknown =>
+    compile<(i: unknown) => unknown>(src, {})(input);
+
+  it('a merged __proto__ key does not repoint the result prototype', () => {
+    const malicious = JSON.parse('{"__proto__": {"polluted": 1}}');
+    const result = run('deepMerge({a: 1}, _)', malicious) as object;
+    assert.strictEqual(
+      Object.getPrototypeOf(result), Object.prototype,
+      'deepMerge must not set the result prototype from a __proto__ key'
+    );
+    assert.strictEqual((result as Record<string, unknown>).a, 1);
+  });
+
+  it('global Object.prototype is never polluted', () => {
+    delete (Object.prototype as Record<string, unknown>).polluted;
+    run('deepMerge({a: {b: 1}}, _)', JSON.parse('{"a": {"__proto__": {"polluted": 1}}}'));
+    assert.strictEqual(({} as Record<string, unknown>).polluted, undefined);
+  });
+
+  it('ordinary nested deepMerge is unchanged', () => {
+    assert.deepStrictEqual(
+      run('deepMerge(_, {b: {y: 2}})', { a: 1, b: { x: 1 } }),
+      { a: 1, b: { x: 1, y: 2 } }
+    );
+  });
+});
+
+/**
  * Security: arithmetic on the dynamic path must stay bounded and numeric.
  *
  * Disproportionate allocation (Medium/High per the security page). Ruby and

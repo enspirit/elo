@@ -78,6 +78,7 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   kFetch: ['kMember'],
   kFetchObject: ['kFetch', 'kMember'],
   kPatch: ['kMember'],
+  kDeepMerge: ['kMember'],
   // Parser helpers depend on pOk/pFail
   pAny: ['pOk'],
   pNull: ['pOk', 'pFail'],
@@ -277,7 +278,10 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof b !== 'object' || b === null || Array.isArray(b)) return b;
   const result = {...a};
   for (const key of Object.keys(b)) {
-    result[key] = kDeepMerge(a[key], b[key]);
+    const merged = kDeepMerge(kMember(a, key), kMember(b, key));
+    /* Assigning result['__proto__'] runs the prototype setter; defineProperty keeps __proto__ a data key, as kFetchObject and kPatch do. Reads go through kMember so a __proto__ key reads its own data, not the prototype chain. */
+    if (key === '__proto__') { Object.defineProperty(result, key, { value: merged, writable: true, enumerable: true, configurable: true }); }
+    else { result[key] = merged; }
   }
   return result;
 }`,
