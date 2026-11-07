@@ -4,6 +4,93 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-11-07
+
+A security release. Four issues were reported under coordinated disclosure by
+Mykhailo Shushman (squ11z1); sweeping the compiler for the same bug classes
+turned up two more on targets the reporter had not probed. All six are fixed,
+each with a red-first test that was seen fail on every affected target and then
+verified executing on node, ruby, python and psql. No new construct; the public
+API is unchanged; no program that was already correct changes its answer.
+
+### Before you upgrade
+
+**If you run Elo on PostgreSQL, reinstall the SQL prelude.** This release adds
+three `elo_*` helpers — `elo_repeat`, `elo_lpad`, `elo_rpad` — that `s * n`,
+`padStart` and `padEnd` now call, and it rewrites `elo_patch`. A prelude
+installed before 1.2.3 lacks the three new names, so repeat and padding on SQL
+raise rather than answer:
+
+```bash
+eloc --prelude-only -t sql | psql "$DATABASE_URL"
+```
+
+Nothing else needs action.
+
+### Security
+
+- **JavaScript sandbox escape through `at()`.** When the operand types were not
+  statically known, `at(x, k)` fell back to the typed array emitter and emitted
+  a bare `x[k]`. A string key then walked the prototype chain:
+  `at(at(_, 'constructor'), 'constructor')` reached the `Function` constructor,
+  so an attacker-authored expression ran arbitrary host code during evaluation —
+  from a plain string input, no data object. `at` now indexes only a real array
+  by an integer and is null otherwise, through a `kAt` guard on JavaScript and
+  an Array/Integer check on Ruby and Python (which erred rather than leaked, and
+  now agree). SQL was never reachable. Reported by squ11z1.
+
+- **SQL injection through the `fetch` object form.** `fetch(data, {key: path})`
+  interpolated the mapping key into a SQL string constant without the identifier
+  check the object-literal emitter already used, so a key supplied through the
+  compiler AST API injected a sub-select — a single-statement read under default
+  PostgreSQL settings. The key now goes through `assertSafeIdentifier`, as the
+  object literal does; a parser-produced key is always an identifier, so no
+  valid program is refused. Reported by squ11z1.
+
+- **SQL injection through date, datetime and duration literals.** The three
+  temporal emitters doubled the single quote but left the backslash raw, unlike
+  the string emitter, so a value carrying a backslash — reachable through the
+  AST API — escaped the literal when `standard_conforming_strings` is `off`
+  (deprecated, non-default). The three now share one escaping helper that
+  doubles the backslash and `E''`-prefixes, so the literal cannot be escaped
+  under either setting. Reported by squ11z1.
+
+- **Guard/check type injection through the AST API (Ruby).** `IRGuard.guardType`
+  is `'guard' | 'check'`, but the transform copied it from the AST unchecked and
+  the Ruby emitter interpolated it into a string literal, so a guard type set
+  through the compiler AST API — never reachable from the parser — injected
+  Ruby. The transform now rejects any value other than the two keywords, which
+  closes it for every target at once. Found while auditing the reported fixes.
+
+- **Unbounded allocation in `patch` and string repeat/padding.** `patch([], .N,
+  v)` grew an array one element per step — quadratic in the SQL prelude — with
+  no cap on `N`; and `s * n`, `padStart`, `padEnd` on SQL used bare
+  `REPEAT`/`LPAD`/`RPAD` with no cap, where the other targets already bound them
+  by `ELO_MAX_STRING_LENGTH`. A short expression could thus build a huge value
+  on a shared database backend. The patch fill is now a single bounded
+  concatenation (a 200k index went from minutes to milliseconds), and repeat and
+  padding go through bounded prelude helpers, so every target enforces
+  `ELO_MAX_STRING_LENGTH` as the security page already said. The patch half was
+  reported by squ11z1; the SQL repeat/pad half was found alongside it.
+
+- **`replace` and `replaceAll` are now literal, as documented.** A replacement
+  string was passed straight to JavaScript's `String.prototype.replace` and
+  Ruby's `gsub`, which interpret `$'`, `$&`, `\1`, … — so a replacement of `$'`
+  expanded the output superlinearly and a replacement was not the literal text
+  the documentation promised. Both targets now insert the replacement verbatim
+  (a function replacement on JavaScript, a block on Ruby). Python and SQL were
+  already literal. Reported by squ11z1 as the second half of the allocation
+  issue; it is also a correctness fix.
+
+### Internals
+
+- Dependencies upgraded and security advisories cleared. The website's
+  toolchain moved to Astro 7, which clears sixteen transitive advisories
+  (including the two critical `@enspirit/elo` lockfile entries a scanner had
+  flagged); the compiler's `pg` and `esbuild` dev-dependencies were bumped, and
+  the CI workflow pins its third-party action to a commit and no longer persists
+  the checkout credential.
+
 ## [1.2.2] - 2026-11-07
 
 A patch release: seven fixes. Six are a disagreement between targets, where at
