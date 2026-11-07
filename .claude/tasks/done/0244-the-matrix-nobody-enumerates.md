@@ -537,12 +537,12 @@ never the person who introduces one of these.
 | ~~7~~ | ~~H6a + H6b (bounded-primitive table, and the bounds biting)~~ | **done** — §1.3 covered, see 0250 | medium |
 | ~~8~~ | ~~H8b (keep the helper region audited)~~ | **done** — would have found pSchema, see 0251 | medium |
 | ~~9~~ | ~~H4 (hostile shapes)~~ | **done** — regression net for 5 reports, see 0252 | small |
-| 10 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3, *earlier* than H0 does | tiny |
-| 11 | H0 moved inside `compile()` | the same, fail-closed, for users too | medium |
-| 12 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
-| 13 | H5 (lying inputs) | §1.4 as a property, not a shape | medium |
-| 14 | H0 extended: SQL | the two SQL injections — no parser in reach | unknown |
-| 15 | branded `Code` type | authoring ergonomics only | large, probably skip |
+| ~~10~~ | ~~H5 (lying inputs)~~ | **done** — §1.4 as a property, see 0253 | medium |
+| — | H0 moved inside `compile()` | **deferred** — needs a dependency decision, see the close | medium |
+| — | H3 (hostile values) | **declined** — see the close | medium |
+| — | H7 rules 1–2 (grep test) | **declined** — subsumed by H0, see the close | tiny |
+| — | H0 extended: SQL | **deferred** at the maintainer's request | unknown |
+| — | branded `Code` type | **declined** — see the close | large |
 
 H9 moved to the front after the measurement above: it is the cheapest item
 that increases what every other item can see, and the three coverage holes
@@ -588,3 +588,69 @@ from `v0 * v1` on a string, and that is a whole class (§1.3) it will never see.
 H5 is last of the real items and still worth it — H0 catches B1's *shape*,
 but only H5 states the *property*, and the next §1.4 bug may have a different
 shape.
+
+---
+
+## Closing this task
+
+Eight items built, enforced by `npm test`, each seen red:
+
+| | what it pins | found |
+|---|---|---|
+| `emitted-js-grammar.ts` + 2 tests | the JavaScript sub-grammar Elo may emit | 3 of this branch's 6 fixes, on revert |
+| `gate-ruby.rb` | no backticks, no host variables, compiler-authored interpolation only | the `#@ivar` RCE, on revert |
+| `gate-python.py` | 84 names, 34 attributes, 44 node kinds — no dunder | the missing `^` bound, on revert |
+| `helper-region.unit.test.ts` | the 12 helpers that index by a computed key | **would have found `pSchema`** |
+| `bounded-primitives.unit.test.ts` | 91 signatures: helper-routed or native with a reason | the inline-guard group |
+| `dispatch-coverage.integration.test.ts` | every stdlib implementation is compiled by a fixture | 78 → 50 unreached on JS |
+| force-dynamic acceptance axis | the typed and dynamic emissions agree | **2 live bugs** (0248) |
+| `hostile-shapes.unit.test.ts` + `lying-input.integration.test.ts` | §1.5 and §1.4 | regression nets; nothing red |
+
+Three live bugs were found *building* these, not running them: the Ruby
+type-name constant clobbering (0246), the `pSchema` `__proto__` key (0246), and
+`String(x)`/`fetch(d, p)` on the dynamic path (0248, still open).
+
+### What is declined, and why
+
+**H3 — a hostile-value corpus.** It was item 3 in the original plan and is now
+declined. H0 closed the sink side of §1.1 *structurally*: the emitted grammar
+is a closed allowlist, so a hostile value either fails to parse, names an
+unlisted global, or reads an unlisted property — whatever the payload. A corpus
+would mostly re-test what the allowlist already refuses, and H4 has just shown
+what building a corpus for an already-closed class costs: 207 assertions,
+nothing red. If a sink is ever added that the grammar cannot describe, revisit.
+
+**H7 — grep rules on the compiler source.** Subsumed. The two rules worth
+having (`JSON.stringify` in the Ruby files, `'${` in the SQL files) both fire
+only on bugs the gates now catch in the output, which is the stronger place.
+
+**The branded `Code` type.** Declined on the reasoning in H7: it constrains how
+an emitter is *written*, where the gates constrain what it *produces*, and the
+second is the property we want. It also cannot be defeated by an `unsafeCode()`
+call that looked fine at the time.
+
+### What is deferred, and what it needs
+
+**H0 inside `compile()`.** The gates live in `test/` only because the parser
+does: `typescript` is a devDependency and Elo ships one runtime dependency
+(luxon). Making the compiler itself fail closed means either promoting that
+dependency or hand-writing a recogniser for the sub-grammar. That is a
+packaging decision, not a security one, and it is the only remaining item that
+would protect a user running a build whose tests we never wrote.
+
+**The SQL gate.** Deferred at the maintainer's request. Note for whoever picks
+it up: PostgreSQL has no `Ripper`/`ast` equivalent in reach. `PREPARE` gives
+syntax only — enough for a stacked statement, not for the sub-select that 1.2.3
+#3 injected. It needs its own investigation rather than an afternoon.
+
+### The method, since it is the transferable part
+
+Every bug found here came from **enumerating something the repository already
+contained** — the grammar the emitters produce, the signatures the bindings
+register, the fixtures that exist, the writes the helpers perform, the
+implementations a corpus reaches. Not one came from a generator of hostile
+inputs. Both items that needed a corpus somebody invents (H3, H4) found
+nothing.
+
+So the next time this question comes up, the first move is to ask what list the
+codebase can already produce and nobody has read.
