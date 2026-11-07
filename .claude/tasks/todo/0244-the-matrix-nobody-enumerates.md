@@ -287,7 +287,7 @@ One table of payloads:
 
 ```
 #{`id`}   #@ivar   #$gvar   #@@cvar      (Ruby interpolation)
-         \n  \r  \t  \0        (line terminators, controls)
+       \n  \r  \t  \0        (line terminators, controls)
 '  "  \   \\  ''  E'                     (quote and escape levels)
 /  */  --  ;  $$                         (comment and delimiter openers)
 ${x}  `x`                                (JS template, Ruby backtick)
@@ -469,15 +469,47 @@ never the person who introduces one of these.
 |---|---|---|---|
 | ~~1~~ | ~~H0 (JS grammar gate)~~ | **done** — 3 of this branch's 6, seen red | small |
 | ~~2~~ | ~~H0 extended: Ruby `Ripper`~~ | **done** — the interpolation class, seen red | small |
-| 3 | H0 extended: Python `ast` | the dunder-dispatch class, structurally | small |
-| 4 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3, *earlier* than H0 does | tiny |
-| 5 | H4 (hostile shapes) | C1 + 3 reports | small |
-| 6 | H0 moved inside `compile()` | the same, fail-closed, for users too | medium |
-| 7 | H1 (force-dynamic axis) | B2 + the whole class | medium |
-| 8 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
-| 9 | H6a (bounded-primitive table) | §1.3 permanently | medium |
-| 10 | H5 (lying inputs) | §1.4 as a property, not a shape | medium |
-| 11 | branded `Code` type | authoring ergonomics only | large, probably skip |
+| ~~3~~ | ~~H0 extended: Python `ast`~~ | **done** — the dunder vocabulary, seen red | small |
+| ~~4~~ | ~~H8 (audit the exempt helper region)~~ | **done once** — found the `pSchema` bug | small |
+| 5 | H8b (keep the helper region audited) | the rest of §1.2, continuously | medium |
+| 6 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3, *earlier* than H0 does | tiny |
+| 7 | H4 (hostile shapes) | C1 + 3 reports | small |
+| 8 | H0 moved inside `compile()` | the same, fail-closed, for users too | medium |
+| 9 | H1 (force-dynamic axis) | B2 + the whole class | medium |
+| 10 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
+| 11 | H6a (bounded-primitive table) | §1.3 permanently | medium |
+| 12 | H5 (lying inputs) | §1.4 as a property, not a shape | medium |
+| 13 | H0 extended: SQL | the two SQL injections — no parser in reach | unknown |
+| 14 | branded `Code` type | authoring ergonomics only | large, probably skip |
+
+### H8. The exempt helper region has to be audited, because the gate cannot
+
+All three gates exempt the prelude helpers: they are *where* the guarded
+bracket reads and the `defineProperty` writes are supposed to live, so they
+cannot obey the rules the rest of the emission does. The coverage audit put a
+number on that exemption — six of the eighteen uncovered issues are inside a
+helper — which made it the largest single gap rather than a footnote.
+
+Auditing it by hand once, by listing every computed write in `JS_HELPERS`,
+took one query and found **six writes across four helpers**, of which five
+were guarded and one was not: `pSchema` built its result with a bare
+`o[key] = r.value` over schema-supplied keys, so `__proto__` ran the prototype
+setter. Fixed; see `.claude/tasks/done/0246`.
+
+That is the method, and it should not depend on anyone remembering to repeat
+it. **H8b** is to make the helper region a *reviewed* region rather than an
+unexamined one — the cheapest version being to pin the helper set the way
+`public-surface.unit.test.ts` pins the exports: a list of names and content
+hashes that a change to a helper has to update on purpose. A stronger version
+would assert the invariant structurally (every computed write in a helper
+either has a numeric index or is guarded by a `__proto__` check), which is
+feasible but needs a dataflow argument the three gates deliberately avoid.
+
+Worth noting for whoever does it: `kFetchObject`, `kPatch`, `kDeepMerge` and
+now `pSet` each carry their own copy of the "keep `__proto__` a data key"
+logic. One invariant, four sites, which is the exact shape 0243 named as the
+cause of this whole class. Consolidating them onto `pSet` is the structural
+fix and was left out of 0246 only to keep that fix's blast radius readable.
 
 The shape of this order is the finding: **four of the first five are one
 idea** — write down the grammar the emitters are allowed to produce, and check

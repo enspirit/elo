@@ -111,8 +111,11 @@ review. Elo's output is a tiny sub-grammar of each target, written down in:
 * `test/integration/emitted-grammar.integration.test.ts` — every fixture line
   in all four compile modes, **including `--optimize`**, which selects
   different emitters
-* `test/acceptance/gate-ruby.rb` + `gate-grammar.sh` — the Ruby counterpart
-  (Ripper), run by `test-all.sh`
+* `test/acceptance/gate-ruby.rb` (Ripper) and `gate-python.py` (`ast`), run by
+  `gate-grammar.sh` from `test-all.sh`, in both the plain and `ELO_OPTIMIZE`
+  passes
+
+All three targets are gated; SQL is not, for want of a parser in reach.
 
 If your change makes one of these fail, the emitter is the suspect, not the
 gate. The allowlists are lists someone edits **on purpose**, like
@@ -120,8 +123,13 @@ gate. The allowlists are lists someone edits **on purpose**, like
 emitted language may reach, and the failure is the review. Do not widen one to
 make a test pass without saying why in the same commit.
 
-The gate exempts the prelude helpers — they are where the guarded reads live —
-so a bug *inside* a helper is invisible to it. Python is not gated yet.
+**The gates exempt the prelude helpers**, because helpers are where the
+guarded reads and the `defineProperty` writes live. That exemption is the
+harness's biggest blind spot — six of the security issues fixed since 1.0 are
+inside one — so when you add or change a helper in `src/runtime.ts`, audit it
+by hand: a computed write (`o[k] = v`) must keep `__proto__` a data key, and a
+computed read must be own-property only. `.claude/tasks/done/0246` is what
+that audit found the one time it was run.
 
 The eight properties on `web/src/pages/security.astro` are the specification.
 `.claude/tasks/todo/0244-the-matrix-nobody-enumerates.md` is the plan for making

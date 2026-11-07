@@ -1,0 +1,22 @@
+# A schema key named `__proto__` is data, like every other key.
+#
+# `pSchema` built its result with `o[key] = r.value`, where `key` comes from
+# the schema. `__proto__` is a legal Elo identifier, so that assignment ran the
+# JavaScript [[Prototype]] setter instead of storing a value: the key vanished
+# from the result, and with an object-valued type the result's prototype became
+# the attacker's data. The same unguarded read, `v[key]`, took the *input's*
+# prototype rather than its own property.
+#
+# This is the bug 35a9f77 fixed in kDeepMerge, in the one remaining helper that
+# had it. Found by auditing the helper region, which the emitted-grammar gate
+# exempts — the exemption is why it had to be audited by hand.
+#
+# Elo cannot read `__proto__` back (member access and fetch both refuse the
+# meta-property names), so the assertion observes the *data loss* instead: a
+# round trip through the schema must preserve the key. Ruby stores it in a Hash
+# and Python in a dict, so both were already right; this was JavaScript alone.
+
+assert((let T = {__proto__: Int} in ({__proto__: 1} |> T)) == {__proto__: 1})
+assert((let T = {__proto__: Int, b: Int} in ({__proto__: 1, b: 2} |> T)) == {__proto__: 1, b: 2})
+assert((let T = {__proto__: {a: Int}} in ({__proto__: {a: 1}} |> T)) == {__proto__: {a: 1}})
+assert((let T = {a: Int} in ({a: 1} |> T)) == {a: 1})

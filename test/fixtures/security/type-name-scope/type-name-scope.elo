@@ -1,0 +1,23 @@
+# A type name is a local binding, not a host global.
+#
+# Elo type names are UPPER_IDENTIFIER, and an uppercase bare name in Ruby is a
+# **constant**. The Ruby typedef emitter wrote `Hash = ->(v) { … }`, which does
+# not create a scoped binding: it reassigns the constant process-wide, with a
+# warning and no error. So `let Integer = Int in …` replaced Ruby's Integer
+# class for the rest of the host process — and the prelude itself asks
+# `r.is_a?(Integer)`, so the *next* expression to multiply raised
+# `TypeError: class or module required`.
+#
+# Reachable from plain source text, no AST API needed. JavaScript scopes the
+# same binding in a `const` inside an IIFE and Python in a lambda-local walrus,
+# so this was Ruby alone — the usual shape of a divergence.
+#
+# The second line is the assertion that matters: it only passes if the first
+# line left the host's Integer alone.
+
+assert((let Integer = Int in ('42' |> Integer)) == 42)
+assert((let f = fn( x, y ~> x * y ) in f(2, 3)) == 6)
+assert((let String = Int in ('7' |> String)) == 7)
+assert(('ab' * 2) == 'abab')
+assert((let Hash = Int in ('1' |> Hash)) == 1)
+assert({a: 1}.a == 1)

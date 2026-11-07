@@ -127,6 +127,31 @@ export function compileToRubyWithMeta(expr: Expr, options?: RubyCompileOptions):
  * `#$gvar` cannot trigger Ruby string interpolation — otherwise attacker-controlled
  * text (string literals, constraint labels, etc.) becomes executable code.
  */
+/**
+ * How Ruby spells an Elo binding name.
+ *
+ * Elo type names are UPPER_IDENTIFIER, and an uppercase bare name in Ruby is a
+ * **constant**, not a local. So `let Integer = Int in …` emitted
+ * `Integer = ->(v) { … }`, which does not create a scoped binding: it
+ * reassigns the constant for the whole host process, with a warning and no
+ * error. The prelude itself asks `r.is_a?(Integer)`, so the next expression to
+ * multiply then raised `TypeError: class or module required` — and a host that
+ * uses `Hash`, `String` or `File` after evaluating an Elo expression got
+ * whatever the expression left behind.
+ *
+ * Emitted code must be a pure function of its input, so a type name is given
+ * a lowercase prefix and becomes an ordinary local. `_t_` rather than a bare
+ * downcase so that `let X` and `let x` in one scope cannot collide, and to
+ * match the `_p_` the parser binding already uses.
+ *
+ * JavaScript (`const X`, inside an IIFE) and Python (a lambda-local walrus)
+ * scope the same binding correctly, which is why this was Ruby alone.
+ */
+function rubyBinding(name: unknown, context: string): string {
+  const safe = assertSafeIdentifier(name, context);
+  return /^[A-Z]/.test(safe) ? `_t_${safe}` : safe;
+}
+
 function escapeRubyDQ(s: string): string {
   return s
     .replace(/\\/g, '\\\\')
@@ -162,7 +187,7 @@ const rubyEmitter: Emitter = {
 
   arrayLiteral: (elements) => `[${elements.join(', ')}]`,
 
-  variable: (name) => assertSafeIdentifier(name, 'variable name'),
+  variable: (name) => rubyBinding(name, 'variable name'),
 
   memberAccess: (object, property, ir) => {
     const objectExpr = ir.object.type === 'call' && isNativeBinaryOp(ir.object) ? `(${object})` : object;
@@ -209,8 +234,12 @@ const rubyEmitter: Emitter = {
   typedef: (definitions, body, ctx) => {
     ctx.requireHelper('p_unwrap');
     const decls = definitions.map(({ name, parser }) => {
+      // rubyBinding, not the bare name: an Elo type name is uppercase, and an
+      // uppercase bare name in Ruby is a process-wide constant rather than a
+      // scoped local. See rubyBinding.
       const safe = assertSafeIdentifier(name, 'typedef name');
-      return `_p_${safe} = ${parser}; ${safe} = ->(v) { p_unwrap(_p_${safe}.call(v, '')) }`;
+      const local = rubyBinding(name, 'typedef name');
+      return `_p_${safe} = ${parser}; ${local} = ->(v) { p_unwrap(_p_${safe}.call(v, '')) }`;
     }).join('; ');
     return `(${decls}; ${body})`;
   },

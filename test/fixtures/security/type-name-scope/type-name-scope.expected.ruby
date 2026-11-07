@@ -1,0 +1,23 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+->(_) { def p_err(m, k, pa, l); e = StandardError.new(m); e.define_singleton_method(:kind) { k }; e.define_singleton_method(:path) { pa }; e.define_singleton_method(:label) { l }; e end; def p_fail(p, m = nil, c = nil, k = nil, l = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [], kind: k || 'schema', label: l } end; def p_int(v, p); return p_ok(v, p) if v.is_a?(Integer); return p_ok(Integer(v, 10), p) if v.is_a?(String) rescue nil; p_fail(p, "expected Int, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}") end; def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end; def p_unwrap(r); return r[:value] if r[:success]; find_error = ->(e) {; return e if e[:message] && !e[:message].empty?; return find_error.call(e[:cause][0]) if e[:cause] && e[:cause][0]; e; }; err = find_error.call(r); given = ->(v, fallback) { v.nil? || (v.respond_to?(:empty?) && v.empty?) ? fallback : v }; path = given.call(err[:path], '.'); raise p_err("#{path}: #{given.call(err[:message], 'type error')}", given.call(err[:kind], 'schema'), path, err[:label]) end; (raise "Assertion failed" unless (_p_Integer = method(:p_int); _t_Integer = ->(v) { p_unwrap(_p_Integer.call(v, '')) }; _t_Integer.call("42")) == 42; true) }.call(nil);
+->(_) { def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless (f = ->(x, y) { k_mul(x, y) }; f.call(2, 3)) == 6; true) }.call(nil);
+->(_) { def p_err(m, k, pa, l); e = StandardError.new(m); e.define_singleton_method(:kind) { k }; e.define_singleton_method(:path) { pa }; e.define_singleton_method(:label) { l }; e end; def p_fail(p, m = nil, c = nil, k = nil, l = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [], kind: k || 'schema', label: l } end; def p_int(v, p); return p_ok(v, p) if v.is_a?(Integer); return p_ok(Integer(v, 10), p) if v.is_a?(String) rescue nil; p_fail(p, "expected Int, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}") end; def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end; def p_unwrap(r); return r[:value] if r[:success]; find_error = ->(e) {; return e if e[:message] && !e[:message].empty?; return find_error.call(e[:cause][0]) if e[:cause] && e[:cause][0]; e; }; err = find_error.call(r); given = ->(v, fallback) { v.nil? || (v.respond_to?(:empty?) && v.empty?) ? fallback : v }; path = given.call(err[:path], '.'); raise p_err("#{path}: #{given.call(err[:message], 'type error')}", given.call(err[:kind], 'schema'), path, err[:label]) end; (raise "Assertion failed" unless (_p_String = method(:p_int); _t_String = ->(v) { p_unwrap(_p_String.call(v, '')) }; _t_String.call("7")) == 7; true) }.call(nil);
+->(_) { def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless k_str_mul("ab", 2) == "abab"; true) }.call(nil);
+->(_) { def p_err(m, k, pa, l); e = StandardError.new(m); e.define_singleton_method(:kind) { k }; e.define_singleton_method(:path) { pa }; e.define_singleton_method(:label) { l }; e end; def p_fail(p, m = nil, c = nil, k = nil, l = nil) { success: false, path: p, message: m || '', value: nil, cause: c || [], kind: k || 'schema', label: l } end; def p_int(v, p); return p_ok(v, p) if v.is_a?(Integer); return p_ok(Integer(v, 10), p) if v.is_a?(String) rescue nil; p_fail(p, "expected Int, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}") end; def p_ok(v, p) { success: true, path: p, message: '', value: v, cause: [] } end; def p_unwrap(r); return r[:value] if r[:success]; find_error = ->(e) {; return e if e[:message] && !e[:message].empty?; return find_error.call(e[:cause][0]) if e[:cause] && e[:cause][0]; e; }; err = find_error.call(r); given = ->(v, fallback) { v.nil? || (v.respond_to?(:empty?) && v.empty?) ? fallback : v }; path = given.call(err[:path], '.'); raise p_err("#{path}: #{given.call(err[:message], 'type error')}", given.call(err[:kind], 'schema'), path, err[:label]) end; (raise "Assertion failed" unless (_p_Hash = method(:p_int); _t_Hash = ->(v) { p_unwrap(_p_Hash.call(v, '')) }; _t_Hash.call("1")) == 1; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless {a: 1}[:a] == 1; true) }.call(nil);

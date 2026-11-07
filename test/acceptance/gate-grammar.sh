@@ -27,26 +27,32 @@ EXIT_CODE=0
 # of them.
 ELO_OPTIMIZE="${ELO_OPTIMIZE:-}"
 
-if ! ruby "$SCRIPTS_DIR/gate-ruby.rb" --self-test; then
-    EXIT_CODE=1
-fi
+for gate in "ruby:ruby:gate-ruby.rb:ruby" "python:python3:gate-python.py:py"; do
+    IFS=: read -r target runner script suffix <<< "$gate"
 
-if [ -n "$ELO_OPTIMIZE" ]; then
-    EMITTED=$(mktemp)
-    trap 'rm -f "$EMITTED"' EXIT
-    while IFS= read -r -d '' file; do
-        # A line the checker reported on is emitted unannotated and exits 1;
-        # that is the documented refusal, not a failure to gate.
-        $ELOC -t ruby --lines -x --optimize "${file%.expected.*}.elo" 2>/dev/null >> "$EMITTED" || true
-    done < <(find "$TEST_DIR" -type f -name "*.expected.ruby" -print0 | sort -z)
-    if ! ruby "$SCRIPTS_DIR/gate-ruby.rb" "$EMITTED"; then
+    if ! "$runner" "$SCRIPTS_DIR/$script" --self-test; then
         EXIT_CODE=1
     fi
-else
-    # shellcheck disable=SC2046
-    if ! ruby "$SCRIPTS_DIR/gate-ruby.rb" $(find "$TEST_DIR" -type f -name "*.expected.ruby" | sort); then
-        EXIT_CODE=1
+
+    if [ -n "$ELO_OPTIMIZE" ]; then
+        EMITTED=$(mktemp)
+        while IFS= read -r -d '' file; do
+            # A line the checker reported on is emitted unannotated and exits 1;
+            # that is the documented refusal, not a failure to gate.
+            $ELOC -t "$target" --lines -x --optimize "${file%.expected.*}.elo" \
+                2>/dev/null >> "$EMITTED" || true
+        done < <(find "$TEST_DIR" -type f -name "*.expected.$suffix" -print0 | sort -z)
+        if ! "$runner" "$SCRIPTS_DIR/$script" "$EMITTED"; then
+            EXIT_CODE=1
+        fi
+        rm -f "$EMITTED"
+    else
+        # shellcheck disable=SC2046
+        if ! "$runner" "$SCRIPTS_DIR/$script" \
+            $(find "$TEST_DIR" -type f -name "*.expected.$suffix" | sort); then
+            EXIT_CODE=1
+        fi
     fi
-fi
+done
 
 exit $EXIT_CODE

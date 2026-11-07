@@ -30,6 +30,10 @@ One expression that used to answer *wrongly* now answers: `x * n` with a string
 `x` on the dynamic path repeats the string on JavaScript, as the typed path and
 the other targets already did, instead of returning `NaN`.
 
+One message changed. A missing record key reported `expected Int, got undefined`
+on JavaScript and `got Null` on Ruby and Python; all three now say `Null`, which
+is the only one of the two that names something Elo has.
+
 ### Security
 
 - **JavaScript sandbox escape through the *typed* `at()` (type confusion).**
@@ -92,6 +96,30 @@ the other targets already did, instead of returning `NaN`.
   and a chain of any length falls through to the existing guard. Well-formed
   programs are unaffected: the same dotted path is built and the same non-null
   paths collected.
+
+- **An Elo type name overwrote a Ruby constant, process-wide.** Elo type names
+  are uppercase, and an uppercase bare name in Ruby is a *constant*, not a
+  local. The typedef emitter wrote `Integer = ->(v) { … }`, which does not
+  create a scoped binding: it rebinds the name for the whole host process,
+  with a warning and no error. So `let Integer = Int in …` replaced Ruby's
+  `Integer` class — the prelude itself asks `r.is_a?(Integer)`, so the next
+  expression to multiply raised `TypeError: class or module required`, and a
+  host that used `Hash`, `String` or `File` after evaluating an expression got
+  whatever that expression left behind. Reachable from plain source text, no
+  AST API needed. A type name now emits a prefixed local. JavaScript scopes
+  the same binding in a `const` inside an IIFE and Python in a lambda-local
+  walrus, so this was Ruby alone. Found by the emitted-grammar gate work.
+
+- **A `__proto__` schema key was not a data key (JavaScript).** `pSchema` built
+  its result with a bare `o[key] = r.value` over keys taken from the schema,
+  and `__proto__` is a legal Elo identifier. That assignment runs the
+  [[Prototype]] setter: `{__proto__: Int}` silently dropped the key, and
+  `{__proto__: {a: Int}}` handed back an object whose prototype was the input's
+  data. The matching read, `v[key]`, took the input's prototype rather than its
+  own property. Both now go through the same helpers the object-literal
+  emitter, `kFetchObject`, `kPatch` and `kDeepMerge` already used. Ruby stores
+  the key in a Hash and Python in a dict, so this was JavaScript alone. Found
+  by auditing the helper region that the emitted-grammar gate exempts.
 
 - **`extract()` emitted invalid JavaScript for U+2028 / U+2029.** Both are line
   terminators inside a JavaScript regex literal, so a template carrying one

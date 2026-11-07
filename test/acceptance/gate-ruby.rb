@@ -60,6 +60,37 @@ ALLOWED_INTERPOLATION_NODES = [
 ].freeze
 ALLOWED_INTERPOLATION_METHODS = %w[inspect class].freeze
 
+# Every method the emitted code may call on a receiver, outside the helpers.
+#
+# 74, measured over the corpus. The security value is the absence: `send`,
+# `__send__`, `public_send`, `instance_eval`, `instance_exec`, `eval`,
+# `method`, `const_get`, `instance_variable_get`, `define_singleton_method`,
+# `binding`, `tap` and `then` are all excluded by not being on the list. A
+# list someone edits on purpose — adding a name is a decision about what the
+# emitted language may reach.
+ALLOWED_METHODS = %w[
+  abs all? any? build call ceil chr class concat downcase empty? end_with?
+  fdiv find first flatten floor gsub include? index inspect is_a? join last
+  length lstrip map match max merge message min new nil? parse reduce reverse
+  round rstrip select sort sort_by split start_with? strip sub sum to_f to_i
+  to_s to_sym transform_values uniq upcase
+  beginning_of_day beginning_of_month beginning_of_quarter beginning_of_week
+  beginning_of_year end_of_day end_of_month end_of_quarter end_of_week
+  end_of_year day days hour minute month now seconds to_datetime today year
+].freeze
+
+# Every bare call — a name with no receiver — the emitted code may make.
+#
+# 22, measured: the prelude helpers, plus `Integer()`, `lambda` and `method`.
+# What is absent is the whole Kernel surface: `system`, `exec`, `spawn`,
+# `require`, `load`, `eval`, `fork`, `open`, `gets`, `at_exit`, `send`.
+ALLOWED_CALLS = %w[
+  Integer lambda method
+  k_deep_merge k_div k_float k_intersection k_mod k_mul k_pad k_patch k_pow
+  k_round_to k_str_mul k_string k_sub
+  p_array p_raise p_schema p_subtype p_union p_unwrap
+].freeze
+
 # Walk a Ripper s-expression, yielding every node that has a symbol head.
 def each_node(sexp, &block)
   return unless sexp.is_a?(Array)
@@ -100,7 +131,39 @@ def violations_in(code)
     end
   end
 
+  # A constant assignment is never scoped in Ruby: it rebinds the name for the
+  # whole process. Elo type names are uppercase, so the typedef emitter used to
+  # write `Integer = ->(v) { … }` and replaced the host's Integer class —
+  # reachable from plain source. Emitted code is a pure function of its input,
+  # so it assigns no constant, anywhere.
+  each_node(sexp) do |node|
+    next unless node[0] == :assign
+    target = node[1]
+    if target.is_a?(Array) && target.inspect.include?(':@const')
+      found << ['no-constant-assignment',
+                'assigning a constant rebinds it for the whole host process; ' \
+                'an Elo binding must be a local']
+    end
+  end
+
   each_node_outside_helpers(sexp) do |node|
+    case node[0]
+    when :call
+      name = node[3]
+      if name.is_a?(Array) && name[1].is_a?(String) && !ALLOWED_METHODS.include?(name[1])
+        found << ['no-unlisted-method',
+                  "##{name[1]} is not in ALLOWED_METHODS; send, instance_eval, " \
+                  'method and const_get are excluded by not being on it']
+      end
+    when :fcall, :vcall
+      name = node[1]
+      if name.is_a?(Array) && name[1].is_a?(String) && !ALLOWED_CALLS.include?(name[1])
+        found << ['no-unlisted-call',
+                  "#{name[1]} is not in ALLOWED_CALLS; the Kernel surface " \
+                  '(system, exec, require, eval, open) is excluded by not being on it']
+      end
+    end
+
     case node[0]
     when :var_ref, :vcall
       name = node[1]
@@ -143,8 +206,20 @@ SELF_TEST = [
   [:reject, 'x = "#{system(\'id\')}"', 'an interpolated method call'],
   [:reject, 'x = "#{File.read(\'/etc/passwd\')}"', 'an interpolated constant'],
   [:reject, 'x = "unterminated', 'an emission that is not valid Ruby'],
+  [:reject, 'Integer = ->(v) { v }; Integer.call(1)',
+   'the type-name scope leak: a constant assignment is process-wide'],
+  [:reject, 'x.send(:exit)', 'send, which turns a string into a method call'],
+  [:reject, 'x.instance_eval("1")', 'instance_eval'],
+  [:reject, 'system("id")', 'a bare Kernel call'],
+  [:reject, 'x.instance_variable_get(:@y)', 'reading a host instance variable by name'],
+  [:accept, '_t_Integer = ->(v) { v }; _t_Integer.call(1)',
+   'the prefixed local the typedef emitter now writes'],
   [:accept, 'Date.parse("2024-01-01")', 'an ordinary temporal literal'],
-  [:accept, '_m = s.match(/\\#@x (.*)$/)', 'the escaped form, which matches the same text'],
+  # Wrapped in a lambda so `s` is a bound local: Ripper reports an unbound
+  # bare name as a `vcall` (a method call), which the bare-call rule rejects
+  # on purpose. The gate runs on whole programs, where it is always bound.
+  [:accept, '->(s) { _m = s.match(/\\#@x (.*)$/) }',
+   'the escaped form, which matches the same text'],
   [:accept, '->(v) { raise ".: expected Int, got #{v.inspect}" }',
    'compiler-authored prose over a lambda parameter'],
   [:accept, 'def k_mul(l, r); l * r; end; k_mul(2, 3)',

@@ -90,7 +90,9 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   pDate: ['pOk', 'pFail'],
   pDuration: ['pOk', 'pFail'],
   pData: ['pOk', 'pFail'],
-  pSchema: ['pOk', 'pFail'],
+  // pSet and kMember: a schema key named `__proto__` is data on both sides.
+  pSchema: ['pOk', 'pFail', 'pSet', 'kMember'],
+  pSet: [],
   pArray: ['pOk', 'pFail'],
   pUnion: ['pFail'],
   pSubtype: ['pFail'],
@@ -346,6 +348,14 @@ export const JS_HELPERS: Record<string, string> = {
   // its label). They are set by the site that fails, so rewording a message
   // leaves them alone.
   pOk: `function pOk(v, p) { return { success: true, path: p, message: '', value: v, cause: [] }; }`,
+  /* Store a key as data, whatever it is called. `o['__proto__'] = v` runs the
+     [[Prototype]] setter rather than storing anything: a primitive is dropped
+     and an object becomes the result's prototype. Every helper that builds an
+     object from keys it did not choose needs this. */
+  pSet: `function pSet(o, k, v) {
+  if (k === '__proto__') { Object.defineProperty(o, k, { value: v, writable: true, enumerable: true, configurable: true }); return; }
+  o[k] = v;
+}`,
   pFail: `function pFail(p, m, c, k, l) { return { success: false, path: p, message: m || '', value: null, cause: c || [], kind: k || 'schema', label: l }; }`,
   pAny: `function pAny(v, p) { return pOk(v, p); }`,
   pNull: `function pNull(v, p) {
@@ -391,25 +401,32 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof v === 'string') { try { return pOk(JSON.parse(v), p); } catch { return pFail(p, 'invalid JSON: ' + JSON.stringify(v)); } }
   return pOk(v, p);
 }`,
+  /* `__proto__` is a legal Elo identifier, so it is a legal schema key and a
+     legal data key. In JavaScript it is neither by default: reading v['__proto__']
+     yields the input's prototype rather than its own property, and writing
+     o['__proto__'] runs the [[Prototype]] setter — which silently drops a
+     primitive and, for an object, repoints the result's prototype at the
+     attacker's data. kMember and pSet keep it a data key on both sides, as
+     kFetchObject, kPatch and kDeepMerge already do. */
   pSchema: `function pSchema(props, extrasMode, extrasParser) {
   const known = props.map(pr => pr[0]);
   return (v, p) => {
     if (typeof v !== 'object' || v === null || Array.isArray(v)) return pFail(p, 'expected object, got ' + (v === null ? 'Null' : typeof v));
     const o = {};
     for (const [key, parser, optional] of props) {
-      if (optional && v[key] == null) continue;
-      const r = parser(v[key], p + '.' + key);
+      if (optional && kMember(v, key) == null) continue;
+      const r = parser(kMember(v, key), p + '.' + key);
       if (!r.success) return pFail(p, null, [Object.prototype.hasOwnProperty.call(v, key) ? r : { ...r, kind: 'missing' }]);
-      o[key] = r.value;
+      pSet(o, key, r.value);
     }
     if (extrasMode === 'closed') {
       for (const k in v) if (!known.includes(k)) return pFail(p + '.' + k, 'unexpected attribute');
     } else if (extrasMode === 'typed' && extrasParser) {
       for (const k in v) {
         if (known.includes(k)) continue;
-        const re = extrasParser(v[k], p + '.' + k);
+        const re = extrasParser(kMember(v, k), p + '.' + k);
         if (!re.success) return pFail(p, null, [re]);
-        o[k] = re.value;
+        pSet(o, k, re.value);
       }
     }
     return pOk(o, p);

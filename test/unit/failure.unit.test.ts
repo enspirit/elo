@@ -117,7 +117,12 @@ describe('a failure keeps its kind when its message is reworded', () => {
     // Pinned here so a change to the prose is a change to this test, rather
     // than a surprise for a host that was reading it.
     assert.strictEqual(failureOf(RECORD, { a: 'x' }).message, '.a: expected Int, got "x"');
-    assert.strictEqual(failureOf(RECORD, {}).message, '.a: expected Int, got undefined');
+    // 'Null', not 'undefined'. Elo has no `undefined`, and Ruby and Python
+    // both said Null for the same program — JavaScript said `undefined` only
+    // because pSchema read the key with a bare `v[key]`. Reading it through
+    // kMember, so that a key named `__proto__` is data, also brought the
+    // missing-key message into line with the other two targets.
+    assert.strictEqual(failureOf(RECORD, {}).message, '.a: expected Int, got Null');
     assert.strictEqual(failureOf(RECORD, { a: 0 }).message, ".a: constraint 'positive' failed");
     assert.strictEqual(failureOf(RECORD, { a: 1, b: 2 }).message, '.b: unexpected attribute');
   });
