@@ -126,10 +126,16 @@ make a test pass without saying why in the same commit.
 **The gates exempt the prelude helpers**, because helpers are where the
 guarded reads and the `defineProperty` writes live. That exemption is the
 harness's biggest blind spot — six of the security issues fixed since 1.0 are
-inside one — so when you add or change a helper in `src/runtime.ts`, audit it
-by hand: a computed write (`o[k] = v`) must keep `__proto__` a data key, and a
-computed read must be own-property only. `.claude/tasks/done/0246` is what
-that audit found the one time it was run.
+inside one — so `test/unit/helper-region.unit.test.ts` enumerates it instead:
+every helper that indexes by a computed key must be classified with what stops
+that key being `__proto__`, and the claim is checked against the source. Add a
+helper that indexes by a runtime key and it fails until you say why it is safe.
+
+Also machine-checked, in the same spirit: `bounded-primitives.unit.test.ts`
+(every path through a bounded operation names its helper or is native with a
+reason), `dispatch-coverage.integration.test.ts` (every stdlib implementation
+is compiled by some fixture) and the force-dynamic acceptance axis
+(`npm run test:acceptance:dynamic`, the mirror of `--optimize`).
 
 The eight properties on `web/src/pages/security.astro` are the specification.
 `.claude/tasks/todo/0244-the-matrix-nobody-enumerates.md` is the plan for making
