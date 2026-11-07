@@ -8,3 +8,7 @@
 ->(_) { (raise "Assertion failed" unless "\#$x".length == 3; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "\#$x" == "\#" + "$x"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "a\#b" == "a" + "\#" + "b"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { _m = s.match(/\#@x (.*)$/); _m ? {n: _m[1]} : {n: nil} }).call("\#@x 42")[:n] == "42"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { _m = s.match(/\#@@x (.*)$/); _m ? {n: _m[1]} : {n: nil} }).call("\#@@x 42")[:n] == "42"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { _m = s.match(/\#\$x (.*)$/); _m ? {n: _m[1]} : {n: nil} }).call("\#$x 42")[:n] == "42"; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(s) { _m = s.match(/\#\{z\} (.*)$/); _m ? {n: _m[1]} : {n: nil} }).call("\#{z} 42")[:n] == "42"; true) }.call(nil);

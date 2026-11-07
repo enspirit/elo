@@ -99,9 +99,33 @@ one target and absent on another *is* the finding — it means the emissions hav
 diverged. Verifying by hand in a scratch script and moving on is how it comes
 back.
 
+### The emitted-grammar gate
+
+**CRITICAL** the shape of the emitted code is enforced by the build, not by
+review. Elo's output is a tiny sub-grammar of each target, written down in:
+
+* `test/support/emitted-js-grammar.ts` — the rules, the two allowlists
+  (`ALLOWED_GLOBALS`, `ALLOWED_PROPERTIES`) and the index predicate
+* `test/unit/emitted-grammar.unit.test.ts` — every `.expected.js`, plus the
+  gate's own tests
+* `test/integration/emitted-grammar.integration.test.ts` — every fixture line
+  in all four compile modes, **including `--optimize`**, which selects
+  different emitters
+* `test/acceptance/gate-ruby.rb` + `gate-grammar.sh` — the Ruby counterpart
+  (Ripper), run by `test-all.sh`
+
+If your change makes one of these fail, the emitter is the suspect, not the
+gate. The allowlists are lists someone edits **on purpose**, like
+`public-surface.unit.test.ts`: adding a name is a decision about what the
+emitted language may reach, and the failure is the review. Do not widen one to
+make a test pass without saying why in the same commit.
+
+The gate exempts the prelude helpers — they are where the guarded reads live —
+so a bug *inside* a helper is invisible to it. Python is not gated yet.
+
 The eight properties on `web/src/pages/security.astro` are the specification.
 `.claude/tasks/todo/0244-the-matrix-nobody-enumerates.md` is the plan for making
-them machine-checked; until it lands, this section is what stands in for it.
+the rest of them machine-checked.
 
 ## Test-Driven Development
 

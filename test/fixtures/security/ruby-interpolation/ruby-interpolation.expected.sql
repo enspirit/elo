@@ -8,3 +8,7 @@ CASE WHEN '#@@x' = '#' || '@@x' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_b
 CASE WHEN LENGTH('#$x') = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN '#$x' = '#' || '$x' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN 'a#b' = 'a' || '#' || 'b' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ((SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object('n', _m[1]) ELSE jsonb_build_object('n', NULL) END FROM (SELECT regexp_match('#@x 42', '\#@x (.*)$')) AS _t(_m))->>'n') = '42' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ((SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object('n', _m[1]) ELSE jsonb_build_object('n', NULL) END FROM (SELECT regexp_match('#@@x 42', '\#@@x (.*)$')) AS _t(_m))->>'n') = '42' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ((SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object('n', _m[1]) ELSE jsonb_build_object('n', NULL) END FROM (SELECT regexp_match('#$x 42', '\#\$x (.*)$')) AS _t(_m))->>'n') = '42' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ((SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object('n', _m[1]) ELSE jsonb_build_object('n', NULL) END FROM (SELECT regexp_match('#{z} 42', '\#\{z\} (.*)$')) AS _t(_m))->>'n') = '42' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

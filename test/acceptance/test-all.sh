@@ -52,4 +52,18 @@ fi
 
 echo ""
 
+# The shape of the emitted Ruby, not its answer. A fixture assertion says the
+# program computed the right thing; this says it is written in the sub-grammar
+# of Ruby that Elo is allowed to emit — no backticks, no host variables, no
+# interpolation that is not the compiler's own prose. It is here rather than in
+# the unit suite because it needs Ripper, which needs ruby. The JavaScript
+# counterpart runs in the unit and integration suites, which need no
+# interpreter.
+echo "Emitted Grammar Tests:"
+if ! "$SCRIPTS_DIR/gate-grammar.sh" "$TEST_DIR"; then
+    EXIT_CODE=1
+fi
+
+echo ""
+
 exit ${EXIT_CODE:-0}

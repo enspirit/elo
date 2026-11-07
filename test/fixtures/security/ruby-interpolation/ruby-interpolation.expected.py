@@ -8,3 +8,7 @@
 (lambda _: kAssert(len("#$x") == 3))(None)
 (lambda _: kAssert("#$x" == "#" + "$x"))(None)
 (lambda _: kAssert("a#b" == "a" + "#" + "b"))(None)
+(lambda _: kAssert(kEq((lambda s: (lambda _m: {"n": _m.group(1)} if _m else {"n": None})(re.search('\\#@x (.*)$', s)))("#@x 42").get("n"), "42")))(None)
+(lambda _: kAssert(kEq((lambda s: (lambda _m: {"n": _m.group(1)} if _m else {"n": None})(re.search('\\#@@x (.*)$', s)))("#@@x 42").get("n"), "42")))(None)
+(lambda _: kAssert(kEq((lambda s: (lambda _m: {"n": _m.group(1)} if _m else {"n": None})(re.search('\\#\\$x (.*)$', s)))("#$x 42").get("n"), "42")))(None)
+(lambda _: kAssert(kEq((lambda s: (lambda _m: {"n": _m.group(1)} if _m else {"n": None})(re.search('\\#\\{z\\} (.*)$', s)))("#{z} 42").get("n"), "42")))(None)

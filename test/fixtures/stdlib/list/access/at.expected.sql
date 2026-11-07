@@ -2,3 +2,6 @@ CASE WHEN (ARRAY[1, 2, 3])[0 + 1] = 1 THEN TRUE ELSE (SELECT pg_terminate_backen
 CASE WHEN (ARRAY[1, 2, 3])[2 + 1] = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (ARRAY[1, 2, 3])[100 + 1] IS NULL = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (ARRAY[1, 2, 3])[-1 + 1] IS NULL = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (ARRAY[1, 2, 3])[1 + 1 + 1] = 3 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (ARRAY[10, 20, 30])[i + 1] FROM (SELECT 1 AS i) AS _let) = 20 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (SELECT (ARRAY[10, 20, 30])[i + 1] IS NULL FROM (SELECT 9 AS i) AS _let) = TRUE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

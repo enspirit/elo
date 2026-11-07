@@ -139,7 +139,15 @@ Answering the five questions in the prompt, cheapest and highest-leverage
 first. Each item says what it would have caught, so the value is checkable
 rather than asserted.
 
-### H0. A grammar whitelist on the emitted code — *do this first*
+### H0. A grammar whitelist on the emitted code — **DONE, enforced by the build**
+
+> Implemented before the rest of this task, because a harness described in a
+> markdown file enforces nothing. What follows is the reasoning; the code is
+> `test/support/emitted-js-grammar.ts`, `test/unit/emitted-grammar.unit.test.ts`,
+> `test/integration/emitted-grammar.integration.test.ts`,
+> `test/acceptance/gate-ruby.rb` and `test/acceptance/gate-grammar.sh`, all run
+> by `npm test`. See `.claude/tasks/done/0245`.
+
 
 > "There is no way to say, e.g., *we never use JavaScript's `[]` operator,
 > except in a prelude helper*, and have a linter enforce that?"
@@ -459,16 +467,17 @@ never the person who introduces one of these.
 
 | | item | catches | cost |
 |---|---|---|---|
-| 1 | **H0 (JS grammar gate, as a test)** | **6 of 12, incl. the two hardest** | small |
-| 2 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3 | tiny |
-| 3 | H4 (hostile shapes) | C1 + 3 reports | small |
-| 4 | H0 extended: Ruby `Ripper`, Python `ast` | the Ruby interpolation class, structurally | small |
-| 5 | H0 moved inside `compile()` | the same, fail-closed, for users too | small |
-| 6 | H1 (force-dynamic axis) | B2 + the whole class | medium |
-| 7 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
-| 8 | H6a (bounded-primitive table) | §1.3 permanently | medium |
-| 9 | H5 (lying inputs) | §1.4 as a property, not a shape | medium |
-| 10 | branded `Code` type | authoring ergonomics only | large, probably skip |
+| ~~1~~ | ~~H0 (JS grammar gate)~~ | **done** — 3 of this branch's 6, seen red | small |
+| ~~2~~ | ~~H0 extended: Ruby `Ripper`~~ | **done** — the interpolation class, seen red | small |
+| 3 | H0 extended: Python `ast` | the dunder-dispatch class, structurally | small |
+| 4 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3, *earlier* than H0 does | tiny |
+| 5 | H4 (hostile shapes) | C1 + 3 reports | small |
+| 6 | H0 moved inside `compile()` | the same, fail-closed, for users too | medium |
+| 7 | H1 (force-dynamic axis) | B2 + the whole class | medium |
+| 8 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
+| 9 | H6a (bounded-primitive table) | §1.3 permanently | medium |
+| 10 | H5 (lying inputs) | §1.4 as a property, not a shape | medium |
+| 11 | branded `Code` type | authoring ergonomics only | large, probably skip |
 
 The shape of this order is the finding: **four of the first five are one
 idea** — write down the grammar the emitters are allowed to produce, and check

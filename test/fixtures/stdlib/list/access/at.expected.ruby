@@ -2,3 +2,6 @@
 ->(_) { (raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 2) == 3; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 100)).nil? == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], -1)).nil? == true; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([1, 2, 3], 1 + 1) == 3; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (i = 1; (->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([10, 20, 30], i)) == 20; true) }.call(nil);
+->(_) { (raise "Assertion failed" unless (i = 9; ((->(a, i) { i >= 0 && i < a.length ? a[i] : nil }).call([10, 20, 30], i)).nil?) == true; true) }.call(nil);

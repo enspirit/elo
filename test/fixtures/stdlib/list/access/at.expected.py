@@ -2,3 +2,6 @@
 (lambda _: kAssert(kEq(kAt([1, 2, 3], 2), 3)))(None)
 (lambda _: kAssert((kAt([1, 2, 3], 100) is None) == True))(None)
 (lambda _: kAssert((kAt([1, 2, 3], -1) is None) == True))(None)
+(lambda _: kAssert(kEq(kAt([1, 2, 3], 1 + 1), 3)))(None)
+(lambda _: kAssert(kEq((i := 1, kAt([10, 20, 30], i))[-1], 20)))(None)
+(lambda _: kAssert((i := 9, (kAt([10, 20, 30], i) is None))[-1] == True))(None)
