@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { parse } from '../../src/parser';
+import { transform } from '../../src/transform';
+import { typecheckWithType } from '../../src/typecheck';
 
 /**
  * The parser must finish, on any input.
@@ -74,6 +76,69 @@ describe('Parser - termination on nested bindings', () => {
     // so this is the case that must not have been made slow by the fix.
     const elapsed = timeParse('let a = 1 in '.repeat(40) + '5 in 1..10');
     assert.ok(elapsed < BUDGET_MS, `took ${elapsed}ms, budget ${BUDGET_MS}ms`);
+  });
+});
+
+/**
+ * The compiler must reject a hostile-depth member chain with its depth guard,
+ * not crash the host with a stack overflow.
+ *
+ * `_.a.a.a…` parses iteratively (the parser is flat here), so a chain of any
+ * length produces an AST the depth guard should refuse at 100. But `pathOf`,
+ * which the transform and the checker call on a member expression to build its
+ * dotted path, recursed on `.object` with no bound — and it runs on the
+ * outermost node, over the *whole* chain, before the per-node depth guard can
+ * fire. A ~20k-deep chain therefore overflowed the native stack with a
+ * `RangeError` instead of the controlled "depth exceeded" rejection. A short
+ * input that crashes the compiler is a compile-host denial of service, which
+ * the security model treats as always-fix.
+ */
+describe('Compiler - termination on deep member chains', () => {
+  const deepChain = '_' + '.a'.repeat(50000);
+
+  function rejection(run: () => void): Error {
+    try {
+      run();
+    } catch (e) {
+      return e as Error;
+    }
+    throw new assert.AssertionError({ message: 'expected a rejection, got none' });
+  }
+
+  it('transform refuses a deep member chain via the depth guard, not a stack overflow', () => {
+    const err = rejection(() => transform(parse(deepChain), new Map(), new Set(), {}));
+    assert.ok(!(err instanceof RangeError), `stack overflow instead of a controlled rejection: ${err.message}`);
+    assert.match(err.message, /depth exceeded/i);
+  });
+
+  it('the checker refuses a deep member chain via the depth guard, not a stack overflow', () => {
+    const { diagnostics } = typecheckWithType(parse(deepChain), {});
+    // The checker reports rather than throws; it must report the depth guard
+    // and must not have crashed on the way.
+    assert.ok(
+      diagnostics.some(d => /depth exceeded/i.test(d.message)),
+      `expected a depth-guard diagnostic, got: ${diagnostics.map(d => d.message).join('; ')}`
+    );
+  });
+
+  // Null-narrowing walks the whole `&&` condition of an `if`/guard to collect
+  // the paths it proves non-null, and that walk (collectNonNullPaths) recursed
+  // on `&&` with no bound. A long `isNotNull(a) and isNotNull(a) and …` chain
+  // therefore overflowed the stack before the depth guard could reject it.
+  const deepAnd = 'if ' + 'isNotNull(_.a) and '.repeat(40000) + 'isNotNull(_.b) then 1 else 2';
+
+  it('transform refuses a deep && condition via the depth guard, not a stack overflow', () => {
+    const err = rejection(() => transform(parse(deepAnd), new Map(), new Set(), {}));
+    assert.ok(!(err instanceof RangeError), `stack overflow instead of a controlled rejection: ${err.message}`);
+    assert.match(err.message, /depth exceeded/i);
+  });
+
+  it('the checker refuses a deep && condition via the depth guard, not a stack overflow', () => {
+    const { diagnostics } = typecheckWithType(parse(deepAnd), {});
+    assert.ok(
+      diagnostics.some(d => /depth exceeded/i.test(d.message)),
+      `expected a depth-guard diagnostic, got: ${diagnostics.map(d => d.message).join('; ')}`
+    );
   });
 });
 

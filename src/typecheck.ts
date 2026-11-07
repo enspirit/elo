@@ -932,13 +932,24 @@ class Checker {
  * narrowed. That is the limit of the flow sensitivity, and it is a deliberate
  * one.
  */
+// Iterative, not recursive: `pathOf` runs on the outermost node of a member
+// chain, over its whole depth, and does so before the per-node depth guard can
+// fire — so a recursion here overflows the native stack on a hostile-depth
+// chain (`_.a.a.a…`) rather than letting the guard reject it. A loop walks the
+// same `.object` spine in constant stack.
 function pathOf(expr: Expr): string | null {
-  if (expr.type === 'variable') return expr.name;
-  if (expr.type === 'member_access') {
-    const base = pathOf(expr.object);
-    return base === null ? null : `${base}.${expr.property}`;
+  const properties: string[] = [];
+  let current: Expr = expr;
+  while (current.type === 'member_access') {
+    properties.push(current.property);
+    current = current.object;
   }
-  return null;
+  if (current.type !== 'variable') return null;
+  let path = current.name;
+  for (let i = properties.length - 1; i >= 0; i--) {
+    path += `.${properties[i]}`;
+  }
+  return path;
 }
 
 /**
@@ -960,19 +971,27 @@ function nonNullPaths(condition: Expr, positive: boolean): ReadonlySet<string> {
 }
 
 function collectNonNullPaths(condition: Expr, positive: boolean, into: Set<string>): void {
-  if (condition.type === 'function_call' && condition.args.length === 1) {
-    const wanted = positive ? 'isNotNull' : 'isNull';
-    if (condition.name === wanted) {
-      const path = pathOf(condition.args[0]);
-      if (path) into.add(path);
-    }
-    return;
-  }
-  // `a && b` holds only if both do, so both sides' knowledge applies. `||`
+  // Iterative over an explicit worklist, not recursive: a long `a && b && c …`
+  // condition is a deep binary spine, and recursing it overflows the native
+  // stack on hostile input before the per-node depth guard can reject it.
+  // `positive` is fixed for the whole walk — the `&&` descent only happens when
+  // it is true, and only passes `true` on — so the loop carries no per-node
+  // flag. `a && b` holds only if both do, so both sides' knowledge applies; `||`
   // tells us nothing about either side.
-  if (condition.type === 'binary' && condition.operator === '&&' && positive) {
-    collectNonNullPaths(condition.left, true, into);
-    collectNonNullPaths(condition.right, true, into);
+  const worklist: Expr[] = [condition];
+  while (worklist.length > 0) {
+    const node = worklist.pop()!;
+    if (node.type === 'function_call' && node.args.length === 1) {
+      const wanted = positive ? 'isNotNull' : 'isNull';
+      if (node.name === wanted) {
+        const path = pathOf(node.args[0]);
+        if (path) into.add(path);
+      }
+      continue;
+    }
+    if (positive && node.type === 'binary' && node.operator === '&&') {
+      worklist.push(node.left, node.right);
+    }
   }
 }
 
