@@ -536,7 +536,7 @@ never the person who introduces one of these.
 | ~~6~~ | ~~H1 (force-dynamic axis)~~ | **done** — found 2 live bugs, see 0248 | medium |
 | ~~7~~ | ~~H6a + H6b (bounded-primitive table, and the bounds biting)~~ | **done** — §1.3 covered, see 0250 | medium |
 | ~~8~~ | ~~H8b (keep the helper region audited)~~ | **done** — would have found pSchema, see 0251 | medium |
-| **9** | **H4 (hostile shapes)** | C1 + 3 reports — the last item with a bug record behind it | small |
+| ~~9~~ | ~~H4 (hostile shapes)~~ | **done** — regression net for 5 reports, see 0252 | small |
 | 10 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3, *earlier* than H0 does | tiny |
 | 11 | H0 moved inside `compile()` | the same, fail-closed, for users too | medium |
 | 12 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
