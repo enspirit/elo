@@ -1,0 +1,64 @@
+# The stdlib reached through the dynamic dispatch path.
+#
+# A lambda parameter is typed `any`, so every call here is answered by the
+# `any` implementation rather than the typed one. That is a separate body of
+# emitted code — and it is where most of the sandbox escapes to date have
+# lived: the `at()` escape, the `fetch()` prototype-chain bypass, the unbounded
+# `*` and `%` on Ruby and Python.
+#
+# CLAUDE.md asks for both paths to be asserted. The dispatch-coverage test
+# (test/integration/dispatch-coverage.integration.test.ts) found the list of
+# places where that had not been done: 32 `any` implementations on JavaScript
+# that no fixture compiled, so no acceptance run executed them and no
+# emitted-grammar gate inspected them. This file is that list.
+#
+# SQL has no lambdas, so the dynamic path cannot be expressed there.
+
+# Strings, one operand unknown
+assert((let f = fn( s ~> trim(s) ) in f('  a  ')) == 'a')
+assert((let f = fn( s ~> trimStart(s) ) in f('  a')) == 'a')
+assert((let f = fn( s ~> trimEnd(s) ) in f('a  ')) == 'a')
+assert((let f = fn( s ~> isEmpty(s) ) in f('')) == true)
+assert((let f = fn( s ~> isBlank(s) ) in f('  ')) == true)
+assert((let f = fn( s ~> concat(s, 'b') ) in f('a')) == 'ab')
+assert((let f = fn( s ~> startsWith(s, 'ab') ) in f('abc')) == true)
+assert((let f = fn( s ~> endsWith(s, 'bc') ) in f('abc')) == true)
+assert((let f = fn( s ~> indexOf(s, 'b') ) in f('abc')) == 1)
+assert((let f = fn( s ~> split(s, ',') ) in f('a,b')) == ['a', 'b'])
+assert((let f = fn( s ~> substring(s, 1, 2) ) in f('abcd')) == 'bc')
+assert((let f = fn( s ~> slice(s, 1, 3) ) in f('abcd')) == 'bc')
+assert((let f = fn( s ~> replace(s, 'a', 'z') ) in f('aba')) == 'zba')
+assert((let f = fn( s ~> replaceAll(s, 'a', 'z') ) in f('aba')) == 'zbz')
+assert((let f = fn( s ~> padStart(s, 3, '0') ) in f('7')) == '007')
+assert((let f = fn( s ~> padEnd(s, 3, '0') ) in f('7')) == '700')
+assert((let f = fn( s ~> extract(s, 'id={{n}}').n ) in f('id=42')) == '42')
+
+# Lists, the receiver unknown
+assert((let f = fn( xs ~> map(xs, fn( x ~> x * 2 )) ) in f([1, 2])) == [2, 4])
+assert((let f = fn( xs ~> filter(xs, fn( x ~> x > 1 )) ) in f([1, 2])) == [2])
+assert((let f = fn( xs ~> all(xs, fn( x ~> x > 0 )) ) in f([1, 2])) == true)
+assert((let f = fn( xs ~> any(xs, fn( x ~> x > 1 )) ) in f([1, 2])) == true)
+assert((let f = fn( xs ~> find(xs, fn( x ~> x > 1 )) ) in f([1, 2])) == 2)
+assert((let f = fn( xs ~> sortBy(xs, fn( x ~> -x )) ) in f([1, 2])) == [2, 1])
+assert((let f = fn( xs ~> reduce(xs, 0, fn( a, x ~> a + x )) ) in f([1, 2])) == 3)
+assert((let f = fn( xs ~> join(xs, '-') ) in f(['a', 'b'])) == 'a-b')
+
+# Operators and conversions on an unknown operand
+assert((let f = fn( b ~> not(b) ) in f(false)) == true)
+assert((let f = fn( n ~> +n ) in f(3)) == 3)
+assert((let f = fn( x ~> round(x, 1) ) in f(1.25)) == 1.3)
+
+# The typed twins, which must agree
+assert(trim('  a  ') == 'a')
+assert(isBlank('  ') == true)
+assert(concat('a', 'b') == 'ab')
+assert(indexOf('abc', 'b') == 1)
+assert(substring('abcd', 1, 2) == 'bc')
+assert(replaceAll('aba', 'a', 'z') == 'zbz')
+assert(padStart('7', 3, '0') == '007')
+assert(extract('id=42', 'id={{n}}').n == '42')
+assert(map([1, 2], fn( x ~> x * 2 )) == [2, 4])
+assert(reduce([1, 2], 0, fn( a, x ~> a + x )) == 3)
+assert(join(['a', 'b'], '-') == 'a-b')
+assert(not(false) == true)
+assert(round(1.25, 1) == 1.3)

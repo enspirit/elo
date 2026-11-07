@@ -192,6 +192,22 @@ export class StdLib<T> {
   }
 
   /**
+   * The signature key an implementation was registered under.
+   *
+   * The inverse of `lookup`, and the other half of what the dispatch-coverage
+   * test needs: `lookup` generalizes, so the key a call *asks* for is often
+   * not the key that answers it, and only the answering one says which
+   * emitter actually ran. Introspection only — nothing in the compiler calls
+   * this.
+   */
+  keyOf(impl: FunctionEmitter<T>): string | undefined {
+    for (const [key, candidate] of this.implementations) {
+      if (candidate === impl) return key;
+    }
+    return undefined;
+  }
+
+  /**
    * Every registered signature of a function name, formatted for an error
    * message, most specific first and without duplicates.
    */
