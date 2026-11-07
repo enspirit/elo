@@ -654,7 +654,18 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
       const pattern = buildExtractPattern(template);
       const matchObj = template.fields.map((f, i) => `${f}: _m[${i + 1}]`).join(', ');
       const nullObj = template.fields.map(f => `${f}: null`).join(', ');
-      return `(function() { var _m = ${ctx.emit(args[0])}.match(/${pattern.replace(/\//g, '\\/')}/); return _m ? {${matchObj}} : {${nullObj}}; })()`;
+      // A JS regex literal /.../ is terminated by a line terminator as well as
+      // by an unescaped `/`. escapeRegex already turns \n, \r and \t into escape
+      // sequences, but U+2028 and U+2029 are *also* line terminators here (and
+      // nowhere else — the other targets leave them as data), so a template
+      // carrying one would close the literal early and emit a SyntaxError. Spell
+      // them as \u escapes, which match the same character. See the
+      // "extract-line-separator" reference fixture.
+      const safePattern = pattern
+        .replace(/\//g, '\\/')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+      return `(function() { var _m = ${ctx.emit(args[0])}.match(/${safePattern}/); return _m ? {${matchObj}} : {${nullObj}}; })()`;
     });
   }
 

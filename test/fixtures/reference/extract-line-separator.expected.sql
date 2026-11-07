@@ -1,0 +1,3 @@
+CASE WHEN ((SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object('x', _m[1]) ELSE jsonb_build_object('x', NULL) END FROM (SELECT regexp_match('a b', 'a (.*)$')) AS _t(_m))->>'x') = 'b' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ((SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object('y', _m[1]) ELSE jsonb_build_object('y', NULL) END FROM (SELECT regexp_match('c d', 'c (.*)$')) AS _t(_m))->>'y') = 'd' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN ((SELECT CASE WHEN _m IS NOT NULL THEN jsonb_build_object('x', _m[1]) ELSE jsonb_build_object('x', NULL) END FROM (SELECT regexp_match('nomatch', 'a (.*)$')) AS _t(_m))->>'x') IS NULL THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

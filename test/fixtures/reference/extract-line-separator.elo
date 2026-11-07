@@ -1,0 +1,3 @@
+assert(extract('a b', 'a {{x}}').x == 'b')
+assert(extract('c d', 'c {{y}}').y == 'd')
+assert(isNull(extract('nomatch', 'a {{x}}').x))
