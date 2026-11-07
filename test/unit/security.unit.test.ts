@@ -2,7 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { compileToRuby, compileToJavaScript, compileToSQL, compileToPython, compile } from '../../src/index';
 import { dateLiteral, dateTimeLiteral, durationLiteral } from '../../src/ast';
-import { parse } from '../../src/parser';
+import { parse, parseTypeExpr } from '../../src/parser';
+import { typecheckWithAnnotations } from '../../src/typecheck';
 import { transform } from '../../src/transform';
 import { defaultFormats } from '../../src/formats';
 import { sqlPrelude } from '../../src/preludes/sql';
@@ -601,6 +602,92 @@ describe('Security - at() inherited-member sandbox escape (JS, squ11z1)', () => 
     assert.strictEqual(compile<(i: unknown) => unknown>(`at([10, 20, 30], 1)`, {})(null), 20);
     assert.strictEqual(compile<(i: unknown) => unknown>(`let f = fn( x ~> at(x, 1) ) in f(_)`, {})([10, 20, 30]), 20);
     assert.strictEqual(compile<(i: unknown) => unknown>(`let f = fn( x ~> at(x, 5) ) in f(_)`, {})([10, 20, 30]), null);
+  });
+});
+
+/**
+ * Security: the *typed* at() accessor must not reach the host prototype chain
+ * under --optimize, when a declared input type is not runtime-enforced.
+ *
+ * Sibling of the squ11z1 at() finding above, on the path that fix did not
+ * cover. squ11z1 hardened the dynamic `at(any, any)` emitter; the typed
+ * `at([Int], Int)` emitter still spelled a bare `x[k] ?? null`. That emitter is
+ * only chosen when the checker knows the operand types — which is exactly what
+ * `--optimize` does by feeding the checker's annotations back into codegen.
+ *
+ * But `--input-type` (and a schema coercion in general) is a *declaration*, not
+ * a runtime check: `_.i` compiles to a bare `kMember(_, 'i')` that returns the
+ * raw value, with no coercion. So an attacker who controls `_` can send
+ * `{ xs: [], i: 'constructor' }` against a program the author wrote and declared
+ * honestly as `{ xs: [Int], i: Int }`, and the bare read `[]['constructor']`
+ * hands back the Array constructor — one hop from the Function constructor and
+ * arbitrary code execution. Applying a value is unchecked too, so
+ * `(at(_.ctx, _.k))(_.arg)` then calls an attacker-named host member.
+ *
+ * The fix keeps the sandbox guard on the typed path: a bare bracket read is
+ * emitted only for a compile-time-known integer index (a literal, which can
+ * never name a meta-property); any runtime-supplied index goes through kAt,
+ * which indexes only a real array, by an integer, and returns null otherwise.
+ * JavaScript only: Ruby bounds-checks the index (and errors on the string
+ * comparison) and Python already routes the typed accessor through kAt.
+ */
+describe('Security - typed at() sandbox escape under --optimize (type confusion)', () => {
+  /** Compile on the typed path, as `eloc --optimize --input-type T` does. */
+  function optimizedJs(source: string, inputTypeSrc: string): string {
+    const ast = parse(source);
+    const inputType = parseTypeExpr(inputTypeSrc);
+    const { types, diagnostics } = typecheckWithAnnotations(ast, { inputType });
+    assert.deepStrictEqual(diagnostics.map(d => d.message), [],
+      'the program must typecheck, or there are no annotations to feed back');
+    return compileToJavaScript(ast, { types });
+  }
+
+  /** Build and run the compiled `(function(_){...})` against a hostile input. */
+  function run(source: string, inputTypeSrc: string, input: unknown): unknown {
+    const code = optimizedJs(source, inputTypeSrc);
+    // DateTime/Duration are the only free names a compiled JS body references.
+    return new Function('DateTime', 'Duration', `return (${code});`)()(input);
+  }
+
+  it('at(_.xs, _.i) with a string index reads no host member', () => {
+    assert.strictEqual(
+      run('at(_.xs, _.i)', '{xs: [Int], i: Int}', { xs: [], i: 'constructor' }),
+      null,
+    );
+    assert.strictEqual(
+      run('at(_.xs, _.i)', '{xs: [Int], i: Int}', { xs: {}, i: 'constructor' }),
+      null,
+    );
+    assert.strictEqual(
+      run('at(_.xs, _.i)', '{xs: [Int], i: Int}', { xs: [], i: '__proto__' }),
+      null,
+    );
+  });
+
+  it('the typed at() never leaks a function value', () => {
+    const leaked = run('at(_.xs, _.i)', '{xs: [Int], i: Int}', { xs: [], i: 'constructor' });
+    assert.notStrictEqual(typeof leaked, 'function', 'typed at() leaked a host constructor');
+  });
+
+  it('the typed at() emits no bare bracket read of a runtime-supplied index', () => {
+    const code = optimizedJs('at(_.xs, _.i)', '{xs: [Int], i: Int}');
+    assert.match(code, /kAt\(/, 'a runtime-supplied index must go through the kAt guard');
+    assert.doesNotMatch(code, /\)\[kMember/, 'typed at() still spells a bare bracket read');
+  });
+
+  it('the full escape-and-apply chain does not execute arbitrary code', () => {
+    // A host passes a context object exposing a callable; the attacker names it.
+    let pwned = false;
+    const input = { ctx: { run: () => { pwned = true; return 1; } }, k: 'run', arg: 0 };
+    try {
+      run('(at(_.ctx, _.k))(_.arg)', '{ctx: [Int], k: Int, arg: Int}', input);
+    } catch { /* a thrown TypeError (calling null) is the safe outcome */ }
+    assert.strictEqual(pwned, false, 'an attacker-named host member was invoked');
+  });
+
+  it('a compile-time integer index still indexes arrays normally', () => {
+    assert.strictEqual(run('at(_.xs, 1)', '{xs: [Int]}', { xs: [10, 20, 30] }), 20);
+    assert.strictEqual(run('at(_.xs, 5)', '{xs: [Int]}', { xs: [10, 20, 30] }), null);
   });
 });
 

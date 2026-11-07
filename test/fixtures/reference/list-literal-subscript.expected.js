@@ -29,4 +29,4 @@
 
 
 (function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(kIsNull(([1, 2, 3][100] ?? null)) == true)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(kIsNull(([1, 2, 3][-1] ?? null)) == true)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kAt(a, i) { if (!Array.isArray(a)) return null; if (typeof i !== 'number' || !Number.isInteger(i) || i < 0 || i >= a.length) return null; return a[i] ?? null; } function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(kIsNull(kAt([1, 2, 3], -1)) == true)) throw new Error("Assertion failed"); return true; })(); })(null);

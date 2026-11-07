@@ -258,8 +258,21 @@ export function createJavaScriptBinding(): StdLib<string> {
   // Array functions
   jsLib.register('length', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
   jsLib.register('count', [Types.array], (args, ctx) => `${ctx.emit(args[0])}.length`);
-  jsLib.register('at', [Types.array, Types.int], (args, ctx) =>
-    `(${ctx.emit(args[0])}[${ctx.emit(args[1])}] ?? null)`);
+  jsLib.register('at', [Types.array, Types.int], (args, ctx) => {
+    // A bare `x[k]` is only safe when `k` is a compile-time integer: a literal
+    // can never name a meta-property, so it cannot walk the prototype chain.
+    // A *runtime-supplied* index is not guaranteed to be an integer even when
+    // the checker typed it `Int` — a declared `--input-type` (or any schema
+    // coercion) is not enforced at runtime, and `_.i` reads the raw value — so
+    // a string key such as 'constructor' would reach the host. Route anything
+    // but a literal index through kAt, which indexes only a real array, by an
+    // integer. See the "typed at() sandbox escape under --optimize" test.
+    if (args[1].type === 'int_literal') {
+      return `(${ctx.emit(args[0])}[${ctx.emit(args[1])}] ?? null)`;
+    }
+    ctx.requireHelper('kAt');
+    return `kAt(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
   // Dynamic fallback: when the operand types are not statically known, a bare
   // `x[k]` would let a string key ('constructor', ...) walk the prototype
   // chain. kAt indexes only a real array, by an integer — a sandbox guard.
