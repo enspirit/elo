@@ -123,6 +123,30 @@ describe('The grammar gate catches what it is for', () => {
     assert.ok(violations.some(v => v.rule === 'no-computed-member-access'));
   });
 
+  it('rejects a plain __proto__ key in an object literal (1.2.0, c0rydoras)', () => {
+    // `{__proto__: [].map}` produced an object whose prototype was a Function
+    // while still passing a `typeof 'object'` guard. The emitter uses
+    // Object.defineProperty so that the key stays data.
+    for (const payload of ['{__proto__: _}', '{"__proto__": _}']) {
+      const violations = checkEmittedJavaScript(inProgram(payload));
+      assert.ok(
+        violations.some(v => v.rule === 'no-proto-key'),
+        `${payload} was not caught: ${JSON.stringify(violations)}`
+      );
+    }
+  });
+
+  it('accepts the defineProperty form the emitter actually uses', () => {
+    const code = '(function(_) { return (function() { const o = {}; '
+      + 'Object.defineProperty(o, "__proto__", { value: 1 }); return o; })(); })(null);';
+    // `Object` is not an allowed global outside a helper, so this shape only
+    // occurs inside one — which is where the emitter puts it.
+    assert.deepStrictEqual(
+      checkEmittedJavaScript(code).map(v => v.rule).filter(r => r === 'no-proto-key'),
+      []
+    );
+  });
+
   it('accepts the two index shapes the compiler really emits', () => {
     assert.deepStrictEqual(checkEmittedJavaScript(inProgram('([1, 2, 3][0] ?? null)')), []);
     assert.deepStrictEqual(

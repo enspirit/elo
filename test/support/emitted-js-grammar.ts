@@ -259,6 +259,25 @@ export function checkEmittedJavaScript(code: string): Violation[] {
         });
       }
 
+      // `{__proto__: v}` in an object literal is the [[Prototype]] setter, not
+      // a data property — one half of the 1.2.0 sandbox escape, where
+      // `{__proto__: [].map}` produced an object whose prototype was a
+      // Function while still passing a `typeof 'object'` guard. The emitter
+      // writes the key with Object.defineProperty for exactly this reason, so
+      // a plain one here means that path was bypassed.
+      if ((ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node))
+          && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))
+          && node.name.text === '__proto__') {
+        violations.push({
+          rule: 'no-proto-key',
+          text: excerpt(node, source),
+          detail:
+            'a plain `__proto__` key in an object literal runs the prototype setter '
+            + 'instead of storing data. It must go through Object.defineProperty, as '
+            + 'the object-literal emitter, kFetchObject, kPatch and kDeepMerge do.',
+        });
+      }
+
       if (ts.isNewExpression(node)
           && !(ts.isIdentifier(node.expression) && node.expression.text === 'Error')) {
         violations.push({

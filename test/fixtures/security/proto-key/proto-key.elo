@@ -1,0 +1,19 @@
+# `__proto__` is an ordinary data key in Elo.
+#
+# On JavaScript it is not one by default: `{__proto__: v}` in an object
+# literal runs the [[Prototype]] setter, so `{__proto__: [].map}` produced an
+# object whose prototype was a Function while still passing a
+# `typeof 'object'` guard — half of the 1.2.0 sandbox escape (c0rydoras). The
+# object-literal emitter therefore writes the key computed, and kFetchObject,
+# kPatch and kDeepMerge use Object.defineProperty.
+#
+# Nothing in the corpus ever built such an object, so no acceptance run and no
+# emitted-grammar check could reach any of those emitters. These lines do.
+# Reading the key back is not possible on purpose — member access and fetch
+# both refuse the meta-property names — so the assertions work around it:
+# a sibling key still reads, and the object is still an object.
+
+assert({__proto__: 1, a: 2}.a == 2)
+assert({a: 2, __proto__: 1}.a == 2)
+assert(isNotNull({__proto__: 1}) == true)
+assert({x: {__proto__: 1, b: 3}}.x.b == 3)
