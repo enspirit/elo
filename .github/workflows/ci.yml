@@ -47,7 +47,8 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        # Shared with deploy-pages.yml, so the two cannot drift apart again.
+        node-version-file: '.nvmrc'
         cache: 'npm'
 
     - name: Set up Ruby

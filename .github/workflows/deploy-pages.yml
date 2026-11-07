@@ -28,7 +28,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # .nvmrc, not a literal: this workflow pinned 20 while CI pinned 22,
+          # and the Astro 7 upgrade in 1.2.3 made the website need >=22.12.0 —
+          # so Pages started failing on a version nobody had thought to change.
+          # One file now says which Node the project is built with.
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install root dependencies
@@ -44,7 +48,7 @@ jobs:
         run: cd web && npm run build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

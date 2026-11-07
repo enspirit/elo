@@ -24,5 +24,8 @@
     "astro": "^7.3.8",
     "codemirror": "^6.0.1",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
