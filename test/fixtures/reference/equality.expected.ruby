@@ -19,7 +19,7 @@
 ->(_) { (raise "Assertion failed" unless DateTime.parse("2024-01-15T10:00:00Z") != DateTime.parse("2024-01-15T11:00:00Z"); true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse("P1D") == ActiveSupport::Duration.parse("P1D"); true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse("P1D") + ActiveSupport::Duration.parse("P1D") == ActiveSupport::Duration.parse("P2D"); true) }.call(nil);
-->(_) { (raise "Assertion failed" unless 2 * ActiveSupport::Duration.parse("P1D") == ActiveSupport::Duration.parse("P2D"); true) }.call(nil);
+->(_) { def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless k_mul(2, ActiveSupport::Duration.parse("P1D")) == ActiveSupport::Duration.parse("P2D"); true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse("P2D") / 2 == ActiveSupport::Duration.parse("P1D"); true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse("P1D") != ActiveSupport::Duration.parse("P2D"); true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ActiveSupport::Duration.parse("PT1H") == ActiveSupport::Duration.parse("PT1H"); true) }.call(nil);

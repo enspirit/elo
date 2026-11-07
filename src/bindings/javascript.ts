@@ -113,7 +113,10 @@ export function createJavaScriptBinding(): StdLib<string> {
       // `round` goes through kRound — when the native operator disagrees with
       // Elo's semantics, the helper is the emission.
       jsLib.register('mod', [leftType, rightType], helperCall('kMod'));
-      jsLib.register('pow', [leftType, rightType], fnCall('Math.pow'));
+      // Via kPow, not a bare Math.pow: the helper refuses a result whose bit
+      // length would exceed the cap, so `2 ^ 1e9` is refused here exactly as it
+      // is on Ruby/Python (which would otherwise build the bignum).
+      jsLib.register('pow', [leftType, rightType], helperCall('kPow'));
     }
   }
 

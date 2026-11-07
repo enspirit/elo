@@ -75,14 +75,14 @@ describe('CLI - Basic compilation', () => {
   it('should handle power operator in JavaScript', () => {
     const result = eloc('-e "2 ^ 3" -t js');
     // Type inference uses Math.pow for known numeric types
-    assert.strictEqual(result, '(function(_) { return Math.pow(2, 3); })');
+    assert.strictEqual(result, '(function(_) { function kPow(l, r) { if (Number.isInteger(l) && Number.isInteger(r) && r > 1 && Math.abs(l) > 1 && r * Math.log2(Math.abs(l)) > 10000000) throw new Error("Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results"); return Math.pow(l, r); } return kPow(2, 3); })');
   });
 
   it('should handle power operator in Ruby', () => {
     // Through a helper: Ruby's `**` answers a Rational for a negative Integer
     // exponent, where every other target answers a Float.
     const result = eloc('-e "2 ^ 3" -t ruby');
-    assert.strictEqual(result, '->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
+    assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
   });
 
   it('should handle power operator in SQL', () => {
@@ -179,7 +179,7 @@ describe('CLI - File input', () => {
 
     try {
       const result = eloc(`${inputFile} -t ruby`);
-      assert.strictEqual(result, '->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
+      assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
     } finally {
       unlinkSync(inputFile);
     }
@@ -567,7 +567,7 @@ describe('CLI - Long options', () => {
 
   it('should accept --target', () => {
     const result = eloc('-e "2 ^ 3" --target ruby');
-    assert.strictEqual(result, '->(_) { def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
+    assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
   });
 
   it('should accept --prelude', () => {

@@ -12,8 +12,15 @@ function wrapRuby(code: string): string {
 }
 
 // Ruby's `**` answers a Rational for a negative Integer exponent, which no
-// other target does, so every power goes through the helper.
-const POW = 'def k_pow(l, r); v = l ** r; v.is_a?(Rational) ? v.to_f : v end; ';
+// other target does, so every power goes through the helper. The helper also
+// refuses a result whose bit length would exceed the allocation cap.
+const POW = 'def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; ';
+
+// Dynamic multiplication dispatches so a String operand reaches the *bounded*
+// repeat rather than Ruby's unbounded `String#*`; k_str_mul is its dependency.
+const K_MUL = 'def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; ';
+const K_STR_MUL = 'def k_str_mul(s, n); return \'\' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; ';
+const MUL = `${K_MUL}${K_STR_MUL}`;
 
 // Emitted ahead of the expression when the division has to decide at runtime.
 const K_DIV = 'def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; ';
@@ -288,7 +295,7 @@ describe('Ruby Compiler - Complex Expressions', () => {
       binary('+', memberAccess(variable('_'), 'a'), memberAccess(variable('_'), 'b')),
       memberAccess(variable('_'), 'c')
     );
-    assert.strictEqual(compileToRuby(ast), wrapRuby('(_[:a] + _[:b]) * _[:c]'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${MUL}k_mul(_[:a] + _[:b], _[:c])`));
   });
 
   it('should compile _.price * _.quantity - _.discount', () => {
@@ -301,7 +308,7 @@ describe('Ruby Compiler - Complex Expressions', () => {
     // Ruby's `-` would give a Rational number of days rather than a duration.
     assert.strictEqual(
       compileToRuby(ast),
-      wrapRubyWithKSub('k_sub(_[:price] * _[:quantity], _[:discount])')
+      wrapRuby(`${MUL}${K_SUB}k_sub(k_mul(_[:price], _[:quantity]), _[:discount])`)
     );
   });
 
@@ -326,7 +333,7 @@ describe('Ruby Compiler - Complex Expressions', () => {
     );
     assert.strictEqual(
       compileToRuby(ast),
-      wrapRubyWithKDivAndKSub('k_div((_[:x] + 5) * (k_sub(_[:y], 3)), 2)')
+      wrapRuby(`${K_DIV}${MUL}${K_SUB}k_div(k_mul(_[:x] + 5, k_sub(_[:y], 3)), 2)`)
     );
   });
 
@@ -349,7 +356,7 @@ describe('Ruby Compiler - Complex Expressions', () => {
       binary('*', memberAccess(variable('_'), 'total'), literal(1.1)),
       literal(1000)
     );
-    assert.strictEqual(compileToRuby(ast), wrapRuby('_[:total] * 1.1 > 1000'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${MUL}k_mul(_[:total], 1.1) > 1000`));
   });
 });
 

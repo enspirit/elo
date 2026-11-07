@@ -99,7 +99,15 @@ export function createRubyBinding(): StdLib<string> {
       rubyLib.register('sub', [leftType, rightType], simpleBinaryOp('-'));
     }
   }
-  rubyLib.register('mul', [Types.any, Types.any], simpleBinaryOp('*'));
+  // Numeric multiplication is the native operator; the unknown-type case goes
+  // through a dispatcher so that `String * Int` reaches the *bounded* repeat
+  // rather than Ruby's unbounded `String#*`, and durations keep the overload.
+  rubyLib.register('mul', [Types.any, Types.any], helperCall('k_mul'));
+  for (const leftType of [Types.int, Types.float]) {
+    for (const rightType of [Types.int, Types.float]) {
+      rubyLib.register('mul', [leftType, rightType], simpleBinaryOp('*'));
+    }
+  }
   // Ruby truncates Integer / Integer, where Elo's `/` is real division in
   // every other target, so numeric division goes through `fdiv` rather than
   // the operator. Every numeric combination, not only Int / Int: a value
@@ -122,7 +130,15 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('div', [Types.duration, Types.int], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.duration, Types.float], simpleBinaryOp('/'));
   rubyLib.register('div', [Types.any, Types.any], helperCall('k_div'));
-  rubyLib.register('mod', [Types.any, Types.any], simpleBinaryOp('%'));
+  // Numeric modulo is the native (floored) operator; the unknown-type case
+  // goes through a dispatcher so that a String operand is refused rather than
+  // reaching Ruby's `String#%` sprintf.
+  rubyLib.register('mod', [Types.any, Types.any], helperCall('k_mod'));
+  for (const leftType of [Types.int, Types.float]) {
+    for (const rightType of [Types.int, Types.float]) {
+      rubyLib.register('mod', [leftType, rightType], simpleBinaryOp('%'));
+    }
+  }
   // `**` answers a Rational for an Integer base and a negative Integer
   // exponent, which no other target does and which typeOf could not name.
   rubyLib.register('pow', [Types.any, Types.any], helperCall('k_pow'));

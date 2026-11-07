@@ -71,9 +71,9 @@ describe('Python Compiler - Arithmetic Operators', () => {
     assert.strictEqual(compileToPython(ast), wrapPy('10 % 3'));
   });
 
-  it('should compile power to ** operator', () => {
+  it('should compile power through kPow (bounded)', () => {
     const ast = binary('^', literal(2), literal(3));
-    assert.strictEqual(compileToPython(ast), wrapPy('2 ** 3'));
+    assert.strictEqual(compileToPython(ast), wrapPy('kPow(2, 3)'));
   });
 });
 
@@ -141,7 +141,7 @@ describe('Python Compiler - Operator Precedence', () => {
 
   it('should handle power with addition', () => {
     const ast = binary('+', binary('^', literal(2), literal(3)), literal(1));
-    assert.strictEqual(compileToPython(ast), wrapPy('2 ** 3 + 1'));
+    assert.strictEqual(compileToPython(ast), wrapPy('kPow(2, 3) + 1'));
   });
 });
 

@@ -56,7 +56,10 @@ export function createPythonBinding(): StdLib<string> {
       pyLib.register('mul', [leftType, rightType], simpleBinaryOp('*'));
       pyLib.register('div', [leftType, rightType], simpleBinaryOp('/'));
       pyLib.register('mod', [leftType, rightType], simpleBinaryOp('%'));
-      pyLib.register('pow', [leftType, rightType], simpleBinaryOp('**'));
+      // Via kPow, not a bare `**`: the helper refuses a result whose bit length
+      // would exceed the cap, so a short literal like `2 ^ 1e9` cannot build a
+      // multi-gigabyte bignum. Matches the JavaScript target.
+      pyLib.register('pow', [leftType, rightType], helperCall('kPow'));
     }
   }
 

@@ -109,8 +109,9 @@ import Footer from '../components/Footer.astro';
           An Elo expression has no loops, but it can still be <em>expensive</em>: it can build a large value from the
           data you give it, or chain enough work to take real CPU. We make a best effort to minimize this — the
           primitives that let a <em>short</em> expression allocate out of proportion are bounded (array repeat is
-          rejected; string repeat and padding, and the array a <code>patch</code> grows to reach an index, are capped
-          by the <code>ELO_MAX_STRING_LENGTH</code> environment variable, default 10,000,000) — but bounding
+          rejected; string repeat and padding, the array a <code>patch</code> grows to reach an index, and the bit
+          length of an exponentiation are capped by the <code>ELO_MAX_STRING_LENGTH</code> environment variable,
+          default 10,000,000) — but bounding
           primitives does not bound total cost, and we will
           never claim it does. <strong>Run compiled Elo the way you would run any untrusted computation: in an
           isolated context, under a memory ceiling and a wall-clock timeout.</strong> See

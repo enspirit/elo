@@ -65,6 +65,7 @@ export interface EloFailure extends Error {
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
   kRepeat: [],
+  kMul: ['kRepeat'],
   kPad: [],
   kMin2: [],
   kMax2: [],
@@ -118,6 +119,8 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   kMul: `function kMul(l, r) {
   if (Array.isArray(l) || Array.isArray(r)) throw new Error("Array multiplication is not supported");
+  if (typeof l === 'string' && typeof r === 'number' && Number.isInteger(r)) return kRepeat(l, r);
+  if (typeof r === 'string' && typeof l === 'number' && Number.isInteger(l)) return kRepeat(r, l);
   if (Duration.isDuration(l)) return Number.isInteger(r) ? l.mapUnits(u => u * r) : Duration.fromMillis(l.toMillis() * r);
   if (Duration.isDuration(r)) return Number.isInteger(l) ? r.mapUnits(u => u * l) : Duration.fromMillis(r.toMillis() * l);
   return l * r;
@@ -148,8 +151,17 @@ export const JS_HELPERS: Record<string, string> = {
   /* Elo's `%` is floored: the result takes the sign of the divisor, as it does
      in Ruby and Python. JavaScript's `%` is truncated like C's, so `-7 % 3` is
      -1 there where Elo says 2. */
-  kMod: `function kMod(l, r) { return ((l % r) + r) % r; }`,
-  kPow: `function kPow(l, r) { return Math.pow(l, r); }`,
+  // Elo's `%` is floored and numeric. A String operand would otherwise reach a
+  // native overload — in Ruby and Python `str % x` is sprintf — so the dynamic
+  // path, where operands are not statically typed, must reject a non-number
+  // rather than diverge (JS returned NaN) or format.
+  kMod: `function kMod(l, r) { if (typeof l !== 'number' || typeof r !== 'number') throw new Error("Modulo requires numeric operands"); return ((l % r) + r) % r; }`,
+  // An integer power builds an exact bignum on Ruby and Python, so a one-token
+  // literal (2 ^ 1e9) allocates gigabytes there; JavaScript's float Math.pow
+  // does not, but must refuse the same expression so the targets agree. The
+  // result's bit length is about r*log2(|l|); cap it by the same knob as the
+  // string and array bounds.
+  kPow: `function kPow(l, r) { if (Number.isInteger(l) && Number.isInteger(r) && r > 1 && Math.abs(l) > 1 && r * Math.log2(Math.abs(l)) > ${MAX_STRING_LENGTH}) throw new Error("Exponentiation result exceeds the size limit (${MAX_STRING_LENGTH} bits); raise ELO_MAX_STRING_LENGTH to allow larger results"); return Math.pow(l, r); }`,
   kEq: `function kEq(l, r) {
   if (Duration.isDuration(l) && Duration.isDuration(r)) return l.toMillis() === r.toMillis();
   if (DateTime.isDateTime(l) && DateTime.isDateTime(r)) return l.toMillis() === r.toMillis();
@@ -463,6 +475,8 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   k_round_to: [],
   k_pow: [],
   k_div: [],
+  k_mul: ['k_str_mul'],
+  k_mod: [],
   k_str_mul: [],
   k_pad: [],
   k_float: [],
@@ -509,8 +523,24 @@ end`,
      Rational compares equal to the Float, so only typeOf and formatting show
      it — typeOf said 'Tuple', having no case for one. */
   k_pow: `def k_pow(l, r)
+  raise "Exponentiation result exceeds the size limit (${MAX_STRING_LENGTH} bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > ${MAX_STRING_LENGTH}
   v = l ** r
   v.is_a?(Rational) ? v.to_f : v
+end`,
+  // Elo's `*` on a String is a length-bounded repeat; on the dynamic path the
+  // operands are not statically typed, so route a String here rather than let
+  // Ruby's unbounded `String#*` run. Everything else (numbers, durations) keeps
+  // the native operator.
+  k_mul: `def k_mul(l, r)
+  return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer)
+  return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer)
+  l * r
+end`,
+  // Elo's `%` is numeric modulo; Ruby's `String#%` is sprintf, so a String
+  // operand on the dynamic path must be refused rather than formatted.
+  k_mod: `def k_mod(l, r)
+  raise "Modulo requires numeric operands" unless l.is_a?(Numeric) && r.is_a?(Numeric)
+  l % r
 end`,
   k_round_to: `def k_round_to(x, n)
   f = 10 ** n
@@ -743,7 +773,7 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kAssertFails: [],
   kAdd: [],
   kSub: [],
-  kMul: [],
+  kMul: ['kStrMul'],
   kDiv: [],
   kMod: [],
   kPow: [],
@@ -1050,6 +1080,8 @@ def _elo_end_of_year(dt):
     return l - r`,
   kMul: `def kMul(l, r):
     if isinstance(l, list) or isinstance(r, list): raise ValueError("Array multiplication is not supported")
+    if isinstance(l, str) and isinstance(r, int) and not isinstance(r, bool): return kStrMul(l, r)
+    if isinstance(r, str) and isinstance(l, int) and not isinstance(l, bool): return kStrMul(r, l)
     if isinstance(l, EloDuration): return l.scale(r)
     if isinstance(r, EloDuration): return r.scale(l)
     return l * r`,
@@ -1062,8 +1094,11 @@ def _elo_end_of_year(dt):
     if isinstance(l, EloDuration) and isinstance(r, (int, float)): return l.divide(r)
     return l / r`,
   kMod: `def kMod(l, r):
+    if not isinstance(l, (int, float)) or not isinstance(r, (int, float)): raise ValueError("Modulo requires numeric operands")
     return l % r`,
   kPow: `def kPow(l, r):
+    import math
+    if isinstance(l, int) and isinstance(r, int) and r > 1 and abs(l) > 1 and r * math.log2(abs(l)) > ${MAX_STRING_LENGTH}: raise ValueError("Exponentiation result exceeds the size limit (${MAX_STRING_LENGTH} bits); raise ELO_MAX_STRING_LENGTH to allow larger results")
     return l ** r`,
   kNeg: `def kNeg(v):
     if isinstance(v, EloDuration): return v.negate()

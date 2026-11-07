@@ -19,6 +19,6 @@
 
 
 
-(lambda _: kAssert(kRound(5 ** 1 / 2) == 3))(None)
-(lambda _: kAssert(kRound(-5 ** 1 / 2) == -3))(None)
-(lambda _: kAssert(kRound(7 ** 1 / 2) == 4))(None)
+(lambda _: kAssert(kRound(kPow(5, 1) / 2) == 3))(None)
+(lambda _: kAssert(kRound(kPow(-5, 1) / 2) == -3))(None)
+(lambda _: kAssert(kRound(kPow(7, 1) / 2) == 4))(None)

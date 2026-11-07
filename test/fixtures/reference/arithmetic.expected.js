@@ -1,7 +1,7 @@
 (function(_) { return (function() { if (!(2 + 3 == 5)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(2 + 3 * 4 == 14)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!(Math.pow(2, 3) == 8)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!(Math.pow(2, 3) + 1 == 9)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kPow(l, r) { if (Number.isInteger(l) && Number.isInteger(r) && r > 1 && Math.abs(l) > 1 && r * Math.log2(Math.abs(l)) > 10000000) throw new Error("Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results"); return Math.pow(l, r); } return (function() { if (!(kPow(2, 3) == 8)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kPow(l, r) { if (Number.isInteger(l) && Number.isInteger(r) && r > 1 && Math.abs(l) > 1 && r * Math.log2(Math.abs(l)) > 10000000) throw new Error("Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results"); return Math.pow(l, r); } return (function() { if (!(kPow(2, 3) + 1 == 9)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!((5 + 5) * (10 - 3) / 2 == 35)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(-5 + 10 == 5)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { function kMod(l, r) { return ((l % r) + r) % r; } return (function() { if (!(kMod(10, 3) + 8 / 2 == 5)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kMod(l, r) { if (typeof l !== 'number' || typeof r !== 'number') throw new Error("Modulo requires numeric operands"); return ((l % r) + r) % r; } return (function() { if (!(kMod(10, 3) + 8 / 2 == 5)) throw new Error("Assertion failed"); return true; })(); })(null);

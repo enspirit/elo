@@ -1,0 +1,20 @@
+# Arithmetic stays bounded and numeric on every target, including the dynamic
+# path where a lambda parameter is `any`. Ruby and Python would otherwise
+# overload `*` (repeat), `%` (sprintf) and `^` (bignum) on strings/integers,
+# diverging from JavaScript and bypassing the ELO_MAX_STRING_LENGTH cap.
+
+# Dynamic string repeat matches the typed path, and is bounded on both.
+assert((let f = fn( x ~> x * 3 ) in f('ab')) == 'ababab')
+assert('ab' * 3 == 'ababab')
+assert(assertFails(fn( ~> (let f = fn( x ~> x * 6000000 ) in f('ab')) )))
+assert(assertFails(fn( ~> 'ab' * 6000000 )))
+
+# Modulo is numeric and floored; a string operand is refused, not formatted.
+assert((let f = fn( x, y ~> x % y ) in f(7, 3)) == 1)
+assert((let f = fn( x, y ~> x % y ) in f(-7, 3)) == 2)
+assert(7 % 3 == 1)
+assert(assertFails(fn( ~> (let f = fn( x ~> x % 1 ) in f('%d')) )))
+
+# Exponentiation is bounded so a short literal cannot allocate a huge bignum.
+assert(2 ^ 10 == 1024)
+assert(assertFails(fn( ~> 2 ^ 20000000 )))

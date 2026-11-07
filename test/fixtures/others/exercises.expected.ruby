@@ -2,5 +2,5 @@
 ->(_) { (raise "Assertion failed" unless {price: 25, quantity: 4}[:price] * {price: 25, quantity: 4}[:quantity] == 100; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless "  hello  ".strip.upcase == "HELLO"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (width = 8; height = 5; width * height) == 40; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless [5, 12, 8, 20, 3, 15].select(&->(x) { x > 10 }).map(&->(x) { x * 2 }) == [24, 40, 30]; true) }.call(nil);
+->(_) { def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless [5, 12, 8, 20, 3, 15].select(&->(x) { x > 10 }).map(&->(x) { k_mul(x, 2) }) == [24, 40, 30]; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (order = {price: 50, quantity: 3}; order[:price] * order[:quantity]) == 150; true) }.call(nil);

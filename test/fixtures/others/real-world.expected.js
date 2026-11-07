@@ -1,6 +1,6 @@
 (function(_) { return (function() { if (!(100 * (1 - 0.2) == 80)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(90 + 90 * 0.1 == 99)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!(1000 * Math.pow(1 + 0.05, 10) > 1500)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kPow(l, r) { if (Number.isInteger(l) && Number.isInteger(r) && r > 1 && Math.abs(l) > 1 && r * Math.log2(Math.abs(l)) > 10000000) throw new Error("Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results"); return Math.pow(l, r); } return (function() { if (!(1000 * kPow(1 + 0.05, 10) > 1500)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(30 >= 18 && (50000 > 30000 || true == true))) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!(0.8 * 100 == 80)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!(70 / Math.pow(1.75, 2) < 25)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { function kPow(l, r) { if (Number.isInteger(l) && Number.isInteger(r) && r > 1 && Math.abs(l) > 1 && r * Math.log2(Math.abs(l)) > 10000000) throw new Error("Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results"); return Math.pow(l, r); } return (function() { if (!(70 / kPow(1.75, 2) < 25)) throw new Error("Assertion failed"); return true; })(); })(null);

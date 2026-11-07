@@ -93,15 +93,12 @@ describe('JavaScript Compiler - Arithmetic Operators (typed literals)', () => {
     // emission even when both types are known, for the same reason `round`
     // goes through kRound.
     const ast = binary('%', literal(10), literal(3));
-    assert.strictEqual(
-      compileToJavaScript(ast),
-      '(function(_) { function kMod(l, r) { return ((l % r) + r) % r; } return kMod(10, 3); })'
-    );
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMod(10, 3)', 'kMod'));
   });
 
   it('should compile power to Math.pow() when types known', () => {
     const ast = binary('^', literal(2), literal(3));
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('Math.pow(2, 3)'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kPow(2, 3)', 'kPow'));
   });
 });
 
@@ -118,7 +115,7 @@ describe('JavaScript Compiler - Arithmetic Operators (unknown types)', () => {
 
   it('should use kMul helper for mixed known/unknown', () => {
     const ast = binary('*', literal(2), memberAccess(variable('_'), 'x'));
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(2, kMember(_, "x"))', 'kMul', 'kMember'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(2, kMember(_, "x"))', 'kMul', 'kMember', 'kRepeat'));
   });
 });
 
@@ -214,12 +211,12 @@ describe('JavaScript Compiler - Operator Precedence (typed)', () => {
 
   it('should handle power with addition', () => {
     const ast = binary('+', binary('^', literal(2), literal(3)), literal(1));
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('Math.pow(2, 3) + 1'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kPow(2, 3) + 1', 'kPow'));
   });
 
   it('should handle complex power expression', () => {
     const ast = binary('*', literal(2), binary('^', literal(3), literal(4)));
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('2 * Math.pow(3, 4)'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('2 * kPow(3, 4)', 'kPow'));
   });
 });
 
@@ -230,7 +227,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       binary('+', memberAccess(variable('_'), 'a'), memberAccess(variable('_'), 'b')),
       memberAccess(variable('_'), 'c')
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(kAdd(kMember(_, "a"), kMember(_, "b")), kMember(_, "c"))', 'kAdd', 'kMul', 'kMember'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(kAdd(kMember(_, "a"), kMember(_, "b")), kMember(_, "c"))', 'kAdd', 'kMul', 'kMember', 'kRepeat'));
   });
 
   it('should compile _.price * _.quantity - _.discount', () => {
@@ -239,7 +236,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       binary('*', memberAccess(variable('_'), 'price'), memberAccess(variable('_'), 'quantity')),
       memberAccess(variable('_'), 'discount')
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kSub(kMul(kMember(_, "price"), kMember(_, "quantity")), kMember(_, "discount"))', 'kMul', 'kSub', 'kMember'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kSub(kMul(kMember(_, "price"), kMember(_, "quantity")), kMember(_, "discount"))', 'kMul', 'kSub', 'kMember', 'kRepeat'));
   });
 
   it('should compile _.x > 0 && _.x < 100 with native operators', () => {
@@ -262,7 +259,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       ),
       literal(2)
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kDiv(kMul(kAdd(kMember(_, "x"), 5), kSub(kMember(_, "y"), 3)), 2)', 'kAdd', 'kSub', 'kMul', 'kDiv', 'kMember'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kDiv(kMul(kAdd(kMember(_, "x"), 5), kSub(kMember(_, "y"), 3)), 2)', 'kAdd', 'kSub', 'kMul', 'kDiv', 'kMember', 'kRepeat'));
   });
 
   it('should compile mixed arithmetic and boolean', () => {
@@ -272,7 +269,7 @@ describe('JavaScript Compiler - Complex Expressions (unknown types)', () => {
       binary('*', memberAccess(variable('_'), 'total'), literal(1.1)),
       literal(1000)
     );
-    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(kMember(_, "total"), 1.1) > 1000', 'kMul', 'kMember'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kMul(kMember(_, "total"), 1.1) > 1000', 'kMul', 'kMember', 'kRepeat'));
   });
 });
 
@@ -283,7 +280,7 @@ describe('JavaScript Compiler - Edge Cases', () => {
       literal(2),
       binary('^', literal(3), literal(2))
     );
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('Math.pow(2, Math.pow(3, 2))'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('kPow(2, kPow(3, 2))', 'kPow'));
   });
 
   it('should handle power in complex expression', () => {
@@ -292,7 +289,7 @@ describe('JavaScript Compiler - Edge Cases', () => {
       binary('*', literal(2), binary('^', literal(3), literal(2))),
       literal(1)
     );
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('2 * Math.pow(3, 2) + 1'));
+    assert.strictEqual(compileToJavaScript(ast), withHelpers('2 * kPow(3, 2) + 1', 'kPow'));
   });
 
   it('should handle multiple unary operators with unknown type', () => {

@@ -692,6 +692,61 @@ describe('Security - typed at() sandbox escape under --optimize (type confusion)
 });
 
 /**
+ * Security: arithmetic on the dynamic path must stay bounded and numeric.
+ *
+ * Disproportionate allocation (Medium/High per the security page). Ruby and
+ * Python spell `*`, `%` and `^` with native operators whose *string / bignum*
+ * overloads both diverge from JavaScript and skip the ELO_MAX_STRING_LENGTH
+ * guards the typed string path enforces:
+ *
+ *   - `x * n` with x a String repeats it, unbounded, on the dynamic
+ *     (any-typed) path — the bounded k_str_mul / kStrMul guard is wired only
+ *     into the typed mul(String, Int). JavaScript returned NaN instead.
+ *   - `x % n` with x a String runs sprintf, so `'%30000000d' % 1` builds a
+ *     30 M-char string past the 10 M cap — and `String % x` is a compile-time
+ *     type error anyway, so it has no meaning on the dynamic path either.
+ *   - `a ^ b` on integers builds an exact bignum: `2 ^ 1e9` is ~125 MB on
+ *     Ruby/Python from a single literal, where JavaScript's Math.pow is a
+ *     float (Infinity).
+ *
+ * The fix: dynamic string*int does the same bounded repeat as the typed path;
+ * modulo rejects a non-numeric operand; exponentiation refuses a result whose
+ * bit length would exceed the cap. All three behave identically on every
+ * target. JavaScript tests run in-process here; Ruby and Python are pinned by
+ * the acceptance fixture reference/arith-string-op-bounds.elo.
+ */
+describe('Security - dynamic arithmetic allocation bounds (JS)', () => {
+  const run = (src: string, input: unknown = null): unknown =>
+    compile<(i: unknown) => unknown>(src, {})(input);
+
+  it('dynamic string * int repeats, bounded like the typed path', () => {
+    assert.strictEqual(run(`let f = fn( x ~> x * 3 ) in f('ab')`), 'ababab');
+  });
+
+  it('dynamic string * int past the cap is refused, not allocated', () => {
+    assert.throws(() => run(`let f = fn( x ~> x * ${MAX_STRING_LENGTH} ) in f('ab')`), /limit/);
+  });
+
+  it('dynamic modulo on a string is refused, not formatted', () => {
+    assert.throws(() => run(`let f = fn( x ~> x % 1 ) in f('%5d')`), /[Mm]odulo|numeric/);
+  });
+
+  it('dynamic modulo on numbers still floors', () => {
+    assert.strictEqual(run(`let f = fn( x ~> x % 3 ) in f(7)`), 1);
+    assert.strictEqual(run(`let f = fn( x, y ~> x % y ) in f(-7, 3)`), 2);
+  });
+
+  it('exponentiation past the bit-length cap is refused', () => {
+    assert.throws(() => run(`2 ^ ${MAX_STRING_LENGTH + 1}`), /limit|exceed/i);
+  });
+
+  it('exponentiation within bounds still computes', () => {
+    assert.strictEqual(run(`2 ^ 10`), 1024);
+    assert.strictEqual(run(`5 ^ 1`), 5);
+  });
+});
+
+/**
  * Security: SQL date/datetime/duration literals must escape the backslash.
  *
  * Reported by squ11z1 (Mykhailo Shushman) under coordinated disclosure.
