@@ -4,6 +4,27 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-11-07
+
+A patch release: seven fixes. Six are a disagreement between targets, where at
+most one of them was right; the seventh is in the Node sandbox of `contrib/`.
+No API change, no new construct, nothing newly refused.
+
+### Before you upgrade
+
+**If you run Elo on PostgreSQL, reinstall the SQL prelude.** The `split` fix
+below adds an `elo_split` helper — the eleventh `elo_*` name — and a prelude
+installed before this release does not have it, so `split()` on SQL raises
+rather than answering:
+
+```bash
+eloc --prelude-only -t sql | psql "$DATABASE_URL"
+```
+
+Nothing else needs action. Every other fix changes what a *wrong* program
+answered, never what a correct one did — so the public API is unchanged and no
+program that worked stops working.
+
 ### Fixed
 
 - A refused value's **path was empty on Ruby** where it is `.` on JavaScript

@@ -4,6 +4,10 @@ Found while building the formula service (0234), whose boot runs every case of
 every bundle: `payment-due-date` fails in a timezone that has a DST transition
 between the two dates, and only on JavaScript.
 
+> The formula service and its catalogue have since moved out of this
+> repository, so the suite named below lives there now. The bug is Elo's and
+> stays here; the repro above needs nothing but `./bin/elo`.
+
 ## The repro
 
 ```bash
@@ -13,8 +17,9 @@ TZ=America/Los_Angeles ./bin/elo -e "inDays(startOfDay(D2026-03-11) - startOfDay
 # 59.958333333333336
 ```
 
-Ruby and Python answer `60` in both timezones — `test/acceptance/test-formulas.sh`
-under `TZ=America/Los_Angeles` fails `payment-due-date [js]` and nothing else.
+Ruby and Python answer `60` in both timezones — the catalogue's own
+cross-target suite, under `TZ=America/Los_Angeles`, fails
+`payment-due-date [js]` and nothing else.
 So the two emissions have diverged, which is the usual shape of this class of
 bug: 2026-03-08 is when the clocks go forward there, so the interval is 59 days
 and 23 hours, and dividing by a nominal 24-hour day gives 59.958.
