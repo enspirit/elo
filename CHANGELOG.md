@@ -4,6 +4,105 @@ All notable changes to Elo are documented in this file.
 
 ## [Unreleased]
 
+A second security pass. 1.2.3 fixed six issues; sweeping the compiler for the
+*classes* those six belonged to — a value embedded in target syntax without the
+target's escaper, a native operator reached on an operand whose type was a
+promise rather than a check, a recursive walk with no depth bound — turned up
+six more, none of them reported from outside. Each got a red-first test, seen
+fail on every affected target, then verified executing on node, ruby, python
+and psql. No new construct; the public API is unchanged.
+
+### Before you upgrade
+
+Nothing to reinstall: the SQL prelude is untouched, and the JavaScript, Ruby
+and Python helpers travel with the emitted code. Three expressions that used to
+answer now raise, on purpose:
+
+- an exponentiation whose result would exceed `ELO_MAX_STRING_LENGTH` bits
+  (default 10,000,000) — `2 ^ 1e9` was `Infinity` on JavaScript and a
+  125 MB bignum on Ruby and Python;
+- a modulo with a non-numeric operand on the dynamic path — it was `NaN` on
+  JavaScript and `sprintf` on Ruby and Python, and it is a type error anyway;
+- `at()` with a runtime-supplied index that is not an integer — it now answers
+  null instead of reading a host member.
+
+One expression that used to answer *wrongly* now answers: `x * n` with a string
+`x` on the dynamic path repeats the string on JavaScript, as the typed path and
+the other targets already did, instead of returning `NaN`.
+
+### Security
+
+- **JavaScript sandbox escape through the *typed* `at()` (type confusion).**
+  1.2.3 hardened the dynamic `at(any, any)`; the typed `at([Int], Int)` emitter
+  still spelled a bare `x[k] ?? null`. That emitter is chosen exactly when the
+  checker knows the operand types — which is what `--optimize` arranges. But a
+  declared input type is a promise, not a runtime check: under `--input-type`,
+  `_.i` compiles to a bare read that returns the raw value uncoerced, so an
+  attacker sending `{xs: [], i: 'constructor'}` against an honestly declared
+  `{xs: [Int], i: Int}` got the `Array` constructor back — one hop from the
+  `Function` constructor, and application is unchecked too. A bare bracket read
+  is now emitted only for a compile-time integer literal index; any
+  runtime-supplied index goes through `kAt`, which indexes only a real array by
+  an integer. JavaScript only: Ruby bounds-checks, Python already routed
+  through `kAt`, SQL casts the index to numeric.
+
+- **Ruby code execution through `#` in temporal literals and `extract()`
+  templates.** A double-quoted Ruby string interpolates `#{...}`, `#@ivar` and
+  `#$global`. Every Ruby string in the emission went through `escapeRubyDQ`,
+  which escapes `#` precisely for that reason — except the three temporal
+  literals, which used `JSON.stringify`, so a date value carrying `#{...}`
+  reached the compiler AST API as `` Date.parse("2024-01-01#{`id`}") `` and ran
+  a shell command under the standard prelude. The same hole existed in the
+  `extract()` regex escaper: `#{code}` was already dead (the `{` was escaped)
+  but `#@ivar` needs no brace, so a template interpolated a host instance
+  variable at match time. The temporal emitters now use `escapeRubyDQ` and the
+  regex escaper escapes `#`; `\#` matches a literal `#` on every target, so no
+  match changes. Ruby only — the other three carry the same value as inert
+  data.
+
+- **`__proto__` was not a data key in `deepMerge` (JavaScript).** `{__proto__: x}`
+  is an ordinary data property in Elo, and the object-literal emitter, `kFetchObject`
+  and `kPatch` all use `Object.defineProperty` to keep it one. `kDeepMerge` did a
+  bare `result[key] = …`, which for `__proto__` runs the prototype setter, so
+  `deepMerge({a: 1}, JSON.parse('{"__proto__": …}'))` handed back an object whose
+  prototype was attacker data. No global `Object.prototype` pollution and Elo could
+  not read the value back, but a host receiving the result saw an
+  attacker-controlled prototype. Reads now go through `kMember` and the
+  `__proto__` write through `defineProperty`, as the other three paths do.
+
+- **Unbounded allocation through native operator overloads on the dynamic
+  path.** When an operand type is not statically known — a lambda parameter, an
+  untyped `_` — Ruby and Python spelled `*`, `%` and `^` with native operators
+  whose String and bignum overloads bypass the `ELO_MAX_STRING_LENGTH` guards
+  the typed path enforces. `x * n` on a String ran Ruby's unbounded `String#*`
+  (`fn(x ~> x * 1e9)` on `'ab'` allocates gigabytes); `x % n` ran `sprintf`, so
+  `'%30000000d' % 1` built a 30 M-char string; and `a ^ b` built an exact
+  bignum, so `2 ^ 1e9` was ~125 MB from one literal. Dynamic `String * Int` now
+  takes the same bounded repeat as the typed path, modulo refuses a non-numeric
+  operand, and exponentiation refuses a result whose bit length would exceed
+  the cap — on every target, including the typed path for `^`.
+
+- **Compile-host denial of service through two unbounded checker walks.**
+  `pathOf` and `collectNonNullPaths` recursed over the AST with no depth bound,
+  and both run on the outermost node over the whole structure, before the
+  per-node depth guard (100) can fire. A hostile-depth `_.a.a.a…` member chain
+  or `isNotNull(a) and isNotNull(a) and …` condition therefore overflowed the
+  native stack with a `RangeError` instead of the controlled "depth exceeded"
+  rejection, so `eloc -e '_.a.a…'` crashed the compiler. Both are now iterative,
+  and a chain of any length falls through to the existing guard. Well-formed
+  programs are unaffected: the same dotted path is built and the same non-null
+  paths collected.
+
+- **`extract()` emitted invalid JavaScript for U+2028 / U+2029.** Both are line
+  terminators inside a JavaScript regex literal, so a template carrying one
+  closed the `/…/` early and the emission was a `SyntaxError` — and under
+  `--execute`, or any `compile()`/`formats` path, the output is wrapped in
+  `new Function(…)`, so attacker-controlled source crashed the host at parse
+  time. Not injection — the closing `/` stays escaped — but it breaks the
+  "always emits valid code" contract. Both are now spelled as `\u` escapes,
+  which match the same character. JavaScript only; the other three carry them
+  as ordinary data.
+
 ## [1.2.3] - 2026-11-07
 
 A security release. Four issues were reported under coordinated disclosure by
