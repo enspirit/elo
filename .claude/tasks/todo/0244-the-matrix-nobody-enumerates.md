@@ -384,6 +384,67 @@ Two narrower rules are real:
   target. `sql-prelude-consistency.unit.test.ts` already checks the SQL helpers
   *exist*; nothing checks they *bite*.
 
+### H9. Dispatch coverage: what does the corpus never compile?
+
+Added after H0 shipped, because building H0 kept running into the same wall
+from a different direction each time.
+
+**Every gate and every acceptance assertion only sees code that something
+compiled.** Three times on this branch a check was green not because the
+emitter was right but because nothing reached it:
+
+- the typed `at()` escape — no fixture indexed a list with anything but a
+  literal, so the emitter holding it was unreachable (0245);
+- the `__proto__` object-literal key — no fixture ever built such an object
+  (0245);
+- `#` in an `extract()` template — no fixture had one (0246).
+
+Each was found by accident, one at a time. The set of them is enumerable.
+
+**Measured.** Instrumenting `StdLib.emit` to record signature keys while
+compiling every fixture line, plain and annotated, against the JavaScript
+binding's `signatureKeys()`:
+
+| | |
+|---|---|
+| signatures the JS binding declares | **314** |
+| signatures the corpus reaches | 212 |
+| **never compiled by any fixture** | **102** |
+
+A third of the emitted surface is never compiled. And the unreached list is
+not a tail of exotica — it contains
+
+```
+fetch:any,array   fetch:any,fn   fetch:any,object   fetch:any,string
+deepMerge:any,any
+```
+
+that is, the **dynamic paths of the functions that have produced CVEs**.
+`fetch`'s dynamic forms, where the c0rydoras prototype-chain escape lived, are
+reached by no fixture at all.
+
+**The item**: record the signature keys dispatched while compiling the corpus,
+diff against `signatureKeys()`, and fail on anything unreached that is not on
+an explicit exception list with a reason. Same idiom as
+`registry-consistency.unit.test.ts`, which already pins *declared* against
+*emittable*; this adds the third direction, *exercised*. Some of the 102 are
+genuinely unreachable (`String:null`, `Interval:interval`) and belong on the
+list with a sentence; the rest are fixtures someone has to write.
+
+- **Catches**: nothing directly — it is a meta-check. What it does is make
+  every *other* item in this list actually apply to the whole stdlib, which on
+  today's numbers means a third more of it.
+- **Cost**: small to build, and the triage of 102 entries is the real work.
+- **Compounds with H1.** 30 of the 102 are `any`-bearing signatures, which the
+  force-dynamic axis reaches by construction. Sequence them: measure with H9,
+  build H1, re-measure, and whatever is left is a genuine fixture gap rather
+  than a mode gap.
+
+The reason to put it near the front is method rather than coverage. Both bugs
+in 0246 were found by *enumerating what the harness must allow* and reading
+the list — not by running anything. That method has now paid twice, and H9 is
+the next list nobody has read.
+
 ### H7. Linting the *compiler source* — "is it a possibility?"
 
 The question had two readings and they land very differently. Linting the
@@ -471,16 +532,21 @@ never the person who introduces one of these.
 | ~~2~~ | ~~H0 extended: Ruby `Ripper`~~ | **done** — the interpolation class, seen red | small |
 | ~~3~~ | ~~H0 extended: Python `ast`~~ | **done** — the dunder vocabulary, seen red | small |
 | ~~4~~ | ~~H8 (audit the exempt helper region)~~ | **done once** — found the `pSchema` bug | small |
-| 5 | H8b (keep the helper region audited) | the rest of §1.2, continuously | medium |
-| 6 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3, *earlier* than H0 does | tiny |
-| 7 | H4 (hostile shapes) | C1 + 3 reports | small |
-| 8 | H0 moved inside `compile()` | the same, fail-closed, for users too | medium |
-| 9 | H1 (force-dynamic axis) | B2 + the whole class | medium |
-| 10 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
-| 11 | H6a (bounded-primitive table) | §1.3 permanently | medium |
-| 12 | H5 (lying inputs) | §1.4 as a property, not a shape | medium |
-| 13 | H0 extended: SQL | the two SQL injections — no parser in reach | unknown |
-| 14 | branded `Code` type | authoring ergonomics only | large, probably skip |
+| **5** | **H9 (dispatch coverage)** | nothing directly — makes every other item apply to 102 more signatures | small + triage |
+| 6 | H1 (force-dynamic axis) | B2 + the whole class, and ~30 of H9's 102 | medium |
+| 7 | H6a (bounded-primitive table) | §1.3 permanently | medium |
+| 8 | H8b (keep the helper region audited) | the rest of §1.2, continuously | medium |
+| 9 | H4 (hostile shapes) | C1 + 3 reports | small |
+| 10 | H7 rules 1–2 (grep test) | A1, 1.2.3 #2/#3, *earlier* than H0 does | tiny |
+| 11 | H0 moved inside `compile()` | the same, fail-closed, for users too | medium |
+| 12 | H3 (hostile values, gated by H0) | the residue of §1.1 | medium |
+| 13 | H5 (lying inputs) | §1.4 as a property, not a shape | medium |
+| 14 | H0 extended: SQL | the two SQL injections — no parser in reach | unknown |
+| 15 | branded `Code` type | authoring ergonomics only | large, probably skip |
+
+H9 moved to the front after the measurement above: it is the cheapest item
+that increases what every other item can see, and the three coverage holes
+found by accident on this branch are all instances of what it enumerates.
 
 ### H8. The exempt helper region has to be audited, because the gate cannot
 
