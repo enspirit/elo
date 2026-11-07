@@ -1,0 +1,37 @@
+# The bounds on the primitives actually fire, on every target.
+#
+# `test/unit/bounded-primitives.unit.test.ts` checks that each path through a
+# bounded operation *calls* its helper. That is the half that catches the bug
+# Elo keeps having — a path that spells the native operator instead. It cannot
+# check the other half: that the helper then refuses a large input rather than
+# merely being on the call stack. A bound nobody has watched refuse something
+# is a bound nobody knows works.
+#
+# Most of that coverage already existed, in repeat-bound, pad-bound and
+# arith-string-op-bounds. These are the cells it did not reach: the array index
+# a `patch` grows to (bounded in 1.2.3, never asserted), and the padding bounds
+# on the *dynamic* path, where the operand types are not statically known.
+#
+# SQL has no lambdas, so assertFails cannot be written there; the SQL bounds
+# live in the prelude and are checked by sql-prelude-consistency plus the
+# emission test. That asymmetry is the reason this file has no .expected.sql.
+
+# The array a patch grows to reach an index is capped. 1.2.3 made the fill one
+# bounded concatenation — a 200k index went from minutes to milliseconds — but
+# nothing asserted the cap refuses a larger one.
+assert(patch([], .2, 7) == [null, null, 7])
+assert(assertFails(fn( ~> patch([], .20000000, 1) )))
+assert(assertFails(fn( ~> patch({a: []}, .a.20000000, 1) )))
+
+# Padding is bounded on the dynamic path too, not only where the length is a
+# literal the checker can see.
+assert((let f = fn( s, n ~> padStart(s, n, '-') ) in f('x', 3)) == '--x')
+assert((let f = fn( s, n ~> padEnd(s, n, '-') ) in f('x', 3)) == 'x--')
+assert((let f = fn( s, n ~> padStart(s, n, '-') ) in assertFails(fn( ~> f('x', 10000001) ))))
+assert((let f = fn( s, n ~> padEnd(s, n, '-') ) in assertFails(fn( ~> f('x', 10000001) ))))
+
+# The at() guard answers null rather than reaching a host member, for an index
+# that is not an integer at all — which only the dynamic path can produce.
+assert((let f = fn( xs, i ~> at(xs, i) ) in isNull(f([1, 2], 'x'))) == true)
+assert((let f = fn( xs, i ~> at(xs, i) ) in isNull(f('notalist', 0))) == true)
+assert((let f = fn( xs, i ~> at(xs, i) ) in f([1, 2], 1)) == 2)
