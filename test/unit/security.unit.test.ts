@@ -20,8 +20,9 @@ import { MAX_STRING_LENGTH } from '../../src/runtime';
  *   DateTime.fromISO(''+process.exit(1)+'')
  * which evaluates process.exit(1) as part of the return expression.
  *
- * The fix uses JSON.stringify (JS/Ruby) and single-quote doubling (SQL) so
- * the malicious payload stays inside the string boundary.
+ * The fix uses JSON.stringify (JS), escapeRubyDQ (Ruby) and single-quote
+ * doubling (SQL) so the malicious payload stays inside the string boundary.
+ * Ruby needs more than JSON.stringify: see the `#{}` interpolation suite below.
  */
 describe('Security - Literal injection prevention', () => {
 
@@ -150,6 +151,78 @@ describe('Security - Literal injection prevention', () => {
     it('single-quote injection in duration_literal', () => {
       assertNoInjection(compileToJavaScript(durationLiteral(sqInjection)));
     });
+  });
+});
+
+/**
+ * Security: Ruby double-quoted string interpolation in temporal literals is a
+ * code-execution sink distinct from the quote-breakout above.
+ *
+ * The temporal emitters used JSON.stringify, which escapes `\`, `"` and control
+ * characters but NOT `#`. Ruby evaluates `#{...}` (and `#@ivar`, `#$global`)
+ * inside a double-quoted string, so a value reaching dateLiteral() /
+ * dateTimeLiteral() / durationLiteral() through the compiler AST API — e.g.
+ * `2024-01-01#{`id`}` — executed an arbitrary shell command when the emitted
+ * `Date.parse("...")` ran under the standard prelude (require 'date'; require
+ * 'active_support/all'). JS/Python/SQL embed the same value as an inert string
+ * (no `#{}` semantics), so this is Ruby-specific — the classic target divergence.
+ *
+ * The fix routes temporal values through escapeRubyDQ, exactly as stringLiteral
+ * and guard labels already do, so `#` is escaped and no interpolation can fire.
+ */
+describe('Security - Ruby temporal literal interpolation (RCE)', () => {
+  const codeExec = '2024-01-01#{`id`}';   // #{...} arbitrary code
+  const ivarRead = '2024-01-01#@x';        // #@ivar instance-variable read
+  const gvarRead = '2024-01-01#$x';        // #$global read
+  const cases: Array<[string, (v: string) => unknown, string]> = [
+    ['date', dateLiteral, 'Date.parse'],
+    ['datetime', dateTimeLiteral, 'DateTime.parse'],
+    ['duration', durationLiteral, 'ActiveSupport::Duration.parse'],
+  ];
+
+  for (const [name, make, call] of cases) {
+    it(`${name} literal escapes # so #{...} cannot interpolate`, () => {
+      const code = compileToRuby(make(codeExec) as any);
+      assert.ok(code.includes(call), `expected a ${call} emission: ${code}`);
+      // No live `#{`, `#@` or `#$` preceded by a non-backslash survives.
+      assert.doesNotMatch(code, /[^\\]#[{@$]/, `interpolation survived: ${code}`);
+      assert.ok(code.includes('\\#'), `# was not escaped: ${code}`);
+    });
+
+    it(`${name} literal escapes #@ivar and #$global`, () => {
+      assert.doesNotMatch(compileToRuby(make(ivarRead) as any), /[^\\]#@/);
+      assert.doesNotMatch(compileToRuby(make(gvarRead) as any), /[^\\]#\$/);
+    });
+  }
+
+  it('a plain temporal literal is unchanged', () => {
+    assert.strictEqual(compileToRuby(dateLiteral('2024-01-01')), `->(_) { Date.parse("2024-01-01") }`);
+  });
+});
+
+/**
+ * Security: extract() builds a Ruby regex *literal* `/.../`, and `escapeRegex`
+ * must neutralize `#` so the `#`-interpolation family cannot fire inside it.
+ *
+ * `#{code}` was already blocked (escapeRegex escapes `{`, so `#{` becomes `#\{`),
+ * but `#@ivar` / `#@@cvar` need no brace and `@` was left unescaped — so
+ * `extract(_, '#@x pre {{name}}')` emitted `/#@x pre (.*)$/`, interpolating the
+ * host instance variable @x at match time (target-divergent result / host read).
+ * Escaping `#` closes the whole family uniformly on every target's regex literal.
+ */
+describe('Security - extract regex # interpolation (Ruby)', () => {
+  it('#@ivar in an extract template is escaped, not interpolated', () => {
+    const code = compileToRuby(parse(`extract(_, '#@x pre {{name}}')`));
+    assert.doesNotMatch(code, /[^\\]#@/, `#@ivar interpolation survived: ${code}`);
+  });
+
+  it('#{...} in an extract template cannot interpolate', () => {
+    const code = compileToRuby(parse(`extract(_, 'a#{1}b {{name}}')`));
+    assert.doesNotMatch(code, /[^\\]#\{/, `#{} interpolation survived: ${code}`);
+  });
+
+  it('still extracts normally from a plain template', () => {
+    assert.doesNotThrow(() => compileToRuby(parse(`extract(_, 'From: {{name}}')`)));
   });
 });
 

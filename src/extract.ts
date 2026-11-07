@@ -83,7 +83,10 @@ export function parseExtractTemplate(template: string): ExtractTemplate {
  * so the pattern is safe for embedding in regex literals.
  */
 export function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // `#` is escaped so the pattern cannot interpolate inside a Ruby regex literal
+  // (`/#{code}/`, `/#@ivar/`, `/#$global/`); `\#` matches a literal `#` on every
+  // target, so this is a no-op for JS/Python/SQL matching.
+  return s.replace(/[.*+?^${}()|[\]\\#]/g, '\\$&')
     .replace(/\n/g, '\\n')
     .replace(/\t/g, '\\t')
     .replace(/\r/g, '\\r');

@@ -150,9 +150,12 @@ const rubyEmitter: Emitter = {
   boolLiteral: (value) => value.toString(),
   nullLiteral: 'nil',
   stringLiteral: (value) => `"${escapeRubyDQ(value)}"`,
-  dateLiteral: (value) => `Date.parse(${JSON.stringify(value)})`,
-  datetimeLiteral: (value) => `DateTime.parse(${JSON.stringify(value)})`,
-  durationLiteral: (value) => `ActiveSupport::Duration.parse(${JSON.stringify(value)})`,
+  // escapeRubyDQ, not JSON.stringify: a double-quoted Ruby string interpolates
+  // `#{...}`, `#@ivar` and `#$global`, and JSON.stringify does not escape `#`.
+  // A value reaching here through the AST API would otherwise execute code.
+  dateLiteral: (value) => `Date.parse("${escapeRubyDQ(value)}")`,
+  datetimeLiteral: (value) => `DateTime.parse("${escapeRubyDQ(value)}")`,
+  durationLiteral: (value) => `ActiveSupport::Duration.parse("${escapeRubyDQ(value)}")`,
 
   objectLiteral: (properties) =>
     `{${properties.map(p => `${assertSafeIdentifier(p.key, 'object_literal key')}: ${p.value}`).join(', ')}}`,
