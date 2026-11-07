@@ -21,6 +21,8 @@ export interface SQLCompileOptions {
    * itself.
    */
   types?: TypeAnnotations;
+  /** Dispatch every call as though no operand type were known. */
+  forceDynamic?: boolean;
 }
 
 /**
@@ -172,7 +174,7 @@ export function compileToSQL(expr: Expr, options?: SQLCompileOptions): string {
  */
 export function compileToSQLWithMeta(expr: Expr, options?: SQLCompileOptions): SQLCompileResult {
   // SQL allows undefined variables since they represent column names
-  const ir = transform(expr, new Map(), new Set(), { allowUndefinedVariables: true, types: options?.types });
+  const ir = transform(expr, new Map(), new Set(), { allowUndefinedVariables: true, types: options?.types, forceDynamic: options?.forceDynamic });
   const needsInput = usesInput(ir) || options?.asFunction;
   // SQL's prelude is installed in the database rather than emitted, so there
   // are no helpers to collect. See `isPreludePrependable`.

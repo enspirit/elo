@@ -24,6 +24,8 @@ export interface PythonCompileOptions {
    * itself.
    */
   types?: TypeAnnotations;
+  /** Dispatch every call as though no operand type were known. */
+  forceDynamic?: boolean;
 }
 
 /**
@@ -97,7 +99,7 @@ export function compileToPython(expr: Expr, options?: PythonCompileOptions): str
  * Compiles Elo expressions to Python with metadata about input usage.
  */
 export function compileToPythonWithMeta(expr: Expr, options?: PythonCompileOptions): PythonCompileResult {
-  const ir = transform(expr, new Map(), new Set(), { types: options?.types });
+  const ir = transform(expr, new Map(), new Set(), { types: options?.types, forceDynamic: options?.forceDynamic });
   const actuallyUsesInput = usesInput(ir);
   // Helpers are provided by the prelude (--prelude-only), not embedded
   // per-expression, so the set is collected and not read back.

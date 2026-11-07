@@ -88,6 +88,23 @@ export interface TransformOptions {
    * independent of the checker.
    */
   types?: TypeAnnotations;
+  /**
+   * Dispatch every call as though no operand type were known.
+   *
+   * The mirror of `types`, and the other end of the same axis: `--optimize`
+   * compiles with the most type information available, this with the least.
+   * The two must agree, because they are two emissions of one semantics — and
+   * where they have not agreed, the difference has been a security bug. The
+   * unbounded `String * Int` on Ruby, the `at()` sandbox escape, the `%` that
+   * ran `sprintf`: each lived in an `any` implementation whose typed twin was
+   * correct.
+   *
+   * Only the *dispatch* changes. Node types are still inferred, so an emitter
+   * that reads the shape of its operands — the element type SQL casts an empty
+   * array to, the branch types COALESCE needs — sees what it always saw. What
+   * changes is which stdlib implementation answers the call.
+   */
+  forceDynamic?: boolean;
 }
 
 /**
@@ -98,6 +115,7 @@ interface TransformContext {
   maxDepth: number;
   allowUndefinedVariables: boolean;
   types?: TypeAnnotations;
+  forceDynamic: boolean;
   /**
    * The name each bound Elo name is emitted under, innermost binding last.
    *
@@ -174,6 +192,7 @@ export function transform(
     maxDepth: options.maxDepth ?? DEFAULT_MAX_DEPTH,
     allowUndefinedVariables: options.allowUndefinedVariables ?? false,
     types: options.types,
+    forceDynamic: options.forceDynamic ?? false,
     renames: new Map(),
     inScope: new Map(),
     fieldBound: new Set(),
@@ -181,6 +200,17 @@ export function transform(
     typeShapes: new Map(),
   };
   return transformWithDepth(expr, env, defining, 0, ctx);
+}
+
+/**
+ * The operand types a call dispatches on.
+ *
+ * Normally what the transform inferred. Under `forceDynamic`, `any` — so every
+ * call is answered by the implementation that assumes nothing, which is the
+ * one the typed path never exercises. See `TransformOptions.forceDynamic`.
+ */
+function dispatchTypes(args: IRExpr[], ctx: TransformContext): EloType[] {
+  return ctx.forceDynamic ? args.map(() => Types.any) : args.map(inferType);
 }
 
 /**
@@ -428,7 +458,7 @@ function transformNode(
     case 'apply': {
       const fnIR = recurse(expr.fn);
       const argsIR = expr.args.map((arg) => recurse(arg));
-      const argTypes = argsIR.map(inferType);
+      const argTypes = dispatchTypes(argsIR, ctx);
 
       // Reject applying a plain variable that is not known to hold a function.
       // A lambda parameter is typed `any`, so applying one to itself — the
@@ -671,7 +701,11 @@ function transformBinaryOp(
 
   const resultType = eloTypeDefs.lookup(fn, [leftType, rightType]);
 
-  return irCall(fn, [leftIR, rightIR], [leftType, rightType], resultType);
+  // The static checks above — the array-multiplication refusal, the result
+  // type — keep the real types: `forceDynamic` is about which implementation
+  // answers the call, never about what Elo will accept. Refusing `[1] * n`
+  // statically is a security guard, and it stays on.
+  return irCall(fn, [leftIR, rightIR], dispatchTypes([leftIR, rightIR], ctx), resultType);
 }
 
 /**
@@ -694,7 +728,7 @@ function transformUnaryOp(
   }
   const resultType = eloTypeDefs.lookup(fn, [operandType]);
 
-  return irCall(fn, [operandIR], [operandType], resultType);
+  return irCall(fn, [operandIR], dispatchTypes([operandIR], ctx), resultType);
 }
 
 /**
@@ -805,7 +839,7 @@ function transformFunctionCall(
   }
 
   const argsIR = args.map((arg) => transformWithDepth(arg, env, defining, depth, ctx));
-  const argTypes = argsIR.map(inferType);
+  const argTypes = dispatchTypes(argsIR, ctx);
 
   // Check if the name is a variable holding a lambda
   const varType = env.get(name);

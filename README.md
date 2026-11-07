@@ -309,6 +309,10 @@ statements no host can run as an expression.
 - `--strict` - Also report anything the checker cannot type (implies `--typecheck`)
 - `--input-type <type>` - Declare the type of `_` (implies `--typecheck`)
 - `--optimize` - Compile with the checker's types (implies `--typecheck`)
+- `--force-dynamic` - The opposite of `--optimize`: compile as though no
+  operand type were known, so every call takes the runtime dispatcher. The two
+  must answer the same; a difference is a bug in Elo, and Elo's own suite runs
+  the whole corpus through both
 - `-f, --file <path>` - Output to file instead of stdout
 - `-h, --help` - Show help message
 

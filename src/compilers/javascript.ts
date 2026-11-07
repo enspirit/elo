@@ -27,6 +27,8 @@ export interface JavaScriptCompileOptions {
    * itself.
    */
   types?: TypeAnnotations;
+  /** Dispatch every call as though no operand type were known. */
+  forceDynamic?: boolean;
 }
 
 /**
@@ -64,7 +66,7 @@ export function compileToJavaScript(expr: Expr, options?: JavaScriptCompileOptio
  * The usesInput field indicates whether _ is actually referenced.
  */
 export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptCompileOptions): JavaScriptCompileResult {
-  const ir = transform(expr, new Map(), new Set(), { types: options?.types });
+  const ir = transform(expr, new Map(), new Set(), { types: options?.types, forceDynamic: options?.forceDynamic });
   const actuallyUsesInput = usesInput(ir);
   const requiredHelpers = new Set<string>();
   const code = emit(ir, jsEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);

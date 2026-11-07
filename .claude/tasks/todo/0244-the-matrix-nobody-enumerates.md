@@ -532,8 +532,8 @@ never the person who introduces one of these.
 | ~~2~~ | ~~H0 extended: Ruby `Ripper`~~ | **done** — the interpolation class, seen red | small |
 | ~~3~~ | ~~H0 extended: Python `ast`~~ | **done** — the dunder vocabulary, seen red | small |
 | ~~4~~ | ~~H8 (audit the exempt helper region)~~ | **done once** — found the `pSchema` bug | small |
-| **5** | **H9 (dispatch coverage)** | nothing directly — makes every other item apply to 102 more signatures | small + triage |
-| 6 | H1 (force-dynamic axis) | B2 + the whole class, and ~30 of H9's 102 | medium |
+| ~~5~~ | ~~H9 (dispatch coverage)~~ | **done** — 78→50 unreached on JS | small + triage |
+| ~~6~~ | ~~H1 (force-dynamic axis)~~ | **done** — found 2 live bugs, see 0248 | medium |
 | 7 | H6a (bounded-primitive table) | §1.3 permanently | medium |
 | 8 | H8b (keep the helper region audited) | the rest of §1.2, continuously | medium |
 | 9 | H4 (hostile shapes) | C1 + 3 reports | small |

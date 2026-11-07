@@ -56,6 +56,7 @@ interface Options {
    * schema becomes a typed operation instead of a runtime dispatcher.
    */
   optimize?: boolean;
+  forceDynamic?: boolean;
 }
 
 function parseArgs(args: string[]): Options {
@@ -117,6 +118,10 @@ function parseArgs(args: string[]): Options {
         // Strict without checking would have nothing to be strict about.
         options.strict = true;
         options.typecheck = true;
+        break;
+
+      case '--force-dynamic':
+        options.forceDynamic = true;
         break;
 
       case '--optimize':
@@ -193,6 +198,10 @@ Options:
                             instead of a runtime dispatcher. Refuses to
                             annotate a program the checker reported on
                             (implies --typecheck)
+  --force-dynamic           The opposite of --optimize: compile as though no
+                            operand type were known, so every call takes the
+                            runtime dispatcher. The two must answer the same;
+                            a difference between them is a bug in Elo
   -f, --file <path>         Output to file instead of stdout
   -v, --version             Show version number
   -h, --help                Show this help message
@@ -241,6 +250,8 @@ interface CompileOptions {
   ast?: Expr;
   /** The checker's types, keyed on the nodes of `ast`. */
   types?: TypeAnnotations;
+  /** Dispatch every call as though no operand type were known. */
+  forceDynamic?: boolean;
   /** What the file's header declares — its imports and type prelude — which scopes every line. */
   scope?: LoadedProgram;
   /** The file the source came from, so a refusal in it names the file. */
@@ -250,7 +261,7 @@ interface CompileOptions {
 }
 
 function compile(source: string, target: Target, options: CompileOptions = {}): string {
-  const { includePrelude = false, execute = false, stripGuards = false, types } = options;
+  const { includePrelude = false, execute = false, stripGuards = false, types, forceDynamic } = options;
   // Reuse the checker's tree when there is one: the annotations are keyed on
   // node identity, so a second parse would produce a map that matches nothing.
   // Positions are recorded on the compile path too, and not only under
@@ -264,24 +275,24 @@ function compile(source: string, target: Target, options: CompileOptions = {}): 
   let code: string;
   switch (target) {
     case 'ruby': {
-      const result = compileToRubyWithMeta(ast, { execute, stripGuards, types });
+      const result = compileToRubyWithMeta(ast, { execute, stripGuards, types, forceDynamic });
       code = result.code;
       break;
     }
     case 'js': {
-      const result = compileToJavaScriptWithMeta(ast, { execute, stripGuards, types });
+      const result = compileToJavaScriptWithMeta(ast, { execute, stripGuards, types, forceDynamic });
       code = result.code;
       break;
     }
     case 'sql': {
       // SQL doesn't support execute option (no function wrapping)
       // and guards already throw an error, so stripGuards is not needed
-      const result = compileToSQLWithMeta(ast, { types });
+      const result = compileToSQLWithMeta(ast, { types, forceDynamic });
       code = result.code;
       break;
     }
     case 'python': {
-      const result = compileToPythonWithMeta(ast, { execute, stripGuards, types });
+      const result = compileToPythonWithMeta(ast, { execute, stripGuards, types, forceDynamic });
       code = result.code;
       break;
     }
@@ -421,6 +432,7 @@ function main() {
           firstLine: options.lines ? index + 1 : 1,
           // The annotations are keyed on AST node identity, so they only mean
           // anything against the tree the checker walked.
+          forceDynamic: options.forceDynamic,
           ...(options.optimize ? checked[index] : {}),
         });
       } catch (error) {

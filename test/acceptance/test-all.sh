@@ -29,7 +29,17 @@ echo ""
 
 # Test SQL
 echo "SQL Tests:"
-if ! "$SCRIPTS_DIR/test-sql.sh" "$TEST_DIR"; then
+# SQL is excluded from the force-dynamic axis, and not as a concession.
+# PostgreSQL resolves operators by the static types of their operands, so an
+# all-`any` compilation leaves it with nothing to resolve on: 19 fixtures fail
+# with "could not choose a best candidate operator". That is PostgreSQL
+# refusing an under-specified query, not Elo's dynamic path disagreeing with
+# its typed one — and SQL has no lambdas, so no Elo program can reach an
+# `any` operand there in the first place. The axis asks a question SQL cannot
+# be asked.
+if [ -n "${ELO_FORCE_DYNAMIC:-}" ]; then
+    echo "  ⊘ skipped - SQL resolves operators by static type; see test-all.sh"
+elif ! "$SCRIPTS_DIR/test-sql.sh" "$TEST_DIR"; then
     EXIT_CODE=1
 fi
 

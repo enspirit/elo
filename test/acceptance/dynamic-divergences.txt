@@ -1,0 +1,46 @@
+# Fixtures the force-dynamic axis cannot run yet, and why.
+#
+# `ELO_FORCE_DYNAMIC=1` recompiles the corpus with every call dispatched as
+# though no operand type were known — the opposite end of the axis from
+# `--optimize`. The two must answer the same, and these are the places where
+# they do not. Each line is a to-do, not an allowance: the list should shrink
+# to nothing.
+#
+# A divergence is marked REAL when it reproduces in ordinary Elo with a lambda
+# (a lambda parameter is typed `any`, so a real program can reach it), and
+# FORCED when only the all-`any` compilation reaches it. A FORCED one is not
+# therefore harmless — it is an `any` implementation nobody has ever run, which
+# is exactly what `dispatch-coverage` lists — but it is not reachable from
+# source today, so it is the weaker of the two.
+#
+# Written up as .claude/tasks/todo/0248. Format: one fixture basename per line.
+
+# REAL — String(x) on the dynamic path returns the *display* form, so a string
+# comes back quoted: String('hello') is "hello" typed and "'hello'" dynamic.
+# The `any` implementation is kString, which is the inspect helper.
+type-selectors
+
+# REAL, and worse than wrong: fetch(d, p) with an object path raises a host
+# TypeError ("path is not iterable") instead of an Elo failure, because the
+# dynamic fetch assumes a path array and cannot tell the object form from it.
+# The security page promises bad input yields a typed Elo error rather than an
+# uncaught native exception.
+datapath
+
+# FORCED — reaches Interval(any) with an argument the typed path would have
+# given a shape to. Interval:any is on the dispatch-coverage unreached list for
+# all four targets, so this is the first time it has ever run.
+interval-arithmetic
+
+# FORCED — concat(Array, Array) is a type error on the typed path and succeeds
+# on the dynamic one, so "it compiles" does not mean the same thing on both.
+concat
+
+# FORCED — typeOf and duration arithmetic through the all-any path on Ruby.
+typeOf-arithmetic
+temporal-duration
+
+# PRE-EXISTING, not a divergence: these two fail identically on main, under
+# every axis. The startOf/endOf timezone bug, tracked separately.
+temporal-startof-endof
+dynamic-ambiguous-dispatch

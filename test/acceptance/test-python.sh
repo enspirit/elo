@@ -7,6 +7,7 @@ set -e
 
 TEST_DIR="${1:-test/fixtures}"
 ELOC="./bin/eloc"
+SCRIPTS_DIR="$(cd "$(dirname "$0")" && pwd)"
 FAILED=0
 PASSED=0
 SKIPPED=0
@@ -20,10 +21,19 @@ PRELUDE=$($ELOC --prelude-only -t python)
 # to behave the same, not merely be smaller.
 ELO_OPTIMIZE="${ELO_OPTIMIZE:-}"
 
+# With ELO_FORCE_DYNAMIC=1, the fixture is recompiled with --force-dynamic:
+# the opposite end of the same axis as --optimize. Every call then takes the
+# runtime dispatcher, and the corpus has to answer exactly what it answers
+# with the types known. Where the two have disagreed, the difference has
+# been a security bug.
+ELO_FORCE_DYNAMIC="${ELO_FORCE_DYNAMIC:-}"
+
 # The code to run for one fixture.
 emit() {
     local file=$1
-    if [ -n "$ELO_OPTIMIZE" ]; then
+    if [ -n "$ELO_FORCE_DYNAMIC" ]; then
+        $ELOC -t python --lines -x --force-dynamic "${file%.expected.*}.elo" 2>/dev/null || true
+    elif [ -n "$ELO_OPTIMIZE" ]; then
         # A line the checker reported on is emitted unannotated and exits 1;
         # that is the documented refusal, not a test failure.
         $ELOC -t python --lines -x --optimize "${file%.expected.*}.elo" 2>/dev/null || true
@@ -35,9 +45,25 @@ emit() {
 # Files that require variables or always throw - cannot be executed standalone
 SKIP_FILES=("member-access" "variables" "fail")
 
+# Under ELO_FORCE_DYNAMIC, fixtures whose dynamic emission does not yet agree
+# with the typed one. Each is a to-do with a reason; see the file.
+DIVERGENCES=()
+if [ -n "$ELO_FORCE_DYNAMIC" ]; then
+    while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        DIVERGENCES+=("$line")
+    done < "$SCRIPTS_DIR/dynamic-divergences.txt"
+fi
+
 should_skip() {
     local file=$1
     local basename=$(basename "$file")
+    for skip in "${DIVERGENCES[@]}"; do
+        if [[ "$basename" == "$skip".* ]]; then
+            echo "  ⊘ $basename (skipped - known dynamic divergence)"
+            return 0
+        fi
+    done
     for skip in "${SKIP_FILES[@]}"; do
         if [[ "$basename" == "$skip"* ]]; then
             echo "  ⊘ $basename (skipped - requires variables)"
