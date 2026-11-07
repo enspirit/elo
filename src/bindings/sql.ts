@@ -398,11 +398,13 @@ export function createSQLBinding(): StdLib<string> {
   // String concatenation uses || in SQL
   sqlLib.register('add', [Types.string, Types.string], sqlBinaryOp('||'));
 
-  // String multiplication (repeat) uses REPEAT function in PostgreSQL
+  // String multiplication (repeat). elo_repeat bounds the result length by
+  // ELO_MAX_STRING_LENGTH, as kRepeat does on the other targets; bare REPEAT
+  // would let a short expression allocate an arbitrarily large string.
   sqlLib.register('mul', [Types.string, Types.int], (args, ctx) =>
-    `REPEAT(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
+    `elo_repeat(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`);
   sqlLib.register('mul', [Types.int, Types.string], (args, ctx) =>
-    `REPEAT(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`);
+    `elo_repeat(${ctx.emit(args[1])}, ${ctx.emit(args[0])})`);
 
   // List concatenation uses || in PostgreSQL (array concatenation). Appending
   // `[]` is the identity, which spares PostgreSQL an element type an empty
@@ -635,10 +637,12 @@ export function createSQLBinding(): StdLib<string> {
     `(LENGTH(${ctx.emit(args[0])}) = 0)`);
   sqlLib.register('isBlank', [Types.string], (args, ctx) =>
     `(LENGTH(TRIM(${ctx.emit(args[0])})) = 0)`);
+  // elo_lpad/elo_rpad bound the target length by ELO_MAX_STRING_LENGTH, as
+  // kPad does on the other targets.
   sqlLib.register('padStart', [Types.string, Types.int, Types.string], (args, ctx) =>
-    `LPAD(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+    `elo_lpad(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
   sqlLib.register('padEnd', [Types.string, Types.int, Types.string], (args, ctx) =>
-    `RPAD(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
+    `elo_rpad(${ctx.emit(args[0])}, ${ctx.emit(args[1])}, ${ctx.emit(args[2])})`);
 
   // Numeric functions
   sqlLib.register('abs', [Types.int], (args, ctx) => `ABS(${ctx.emit(args[0])})`);

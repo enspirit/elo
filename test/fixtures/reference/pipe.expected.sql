@@ -1,11 +1,11 @@
 CASE WHEN UPPER('hello') = 'HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN LOWER(TRIM('  HELLO  ')) = 'hello' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN LPAD('42', 5, '0') = '00042' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_lpad('42', 5, '0') = '00042' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN ABS(0 - 5) = 5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (CASE WHEN POSITION('world' IN 'hello world') > 0 THEN LEFT('hello world', POSITION('world' IN 'hello world') - 1) || 'elo' || SUBSTRING('hello world' FROM POSITION('world' IN 'hello world') + LENGTH('world')) ELSE 'hello world' END) = 'hello elo' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN UPPER('hello') = 'HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN LOWER(TRIM('  HELLO  ')) = 'hello' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN ABS(0 - 5) = 5 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN LPAD(UPPER('hello'), 10, '-') = '-----HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_lpad(UPPER('hello'), 10, '-') = '-----HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (SELECT x FROM (SELECT UPPER('hello') AS x) AS _let) = 'HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (SELECT x FROM (SELECT UPPER(TRIM('  hello  ')) AS x) AS _let) = 'HELLO' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

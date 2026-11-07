@@ -297,4 +297,36 @@ BEGIN
   RETURN result;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+-- String repeat and padding, bounded by ELO_MAX_STRING_LENGTH. The other
+-- targets cap these through kRepeat/kPad; bare REPEAT/LPAD/RPAD let a short
+-- expression ('a' * 1e9) build an arbitrarily large string on the backend.
+-- The bound is checked on the *result* length, before PostgreSQL allocates it.
+CREATE OR REPLACE FUNCTION elo_repeat(s TEXT, n INTEGER) RETURNS TEXT AS $$
+BEGIN
+  IF n <= 0 THEN RETURN ''; END IF;
+  IF LENGTH(s)::BIGINT * n > ${MAX_STRING_LENGTH} THEN
+    RAISE EXCEPTION 'String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings';
+  END IF;
+  RETURN REPEAT(s, n);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION elo_lpad(s TEXT, n INTEGER, pad TEXT) RETURNS TEXT AS $$
+BEGIN
+  IF n > ${MAX_STRING_LENGTH} THEN
+    RAISE EXCEPTION 'String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings';
+  END IF;
+  RETURN LPAD(s, n, pad);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION elo_rpad(s TEXT, n INTEGER, pad TEXT) RETURNS TEXT AS $$
+BEGIN
+  IF n > ${MAX_STRING_LENGTH} THEN
+    RAISE EXCEPTION 'String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings';
+  END IF;
+  RETURN RPAD(s, n, pad);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
 `;

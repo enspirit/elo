@@ -724,3 +724,87 @@ describe('Security - patch array bound & literal replacement (squ11z1)', () => {
     assert.doesNotMatch(code, /\.gsub\([^)]*,[^)]*\)/, `Ruby replaceAll still uses the backreference-interpreting 2-arg gsub: ${code}`);
   });
 });
+
+/**
+ * Security audit follow-up (siblings of the squ11z1 reports).
+ *
+ * The four squ11z1 fixes each belong to a class; sweeping the compiler for
+ * the same class turned up two more holes on targets the reporter did not
+ * probe. Both are fixed here with the same structural approach.
+ */
+
+/**
+ * [High] guard/check type AST-API code injection (Ruby).
+ *
+ * IRGuard.guardType is declared 'guard' | 'check', but the transform copied
+ * it from the AST unchecked and the Ruby emitter interpolated it into a
+ * single-quoted string: p_raise('${guardType}', ...). A guardType supplied
+ * through the compiler AST API — never through the parser, which only ever
+ * emits the two keywords — then broke out and injected Ruby. JS and Python
+ * JSON-encode it and were safe, but the fix validates the enum in the
+ * transform so every target is covered at the source.
+ */
+describe('Security - guard type AST-API injection (Ruby)', () => {
+  function poisonedGuardType(gt: string): any {
+    const ast: any = parse('guard(x | x > 0)');
+    let found = false;
+    (function walk(n: any) {
+      if (n && typeof n === 'object') {
+        if ('guardType' in n) { n.guardType = gt; found = true; }
+        for (const k of Object.keys(n)) walk(n[k]);
+      }
+    })(ast);
+    assert.ok(found, 'test setup: no guardType field to poison');
+    return ast;
+  }
+
+  it('Ruby rejects a non-enum guardType instead of injecting it', () => {
+    const ast = poisonedGuardType(`g'); raise('PWNED'); ('`);
+    assert.throws(() => compileToRuby(ast), /guard|Invalid/i);
+  });
+
+  it('every target rejects a non-enum guardType', () => {
+    for (const fn of [compileToRuby, compileToJavaScript, compileToPython]) {
+      assert.throws(() => fn(poisonedGuardType(`x'; y`)), /guard|Invalid/i);
+    }
+  });
+
+  it('still compiles legitimate guard and check', () => {
+    assert.doesNotThrow(() => compileToRuby(parse('guard(x | x > 0)')));
+    assert.doesNotThrow(() => compileToRuby(parse('let T = Int(n | n > 0) in T(5)')));
+  });
+});
+
+/**
+ * [Medium] SQL string repeat / padding not bounded.
+ *
+ * `s * n`, `padStart`, `padEnd` are capped by ELO_MAX_STRING_LENGTH on JS,
+ * Ruby and Python (kRepeat / kPad), and the security page says so. The SQL
+ * target emitted bare REPEAT / LPAD / RPAD, so a short expression could build
+ * an arbitrarily large string on the database backend — the same unbounded
+ * allocation class as the patch finding, on a shared service. The emitters now
+ * call bounded prelude helpers.
+ */
+describe('Security - SQL string repeat/pad allocation bound', () => {
+  it('repeat goes through the bounded helper, not bare REPEAT', () => {
+    const code = compileToSQL(parse(`'a' * 1000000000`));
+    assert.match(code, /elo_repeat\(/);
+    assert.doesNotMatch(code, /\bREPEAT\(/);
+  });
+
+  it('padStart/padEnd go through bounded helpers, not bare LPAD/RPAD', () => {
+    const lpad = compileToSQL(parse(`padStart('a', 1000000000, 'x')`));
+    const rpad = compileToSQL(parse(`padEnd('a', 1000000000, 'x')`));
+    assert.match(lpad, /elo_lpad\(/);
+    assert.doesNotMatch(lpad, /\bLPAD\(/);
+    assert.match(rpad, /elo_rpad\(/);
+    assert.doesNotMatch(rpad, /\bRPAD\(/);
+  });
+
+  it('the prelude bounds repeat/pad by ELO_MAX_STRING_LENGTH', () => {
+    assert.match(sqlPrelude, /FUNCTION elo_repeat/);
+    assert.match(sqlPrelude, /FUNCTION elo_lpad/);
+    assert.match(sqlPrelude, /FUNCTION elo_rpad/);
+    assert.match(sqlPrelude, new RegExp(String(MAX_STRING_LENGTH)));
+  });
+});

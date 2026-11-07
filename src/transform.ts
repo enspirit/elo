@@ -503,7 +503,15 @@ function transformNode(
     }
 
     case 'guard': {
-      // Transform guard expression
+      // Transform guard expression. guardType is an enum the parser only ever
+      // sets to 'guard' or 'check'; an AST-API caller could set anything, and
+      // the Ruby emitter interpolates it into a string literal, so validate it
+      // here — the one choke point that covers every target.
+      if (expr.guardType !== 'guard' && expr.guardType !== 'check') {
+        throw new Error(
+          `Invalid guard type: expected 'guard' or 'check', got ${JSON.stringify(expr.guardType)}`
+        );
+      }
       const constraintsIR = expr.constraints.map(c => ({
         label: c.label,
         condition: recurse(c.condition)
