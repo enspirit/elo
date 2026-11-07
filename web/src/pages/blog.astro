@@ -19,7 +19,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       </header>
 
       {posts.map((post) => (
-        <a href={`${base}/blog/${post.slug}`} class="blog-post-link">
+        <a href={`${base}/blog/${post.id}`} class="blog-post-link">
           <article class="blog-post-card">
             <h2>{post.data.title}</h2>
             <div class="post-meta">
