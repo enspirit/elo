@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The build only reads the tree; it never pushes, so the checkout
+          # token should not persist in .git/config for later steps to read.
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

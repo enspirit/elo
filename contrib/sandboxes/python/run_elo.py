@@ -67,8 +67,14 @@ def run_elo(src, data, *, cpu_s=1, mem_mb=512, wall_s=2, prelude=""):
 
 
 if __name__ == "__main__":
-    assert run_elo("(lambda _: _ * 2)", 21) == 42
-    assert run_elo("(lambda _: _.upper())", "hi") == "HI"
+    # Explicit checks rather than `assert`, so the self-test still runs under
+    # `python -O` (which strips assertions).
+    def _check(got, want):
+        if got != want:
+            raise SystemExit("python sandbox FAILED: expected %r, got %r" % (want, got))
+
+    _check(run_elo("(lambda _: _ * 2)", 21), 42)
+    _check(run_elo("(lambda _: _.upper())", "hi"), "HI")
     # A CPU-bound runaway is contained — by RLIMIT_CPU where supported, and by
     # the wall-clock timeout everywhere.
     try:

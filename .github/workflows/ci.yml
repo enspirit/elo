@@ -39,6 +39,10 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        # No step pushes back to the repo, so the checkout token does not need
+        # to linger in .git/config where a later step could read it.
+        persist-credentials: false
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -47,7 +51,9 @@ jobs:
         cache: 'npm'
 
     - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
+      # Third-party action pinned to a commit SHA (v1.338.0) rather than the
+      # mutable @v1 tag, so a compromised upstream tag cannot change what runs.
+      uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: false
