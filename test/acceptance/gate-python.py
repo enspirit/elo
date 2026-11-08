@@ -60,13 +60,17 @@ ALLOWED_NAMES = {
     'pUnion', 'pUnwrap',
     # Temporal helpers and the classes the prelude defines
     'EloDuration', 'EloInterval', '_dt', '_elo_dt',
+    # 0259 D1: NOW and TODAY read the declared zone through these, rather than
+    # `_dt.datetime.now()` inline, so the conversion lives in one place and
+    # the zone is its argument.
+    '_elo_now', '_elo_today',
     '_elo_start_of_day', '_elo_end_of_day',
     '_elo_start_of_week', '_elo_end_of_week',
     '_elo_start_of_month', '_elo_end_of_month',
     '_elo_start_of_quarter', '_elo_end_of_quarter',
     '_elo_start_of_year', '_elo_end_of_year',
     # Modules the prelude imports
-    'functools', 'math', 're',
+    'functools', 'math', 're', 'ZoneInfo',
     # Builtins the emitters call. Note what is absent: eval, exec, compile,
     # __import__, open, getattr, setattr, globals, locals, vars, dir, input,
     # breakpoint, type, object, super, memoryview.

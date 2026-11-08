@@ -22,6 +22,15 @@
  * window — see the security page.
  */
 export const DEFAULT_MAX_STRING_LENGTH = 10_000_000;
+/**
+ * The zone `NOW` and `TODAY` are read in when none is declared.
+ *
+ * UTC, because it is the only answer that needs nothing from the environment.
+ * The host's ambient zone is specifically *not* the default: it made the same
+ * program mean different things on two servers.
+ */
+export const DEFAULT_TIMEZONE = 'UTC';
+
 export const MAX_STRING_LENGTH: number = (() => {
   // Guard `process`: this module is bundled into the browser (the playground
   // compiles Elo in-page), where `process` is undefined. A bare reference would
@@ -64,6 +73,8 @@ export interface EloFailure extends Error {
  * Dependencies between helpers. If helper A uses helper B, A depends on B.
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
+  kNow: [],
+  kToday: ['kNow'],
   kRepeat: [],
   kMul: ['kRepeat'],
   kPad: [],
@@ -101,6 +112,18 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const JS_HELPERS: Record<string, string> = {
+  /* 0259 D1. NOW is the wall clock in the declared zone, labelled zone-free.
+     `setZone(tz)` converts the instant to that zone; the second `setZone`
+     with keepLocalTime relabels those wall-clock fields as UTC without moving
+     them, which is how every other Elo datetime is carried. Reading the
+     host's ambient clock instead is what made `hour(NOW)` and
+     `NOW - <literal>` disagree. */
+  kNow: `function kNow(tz) {
+  return DateTime.now().setZone(tz).setZone("utc", { keepLocalTime: true });
+}`,
+  kToday: `function kToday(tz) {
+  return kNow(tz).startOf('day');
+}`,
   kRepeat: `function kRepeat(s, n) {
   if (n <= 0) return "";
   if (s.length * n > ${MAX_STRING_LENGTH}) throw new Error("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings");
@@ -533,6 +556,8 @@ export const JS_HELPERS: Record<string, string> = {
  * These are embedded in compiled Ruby output when type definitions are used.
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  k_now: [],
+  k_today: ['k_now'],
   k_add: [],
   k_sub: [],
   k_round_to: [],
@@ -566,6 +591,18 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  /* 0259 D1. `change(offset: 0)` keeps the wall-clock fields and drops the
+     offset, which is how a zone-free Elo datetime is carried on Ruby. Written
+     as an expression over `ActiveSupport::TimeZone[...]` rather than by
+     assigning `Time.zone`, because a global assignment is both shared mutable
+     state and rejected by the Ruby grammar gate. The sub-second survives. */
+  k_now: `def k_now(tz)
+  Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0)
+end`,
+  /* TODAY is a Date, as `Date.today` was, so `TODAY + P1D` keeps working. */
+  k_today: `def k_today(tz)
+  k_now(tz).to_date
+end`,
   // A class test in a helper is written `Klass === v`, never `v.is_a?(Klass)`.
   //
   // `ActiveSupport::Duration#is_a?` delegates to the Duration's numeric value,
@@ -908,6 +945,8 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kParseDatetime: ['_elo_dt_helpers'],
   kParseDuration: ['_elo_duration', '_EloInterval'],
   _elo_dt_helpers: ['_import_datetime', '_elo_duration'],
+  _elo_now: ['_import_datetime', '_import_zoneinfo', '_elo_dt_helpers'],
+  _elo_today: ['_elo_now'],
   _EloInterval: ['_import_collections'],
   _elo_duration: ['_import_re'],
   // Parser helpers
@@ -942,6 +981,7 @@ export const PY_HELPERS: Record<string, string> = {
   _import_datetime: `import datetime as _dt`,
   _import_re: `import re`,
   _import_collections: `from collections import namedtuple`,
+  _import_zoneinfo: `from zoneinfo import ZoneInfo`,
   _EloInterval: `EloInterval = namedtuple('EloInterval', ['start', 'end'])`,
   // A duration keeps its year and month components apart from its time
   // component, because they are not a number of milliseconds: a month is a
@@ -1013,6 +1053,18 @@ export const PY_HELPERS: Record<string, string> = {
     def in_months(self): return self.to_ms() / (30.4375 * 86400000.0)
     def in_quarters(self): return self.to_ms() / (91.3125 * 86400000.0)
     def in_years(self): return self.to_ms() / (365.25 * 86400000.0)`,
+  /* 0259 D1. NOW is the wall clock in the declared zone, with the tzinfo
+     dropped so the value is naive like every other Elo datetime on Python.
+     `datetime.now()` read the host's ambient zone instead. The zone arrives
+     as an argument so it belongs to the program, not to this prelude -- which
+     is installed once, separately from any compile. */
+  _elo_now: `def _elo_now(tz):
+    return _dt.datetime.now(ZoneInfo(tz)).replace(tzinfo=None)`,
+  /* TODAY is midnight of that wall clock's date, built through _elo_dt so it
+     is the same kind of value a date literal is. */
+  _elo_today: `def _elo_today(tz):
+    n = _elo_now(tz)
+    return _elo_dt(n.year, n.month, n.day)`,
   _elo_dt_helpers: `def _elo_shift_months(dt, n):
     if not n: return dt
     import calendar

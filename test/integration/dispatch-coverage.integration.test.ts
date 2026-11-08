@@ -82,7 +82,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'eq:bool,int': 'cross-type',
     'eq:bool,string': 'cross-type',
     'eq:date,datetime': 'cross-type',
-    'eq:datetime,date': 'cross-type',
     'eq:float,bool': 'cross-type',
     'eq:float,string': 'cross-type',
     'eq:int,bool': 'cross-type',
@@ -170,7 +169,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     // cross-type
     'eq:int,float': 'cross-type',
     'gt:int,float': 'cross-type',
-    'gte:float,int': 'cross-type',
     'gte:int,float': 'cross-type',
     'lt:int,float': 'cross-type',
     'lte:float,int': 'cross-type',
@@ -202,7 +200,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
   sql: {
     // dynamic
     'Bool:any': 'dynamic',
-    'Date:any': 'dynamic',
     'Datetime:any': 'dynamic',
     'Duration:any': 'dynamic',
     'Float:any': 'dynamic',

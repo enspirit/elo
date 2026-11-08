@@ -1,5 +1,32 @@
 # The temporal model, decided
 
+> **Step 1 is done** (`SPEC`/`IMPL`/`SPEC`/`FIX`/`DOC`, five commits).
+> `--timezone` exists on `eloc` and `elo`; `NOW`/`TODAY` read the declared zone
+> through one helper per target, with the zone as its *argument* so it travels
+> with the program; the zone axis runs the temporal corpus in three zones; the
+> `one-clock.elo` fixture is green on four targets in four zones. Measured:
+> with the host in UTC, all four targets answer the same minute-of-day for
+> every declared zone. Closes `ideation/0180` and `0255` §3 and §5.
+>
+> Two bugs were found on the way and fixed in their own commits:
+> `Date(datetime)` was the identity on Ruby (`todo/0260` §2), and
+> `date_trunc` resolved to PostgreSQL's `timestamptz` overload, so a zone-free
+> SQL literal acquired the session's zone — found by the zone axis on its first
+> run, red only outside UTC, and in the corpus unnoticed since `0240`.
+>
+> **Next: step 2**, the inbound boundary (`D7`).
+>
+> One correction to `D2` from doing it: "the zone appears exactly once per
+> emitted program" was the wrong invariant. Python's and SQL's helpers live in
+> a prelude installed once, separately from any compile, so a zone held inside
+> a helper would belong to the *deployment* — and a program compiled for one
+> zone could run against a prelude built for another with nothing to detect it.
+> The zone is therefore an **argument** to the helper, which is both uniform
+> across the four targets and closer to what `$.timezone` needs. The invariant
+> that survives, and is machine-checked: **no emitter spells the conversion
+> itself; the zone reaches the emission only as an argument to the one clock
+> helper.**
+
 > This is the decision record for Elo's handling of dates and times. It
 > supersedes the open questions in `analyzed/0256-*` and
 > `analyzed/0258-*`, which stay as the evidence behind it.

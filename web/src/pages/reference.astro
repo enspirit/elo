@@ -105,12 +105,36 @@ import Footer from '../components/Footer.astro';
         </div>
         <h3>Dates &amp; Times</h3>
         <p>
-          A date or a datetime is a <strong>zone-free wall clock</strong>: it
-          means the time it spells, and the timezone of the machine running the
-          compiled code never moves it. So the same expression answers the same
-          thing on a server in Brussels, in a browser in Los Angeles and in
-          PostgreSQL. <code>NOW</code> and <code>TODAY</code> are the exception,
-          and read the host's local clock — that is what they are for.
+          <strong>Elo has no instants.</strong> A date or a datetime is a
+          <strong>zone-free wall clock</strong>: it means the time it spells,
+          and the timezone of the machine running the compiled code never moves
+          it. Arithmetic on it is calendar arithmetic with no daylight saving,
+          so a day is always a day and two dates always differ by a whole
+          number of days. The same expression answers the same thing on a
+          server in Brussels, in a browser in Los Angeles and in PostgreSQL.
+        </p>
+        <p>
+          A timezone is used in exactly one place, and it is
+          <strong>declared</strong> rather than inherited from whichever machine
+          happens to be running: <code>NOW</code> and <code>TODAY</code> read
+          the clock in the zone given by
+          <code>eloc --timezone Europe/Brussels</code>, which defaults to
+          <code>UTC</code>. All four targets read it identically.
+        </p>
+        <p>
+          Three consequences worth knowing before you meet them.
+          <strong><code>P1D</code> is always <code>PT24H</code></strong> — no
+          wall clock ever repeats or skips, so an expert expecting these to
+          differ should know that here they do not.
+          <strong>Elapsed real time across a daylight-saving transition is not
+          expressible</strong>: a shift from
+          <code>D2026-03-08T01:00:00</code> to
+          <code>D2026-03-08T04:00:00</code> lasted two real hours in Los
+          Angeles, and Elo answers three — that arithmetic belongs in a library
+          that knows the zone's rules. And
+          <strong><code>+ P1M - P1M</code> is not the identity</strong>:
+          <code>D2026-01-31 + P1M</code> clamps to <code>D2026-02-28</code>,
+          which is what you want, and clamping has no inverse.
         </p>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Date Literal</div>

@@ -377,11 +377,18 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   });
 
   // Temporal nullary functions
+  // 0259 D1/D2: the clock is read in the *declared* zone, passed to the one
+  // prelude helper that converts it. `_dt.datetime.now()` read the host's
+  // ambient zone. A Python string literal does not interpolate, and
+  // assertSafeTimezone has already excluded the quote and the backslash.
   pyLib.register('today', [], (_args, ctx) => {
-    ctx.requireHelper('_elo_dt_helpers');
-    return `_elo_dt(_dt.datetime.now().year, _dt.datetime.now().month, _dt.datetime.now().day)`;
+    ctx.requireHelper('_elo_today');
+    return `_elo_today("${ctx.timezone}")`;
   });
-  pyLib.register('now', [], (_args, _ctx) => `_dt.datetime.now()`);
+  pyLib.register('now', [], (_args, ctx) => {
+    ctx.requireHelper('_elo_now');
+    return `_elo_now("${ctx.timezone}")`;
+  });
   pyLib.register('bot', [], (_args, ctx) => {
     ctx.requireHelper('_elo_dt_helpers');
     return `_elo_dt(1, 1, 1)`;

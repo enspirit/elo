@@ -4,8 +4,8 @@
 (lambda _: kAssert(((lambda a: min(a) if a else None)([]) is None)))(None)
 
 
-(lambda _: kAssert(kTypeOf((lambda a: min(a) if a else None)([_elo_start_of_day(_dt.datetime.now()), kSub(_elo_start_of_day(_dt.datetime.now()), EloDuration.from_iso("P1D"))])) == "DateTime"))(None)
-(lambda _: kAssert(kEq((lambda a: min(a) if a else None)([_elo_start_of_day(_dt.datetime.now()), kSub(_elo_start_of_day(_dt.datetime.now()), EloDuration.from_iso("P1D"))]), kSub(_elo_start_of_day(_dt.datetime.now()), EloDuration.from_iso("P1D")))))(None)
+(lambda _: kAssert(kTypeOf((lambda a: min(a) if a else None)([_elo_start_of_day(_elo_now("UTC")), kSub(_elo_start_of_day(_elo_now("UTC")), EloDuration.from_iso("P1D"))])) == "DateTime"))(None)
+(lambda _: kAssert(kEq((lambda a: min(a) if a else None)([_elo_start_of_day(_elo_now("UTC")), kSub(_elo_start_of_day(_elo_now("UTC")), EloDuration.from_iso("P1D"))]), kSub(_elo_start_of_day(_elo_now("UTC")), EloDuration.from_iso("P1D")))))(None)
 
 
 

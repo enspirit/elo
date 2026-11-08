@@ -1,5 +1,16 @@
 # Two bugs the temporal probe found, neither about time
 
+> **§2 is fixed** — `Date(datetime)` was the identity on Ruby because
+> `DateTime` subclasses `Date`, so the coercion's `when Date` arm matched it and
+> returned it with the time-of-day intact. Fixed by ordering
+> `when DateTime, Time; v.to_date` first; measured red in all four zones and
+> green in all four after. `to_date` went into the Ruby gate's
+> `ALLOWED_METHODS` in the same commit, which is the review that gate exists to
+> force.
+>
+> **§1 is still open**: the SQL emitter drops parentheses around a
+> same-precedence right operand.
+
 > Found while measuring the assertions for `todo/0259` on four targets under
 > four host zones. Both are zone-independent, both are red under `TZ=UTC`, and
 > neither needs any of `0259`'s decisions. Ordinary bug fixes.

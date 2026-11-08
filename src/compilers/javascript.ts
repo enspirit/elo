@@ -4,8 +4,8 @@ import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createJavaScriptBinding, isNativeBinaryOp, UTC_ZONE } from '../bindings/javascript';
-import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
-import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { JS_HELPERS, JS_HELPER_DEPS, DEFAULT_TIMEZONE } from '../runtime';
+import { assertSafeIdentifier, assertSafeDatapathSegment, assertSafeTimezone } from './_validate';
 import { Emitter, emit, resolveHelpers } from './_emit';
 
 /**
@@ -29,6 +29,14 @@ export interface JavaScriptCompileOptions {
   types?: TypeAnnotations;
   /** Dispatch every call as though no operand type were known. */
   forceDynamic?: boolean;
+  /**
+   * The zone `NOW` and `TODAY` are read in, as an IANA name. Defaults to
+   * `UTC`.
+   *
+   * 0259 D2: this is the *default* for a zone that will eventually arrive at
+   * runtime as `$.timezone`. It reaches the emission through `kZone` alone.
+   */
+  timezone?: string;
 }
 
 /**
@@ -69,7 +77,8 @@ export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptComp
   const ir = transform(expr, new Map(), new Set(), { types: options?.types, forceDynamic: options?.forceDynamic });
   const actuallyUsesInput = usesInput(ir);
   const requiredHelpers = new Set<string>();
-  const code = emit(ir, jsEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);
+  const zone = assertSafeTimezone(options?.timezone ?? DEFAULT_TIMEZONE);
+  const code = emit(ir, jsEmitter, { stripGuards: options?.stripGuards || false, timezone: zone }, requiredHelpers);
 
   const helperDefs = resolveHelpers(requiredHelpers, JS_HELPER_DEPS)
     .map(name => JS_HELPERS[name].replace(/\n\s*/g, ' '))

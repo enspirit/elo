@@ -57,6 +57,13 @@ interface Options {
    */
   optimize?: boolean;
   forceDynamic?: boolean;
+  /**
+   * The IANA zone NOW and TODAY are read in. Defaults to UTC.
+   *
+   * 0259 D2: a compile-time default for a value that will later arrive at
+   * runtime as `$.timezone`.
+   */
+  timezone?: string;
 }
 
 function parseArgs(args: string[]): Options {
@@ -120,6 +127,9 @@ function parseArgs(args: string[]): Options {
         options.typecheck = true;
         break;
 
+      case '--timezone':
+        options.timezone = args[++i];
+        break;
       case '--force-dynamic':
         options.forceDynamic = true;
         break;
@@ -198,6 +208,9 @@ Options:
                             instead of a runtime dispatcher. Refuses to
                             annotate a program the checker reported on
                             (implies --typecheck)
+  --timezone <IANA>         The zone NOW and TODAY are read in, e.g.
+                            Europe/Brussels. Defaults to UTC. Dates and
+                            datetimes themselves carry no zone.
   --force-dynamic           The opposite of --optimize: compile as though no
                             operand type were known, so every call takes the
                             runtime dispatcher. The two must answer the same;
@@ -252,6 +265,13 @@ interface CompileOptions {
   types?: TypeAnnotations;
   /** Dispatch every call as though no operand type were known. */
   forceDynamic?: boolean;
+  /**
+   * The IANA zone NOW and TODAY are read in. Defaults to UTC.
+   *
+   * 0259 D2: a compile-time default for a value that will later arrive at
+   * runtime as `$.timezone`.
+   */
+  timezone?: string;
   /** What the file's header declares — its imports and type prelude — which scopes every line. */
   scope?: LoadedProgram;
   /** The file the source came from, so a refusal in it names the file. */
@@ -261,7 +281,7 @@ interface CompileOptions {
 }
 
 function compile(source: string, target: Target, options: CompileOptions = {}): string {
-  const { includePrelude = false, execute = false, stripGuards = false, types, forceDynamic } = options;
+  const { includePrelude = false, execute = false, stripGuards = false, types, forceDynamic, timezone } = options;
   // Reuse the checker's tree when there is one: the annotations are keyed on
   // node identity, so a second parse would produce a map that matches nothing.
   // Positions are recorded on the compile path too, and not only under
@@ -275,24 +295,24 @@ function compile(source: string, target: Target, options: CompileOptions = {}): 
   let code: string;
   switch (target) {
     case 'ruby': {
-      const result = compileToRubyWithMeta(ast, { execute, stripGuards, types, forceDynamic });
+      const result = compileToRubyWithMeta(ast, { execute, stripGuards, types, forceDynamic, timezone });
       code = result.code;
       break;
     }
     case 'js': {
-      const result = compileToJavaScriptWithMeta(ast, { execute, stripGuards, types, forceDynamic });
+      const result = compileToJavaScriptWithMeta(ast, { execute, stripGuards, types, forceDynamic, timezone });
       code = result.code;
       break;
     }
     case 'sql': {
       // SQL doesn't support execute option (no function wrapping)
       // and guards already throw an error, so stripGuards is not needed
-      const result = compileToSQLWithMeta(ast, { types, forceDynamic });
+      const result = compileToSQLWithMeta(ast, { types, forceDynamic, timezone });
       code = result.code;
       break;
     }
     case 'python': {
-      const result = compileToPythonWithMeta(ast, { execute, stripGuards, types, forceDynamic });
+      const result = compileToPythonWithMeta(ast, { execute, stripGuards, types, forceDynamic, timezone });
       code = result.code;
       break;
     }
@@ -433,6 +453,7 @@ function main() {
           // The annotations are keyed on AST node identity, so they only mean
           // anything against the tree the checker walked.
           forceDynamic: options.forceDynamic,
+          timezone: options.timezone,
           ...(options.optimize ? checked[index] : {}),
         });
       } catch (error) {

@@ -69,6 +69,30 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- 0259 D1. NOW and TODAY are wall clocks in the *declared* zone.
+--
+-- CURRENT_TIMESTAMP is a timestamptz in the session's zone, so the same
+-- program meant different things against two databases. AT TIME ZONE
+-- converts it to a zone-free timestamp, which is exactly how every other
+-- Elo datetime is carried on this target.
+--
+-- STABLE, not IMMUTABLE: the result depends on the clock. It is the
+-- transaction's clock, because CURRENT_TIMESTAMP is frozen at transaction
+-- start -- declared in 0259 D6 rather than changed, since clock_timestamp()
+-- is VOLATILE and would bar an Elo expression from an index or a generated
+-- column.
+--
+-- The zone is a parameter, never interpolated syntax. It arrives from the
+-- compiler as an argument so that it belongs to the program rather than to
+-- this prelude, which is installed once per database.
+CREATE OR REPLACE FUNCTION elo_now(tz TEXT) RETURNS TIMESTAMP AS $$
+  SELECT CURRENT_TIMESTAMP AT TIME ZONE tz;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION elo_today(tz TEXT) RETURNS DATE AS $$
+  SELECT (CURRENT_TIMESTAMP AT TIME ZONE tz)::DATE;
+$$ LANGUAGE sql STABLE;
+
 -- Type selector: Date - parse ISO date string, throws on failure
 CREATE OR REPLACE FUNCTION elo_date(v TEXT) RETURNS DATE AS $$
 BEGIN
