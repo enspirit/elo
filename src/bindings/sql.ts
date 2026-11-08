@@ -857,13 +857,13 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
 
   // Date - identity for date, parse ISO for string
   sqlLib.register('Date', [Types.date], (args, ctx) => ctx.emit(args[0]));
-  sqlLib.register('Date', [Types.string], (args, ctx) => `elo_date(${ctx.emit(args[0])})`);
-  sqlLib.register('Date', [Types.any], (args, ctx) => `elo_date(${ctx.emit(args[0])})`);
+  sqlLib.register('Date', [Types.string], (args, ctx) => `elo_date(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
+  sqlLib.register('Date', [Types.any], (args, ctx) => `elo_date(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
 
   // Datetime - identity for datetime, parse ISO for string
   sqlLib.register('Datetime', [Types.datetime], (args, ctx) => ctx.emit(args[0]));
-  sqlLib.register('Datetime', [Types.string], (args, ctx) => `elo_datetime(${ctx.emit(args[0])})`);
-  sqlLib.register('Datetime', [Types.any], (args, ctx) => `elo_datetime(${ctx.emit(args[0])})`);
+  sqlLib.register('Datetime', [Types.string], (args, ctx) => `elo_datetime(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
+  sqlLib.register('Datetime', [Types.any], (args, ctx) => `elo_datetime(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
 
   // Duration - identity for duration, parse ISO for string
   sqlLib.register('Duration', [Types.duration], (args, ctx) => ctx.emit(args[0]));

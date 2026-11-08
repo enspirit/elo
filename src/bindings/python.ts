@@ -475,12 +475,12 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('Date', [Types.date], identity());
   pyLib.register('Date', [Types.any], (args, ctx) => {
     ctx.requireHelper('kParseDate');
-    return `kParseDate(${ctx.emit(args[0])})`;
+    return `kParseDate(${ctx.emit(args[0])}, "${ctx.timezone}")`;
   });
   pyLib.register('Datetime', [Types.datetime], identity());
   pyLib.register('Datetime', [Types.any], (args, ctx) => {
     ctx.requireHelper('kParseDatetime');
-    return `kParseDatetime(${ctx.emit(args[0])})`;
+    return `kParseDatetime(${ctx.emit(args[0])}, "${ctx.timezone}")`;
   });
   pyLib.register('Duration', [Types.duration], identity());
   pyLib.register('Duration', [Types.any], (args, ctx) => {

@@ -114,12 +114,25 @@ import Footer from '../components/Footer.astro';
           server in Brussels, in a browser in Los Angeles and in PostgreSQL.
         </p>
         <p>
-          A timezone is used in exactly one place, and it is
+          A timezone is used for exactly one job, and it is
           <strong>declared</strong> rather than inherited from whichever machine
-          happens to be running: <code>NOW</code> and <code>TODAY</code> read
-          the clock in the zone given by
-          <code>eloc --timezone Europe/Brussels</code>, which defaults to
-          <code>UTC</code>. All four targets read it identically.
+          happens to be running: <strong>an instant arriving from outside is
+          expressed in that zone</strong>. It arrives either from the host's
+          clock — <code>NOW</code>, <code>TODAY</code> — or in the data, and
+          both follow the same rule. The zone is given by
+          <code>eloc --timezone Europe/Brussels</code> and defaults to
+          <code>UTC</code>; all four targets read it identically.
+        </p>
+        <p>
+          That is worth reading twice, because it is the whole of the surprise.
+          <code>Datetime('2026-01-15T10:00:00+01:00')</code> is the instant
+          <code>09:00Z</code>, so <code>hour</code> of it answers
+          <strong>9</strong> under <code>--timezone UTC</code> and
+          <strong>10</strong> under <code>--timezone Europe/Brussels</code>,
+          which <em>is</em> <code>+01:00</code> in January. A datum carrying
+          <strong>no</strong> offset is already a wall clock in the declared
+          zone, so nothing is done to it. Elo never reconciles two timezones
+          behind your back — it has one, and it says which.
         </p>
         <p>
           Three consequences worth knowing before you meet them.

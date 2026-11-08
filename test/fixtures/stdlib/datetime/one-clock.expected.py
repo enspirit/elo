@@ -9,7 +9,7 @@
 
 
 (lambda _: kAssert((t := _elo_now("UTC"), kEq(_elo_start_of_day(t), _elo_today("UTC")))[-1]))(None)
-(lambda _: kAssert((t := _elo_now("UTC"), kEq(kParseDate(t), _elo_today("UTC")))[-1]))(None)
+(lambda _: kAssert((t := _elo_now("UTC"), kEq(kParseDate(t, "UTC"), _elo_today("UTC")))[-1]))(None)
 (lambda _: kAssert(_elo_now("UTC").day == _elo_today("UTC").day))(None)
 (lambda _: kAssert(_elo_now("UTC").month == _elo_today("UTC").month))(None)
 (lambda _: kAssert(_elo_now("UTC").year == _elo_today("UTC").year))(None)

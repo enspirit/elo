@@ -14,7 +14,19 @@
 > SQL literal acquired the session's zone — found by the zone axis on its first
 > run, red only outside UTC, and in the corpus unnoticed since `0240`.
 >
-> **Next: step 2**, the inbound boundary (`D7`).
+> **Step 2 is done.** `Date(x)` / `Datetime(x)` express an arriving instant in
+> the declared zone on all four targets, which now agree cell for cell:
+> `hour(Datetime('2026-01-15T10:00:00+01:00'))` is 9 under `UTC` and 10 under
+> `Europe/Brussels`, everywhere. Closes `ideation/0255` §4.
+>
+> `D7` was rewritten twice on the way, and the second rewrite reverted the
+> first. Checking the offset and *failing* on a disagreement was tried and
+> rejected — see the subsection in `D7`. The argument that settled it: `NOW`
+> already converts an instant into the declared zone, so refusing an identical
+> instant arriving in the data would have made Elo's two inbound boundaries
+> disagree with each other.
+>
+> **Next: step 3**, the outbound boundary.
 >
 > One correction to `D2` from doing it: "the zone appears exactly once per
 > emitted program" was the wrong invariant. Python's and SQL's helpers live in
@@ -57,11 +69,11 @@ almost everything agrees** — that is why none of this is red today.
 
 > **Elo has no instants. A Date or a Datetime is a wall clock.** Arithmetic on
 > wall clocks is calendar arithmetic with no DST, so a day is always a day.
-> A timezone is used **only at the edges**, in three places: reading the host's
-> clock (`NOW`, `TODAY`), converting a value that arrives from outside
-> (`Date(x)`, `Datetime(x)`), and converting one on the way out on purpose
-> (`instantOf`). That zone is **declared**, defaults to `UTC`, and is the same
-> on all four targets.
+> A timezone is used **only at the edges**, and for one job: **an instant
+> arriving from outside is expressed in that zone.** It arrives either from the
+> host's clock (`NOW`, `TODAY`) or in the data (`Date(x)`, `Datetime(x)`), and
+> `instantOf` is the one way back out. That zone is **declared**, defaults to
+> `UTC`, and is the same on all four targets.
 
 One declared zone, used only at the edges, no zones inside. That is the whole
 of it.
@@ -218,29 +230,92 @@ expressions in one transaction gets one `NOW` on SQL and two elsewhere
 than removed. Doing better needs a sampled-once-per-evaluation clock, which
 needs `$.now`, which is `0261`'s business.
 
-### D7 — Instants are welcome at the boundary, in both directions
+### D7 — An instant arriving from outside is expressed in the declared zone
 
 "No instants" is a statement about Elo's **values**, not about its **edges**.
 Dates and datetimes arrive in `_` as data and leave as output, that data is
-ISO-8601, and ISO-8601 carries offsets. Refusing them at the edge would make
-the model unusable; the rule is that they are *converted*, not *kept*.
+ISO-8601, and ISO-8601 carries offsets. The rule is one sentence:
 
-> **Inbound:** an instant is converted to a wall clock in `$.timezone`.
+> **Inbound:** an instant arriving from outside is expressed in the declared
+> zone, and the wall clock that comes out is what the program sees. A datum
+> with no offset is *already* a wall clock in that zone, so there is nothing to
+> do to it.
 > **Outbound:** a value is rendered as the wall clock it is — no offset.
 > **To leave the model on purpose:** one explicit function, `instantOf(t)`.
 
-**Inbound, the rule is already right on one target and the "majority" was
-wrong.** `hour(Datetime(_.t))` for `_.t = "2026-01-01T00:30:00+02:00"`:
+**The argument that settles it is consistency with `NOW`.** `NOW` already does
+exactly this, and has since step 1: it takes an instant — the host clock's
+reading — expresses it in the declared zone, and keeps the wall clock. An
+instant arriving in `_` is the same kind of thing from a different source, so
+it gets the same treatment. One rule, two sources:
 
-| | answer | what it did |
-| --- | --- | --- |
-| JS | **22** | converted the instant to a UTC wall clock — *exactly the rule, at the default zone* |
-| Ruby, Python, SQL | 0 | `DateTime.parse` and friends keep the written clock and discard the offset |
+| the instant comes from | spelled |
+| --- | --- |
+| the host's clock | `NOW`, `TODAY` |
+| the data | `Datetime(_.t)`, `Date(_.d)` |
 
-`ideation/0255` §4 called this three-against-one and doubted the majority.
-With the rule written down the minority is simply **correct**, and the other
-three are the work. That is worth noting as a correction: the divergence was
-not a coin toss, it was three targets missing a conversion.
+Nobody is surprised that `hour(NOW)` depends on the declared zone. There is no
+principled reason `hour(Datetime(_.t))` should not.
+
+**The consequence to document, because it is the whole of the surprise.**
+With `--timezone UTC` and `_.t = "2026-01-15T10:00:00+01:00"`:
+
+```
+hour(Datetime(_.t))  ->  9
+```
+
+An author who reads that as "the hour of my datum" expects 10 and is
+bewildered. An author who knows that **the declared zone interprets every
+value at the moment it is made** expects 9 and is not. That sentence belongs
+on the reference page next to the model; it is not something to be discovered.
+
+Note where the context applies: at **construction**, not in the accessor.
+`hour(t)` reads a field of a value that is already a zone-free wall clock —
+which is why `0259 D1`'s "no zones inside" survives intact. Only the edge is
+contextual.
+
+#### The alternative, and why it was rejected
+
+Checking the offset against the declared zone and **failing** on a
+disagreement was considered, on the argument that converting lets the same
+expression answer 10 or 9 depending on a flag declared elsewhere. It was
+rejected for three reasons, in increasing order of weight:
+
+1. **It would refuse ordinary data.** `timestamptz`, JSON APIs and nearly
+   every wire format emit `Z`. A service declaring `Europe/Brussels` and
+   reading `…T09:00:00Z` from its own database would have every value refused,
+   leaving the author to choose between a correct `TODAY` and readable input.
+2. **It would drag gap and fold into the inbound boundary.** Measured: Brussels
+   at `2026-10-25T02:30` has *two* valid offsets and at `2026-03-29T02:30` has
+   *none*, so "the zone's offset at that moment" is not a function and the
+   check would need a policy for both. Expressing an instant *as* a wall clock
+   is total and unambiguous, so conversion needs no such policy — and gap/fold
+   stays confined to `instantOf`, which is the one place that should own it.
+3. **It would make the two inbound boundaries disagree.** An instant from the
+   clock would be converted while an identical instant from the data was
+   refused. That is the asymmetry the rule above does not have.
+
+What conversion gives up is catching a misconfigured host. Elo cannot detect a
+*wrong* offset anyway, only a disagreeing one, and that is data quality rather
+than the language's job.
+
+**Measured starting point — four targets, three behaviours, none of them the
+rule.** `hour(Datetime(_.t))`:
+
+| `_.t` | JS | Ruby | Python | SQL |
+| --- | --- | --- | --- | --- |
+| `2026-01-15T10:00:00` | 10 | 10 | 10 | 10 |
+| `2026-01-15T10:00:00Z` | 10 | 10 | 10 | 10 |
+| `2026-01-15T10:00:00+01:00` | 9 | **10** | **ValueError** | **10** |
+| `2026-01-15T10:00:00+05:00` | 5 | **10** | **ValueError** | **10** |
+
+JavaScript has the right *shape* and ignores the declared zone — the coercion
+helpers still hardcode `'utc'`, measured: `--timezone Europe/Brussels` changes
+none of its answers. Ruby and SQL silently discard the offset. Python raises a
+raw host exception, which is a robustness defect under any rule. So all four
+need work, and `ideation/0255` §4 — which called this three-against-one and
+doubted the majority — resolves in favour of the minority: JavaScript was
+nearly right, and the other three are missing the conversion entirely.
 
 **Outbound is where the model is contradicted today.** Measured, on JS:
 
@@ -322,7 +397,7 @@ These cannot be added without re-opening the model.
 | ⚠ **Ordering or deduplicating events recorded in different zones.** "Did the Brussels order arrive before the Tokyo one?" | Comparing two wall clocks from two zones is meaningless, and `<` answers anyway. |
 | **Zone conversion.** `toZone(t, 'Asia/Tokyo')` | There is no instant to re-express, and the target zone would be a second zone, which D2 does not have. Verified absent today: no `toZone`, no `setZone`, no epoch function in any binding. |
 | **Monotonic or stopwatch time.** "How long did this take?" | Structurally inexpressible: no monotonic clock, and within one evaluation every `NOW` is the same reading (on SQL, the same for the whole transaction — `D6`). |
-| **Gap/fold disambiguation.** "This appointment is 01:30 on the fall-back night — which one?" | The API can only *force* this choice, never make it; Elo has nowhere to put it. Note the direction: converting an instant *to* a wall clock is always unambiguous, which is all `D1`'s two boundaries ever do. The reverse is ambiguous and happens **after Elo returns** — in the host, or in PostgreSQL on a write to `timestamptz`. Elo can hand back a Datetime that is ambiguous or non-existent where it lands. |
+| **Gap/fold disambiguation.** "This appointment is 01:30 on the fall-back night — which one?" | The API can only *force* this choice, never make it; Elo has nowhere to put it. Note the direction: expressing an instant *as* a wall clock is total and unambiguous, which is all the inbound boundaries ever do. The ambiguous direction is wall clock → instant, and `instantOf` is the only place Elo takes it — which is why it is the only place that needs a policy. The reverse is ambiguous and happens **after Elo returns** — in the host, or in PostgreSQL on a write to `timestamptz`. Elo can hand back a Datetime that is ambiguous or non-existent where it lands. |
 
 ### Bought back by D7
 
@@ -333,7 +408,7 @@ is the measure of how much `instantOf` is worth:
 | --- | --- |
 | **Rendering an instant.** `…T09:30:00+01:00` for an API response | `instantOf(t)` |
 | **The firing instant of a schedule.** "When does 'every Monday 09:00' run?" | `instantOf(nextMonday)`. Elo expresses the rule — local-time-plus-rule is the *correct* representation, which most systems get wrong — and now also the trigger. |
-| **Accepting an offset-bearing timestamp** from a web request or a database | `Datetime(_.t)`, converted to `$.timezone` |
+| **Accepting an offset-bearing timestamp** from a web request or a database | `Datetime(_.t)`, expressed in the declared zone |
 
 What stays forbidden is the *type*: there is no Instant to hold, compare or
 sort. `instantOf` renders one and hands it out. That is the line the model
@@ -453,10 +528,11 @@ half of what makes the model usable.
    check that it appears once; `NOW`/`TODAY` through it on four targets (D1);
    the zone axis in `test-all.sh`; the fixture above. Closes `ideation/0180`
    and `0255` §3.
-2. **The inbound boundary.** `Date(x)` / `Datetime(x)` convert an arriving
-   instant to a wall clock in the declared zone (D7). JS is already correct at
-   the default zone; Ruby, Python and SQL need the conversion written for the
-   first time.
+2. **The inbound boundary.** `Date(x)` / `Datetime(x)` express an arriving
+   instant in the declared zone (D7). All four targets need work and no two are
+   wrong in the same way: JS converts but ignores the declared zone, Ruby and
+   SQL discard the offset, Python raises a host `ValueError` — which is a
+   robustness defect in its own right and must become an Elo failure.
 3. **The outbound boundary.** A Datetime renders with no `Z`, a Date renders as
    a date, neither varies with the host's `TZ` (D7). Four measured defects to
    turn red first. Then `instantOf`, with the fold-earlier / gap-fails policy
@@ -477,7 +553,7 @@ written until the four acceptance runners can supply a context.
 
 Elo's **values** are wall clocks, so a host handing in a zoned instant — the
 README's `inThisWeek(DateTime.now())` — needs a rule. D7 gives it one:
-`Datetime(x)` converts it in the declared zone. But `--input-type` does not
+`Datetime(x)` expresses it in the declared zone. But `--input-type` does not
 apply it for you: a declared type is a promise and `_.i` reads the raw value
 uncoerced (`done/0253`), so an uncoerced `_` is still a host-zoned instant
 being treated as a wall clock.

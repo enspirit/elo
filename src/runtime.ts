@@ -99,8 +99,10 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   pInt: ['pOk', 'pFail'],
   pBool: ['pOk', 'pFail'],
   pDatetime: ['pOk', 'pFail'],
+  pDatetimeIn: ['pDatetime', 'pOk', 'pFail'],
   pFloat: ['pOk', 'pFail'],
   pDate: ['pOk', 'pFail'],
+  pDateIn: ['pDate', 'pOk', 'pFail'],
   pDuration: ['pOk', 'pFail'],
   pData: ['pOk', 'pFail'],
   // pSet and kMember: a schema key named `__proto__` is data on both sides.
@@ -348,18 +350,6 @@ export const JS_HELPERS: Record<string, string> = {
   // coerced: Elo's temporal values are zone-free, and Luxon is the only one of
   // the four runtimes that would otherwise read the host's zone into them.
   // See `dateLiteral` in `src/compilers/javascript.ts`.
-  kDate: `function kDate(v) {
-  if (v === null || v === undefined) return null;
-  if (DateTime.isDateTime(v)) return v.setZone("utc").startOf('day');
-  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: "utc" }); return d.isValid && /^\\d{4}-\\d{2}-\\d{2}$/.test(v) ? d.startOf('day') : null; }
-  return null;
-}`,
-  kDatetime: `function kDatetime(v) {
-  if (v === null || v === undefined) return null;
-  if (DateTime.isDateTime(v)) return v.setZone("utc");
-  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: "utc" }); return d.isValid ? d : null; }
-  return null;
-}`,
   kDuration: `function kDuration(v) {
   if (v === null || v === undefined) return null;
   if (Duration.isDuration(v)) return v;
@@ -438,20 +428,38 @@ export const JS_HELPERS: Record<string, string> = {
   if (v === 'false') return pOk(false, p);
   return pFail(p, 'expected Bool, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
-  pDatetime: `function pDatetime(v, p) {
-  if (DateTime.isDateTime(v)) return pOk(v.setZone("utc"), p);
-  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: "utc" }); if (d.isValid) return pOk(d, p); }
+  /* 0259 D7. An instant arriving from outside is expressed in the declared
+     zone, then relabelled zone-free — the same two steps as kNow, because it
+     is the same rule from a different source.
+
+     `fromISO(v, { zone: tz })` does the first step for both kinds of datum in
+     one call: a string carrying an offset is an instant and luxon converts it
+     into `tz`, while a string carrying none is read *as* a wall clock in `tz`
+     and so is left where it is. The second `setZone` relabels the fields as
+     UTC without moving them, which is how every Elo datetime is carried. */
+  pDatetime: `function pDatetime(v, p, tz) {
+  if (DateTime.isDateTime(v)) return pOk(v.setZone(tz).setZone("utc", { keepLocalTime: true }), p);
+  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: tz }); if (d.isValid) return pOk(d.setZone("utc", { keepLocalTime: true }), p); }
   return pFail(p, 'expected Datetime, got ' + (v === null ? 'Null' : typeof v === 'string' ? 'invalid datetime ' + JSON.stringify(v) : typeof v));
+}`,
+  /* Curried, for a schema field: pSchema takes parsers by reference under a
+     (value, path) contract, so the zone is bound here rather than threaded
+     through pSchema, pArray and pUnion. */
+  pDatetimeIn: `function pDatetimeIn(tz) {
+  return (v, p) => pDatetime(v, p, tz);
 }`,
   pFloat: `function pFloat(v, p) {
   if (typeof v === 'number') return pOk(v, p);
   if (typeof v === 'string' && /^[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?$/.test(v.trim())) return pOk(parseFloat(v.trim()), p);
   return pFail(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
-  pDate: `function pDate(v, p) {
-  if (DateTime.isDateTime(v)) return pOk(v.setZone("utc").startOf('day'), p);
-  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v, { zone: "utc" }); if (d.isValid) return pOk(d.startOf('day'), p); }
+  pDate: `function pDate(v, p, tz) {
+  if (DateTime.isDateTime(v)) return pOk(v.setZone(tz).setZone("utc", { keepLocalTime: true }).startOf('day'), p);
+  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v, { zone: tz }); if (d.isValid) return pOk(d.setZone("utc", { keepLocalTime: true }).startOf('day'), p); }
   return pFail(p, 'expected Date (YYYY-MM-DD), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
+}`,
+  pDateIn: `function pDateIn(tz) {
+  return (v, p) => pDate(v, p, tz);
 }`,
   pDuration: `function pDuration(v, p) {
   if (Duration.isDuration(v)) return pOk(v, p);
@@ -556,6 +564,7 @@ export const JS_HELPERS: Record<string, string> = {
  * These are embedded in compiled Ruby output when type definitions are used.
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  k_wall: [],
   k_now: [],
   k_today: ['k_now'],
   k_add: [],
@@ -577,9 +586,11 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   p_string: ['p_ok', 'p_fail'],
   p_int: ['p_ok', 'p_fail'],
   p_bool: ['p_ok', 'p_fail'],
-  p_datetime: ['p_ok', 'p_fail'],
+  p_datetime: ['p_ok', 'p_fail', 'k_wall'],
+  p_datetime_in: ['p_datetime', 'p_ok', 'p_fail', 'k_wall'],
   p_float: ['p_ok', 'p_fail', 'k_float'],
-  p_date: ['p_ok', 'p_fail'],
+  p_date: ['p_ok', 'p_fail', 'k_wall'],
+  p_date_in: ['p_date', 'p_ok', 'p_fail', 'k_wall'],
   p_duration: ['p_ok', 'p_fail'],
   p_data: ['p_ok', 'p_fail'],
   p_schema: ['p_ok', 'p_fail'],
@@ -596,6 +607,23 @@ export const RUBY_HELPERS: Record<string, string> = {
      as an expression over `ActiveSupport::TimeZone[...]` rather than by
      assigning `Time.zone`, because a global assignment is both shared mutable
      state and rejected by the Ruby grammar gate. The sub-second survives. */
+  /* 0259 D7. An instant arriving from outside is expressed in the declared
+     zone, then carried with no offset — the same rule k_now follows, from a
+     different source.
+
+     The offset has to be detected from the text, which luxon does for us on
+     JavaScript and Ruby does not: `DateTime.parse` labels an offsetless string
+     +00:00, so converting it would *move* a datum that was already a wall
+     clock in the declared zone. A string with no offset is therefore left
+     where it is; one with an offset is an instant and is converted. */
+  k_wall: `def k_wall(v, tz)
+  if v.is_a?(String)
+    d = DateTime.parse(v)
+    return d.change(offset: 0) unless v =~ /(?:Z|[+-]\\d{2}:?\\d{2})\\s*\\z/
+    v = d
+  end
+  v.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0)
+end`,
   k_now: `def k_now(tz)
   Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0)
 end`,
@@ -847,21 +875,27 @@ end`,
   return p_ok(false, p) if v == 'false'
   p_fail(p, "expected Bool, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
 end`,
-  p_datetime: `def p_datetime(v, p)
-  return p_ok(v, p) if v.is_a?(DateTime) || v.is_a?(Time)
-  return p_ok(DateTime.parse(v), p) if v.is_a?(String) rescue nil
+  p_datetime: `def p_datetime(v, p, tz)
+  return p_ok(k_wall(v, tz), p) if v.is_a?(DateTime) || v.is_a?(Time)
+  return p_ok(k_wall(v, tz), p) if v.is_a?(String) rescue nil
   p_fail(p, "expected Datetime, got #{v.nil? ? 'Null' : v.is_a?(String) ? 'invalid datetime ' + v.inspect : v.class}")
+end`,
+  p_datetime_in: `def p_datetime_in(tz)
+  ->(v, p) { p_datetime(v, p, tz) }
 end`,
   p_float: `def p_float(v, p)
   return p_ok(v, p) if v.is_a?(Numeric)
   return p_ok(k_float(v), p) if v.is_a?(String) rescue nil
   p_fail(p, "expected Float, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
 end`,
-  p_date: `def p_date(v, p)
-  return p_ok(v.to_date, p) if v.is_a?(DateTime) || v.is_a?(Time)
+  p_date: `def p_date(v, p, tz)
+  return p_ok(k_wall(v, tz).to_date, p) if v.is_a?(DateTime) || v.is_a?(Time)
   return p_ok(v, p) if v.is_a?(Date)
   return p_ok(Date.parse(v), p) if v.is_a?(String) && v.match?(/^\\d{4}-\\d{2}-\\d{2}$/) rescue nil
   p_fail(p, "expected Date (YYYY-MM-DD), got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
+end`,
+  p_date_in: `def p_date_in(tz)
+  ->(v, p) { p_date(v, p, tz) }
 end`,
   p_duration: `def p_duration(v, p)
   return p_ok(v, p) if v.is_a?(ActiveSupport::Duration)
@@ -941,10 +975,11 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kNeg: [],
   kBool: [],
   kString: ['_elo_dur_to_iso'],
-  kParseDate: ['_elo_dt_helpers'],
-  kParseDatetime: ['_elo_dt_helpers'],
+  kParseDate: ['_elo_dt_helpers', '_elo_wall', '_import_re'],
+  kParseDatetime: ['_elo_dt_helpers', '_elo_wall', '_import_re'],
   kParseDuration: ['_elo_duration', '_EloInterval'],
   _elo_dt_helpers: ['_import_datetime', '_elo_duration'],
+  _elo_wall: ['_import_datetime', '_import_zoneinfo', '_elo_dt_helpers'],
   _elo_now: ['_import_datetime', '_import_zoneinfo', '_elo_dt_helpers'],
   _elo_today: ['_elo_now'],
   _EloInterval: ['_import_collections'],
@@ -956,8 +991,10 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   pInt: ['pOk', 'pFail'],
   pFloat: ['pOk', 'pFail'],
   pBool: ['pOk', 'pFail'],
-  pDate: ['pOk', 'pFail', 'kParseDate'],
-  pDatetime: ['pOk', 'pFail', 'kParseDatetime'],
+  pDate: ['pOk', 'pFail', 'kParseDate', '_elo_wall'],
+  pDateIn: ['pDate', 'pOk', 'pFail', 'kParseDate', '_elo_wall'],
+  pDatetime: ['pOk', 'pFail', 'kParseDatetime', '_elo_wall'],
+  pDatetimeIn: ['pDatetime', 'pOk', 'pFail', 'kParseDatetime', '_elo_wall'],
   pDuration: ['pOk', 'pFail', '_elo_duration'],
   pData: ['pOk', 'pFail'],
   pSchema: ['pOk', 'pFail'],
@@ -1058,6 +1095,14 @@ export const PY_HELPERS: Record<string, string> = {
      `datetime.now()` read the host's ambient zone instead. The zone arrives
      as an argument so it belongs to the program, not to this prelude -- which
      is installed once, separately from any compile. */
+  /* 0259 D7. An instant arriving from outside is expressed in the declared
+     zone, then carried naive like every other Elo datetime on Python.
+     `tzinfo` is what says whether a datum is an instant or already a wall
+     clock, so unlike Ruby this needs no regex on the text. */
+  _elo_wall: `def _elo_wall(v, tz):
+    if v.tzinfo is not None:
+        v = v.astimezone(ZoneInfo(tz))
+    return _elo_dt(v.year, v.month, v.day, v.hour, v.minute, v.second, v.microsecond)`,
   _elo_now: `def _elo_now(tz):
     return _dt.datetime.now(ZoneInfo(tz)).replace(tzinfo=None)`,
   /* TODAY is midnight of that wall clock's date, built through _elo_dt so it
@@ -1081,8 +1126,8 @@ def _elo_dt_minus_dur(dt, dur):
 def _elo_dt_diff(a, b):
     diff = a - b
     return EloDuration(diff.total_seconds() * 1000)
-def _elo_dt(y, mo, d, h=0, mi=0, s=0):
-    return _dt.datetime(y, mo, d, h, mi, s)
+def _elo_dt(y, mo, d, h=0, mi=0, s=0, us=0):
+    return _dt.datetime(y, mo, d, h, mi, s, us)
 def _elo_start_of_day(dt):
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 def _elo_end_of_day(dt):
@@ -1302,8 +1347,10 @@ def _elo_end_of_year(dt):
         if v == 'false': return False
         raise Exception('Cannot convert to Bool: ' + repr(v))
     raise Exception('Cannot convert to Bool: ' + repr(v))`,
-  kParseDate: `def kParseDate(v):
-    if isinstance(v, _dt.datetime): return _elo_dt(v.year, v.month, v.day)
+  kParseDate: `def kParseDate(v, tz):
+    if isinstance(v, _dt.datetime):
+        w = _elo_wall(v, tz)
+        return _elo_dt(w.year, w.month, w.day)
     if isinstance(v, str):
         parts = v.split('-')
         if len(parts) == 3: return _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
@@ -1318,17 +1365,31 @@ def _elo_end_of_year(dt):
     # Duration(interval) is the interval's length on the typed path.
     if isinstance(v, EloInterval): return EloDuration.from_timedelta(v.end - v.start)
     raise Exception('Cannot parse duration: ' + repr(v))`,
-  kParseDatetime: `def kParseDatetime(v):
-    if isinstance(v, _dt.datetime): return v
+  kParseDatetime: `def kParseDatetime(v, tz):
+    if isinstance(v, _dt.datetime): return _elo_wall(v, tz)
     if isinstance(v, str):
-        v2 = v.replace('Z', '')
+        s = v.strip()
+        m = re.search(r'(Z|[+-]\\d{2}:?\\d{2})$', s)
+        off = m.group(1) if m else None
+        v2 = s[:m.start()] if m else s
         if 'T' in v2:
             dp, tp = v2.split('T')
             dy, dm, dd = dp.split('-')
             tps = tp.split(':')
-            return _elo_dt(int(dy), int(dm), int(dd), int(tps[0]), int(tps[1]), int(tps[2]) if len(tps) > 2 else 0)
-        parts = v2.split('-')
-        if len(parts) == 3: return _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
+            whole, _sep, frac = (tps[2] if len(tps) > 2 else '0').partition('.')
+            d = _elo_dt(int(dy), int(dm), int(dd), int(tps[0]), int(tps[1]), int(whole), int((frac + '000000')[:6]) if frac else 0)
+        else:
+            parts = v2.split('-')
+            if len(parts) != 3: raise Exception('Cannot parse datetime: ' + repr(v))
+            d = _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
+        if off is None: return d
+        if off == 'Z':
+            tzi = _dt.timezone.utc
+        else:
+            digits = off[1:].replace(':', '')
+            delta = _dt.timedelta(hours=int(digits[:2]), minutes=int(digits[2:4]))
+            tzi = _dt.timezone(-delta if off[0] == '-' else delta)
+        return _elo_wall(d.replace(tzinfo=tzi), tz)
     raise Exception('Cannot parse datetime: ' + repr(v))`,
   // Parser helpers - return Result: { "success": bool, "path": str, "message": str, "value": any, "cause": list }
   pOk: `def pOk(v, p):
@@ -1402,18 +1463,22 @@ def _elo_end_of_year(dt):
         try: return pOk(json.loads(v), p)
         except: return pFail(p, "invalid JSON: " + repr(v))
     return pOk(v, p)`,
-  pDate: `def pDate(v, p):
-    if isinstance(v, _dt.datetime): return pOk(kParseDate(v), p)
+  pDate: `def pDate(v, p, tz):
+    if isinstance(v, _dt.datetime): return pOk(kParseDate(v, tz), p)
     if isinstance(v, str):
-        try: return pOk(kParseDate(v), p)
+        try: return pOk(kParseDate(v, tz), p)
         except: pass
     return pFail(p, "expected Date (YYYY-MM-DD), got " + ("Null" if v is None else repr(v) if isinstance(v, str) else type(v).__name__))`,
-  pDatetime: `def pDatetime(v, p):
-    if isinstance(v, _dt.datetime): return pOk(v, p)
+  pDateIn: `def pDateIn(tz):
+    return lambda v, p: pDate(v, p, tz)`,
+  pDatetime: `def pDatetime(v, p, tz):
+    if isinstance(v, _dt.datetime): return pOk(_elo_wall(v, tz), p)
     if isinstance(v, str):
-        try: return pOk(kParseDatetime(v), p)
+        try: return pOk(kParseDatetime(v, tz), p)
         except: pass
     return pFail(p, "expected Datetime, got " + ("Null" if v is None else "invalid datetime " + repr(v) if isinstance(v, str) else type(v).__name__))`,
+  pDatetimeIn: `def pDatetimeIn(tz):
+    return lambda v, p: pDatetime(v, p, tz)`,
   pSchema: `def pSchema(props, extras_mode, extras_parser=None):
     known_keys = [p[0] for p in props]
     def parser(v, p):

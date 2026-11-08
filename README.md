@@ -343,6 +343,21 @@ defaulting to `UTC`. Nothing else in a program depends on a zone, so the same
 expression means the same thing compiled to Ruby on one server and to SQL on
 another.
 
+A timezone is used for exactly one job: **an instant arriving from outside is
+expressed in that zone.** It arrives either from the host's clock (`NOW`,
+`TODAY`) or in the data, and the two follow the same rule:
+
+```bash
+./bin/elo --timezone UTC             -e "hour(Datetime('2026-01-15T10:00:00+01:00'))"   # 9
+./bin/elo --timezone Europe/Brussels -e "hour(Datetime('2026-01-15T10:00:00+01:00'))"   # 10
+```
+
+That is worth reading twice, because it is the whole of the surprise. `10:00+01:00`
+is the instant `09:00Z`; asked for its hour *in UTC* the answer is 9, and asked
+for its hour *in Brussels* — which is `+01:00` in January — it is 10. A datum
+carrying **no** offset is already a wall clock in the declared zone, so nothing
+is done to it and `hour` answers 10 in both.
+
 Three consequences worth knowing before you meet them:
 
 - **`P1D` is always `PT24H`.** Every day is 24 hours and no wall clock ever

@@ -1,0 +1,48 @@
+# An instant arriving from outside is expressed in the declared zone (0259 D7).
+#
+# The same rule `NOW` has followed since step 1, from a different source: an
+# instant comes in, the declared zone says how to read it, and what the program
+# sees is a zone-free wall clock. A datum with no offset is already a wall clock
+# in that zone, so nothing is done to it.
+#
+# The corpus compiles with the default declared zone, UTC, so every offset below
+# is read into UTC. The same assertions under a non-UTC declared zone -- where
+# the answers differ -- are in
+# test/integration/inbound-boundary.integration.test.ts, which can pass
+# --timezone; that pair is the point, because a single zone cannot show that the
+# declared zone is what decides.
+
+# No offset: nothing to express, so the wall clock stands as written.
+assert(hour(Datetime('2026-01-15T10:00:00')) == 10)
+assert(minute(Datetime('2026-01-15T10:30:00')) == 30)
+assert(day(Date('2026-01-15')) == 15)
+
+# An offset of zero is already UTC, so the wall clock is unchanged. `Z`,
+# `+00:00` and `-00:00` all spell it.
+assert(hour(Datetime('2026-01-15T10:00:00Z')) == 10)
+assert(hour(Datetime('2026-01-15T10:00:00+00:00')) == 10)
+assert(hour(Datetime('2026-01-15T10:00:00-00:00')) == 10)
+
+# A non-zero offset is an instant somewhere else, read into the declared zone.
+# 10:00+01:00 is 09:00 UTC, so under the default zone the hour is 9 -- not 10
+# with the offset quietly dropped, and not a refusal.
+assert(hour(Datetime('2026-01-15T10:00:00+01:00')) == 9)
+assert(hour(Datetime('2026-01-15T10:00:00+05:30')) == 4)
+assert(minute(Datetime('2026-01-15T10:00:00+05:30')) == 30)
+assert(hour(Datetime('2026-01-15T10:00:00-05:00')) == 15)
+
+# Expressing an instant as a wall clock can move the date, and must.
+assert(day(Datetime('2026-01-15T00:30:00+02:00')) == 14)
+assert(hour(Datetime('2026-01-15T00:30:00+02:00')) == 22)
+assert(day(Datetime('2026-01-15T23:30:00-02:00')) == 16)
+
+# Two data carrying different offsets are each read into the one declared zone,
+# so they are directly comparable afterwards -- which is the point of having a
+# declared zone at all.
+assert(Datetime('2026-01-15T10:00:00+01:00') == Datetime('2026-01-15T09:00:00Z'))
+assert(Datetime('2026-01-15T12:00:00+03:00') == Datetime('2026-01-15T10:00:00+01:00'))
+assert(Datetime('2026-01-15T10:00:00+01:00') < Datetime('2026-01-15T10:00:00Z'))
+
+# The offset survives into the boundary even when the result is used as a Date:
+# 00:30+02:00 is the previous day in UTC.
+assert(Date(Datetime('2026-01-15T00:30:00+02:00')) == D2026-01-14)

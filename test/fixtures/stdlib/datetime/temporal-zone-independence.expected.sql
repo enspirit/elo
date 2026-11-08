@@ -33,5 +33,5 @@ CASE WHEN EXTRACT(DAY FROM (SELECT MIN(v) FROM UNNEST(ARRAY[TIMESTAMP '2026-01-0
 CASE WHEN date_trunc('day', CAST((SELECT MIN(v) FROM UNNEST(ARRAY[TIMESTAMP '2026-01-01 00:30:00']) AS v) AS timestamp)) = TIMESTAMP '2026-01-01 00:00:00' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 
 
-CASE WHEN EXTRACT(DAY FROM elo_datetime('2026-01-01T00:30:00Z')) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN (EXTRACT(EPOCH FROM (elo_date('2026-03-11') - elo_date('2026-01-10')) * INTERVAL '1 day') / 86400.0) = 60 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN EXTRACT(DAY FROM elo_datetime('2026-01-01T00:30:00Z', 'UTC')) = 1 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN (EXTRACT(EPOCH FROM (elo_date('2026-03-11', 'UTC') - elo_date('2026-01-10', 'UTC')) * INTERVAL '1 day') / 86400.0) = 60 THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

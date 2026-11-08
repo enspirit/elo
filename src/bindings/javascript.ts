@@ -25,12 +25,19 @@ export const UTC_ZONE = '{ zone: "utc" }';
  * Generates: pUnwrap(pParser(value, ''))
  * This throws on parse failure instead of returning null.
  */
+/**
+ * Parsers that need the declared zone, because they turn an instant arriving
+ * from outside into a wall clock (0259 D7). Everything else is zone-blind.
+ */
+const ZONED_PARSERS = new Set(['pDate', 'pDatetime']);
+
 function parserUnwrap(parserName: string): FunctionEmitter<string> {
   return (args, ctx) => {
     ctx.requireHelper(parserName);
     ctx.requireHelper('pUnwrap');
     const emittedArg = ctx.emit(args[0]);
-    return `pUnwrap(${parserName}(${emittedArg}, ''))`;
+    const zone = ZONED_PARSERS.has(parserName) ? `, ${JSON.stringify(ctx.timezone)}` : '';
+    return `pUnwrap(${parserName}(${emittedArg}, ''${zone}))`;
   };
 }
 

@@ -94,7 +94,9 @@ CREATE OR REPLACE FUNCTION elo_today(tz TEXT) RETURNS DATE AS $$
 $$ LANGUAGE sql STABLE;
 
 -- Type selector: Date - parse ISO date string, throws on failure
-CREATE OR REPLACE FUNCTION elo_date(v TEXT) RETURNS DATE AS $$
+-- A date-only string carries no offset, so there is nothing for the declared
+-- zone to do. The parameter is taken for symmetry with the ANYELEMENT form.
+CREATE OR REPLACE FUNCTION elo_date(v TEXT, tz TEXT) RETURNS DATE AS $$
 BEGIN
   IF v !~ '^\d{4}-\d{2}-\d{2}$' THEN
     RAISE EXCEPTION '.: expected Date (YYYY-MM-DD), got %', quote_literal(v);
@@ -103,32 +105,51 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Date (YYYY-MM-DD), got %', quote_literal(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
-CREATE OR REPLACE FUNCTION elo_date(v ANYELEMENT) RETURNS DATE AS $$
+CREATE OR REPLACE FUNCTION elo_date(v ANYELEMENT, tz TEXT) RETURNS DATE AS $$
 BEGIN
+  IF pg_typeof(v) = 'timestamp with time zone'::regtype THEN
+    RETURN (v::TIMESTAMPTZ AT TIME ZONE tz)::DATE;
+  END IF;
   RETURN v::DATE;
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Date, got %', pg_typeof(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Type selector: Datetime - parse ISO datetime string, throws on failure
-CREATE OR REPLACE FUNCTION elo_datetime(v TEXT) RETURNS TIMESTAMP AS $$
+-- 0259 D7. An instant arriving from outside is expressed in the declared zone.
+--
+-- A string carrying an offset is an instant: cast to TIMESTAMPTZ and read it in
+-- tz. A string carrying none is already a wall clock in tz, so a plain
+-- TIMESTAMP cast leaves it where it is -- going via TIMESTAMPTZ would apply the
+-- *session's* zone and move it.
+--
+-- STABLE, not IMMUTABLE: text::timestamptz may consult the session TimeZone.
+CREATE OR REPLACE FUNCTION elo_datetime(v TEXT, tz TEXT) RETURNS TIMESTAMP AS $$
 BEGIN
+  IF v ~ '(Z|[+-][0-9]{2}:?[0-9]{2})[[:space:]]*$' THEN
+    RETURN v::TIMESTAMPTZ AT TIME ZONE tz;
+  END IF;
   RETURN v::TIMESTAMP;
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Datetime, got %', quote_literal(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
-CREATE OR REPLACE FUNCTION elo_datetime(v ANYELEMENT) RETURNS TIMESTAMP AS $$
+-- A non-text value that already carries a zone (timestamptz) is an instant and
+-- is read in tz; anything else is cast as written.
+CREATE OR REPLACE FUNCTION elo_datetime(v ANYELEMENT, tz TEXT) RETURNS TIMESTAMP AS $$
 BEGIN
+  IF pg_typeof(v) = 'timestamp with time zone'::regtype THEN
+    RETURN v::TIMESTAMPTZ AT TIME ZONE tz;
+  END IF;
   RETURN v::TIMESTAMP;
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Datetime, got %', pg_typeof(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Type selector: Duration - parse ISO duration string, throws on failure
 CREATE OR REPLACE FUNCTION elo_duration(v TEXT) RETURNS INTERVAL AS $$

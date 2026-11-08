@@ -64,6 +64,11 @@ ALLOWED_NAMES = {
     # `_dt.datetime.now()` inline, so the conversion lives in one place and
     # the zone is its argument.
     '_elo_now', '_elo_today',
+    # 0259 D7, the other inbound boundary: an instant arriving in the data is
+    # expressed in the declared zone. The `*In` pair are curried parsers --
+    # pSchema takes parsers by reference under a (value, path) contract, so the
+    # zone is bound at the reference rather than threaded through pSchema.
+    'pDateIn', 'pDatetimeIn',
     '_elo_start_of_day', '_elo_end_of_day',
     '_elo_start_of_week', '_elo_end_of_week',
     '_elo_start_of_month', '_elo_end_of_month',

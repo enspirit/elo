@@ -551,19 +551,24 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
   // intact. `Date(NOW)` was the identity here while JavaScript, Python and SQL
   // all truncated — a one-target divergence in the dynamic path.
   rubyLib.register('Date', [Types.any], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when DateTime, Time; v.to_date when Date; v when String; raise ".: expected Date (YYYY-MM-DD), got #{v.inspect}" unless v =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(v) else raise ".: expected Date, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when DateTime, Time; k_wall(v, "${ctx.timezone}").to_date when Date; v when String; raise ".: expected Date (YYYY-MM-DD), got #{v.inspect}" unless v =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(v) else raise ".: expected Date, got #{v.class}" end }).call(${v})`;
   });
 
   // Datetime - identity for datetime, parse ISO for string
   rubyLib.register('Datetime', [Types.datetime], identity());
+  // 0259 D7: an instant arriving from outside is expressed in the declared
+  // zone and carried with no offset. k_wall is the one place that knows how.
   rubyLib.register('Datetime', [Types.string], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(s) { DateTime.parse(s) rescue raise ".: expected Datetime, got invalid datetime #{s.inspect}" }).call(${v})`;
+    return `(->(s) { k_wall(s, "${ctx.timezone}") rescue raise ".: expected Datetime, got invalid datetime #{s.inspect}" }).call(${v})`;
   });
   rubyLib.register('Datetime', [Types.any], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when DateTime, Time; v when String; DateTime.parse(v) rescue raise ".: expected Datetime, got #{v.inspect}" else raise ".: expected Datetime, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when DateTime, Time; k_wall(v, "${ctx.timezone}") when String; k_wall(v, "${ctx.timezone}") rescue raise ".: expected Datetime, got #{v.inspect}" else raise ".: expected Datetime, got #{v.class}" end }).call(${v})`;
   });
 
   // Duration - identity for duration, parse ISO for string

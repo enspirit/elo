@@ -255,6 +255,14 @@ function emitTypeExprParser(
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
+        // A temporal field parser needs the declared zone (0259 D7); pSchema
+        // takes parsers by reference under a (value, path) contract, so the
+        // zone is bound by the curried form instead of threaded through it.
+        if (parserName === 'pDate' || parserName === 'pDatetime') {
+          const curried = `${parserName}In`;
+          ctx.requireHelper(curried);
+          return `${curried}("${ctx.timezone}")`;
+        }
         ctx.requireHelper(parserName);
         return parserName;
       }

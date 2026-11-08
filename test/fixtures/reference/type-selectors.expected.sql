@@ -29,10 +29,10 @@ CASE WHEN CASE 'true' WHEN 'true' THEN TRUE WHEN 'false' THEN FALSE ELSE NULL EN
 CASE WHEN CASE 'false' WHEN 'true' THEN TRUE WHEN 'false' THEN FALSE ELSE NULL END = FALSE THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 TRUE /* assertFails not supported in SQL */
 CASE WHEN DATE '2025-01-15' = DATE '2025-01-15' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN elo_date('2025-01-15') = DATE '2025-01-15' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_date('2025-01-15', 'UTC') = DATE '2025-01-15' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 TRUE /* assertFails not supported in SQL */
 CASE WHEN TIMESTAMP '2025-01-15 10:30:00' = TIMESTAMP '2025-01-15 10:30:00' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
-CASE WHEN elo_datetime('2025-01-15T10:30:00') = TIMESTAMP '2025-01-15 10:30:00' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_datetime('2025-01-15T10:30:00', 'UTC') = TIMESTAMP '2025-01-15 10:30:00' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 TRUE /* assertFails not supported in SQL */
 CASE WHEN INTERVAL 'P1D' = INTERVAL 'P1D' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN elo_duration('P1D') = INTERVAL 'P1D' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
