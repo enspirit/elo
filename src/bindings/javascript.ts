@@ -74,7 +74,7 @@ export function createJavaScriptBinding(): StdLib<string> {
   // host is documented to hand its own `DateTime.now()` in as `_` (see the
   // `compile()` example in README), so these have to stay comparable with it.
   // The seam that leaves — `TODAY` against a zone-free literal — is recorded
-  // in `.claude/tasks/ideation/0250`; it is not this target's to settle alone.
+  // in `.claude/tasks/ideation/0255`; it is not this target's to settle alone.
   jsLib.register('today', [], nullary("DateTime.now().startOf('day')"));
   jsLib.register('now', [], nullary('DateTime.now()'));
   jsLib.register('bot', [], nullary(`DateTime.fromISO("0001-01-01T00:00:00.000Z", ${UTC_ZONE})`));

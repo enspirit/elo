@@ -99,12 +99,12 @@ temporal value whose answer *is* the host's clock, and README documents a host
 handing its own `DateTime.now()` in as `_`; pinning them was tried and turns
 `fn(yesterday)` into `true` in `test/unit/compile.unit.test.ts` — measured, not
 predicted. The seam that leaves (`TODAY == D<today>` is true on the other three
-targets and false here) is finding 5 of `ideation/0250`, because it is a
+targets and false here) is finding 5 of `ideation/0255`, because it is a
 question about the host API, not about this emitter.
 
 **Not done here, recorded instead.** The fixture walked into four more
 divergences while being written, every one of them zone-*independent* and so a
-different bug: `ideation/0250`. Two of them were asserted, seen red, and taken
+different bug: `ideation/0255`. Two of them were asserted, seen red, and taken
 back out so the corpus could stay green.
 
 **Blast radius.** 24 `.expected.js` files; the word-level diff is exactly

@@ -1,5 +1,8 @@
 # Five temporal divergences the zone fixture walked into
 
+> Numbered 0250 when written, which collided with `done/0250-a-table-for-the-
+> bounded-primitives.md`. The commit that closed 0240 refers to it as 0250.
+
 > Found while writing `stdlib/datetime/temporal-zone-independence.elo` for 0240.
 > Each was measured on main, each is zone-*independent* (red under `TZ=UTC` too),
 > and each is therefore a different bug from the one 0240 fixed. Two of the four
