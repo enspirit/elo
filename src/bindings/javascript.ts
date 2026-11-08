@@ -652,8 +652,15 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
     jsLib.register('extract', [t, Types.string], (args, ctx) => {
       const template = parseExtractTemplate((args[1] as { value: string }).value);
       const pattern = buildExtractPattern(template);
-      const matchObj = template.fields.map((f, i) => `${f}: _m[${i + 1}]`).join(', ');
-      const nullObj = template.fields.map(f => `${f}: null`).join(', ');
+      // `__proto__` is a legal field name, but a plain `__proto__: v` key in
+      // an object literal runs the [[Prototype]] setter instead of storing
+      // data: the field was silently swallowed on a match, and the no-match
+      // branch returned an object with a null prototype. Emit that key
+      // computed, as the object-literal emitter does, so it stays a data
+      // property.
+      const fieldKey = (field: string) => field === '__proto__' ? `['__proto__']` : field;
+      const matchObj = template.fields.map((f, i) => `${fieldKey(f)}: _m[${i + 1}]`).join(', ');
+      const nullObj = template.fields.map(f => `${fieldKey(f)}: null`).join(', ');
       // A JS regex literal /.../ is terminated by a line terminator as well as
       // by an unescaped `/`. escapeRegex already turns \n, \r and \t into escape
       // sequences, but U+2028 and U+2029 are *also* line terminators here (and
