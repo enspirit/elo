@@ -1,0 +1,14 @@
+# `__proto__` is an ordinary data key in Elo, and extract() accepts it as a
+# placeholder name. Its result object used to be written with plain keys —
+# `{__proto__: _m[1]}` — so the key ran the [[Prototype]] setter instead of
+# storing data: a match silently swallowed the field, and the no-match branch
+# returned an object with a null prototype.
+#
+# Member access and fetch both refuse the meta-property names on purpose, so
+# the assertions compare the whole result with an object literal, whose
+# `__proto__` key the object-literal emitter already writes computed. Equality
+# is own-keys deep equality, so a swallowed field makes these false.
+
+assert(extract('xmatchy', 'x{{__proto__}}y') == {__proto__: 'match'})
+assert(extract('no match', 'x{{__proto__}}y') == {__proto__: null})
+assert(extract('From: John <john@acme.com>', 'From: {{name}} <{{__proto__}}>').name == 'John')
