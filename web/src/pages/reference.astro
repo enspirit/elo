@@ -104,6 +104,14 @@ import Footer from '../components/Footer.astro';
           <p class="example-desc">Strings use single quotes. Escape with backslash: <code>'it\'s working'</code>.</p>
         </div>
         <h3>Dates &amp; Times</h3>
+        <p>
+          A date or a datetime is a <strong>zone-free wall clock</strong>: it
+          means the time it spells, and the timezone of the machine running the
+          compiled code never moves it. So the same expression answers the same
+          thing on a server in Brussels, in a browser in Los Angeles and in
+          PostgreSQL. <code>NOW</code> and <code>TODAY</code> are the exception,
+          and read the host's local clock — that is what they are for.
+        </p>
         <div class="example" data-action="click->doc#tryExample">
           <div class="example-header">Date Literal</div>
           <pre class="language-elo">D2025-12-25</pre>

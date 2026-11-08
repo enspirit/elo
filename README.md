@@ -72,7 +72,9 @@ See also the Related work section below.
   - Strings: `'hello'`
   - Null: `null`
   - Dates: `D2024-01-15`
-  - DateTimes: `D2024-01-15T10:30:00Z`
+  - DateTimes: `D2024-01-15T10:30:00Z` — a date or a datetime is a *zone-free*
+    wall clock: it means the time it spells, and the host's timezone never
+    moves it. `NOW` and `TODAY` read the host's local clock, as elsewhere
   - Durations: `P1D`, `PT1H30M`, `P1Y2M3D` (ISO8601)
   - Objects: `{name: 'Alice', age: 30}`
   - Arrays: `[1, 2, 3]`, `['a', 'b']`, `[1, 'mixed', true, null]` (mixed and ragged-nested lists do not compile to SQL — see below)

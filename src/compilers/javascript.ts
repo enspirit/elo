@@ -3,7 +3,7 @@ import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
-import { createJavaScriptBinding, isNativeBinaryOp } from '../bindings/javascript';
+import { createJavaScriptBinding, isNativeBinaryOp, UTC_ZONE } from '../bindings/javascript';
 import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
 import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
 import { Emitter, emit, resolveHelpers } from './_emit';
@@ -138,8 +138,19 @@ const jsEmitter: Emitter = {
   boolLiteral: (value) => value.toString(),
   nullLiteral: 'null',
   stringLiteral: (value) => JSON.stringify(value),
-  dateLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)})`,
-  datetimeLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)})`,
+  // A Date or a Datetime in Elo is a zone-free wall clock: the literal means
+  // the time it spells, and nothing about the host may move it. Ruby, Python
+  // and PostgreSQL have no ambient zone to apply; Luxon does, and `fromISO`
+  // without a zone converts into it — so two dates a whole number of days
+  // apart came out 59.958 days apart across a DST transition, and `day(...)`
+  // answered the day before. Every DateTime the emission *builds from text* is
+  // therefore pinned to UTC: here, in `bot`/`eot`, and in the coercion helpers
+  // (`kDate`, `kDatetime`, `pDate`, `pDatetime`). All of them, or the ambient
+  // zone comes back through whichever one was left out.
+  //
+  // `NOW` and `TODAY` are deliberately not in that list — see the binding.
+  dateLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)}, ${UTC_ZONE})`,
+  datetimeLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)}, ${UTC_ZONE})`,
   durationLiteral: (value) => `Duration.fromISO(${JSON.stringify(value)})`,
 
   // Wrapped in parens to avoid the ambiguity with a block.

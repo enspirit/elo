@@ -11,6 +11,16 @@ import { StdLib, identity, simpleBinaryOp, nullary, fnCall, helperCall, Function
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
+ * The zone every DateTime this target builds is pinned to.
+ *
+ * Elo's Date and Datetime are zone-free wall clocks. Luxon is the only one of
+ * the four runtimes with an ambient zone, so leaving it to decide made the
+ * same expression answer differently per host — see the comment on
+ * `dateLiteral` in `src/compilers/javascript.ts`.
+ */
+export const UTC_ZONE = '{ zone: "utc" }';
+
+/**
  * Helper for type selector using Finitio parser + pUnwrap.
  * Generates: pUnwrap(pParser(value, ''))
  * This throws on parse failure instead of returning null.
@@ -59,10 +69,16 @@ export function createJavaScriptBinding(): StdLib<string> {
   const jsLib = new StdLib<string>();
 
   // Temporal nullary functions
+  // `NOW` and `TODAY` keep the host's zone, where every literal drops it.
+  // They are the one temporal value whose answer *is* the host's clock, and a
+  // host is documented to hand its own `DateTime.now()` in as `_` (see the
+  // `compile()` example in README), so these have to stay comparable with it.
+  // The seam that leaves — `TODAY` against a zone-free literal — is recorded
+  // in `.claude/tasks/ideation/0250`; it is not this target's to settle alone.
   jsLib.register('today', [], nullary("DateTime.now().startOf('day')"));
   jsLib.register('now', [], nullary('DateTime.now()'));
-  jsLib.register('bot', [], nullary('DateTime.fromISO("0001-01-01T00:00:00.000Z")'));
-  jsLib.register('eot', [], nullary('DateTime.fromISO("9999-12-31T23:59:59.999Z")'));
+  jsLib.register('bot', [], nullary(`DateTime.fromISO("0001-01-01T00:00:00.000Z", ${UTC_ZONE})`));
+  jsLib.register('eot', [], nullary(`DateTime.fromISO("9999-12-31T23:59:59.999Z", ${UTC_ZONE})`));
 
   // Period boundary functions
   const periodBoundaryMap: Record<string, string> = {

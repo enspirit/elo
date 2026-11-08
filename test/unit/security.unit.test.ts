@@ -41,14 +41,14 @@ describe('Security - Literal injection prevention', () => {
     it('date_literal for JavaScript', () => {
       assert.strictEqual(
         compileToJavaScript(dateLiteral(sqInjection)),
-        `(function(_) { return DateTime.fromISO("'+process.exit(1)+'"); })`
+        `(function(_) { return DateTime.fromISO("'+process.exit(1)+'", { zone: "utc" }); })`
       );
     });
 
     it('datetime_literal for JavaScript', () => {
       assert.strictEqual(
         compileToJavaScript(dateTimeLiteral(sqInjection)),
-        `(function(_) { return DateTime.fromISO("'+process.exit(1)+'"); })`
+        `(function(_) { return DateTime.fromISO("'+process.exit(1)+'", { zone: "utc" }); })`
       );
     });
 
@@ -99,7 +99,7 @@ describe('Security - Literal injection prevention', () => {
     it('date_literal for JavaScript', () => {
       assert.strictEqual(
         compileToJavaScript(dateLiteral(dqInjection)),
-        '(function(_) { return DateTime.fromISO("\\"+process.exit(1)+\\""); })'
+        '(function(_) { return DateTime.fromISO("\\"+process.exit(1)+\\"", { zone: "utc" }); })'
       );
     });
 

@@ -38,7 +38,7 @@ describe('Temporal - Date Literals', () => {
 
   it('should compile date to JavaScript', () => {
     const ast = dateLiteral('2024-01-15');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15\")"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15\", { zone: \"utc\" })"));
   });
 
   it('should compile date to SQL', () => {
@@ -63,7 +63,7 @@ describe('Temporal - DateTime Literals', () => {
 
   it('should compile datetime to JavaScript', () => {
     const ast = dateTimeLiteral('2024-01-15T10:30:00Z');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15T10:30:00Z\")"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15T10:30:00Z\", { zone: \"utc\" })"));
   });
 
   it('should compile datetime to SQL', () => {
@@ -141,7 +141,7 @@ describe('Temporal - Date Arithmetic', () => {
     // JavaScript uses type-aware DateTime.plus() method
     assert.strictEqual(
       compileToJavaScript(ast),
-      wrapJS("DateTime.fromISO(\"2024-01-15\").plus(Duration.fromISO(\"P1D\"))")
+      wrapJS("DateTime.fromISO(\"2024-01-15\", { zone: \"utc\" }).plus(Duration.fromISO(\"P1D\"))")
     );
     assert.strictEqual(
       compileToSQL(ast),
@@ -225,7 +225,7 @@ describe('Temporal - Date Comparisons', () => {
     );
     assert.strictEqual(
       compileToJavaScript(ast),
-      wrapJS("DateTime.fromISO(\"2024-01-15\") < DateTime.fromISO(\"2024-12-31\")")
+      wrapJS("DateTime.fromISO(\"2024-01-15\", { zone: \"utc\" }) < DateTime.fromISO(\"2024-12-31\", { zone: \"utc\" })")
     );
     assert.strictEqual(
       compileToSQL(ast),

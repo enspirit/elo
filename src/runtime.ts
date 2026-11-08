@@ -297,16 +297,20 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof v === 'string') { if (v === 'true') return true; if (v === 'false') return false; }
   return null;
 }`,
+  // A Date or Datetime this target produces is always in UTC, literal or
+  // coerced: Elo's temporal values are zone-free, and Luxon is the only one of
+  // the four runtimes that would otherwise read the host's zone into them.
+  // See `dateLiteral` in `src/compilers/javascript.ts`.
   kDate: `function kDate(v) {
   if (v === null || v === undefined) return null;
-  if (DateTime.isDateTime(v)) return v.startOf('day');
-  if (typeof v === 'string') { const d = DateTime.fromISO(v); return d.isValid && /^\\d{4}-\\d{2}-\\d{2}$/.test(v) ? d.startOf('day') : null; }
+  if (DateTime.isDateTime(v)) return v.setZone("utc").startOf('day');
+  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: "utc" }); return d.isValid && /^\\d{4}-\\d{2}-\\d{2}$/.test(v) ? d.startOf('day') : null; }
   return null;
 }`,
   kDatetime: `function kDatetime(v) {
   if (v === null || v === undefined) return null;
-  if (DateTime.isDateTime(v)) return v;
-  if (typeof v === 'string') { const d = DateTime.fromISO(v); return d.isValid ? d : null; }
+  if (DateTime.isDateTime(v)) return v.setZone("utc");
+  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: "utc" }); return d.isValid ? d : null; }
   return null;
 }`,
   kDuration: `function kDuration(v) {
@@ -378,8 +382,8 @@ export const JS_HELPERS: Record<string, string> = {
   return pFail(p, 'expected Bool, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pDatetime: `function pDatetime(v, p) {
-  if (DateTime.isDateTime(v)) return pOk(v, p);
-  if (typeof v === 'string') { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d, p); }
+  if (DateTime.isDateTime(v)) return pOk(v.setZone("utc"), p);
+  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: "utc" }); if (d.isValid) return pOk(d, p); }
   return pFail(p, 'expected Datetime, got ' + (v === null ? 'Null' : typeof v === 'string' ? 'invalid datetime ' + JSON.stringify(v) : typeof v));
 }`,
   pFloat: `function pFloat(v, p) {
@@ -388,8 +392,8 @@ export const JS_HELPERS: Record<string, string> = {
   return pFail(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pDate: `function pDate(v, p) {
-  if (DateTime.isDateTime(v)) return pOk(v.startOf('day'), p);
-  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d.startOf('day'), p); }
+  if (DateTime.isDateTime(v)) return pOk(v.setZone("utc").startOf('day'), p);
+  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v, { zone: "utc" }); if (d.isValid) return pOk(d.startOf('day'), p); }
   return pFail(p, 'expected Date (YYYY-MM-DD), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
   pDuration: `function pDuration(v, p) {

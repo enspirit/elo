@@ -302,22 +302,22 @@ describe('JavaScript Compiler - Edge Cases', () => {
 describe('JavaScript Compiler - Date Arithmetic', () => {
   it('should compile date + duration using DateTime.plus()', () => {
     const ast = binary('+', { type: 'date', value: '2024-01-15' }, { type: 'duration', value: 'P1D' });
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15\").plus(Duration.fromISO(\"P1D\"))"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15\", { zone: \"utc\" }).plus(Duration.fromISO(\"P1D\"))"));
   });
 
   it('should compile date - duration using DateTime.minus()', () => {
     const ast = binary('-', { type: 'date', value: '2024-01-15' }, { type: 'duration', value: 'P1D' });
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15\").minus(Duration.fromISO(\"P1D\"))"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15\", { zone: \"utc\" }).minus(Duration.fromISO(\"P1D\"))"));
   });
 
   it('should compile duration + datetime (commutative)', () => {
     const ast = binary('+', { type: 'duration', value: 'PT2H' }, { type: 'datetime', value: '2024-01-15T10:00:00Z' });
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15T10:00:00Z\").plus(Duration.fromISO(\"PT2H\"))"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15T10:00:00Z\", { zone: \"utc\" }).plus(Duration.fromISO(\"PT2H\"))"));
   });
 
   it('should compile datetime + duration', () => {
     const ast = binary('+', { type: 'datetime', value: '2024-01-15T10:00:00Z' }, { type: 'duration', value: 'PT1H30M' });
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15T10:00:00Z\").plus(Duration.fromISO(\"PT1H30M\"))"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.fromISO(\"2024-01-15T10:00:00Z\", { zone: \"utc\" }).plus(Duration.fromISO(\"PT1H30M\"))"));
   });
 });
 
