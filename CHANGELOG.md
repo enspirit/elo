@@ -2,20 +2,29 @@
 
 All notable changes to Elo are documented in this file.
 
-## [Unreleased]
+## [1.2.4] - 2026-11-08
 
 A second security pass. 1.2.3 fixed six issues; sweeping the compiler for the
 *classes* those six belonged to — a value embedded in target syntax without the
 target's escaper, a native operator reached on an operand whose type was a
 promise rather than a check, a recursive walk with no depth bound — turned up
-six more, none of them reported from outside. Each got a red-first test, seen
-fail on every affected target, then verified executing on node, ruby, python
-and psql. No new construct; the public API is unchanged.
+**eight** more, none of them reported from outside. Each got a red-first test,
+seen fail on every affected target, then verified executing on node, ruby,
+python and psql.
+
+Half of those eight were found by building the harness rather than by running
+it: writing down what the emitted code is *allowed* to contain, and what each
+path through a bounded primitive is *allowed* to call, forced the question "why
+is this one safe?" to be answered for every cell — and three cells had no
+answer. See **Internals** below.
+
+No new construct, no API change. `eloc` gains one diagnostic flag, used by
+Elo's own suite.
 
 ### Before you upgrade
 
 Nothing to reinstall: the SQL prelude is untouched, and the JavaScript, Ruby
-and Python helpers travel with the emitted code. Three expressions that used to
+and Python helpers travel with the emitted code. Four expressions that used to
 answer now raise, on purpose:
 
 - an exponentiation whose result would exceed `ELO_MAX_STRING_LENGTH` bits
@@ -24,11 +33,22 @@ answer now raise, on purpose:
 - a modulo with a non-numeric operand on the dynamic path — it was `NaN` on
   JavaScript and `sprintf` on Ruby and Python, and it is a type error anyway;
 - `at()` with a runtime-supplied index that is not an integer — it now answers
-  null instead of reading a host member.
+  null instead of reading a host member;
+- a `patch` whose array index would exceed `ELO_MAX_STRING_LENGTH` — the cap
+  was already there, but nothing asserted it refused anything.
 
-One expression that used to answer *wrongly* now answers: `x * n` with a string
-`x` on the dynamic path repeats the string on JavaScript, as the typed path and
-the other targets already did, instead of returning `NaN`.
+Two expressions that used to answer *wrongly* now answer correctly. `x * n`
+with a string `x` on the dynamic path repeats the string on JavaScript, as the
+typed path and the other targets already did, instead of returning `NaN`. And a
+record type with a `__proto__` key round-trips on JavaScript instead of
+silently dropping it.
+
+**If you run Elo on Ruby and bind a type whose name collides with a Ruby
+constant**, the emitted name changed: a type name is now a `_t_`-prefixed local
+rather than a bare constant. The shape of generated code carries no promise
+(see README, *Versioning*), so this is informational — but it is the fix for
+the most serious issue in this release, and a host that pattern-matched the
+emitted Ruby will see it.
 
 One message changed. A missing record key reported `expected Int, got undefined`
 on JavaScript and `got Null` on Ruby and Python; all three now say `Null`, which
@@ -130,6 +150,80 @@ is the only one of the two that names something Elo has.
   "always emits valid code" contract. Both are now spelled as `\u` escapes,
   which match the same character. JavaScript only; the other three carry them
   as ordinary data.
+
+### Added
+
+- **`eloc --force-dynamic`**, the opposite of `--optimize`: compile as though
+  no operand type were known, so every call takes the runtime dispatcher
+  instead of a typed operation. The two must answer the same, and a difference
+  between them is a bug in Elo — half the sandbox escapes to date have lived in
+  an `any` implementation whose typed twin was correct. Elo's own suite now
+  runs the whole fixture corpus through both ends of that axis.
+
+### Internals
+
+The security work above is half the release. The other half is the harness that
+found it, because "sweep the compiler for this class" is not a thing you can do
+twice by hand.
+
+- **The grammar of the emitted code is written down and enforced.** Elo's
+  output is a very small sub-grammar of each target, and nothing had ever said
+  so. Measured over the 1 364 emitted programs in the fixture corpus, the
+  JavaScript outside the prelude helpers reads 54 property names, names 6
+  globals, and performs computed member access in exactly two shapes. Those
+  lists are now closed, which bans `.constructor`, `.__proto__`, `eval`,
+  `Function`, `require` and `process` by *absence* rather than by denylist.
+  Ruby is gated the same way through Ripper (no backticks, no host variables,
+  no interpolation that is not the compiler's own prose) and Python through
+  `ast` — where a closed list of 34 attribute names bans the entire dunder
+  escape vocabulary. The gates run over every fixture, in all four compile
+  modes, in both the plain and `--optimize` passes.
+
+- **Every path through a bounded primitive is enumerated.** 91 signatures
+  across four targets, each either routing through its bounding helper or
+  classified as native with a reason. Every allocation bug Elo has had was the
+  same sentence — the helper exists and some path did not call it — so the
+  table is the machine-checked version of that sentence.
+
+- **The helper region the gates exempt is enumerated too**, since it is where
+  six of the thirty issues fixed since 1.0 have lived. Of 53 JavaScript
+  helpers, 12 index by a computed key; each now has to say what stops that key
+  being `__proto__`, and the claim is checked against the source.
+
+- **Dispatch coverage.** Instrumenting the dispatcher while compiling the
+  corpus showed 78 of 314 JavaScript stdlib implementations were never compiled
+  by any fixture — so no acceptance run executed them and no gate inspected
+  them. Closing the largest group brought that to 50; the rest is a listed
+  to-do.
+
+- **Two corpora for the properties a shape cannot show**: 30 hostile shapes ×
+  7 compiler stages at depth 50 000 (nothing was red — the 1.1.0/1.1.1/1.2.4
+  depth fixes hold), and 19 programs × 13 inputs that lie about their declared
+  `--input-type`, asserting that `--optimize` cannot turn a lie about the input
+  into a capability.
+
+- **CI.** `deploy-pages.yml` pinned Node 20 while `ci.yml` pinned 22, and the
+  Astro 7 upgrade in 1.2.3 made the website need ≥ 22.12.0 — so Pages had been
+  failing on a version nobody had thought to change. Both workflows now read a
+  single `.nvmrc`.
+
+- **`contrib/` advisories cleared.** Seven `brace-expansion` advisories and one
+  in `diff` (codemirror-lang-elo), and one in `minimatch` via `@vscode/vsce`
+  (vscode-elo) — all dev-dependency denial-of-service. `mocha` moved to 12;
+  `glob` and `minimatch` needed `overrides` because the top-level packages
+  still resolve to affected ranges.
+
+### Known limitations
+
+- Two divergences the new force-dynamic axis found are **not** fixed in this
+  release, and are listed in `test/acceptance/dynamic-divergences.txt`:
+  `String(x)` returns the quoted *display* form on the dynamic path
+  (`"'hello'"` rather than `"hello"`), and `fetch(d, p)` with an object path
+  raises a host `TypeError` instead of an Elo failure when the path's type is
+  not statically known. Both need a lambda to reach — `fn( x ~> String(x) )`.
+- `startOf`/`endOf` still answer in the host timezone rather than the value's
+  on JavaScript, which is two known acceptance failures and predates this
+  release.
 
 ## [1.2.3] - 2026-11-07
 
