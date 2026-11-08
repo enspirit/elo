@@ -34,13 +34,13 @@
 ->(_) { (raise "Assertion failed" unless (f = ->(s) { (->(s) { _m = s.match(/id=(.*)$/); _m ? {n: _m[1]} : {n: nil} }).call(s)[:n] }; f.call("id=42")) == "42"; true) }.call(nil);
 
 
-->(_) { def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless (f = ->(xs) { xs.map(&->(x) { k_mul(x, 2) }) }; f.call([1, 2])) == [2, 4]; true) }.call(nil);
+->(_) { def k_mul(l, r); return k_str_mul(l, r) if String === l && Integer === r; return k_str_mul(r, l) if String === r && Integer === l; l * r end; def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless (f = ->(xs) { xs.map(&->(x) { k_mul(x, 2) }) }; f.call([1, 2])) == [2, 4]; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(xs) { xs.select(&->(x) { x > 1 }) }; f.call([1, 2])) == [2]; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(xs) { xs.all?(&->(x) { x > 0 }) }; f.call([1, 2])) == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(xs) { xs.any?(&->(x) { x > 1 }) }; f.call([1, 2])) == true; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(xs) { xs.find(&->(x) { x > 1 }) }; f.call([1, 2])) == 2; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(xs) { xs.sort_by(&->(x) { -x }) }; f.call([1, 2])) == [2, 1]; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless (f = ->(xs) { xs.reduce(0, &->(a, x) { a + x }) }; f.call([1, 2])) == 3; true) }.call(nil);
+->(_) { def k_add(l, r); return r + l if ActiveSupport::Duration === l && (Date === r || Time === r); l + r end; (raise "Assertion failed" unless (f = ->(xs) { xs.reduce(0, &->(a, x) { k_add(a, x) }) }; f.call([1, 2])) == 3; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (f = ->(xs) { xs.join("-") }; f.call(["a", "b"])) == "a-b"; true) }.call(nil);
 
 
@@ -57,8 +57,8 @@
 ->(_) { (raise "Assertion failed" unless "aba".gsub("a") { "z" } == "zbz"; true) }.call(nil);
 ->(_) { def k_pad(s, n, p, at_start); raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if n > 10000000; at_start ? s.rjust(n, p) : s.ljust(n, p) end; (raise "Assertion failed" unless k_pad("7", 3, "0", true) == "007"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless (->(s) { _m = s.match(/id=(.*)$/); _m ? {n: _m[1]} : {n: nil} }).call("id=42")[:n] == "42"; true) }.call(nil);
-->(_) { def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless [1, 2].map(&->(x) { k_mul(x, 2) }) == [2, 4]; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless [1, 2].reduce(0, &->(a, x) { a + x }) == 3; true) }.call(nil);
+->(_) { def k_mul(l, r); return k_str_mul(l, r) if String === l && Integer === r; return k_str_mul(r, l) if String === r && Integer === l; l * r end; def k_str_mul(s, n); return '' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; (raise "Assertion failed" unless [1, 2].map(&->(x) { k_mul(x, 2) }) == [2, 4]; true) }.call(nil);
+->(_) { def k_add(l, r); return r + l if ActiveSupport::Duration === l && (Date === r || Time === r); l + r end; (raise "Assertion failed" unless [1, 2].reduce(0, &->(a, x) { k_add(a, x) }) == 3; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ["a", "b"].join("-") == "a-b"; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless !false == true; true) }.call(nil);
 ->(_) { def k_round_to(x, n); f = 10 ** n; (x * f).round.fdiv(f) end; (raise "Assertion failed" unless k_round_to(1.25, 1) == 1.3; true) }.call(nil);

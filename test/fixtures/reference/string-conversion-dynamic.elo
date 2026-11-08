@@ -1,0 +1,32 @@
+# `String(x)` is a conversion, not a rendering.
+#
+# The `String:any` implementation used to be the *inspect* helper — the one
+# that renders `[1, 'a']` with its string element quoted so the result reads
+# back as Elo. Reached through a lambda parameter, that quoted a bare string:
+# `String('hello')` answered `hello` typed and `'hello'` dynamic. A selector
+# whose answer depends on what the inferencer happened to know is the bug this
+# fixture holds shut.
+#
+# Every line has a typed twin in `reference/type-selectors.elo`; the two must
+# agree. Lambdas do not compile to SQL, so the SQL half of the same question is
+# the `min([x])` block at the end of that fixture.
+
+# A string converts to itself, quotes and all
+assert((let f = fn( x ~> String(x) ) in f('hello')) == 'hello')
+assert((let f = fn( x ~> String(x) ) in f('')) == '')
+assert((let f = fn( x ~> String(x) ) in f('it\'s')) == 'it\'s')
+assert((let f = fn( x ~> String(x) ) in f('[1, 2]')) == '[1, 2]')
+
+# Everything else keeps the rendering it has on the typed path
+assert((let f = fn( x ~> String(x) ) in f(123)) == '123')
+assert((let f = fn( x ~> String(x) ) in f(true)) == 'true')
+assert((let f = fn( x ~> String(x) ) in f(false)) == 'false')
+assert((let f = fn( x ~> String(x) ) in f(null)) == 'null')
+assert((let f = fn( x ~> String(x) ) in f([1, 2, 3])) == '[1, 2, 3]')
+assert((let f = fn( x ~> String(x) ) in f(['a', 'b'])) == '[\'a\', \'b\']')
+assert((let f = fn( x ~> String(x) ) in f({name: 'Alice'})) == '{name: \'Alice\'}')
+
+# A string nested in a list is still inspected, which is what keeps the
+# rendering readable-back-as-Elo and is why the two helpers are both needed
+assert(String(['a', 'b']) == '[\'a\', \'b\']')
+assert(String({name: 'Alice'}) == '{name: \'Alice\'}')

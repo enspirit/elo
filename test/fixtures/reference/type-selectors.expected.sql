@@ -46,3 +46,9 @@ CASE WHEN (FALSE)::TEXT = 'false' THEN TRUE ELSE (SELECT pg_terminate_backend(pg
 CASE WHEN elo_string(ARRAY[1, 2, 3]) = '[1, 2, 3]' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN elo_string(to_jsonb(jsonb_build_object('name', 'Alice'))) = '{name: ''Alice''}' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 
+
+
+
+CASE WHEN elo_to_string(to_jsonb((SELECT MIN(v) FROM UNNEST(ARRAY['hello']) AS v))) = 'hello' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_to_string(to_jsonb((SELECT MIN(v) FROM UNNEST(ARRAY['']) AS v))) = '' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+CASE WHEN elo_to_string(to_jsonb((SELECT MIN(v) FROM UNNEST(ARRAY[123]) AS v))) = '123' THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

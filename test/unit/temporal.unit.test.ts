@@ -20,7 +20,7 @@ function wrapRuby(code: string): string {
 // Ruby has no typed mul(Int, Duration); duration scaling dispatches through
 // k_mul, which routes a String operand to the bounded repeat and otherwise
 // uses the native `*` (so durations keep ActiveSupport's overload).
-const RUBY_MUL = 'def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; def k_str_mul(s, n); return \'\' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; ';
+const RUBY_MUL = 'def k_mul(l, r); return k_str_mul(l, r) if String === l && Integer === r; return k_str_mul(r, l) if String === r && Integer === l; l * r end; def k_str_mul(s, n); return \'\' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; ';
 
 describe('Temporal - Date Literals', () => {
   it('should parse date literal', () => {

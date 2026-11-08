@@ -87,7 +87,19 @@ export function createRubyBinding(): StdLib<string> {
 
   // Ruby uses native operators for all types due to operator overloading
   // Using any,any registration - type generalization handles all concrete type combinations
-  rubyLib.register('add', [Types.any, Types.any], simpleBinaryOp('+'));
+  // Addition is not native for every type either: ActiveSupport defines
+  // Date + Duration and not Duration + Date, so the unknown-type case goes
+  // through a dispatcher that swaps the operands the way the typed
+  // registrations below do. The numeric cases keep a bare `+`.
+  rubyLib.register('add', [Types.any, Types.any], helperCall('k_add'));
+  for (const leftType of [Types.int, Types.float]) {
+    for (const rightType of [Types.int, Types.float]) {
+      rubyLib.register('add', [leftType, rightType], simpleBinaryOp('+'));
+    }
+  }
+  rubyLib.register('add', [Types.string, Types.string], simpleBinaryOp('+'));
+  rubyLib.register('add', [Types.array, Types.array], simpleBinaryOp('+'));
+  rubyLib.register('add', [Types.duration, Types.duration], simpleBinaryOp('+'));
   // Subtraction is the one operator Ruby cannot do natively for every type:
   // Date/DateTime difference yields a Rational number of days, not a duration.
   // So the unknown-type case goes through a dispatcher, and the numeric cases
@@ -427,29 +439,29 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('isNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])}).nil?`);
 rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])}).nil?`);
 
-  // Data path navigation - core fetch helper (used by all fetch variants)
-  // Note: converts string segments to symbols for hash access (Ruby hashes use symbol keys)
-  const rubyFetchLambda = '->(d, p) { p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg.is_a?(String) ? seg.to_sym : seg] : nil) } }';
-
+  // Data path navigation. The walk lives in the `k_fetch*` prelude helpers,
+  // so the four forms share one implementation of it; see src/runtime.ts.
   rubyLib.register('fetch', [Types.any, Types.fn], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const path = ctx.emit(args[1]);
-    return `(${rubyFetchLambda}).call(${data}, ${path})`;
+    ctx.requireHelper('k_fetch');
+    return `k_fetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   rubyLib.register('fetch', [Types.any, Types.string], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const key = ctx.emit(args[1]);
-    return `(${rubyFetchLambda}).call(${data}, [${key}])`;
+    ctx.requireHelper('k_fetch');
+    return `k_fetch(${ctx.emit(args[0])}, [${ctx.emit(args[1])}])`;
   });
   rubyLib.register('fetch', [Types.any, Types.array], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const path = ctx.emit(args[1]);
-    return `(${rubyFetchLambda}).call(${data}, ${path})`;
+    ctx.requireHelper('k_fetch');
+    return `k_fetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   rubyLib.register('fetch', [Types.any, Types.object], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const paths = ctx.emit(args[1]);
-    return `(->(d, ps) { f = ${rubyFetchLambda}; ps.transform_values { |p| f.call(d, p) } }).call(${data}, ${paths})`;
+    ctx.requireHelper('k_fetch_object');
+    return `k_fetch_object(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
+  // With the path's type unknown, its runtime shape decides which form it is.
+  // Without this the arity fallback took the path form for all four.
+  rubyLib.register('fetch', [Types.any, Types.any], (args, ctx) => {
+    ctx.requireHelper('k_fetch_any');
+    return `k_fetch_any(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   rubyLib.register('patch', [Types.any, Types.fn, Types.any], (args, ctx) => {
     ctx.requireHelper('k_patch');
@@ -547,9 +559,12 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     const v = ctx.emit(args[0]);
     return `(->(s) { ActiveSupport::Duration.parse(s) rescue raise ".: expected Duration (ISO 8601), got #{s.inspect}" }).call(${v})`;
   });
+  // A Range is how this target carries an Interval, and Duration(interval) is
+  // the interval's length on the typed path, so this must answer the same
+  // rather than refuse — it raised ".: expected Duration, got Range".
   rubyLib.register('Duration', [Types.any], (args, ctx) => {
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when ActiveSupport::Duration; v when String; ActiveSupport::Duration.parse(v) rescue raise ".: expected Duration (ISO 8601), got #{v.inspect}" else raise ".: expected Duration, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when ActiveSupport::Duration; v when Range; ActiveSupport::Duration.build(((v.last - v.first) * 86400).to_i) when String; ActiveSupport::Duration.parse(v) rescue raise ".: expected Duration (ISO 8601), got #{v.inspect}" else raise ".: expected Duration, got #{v.class}" end }).call(${v})`;
   });
 
   // Interval - construct from object with start/end properties
@@ -619,9 +634,11 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     ctx.requireHelper('k_string');
     return `k_string(${ctx.emit(args[0])})`;
   });
+  // Not k_string: that renders, and renders a string *quoted*. Reached with
+  // the type unknown it has to convert, like `String:string` does.
   rubyLib.register('String', [Types.any], (args, ctx) => {
-    ctx.requireHelper('k_string');
-    return `k_string(${ctx.emit(args[0])})`;
+    ctx.requireHelper('k_to_string');
+    return `k_to_string(${ctx.emit(args[0])})`;
   });
 
   // List manipulation functions

@@ -529,6 +529,9 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
   });
   jsLib.register('fetch', [Types.any, Types.array], helperCall('kFetch'));
   jsLib.register('fetch', [Types.any, Types.object], helperCall('kFetchObject'));
+  // With the path's type unknown, its runtime shape decides which form it is.
+  // Without this the arity fallback took the path form for all four.
+  jsLib.register('fetch', [Types.any, Types.any], helperCall('kFetchAny'));
   jsLib.register('patch', [Types.any, Types.fn, Types.any], helperCall('kPatch'));
 
   // Data merge functions
@@ -634,7 +637,9 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
   jsLib.register('String', [Types.null], (args, ctx) => `String(${ctx.emit(args[0])})`);
   jsLib.register('String', [Types.array], helperCall('kString'));
   jsLib.register('String', [Types.object], helperCall('kString'));
-  jsLib.register('String', [Types.any], helperCall('kString'));
+  // Not kString: that renders, and renders a string *quoted*. Reached with the
+  // type unknown it has to convert, like `String:string` does. See kToString.
+  jsLib.register('String', [Types.any], helperCall('kToString'));
 
   // List manipulation functions
   jsLib.register('reverse', [Types.array], (args, ctx) =>

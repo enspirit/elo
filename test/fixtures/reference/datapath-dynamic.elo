@@ -1,0 +1,47 @@
+# `fetch(d, p)` has four forms, told apart by the *type* of `p`.
+#
+# A datapath, a string key, a list of segments, and a mapping of names to
+# paths. With `p`'s type unknown the stdlib's arity fallback picked the first
+# registration — the path form — and the mapping form then raised a host
+# `TypeError: path is not iterable` from ordinary Elo source:
+#
+#   let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, {x: .a})
+#
+# That is a violation of the stated property *"it never crashes uncontrollably;
+# bad input yields a typed Elo error, not an uncaught native exception"*, not
+# merely a wrong answer. The dynamic `fetch` dispatches on the runtime shape of
+# `p` now, the way `kMul` dispatches on whether its operand is a String.
+#
+# Every line has a typed twin in `reference/datapath.elo`; the two must agree.
+# Lambdas do not compile to SQL, so this fixture has no SQL expectation.
+
+# The mapping form, which is the one that crashed
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({a: 1, b: 2}, {x: .a, y: .b})) == {x: 1, y: 2})
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({foo: {bar: 10}}, {v: .foo.bar})) == {v: 10})
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({items: [1, 2, 3]}, {first: .items.0, last: .items.2})) == {first: 1, last: 3})
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, {})) == {})
+
+# The datapath form, which already worked and must keep working
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({name: 'Alice'}, .name)) == 'Alice')
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({user: {name: 'Bob'}}, .user.name)) == 'Bob')
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({items: [10, 20, 30]}, .items.0)) == 10)
+assert(isNull(let f = fn( d, p ~> fetch(d, p) ) in f({name: 'Alice'}, .missing)))
+assert(isNull(let f = fn( d, p ~> fetch(d, p) ) in f(null, .x)))
+
+# The string-key and segment-list forms
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({x: 12}, 'x')) == 12)
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({x: 12}, ['x'])) == 12)
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({user: {name: 'Bob'}}, ['user', 'name'])) == 'Bob')
+
+# A path that is none of the four shapes is an Elo null, not a host crash
+assert(isNull(let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, 42)))
+assert(isNull(let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, null)))
+
+# A meta-property name is still refused through the dynamic path
+assert(isNull(let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, ['__proto__'])))
+assert(isNull(let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, ['constructor'])))
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, {k: ['__proto__']})) == {k: null})
+
+# A path segment list the typed path would have refused, through the dynamic one
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, {k: 42})) == {k: null})
+assert((let f = fn( d, p ~> fetch(d, p) ) in f({a: 1}, {k: null})) == {k: null})

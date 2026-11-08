@@ -55,15 +55,24 @@ if [ -n "$ELO_FORCE_DYNAMIC" ]; then
     done < "$SCRIPTS_DIR/dynamic-divergences.txt"
 fi
 
-should_skip() {
-    local file=$1
-    local basename=$(basename "$file")
+# Whether this fixture is on the known-divergence list. Listed fixtures are not
+# simply skipped: a line that has stopped diverging is a stale allowance, and a
+# list that quietly carries one has stopped meaning anything. So a listed
+# fixture is run, and *passing* is the failure. See dynamic-divergences.txt.
+is_divergence() {
+    local basename=$(basename "$1")
+    local skip
     for skip in "${DIVERGENCES[@]}"; do
         if [[ "$basename" == "$skip".* ]]; then
-            echo "  ⊘ $basename (skipped - known dynamic divergence)"
             return 0
         fi
     done
+    return 1
+}
+
+should_skip() {
+    local file=$1
+    local basename=$(basename "$file")
     for skip in "${SKIP_FILES[@]}"; do
         if [[ "$basename" == "$skip"* ]]; then
             echo "  ⊘ $basename (skipped - requires variables)"
@@ -75,6 +84,17 @@ should_skip() {
 
 # Find all .expected.ruby and .expected.rb files recursively
 while IFS= read -r -d '' file; do
+    if is_divergence "$file"; then
+        if { echo "$PRELUDE"; emit "$file"; } | ruby >/dev/null 2>&1; then
+            echo "  ⚠ $(basename "$file") (STALE divergence: it passes now - delete its line from dynamic-divergences.txt)"
+            ((FAILED++)) || true
+        else
+            echo "  ⊘ $(basename "$file") (skipped - known dynamic divergence)"
+            ((SKIPPED++)) || true
+        fi
+        continue
+    fi
+
     if should_skip "$file"; then
         ((SKIPPED++)) || true
         continue

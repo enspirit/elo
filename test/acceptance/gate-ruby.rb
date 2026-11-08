@@ -86,8 +86,9 @@ ALLOWED_METHODS = %w[
 # `require`, `load`, `eval`, `fork`, `open`, `gets`, `at_exit`, `send`.
 ALLOWED_CALLS = %w[
   Integer lambda method
-  k_deep_merge k_div k_float k_intersection k_mod k_mul k_pad k_patch k_pow
-  k_round_to k_str_mul k_string k_sub
+  k_add k_deep_merge k_div k_fetch k_fetch_any k_fetch_object k_float
+  k_intersection k_mod k_mul k_pad k_patch k_pow k_round_to k_str_mul
+  k_string k_sub k_to_string
   p_array p_raise p_schema p_subtype p_union p_unwrap
 ].freeze
 

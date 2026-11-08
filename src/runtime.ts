@@ -74,9 +74,11 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   kRoundTo: ['kRound'],
   kInt: ['pInt', 'pUnwrap', 'pOk', 'pFail'],
   kNeq: ['kEq'],
+  kToString: ['kString'],
   kMember: [],
   kFetch: ['kMember'],
   kFetchObject: ['kFetch', 'kMember'],
+  kFetchAny: ['kFetch', 'kFetchObject', 'kMember'],
   kPatch: ['kMember'],
   kDeepMerge: ['kMember'],
   // Parser helpers depend on pOk/pFail
@@ -112,6 +114,12 @@ export const JS_HELPERS: Record<string, string> = {
   if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
   if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l);
   if (Duration.isDuration(l) && Duration.isDuration(r)) return l.plus(r);
+  /* Elo's + on two lists concatenates, as add:array,array does. JavaScript's
+     native + stringifies them instead, so [1, 2] + [3, 4] came out "1,23,4" —
+     a wrong value, silently, where the typed path and the other three targets
+     answer a list. The dispatcher has to carry every overload the typed path
+     has, not the subset someone remembered. */
+  if (Array.isArray(l) && Array.isArray(r)) return l.concat(r);
   return l + r;
 }`,
   kSub: `function kSub(l, r) {
@@ -216,6 +224,11 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   kFetch: `function kFetch(data, path) {
   var FORBIDDEN = ['constructor', '__proto__', 'prototype', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'];
+  /* A path that is not a list of segments has nothing to walk. Without this
+     the for-of raised "path is not iterable" — an uncaught host exception from
+     ordinary Elo source, which the security page promises cannot happen:
+     fetch({a: 1}, {k: 42}) reached here through kFetchObject with 42. */
+  if (!Array.isArray(path)) return null;
   let current = data;
   for (const segment of path) {
     if (current === null || current === undefined) return null;
@@ -241,6 +254,17 @@ export const JS_HELPERS: Record<string, string> = {
     else { result[key] = value; }
   }
   return result;
+}`,
+  /* `fetch(d, p)` has four forms and the *type* of `p` tells them apart. Where
+     the type is unknown — a lambda parameter, a member read — the shape of the
+     value has to, the way kMul asks whether its operand is a String. Before
+     this the arity fallback chose the path form for every one of them, so the
+     mapping form walked an object as if it were a list of segments. */
+  kFetchAny: `function kFetchAny(data, path) {
+  if (typeof path === 'string') return kFetch(data, [path]);
+  if (Array.isArray(path)) return kFetch(data, path);
+  if (path !== null && typeof path === 'object') return kFetchObject(data, path);
+  return null;
 }`,
   kPatch: `function kPatch(data, path, value) {
   var FORBIDDEN = ['constructor', '__proto__', 'prototype', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'];
@@ -338,6 +362,16 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof v === 'object') return '{' + Object.keys(v).map(k => k + ': ' + kString(v[k])).join(', ') + '}';
   return String(v);
 }`,
+  /* `String(x)` is a *conversion*; kString is a *rendering*. They differ on
+     exactly one input — a string, which kString quotes so that `[1, 'a']`
+     reads back as Elo — and `String:any` used to be kString, so a string that
+     reached it through a lambda parameter came back as "'hello'". The typed
+     `String:string` is the identity; this is what makes the dynamic path agree
+     with it. The two helpers are both needed: a string *nested* in a list is
+     still rendered. */
+  kToString: `function kToString(v) {
+  return typeof v === 'string' ? v : kString(v);
+}`,
   kIntersection: `function kIntersection(a, b) {
   const s = DateTime.max(a.start, b.start);
   const e = DateTime.min(a.end, b.end);
@@ -398,6 +432,9 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   pDuration: `function pDuration(v, p) {
   if (Duration.isDuration(v)) return pOk(v, p);
+  /* Duration(interval) is the interval's length on the typed path, so the
+     unknown-type path has to answer the same rather than refuse. */
+  if (Interval.isInterval(v)) return pOk(v.end.diff(v.start), p);
   if (typeof v === 'string') { const d = Duration.fromISO(v); if (d.isValid) return pOk(d, p); }
   return pFail(p, 'expected Duration (ISO 8601), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
@@ -496,6 +533,7 @@ export const JS_HELPERS: Record<string, string> = {
  * These are embedded in compiled Ruby output when type definitions are used.
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  k_add: [],
   k_sub: [],
   k_round_to: [],
   k_pow: [],
@@ -505,6 +543,10 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   k_str_mul: [],
   k_pad: [],
   k_float: [],
+  k_fetch: [],
+  k_fetch_object: ['k_fetch'],
+  k_fetch_any: ['k_fetch', 'k_fetch_object'],
+  k_to_string: ['k_string'],
   p_any: ['p_ok'],
   p_null: ['p_ok', 'p_fail'],
   p_string: ['p_ok', 'p_fail'],
@@ -524,6 +566,17 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  // A class test in a helper is written `Klass === v`, never `v.is_a?(Klass)`.
+  //
+  // `ActiveSupport::Duration#is_a?` delegates to the Duration's numeric value,
+  // so `P2D.is_a?(Integer)` is **true** — and so is `instance_of?(Integer)`,
+  // which goes through the same `method_missing`. `Integer === P2D` is false,
+  // because `Module#===` does the real class check. Every dispatcher below
+  // receives operands whose types nothing knows, so the difference is not
+  // academic: `k_div` took its Integer branch for `P2D / 2` and answered the
+  // Float 86400.0 where the typed path answers a Duration, and `k_mul` would
+  // have taken a Duration for the repeat count of a String.
+  //
   // What a String has to look like to be a Float. Kernel#Float is not that
   // question: it answers 1.0 for "1." on Ruby 3.4 and raises on 3.2, so the
   // same Elo program would mean two things depending on the host's Ruby. The
@@ -548,23 +601,23 @@ end`,
      Rational compares equal to the Float, so only typeOf and formatting show
      it — typeOf said 'Tuple', having no case for one. */
   k_pow: `def k_pow(l, r)
-  raise "Exponentiation result exceeds the size limit (${MAX_STRING_LENGTH} bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > ${MAX_STRING_LENGTH}
+  raise "Exponentiation result exceeds the size limit (${MAX_STRING_LENGTH} bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > ${MAX_STRING_LENGTH}
   v = l ** r
-  v.is_a?(Rational) ? v.to_f : v
+  Rational === v ? v.to_f : v
 end`,
   // Elo's `*` on a String is a length-bounded repeat; on the dynamic path the
   // operands are not statically typed, so route a String here rather than let
   // Ruby's unbounded `String#*` run. Everything else (numbers, durations) keeps
   // the native operator.
   k_mul: `def k_mul(l, r)
-  return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer)
-  return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer)
+  return k_str_mul(l, r) if String === l && Integer === r
+  return k_str_mul(r, l) if String === r && Integer === l
   l * r
 end`,
   // Elo's `%` is numeric modulo; Ruby's `String#%` is sprintf, so a String
   // operand on the dynamic path must be refused rather than formatted.
   k_mod: `def k_mod(l, r)
-  raise "Modulo requires numeric operands" unless l.is_a?(Numeric) && r.is_a?(Numeric)
+  raise "Modulo requires numeric operands" unless Numeric === l && Numeric === r
   l % r
 end`,
   k_round_to: `def k_round_to(x, n)
@@ -576,13 +629,28 @@ end`,
   // must too or the two disagree. Kept comment-free: helper bodies are inlined
   // onto one line, where a `#` would swallow the rest of the program.
   k_sub: `def k_sub(l, r)
-  if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time))
+  if (Date === l || Time === l) && (Date === r || Time === r)
     return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds
   end
   l - r
 end`,
+  // Elo's `+` on a Duration and a Date reads the same either way round, but
+  // ActiveSupport only defines Date + Duration — `P1D + D2024-01-15` raised
+  // "Date can't be coerced into Integer". The typed registrations swap the
+  // operands for exactly this reason; `add:any,any` was a bare `+` and did
+  // not, which is the shape CLAUDE.md warns about: a native operator on an
+  // `any` operand reaching overloads Elo never asked for.
+  k_add: `def k_add(l, r)
+  return r + l if ActiveSupport::Duration === l && (Date === r || Time === r)
+  l + r
+end`,
+  // Durations are tested first and by class: see the note at the top. With
+  // `is_a?` and the Integer branch first, `P2D / 2` answered the Float
+  // 86400.0 where the typed path and the other three targets answer P1D, so
+  // typeOf said 'Float'. `Duration#/` already returns a Duration.
   k_div: `def k_div(l, r)
-  return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer)
+  return l / r if ActiveSupport::Duration === l
+  return l.fdiv(r) if Integer === l && Integer === r
   l / r
 end`,
   k_deep_merge: `def k_deep_merge(a, b)
@@ -611,6 +679,35 @@ end`,
     obj[seg] = k_patch(existing.nil? ? next_default : existing, rest, v)
     obj
   end
+end`,
+  // Data path navigation. One helper per form, and one that picks a form by
+  // the runtime shape of the path, because `fetch(d, p)` tells its four forms
+  // apart by the *type* of `p` and that type is not always known. These used
+  // to be lambdas inlined at each of the four registrations; a bound that
+  // lives in four copies is a bound three of them can lose.
+  //
+  // Ruby hashes built from Elo objects are symbol-keyed, so a string segment
+  // is converted; there is no prototype chain behind `Hash#[]`, so no
+  // meta-property a computed key could reach (see helper-region.unit.test.ts,
+  // "Why JavaScript only").
+  k_fetch: `def k_fetch(d, p)
+  return nil unless p.is_a?(Array)
+  p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg.is_a?(String) ? seg.to_sym : seg] : nil) }
+end`,
+  k_fetch_object: `def k_fetch_object(d, ps)
+  return nil unless ps.is_a?(Hash)
+  ps.transform_values { |p| k_fetch(d, p) }
+end`,
+  k_fetch_any: `def k_fetch_any(d, p)
+  return k_fetch(d, [p]) if p.is_a?(String)
+  return k_fetch(d, p) if p.is_a?(Array)
+  return k_fetch_object(d, p) if p.is_a?(Hash)
+  nil
+end`,
+  // `String(x)` converts; k_string renders, and renders a string quoted. The
+  // typed `String:string` is the identity, so the dynamic path must be too.
+  k_to_string: `def k_to_string(v)
+  v.is_a?(String) ? v : k_string(v)
 end`,
   k_intersection: `def k_intersection(a, b)
   s = [a.first, b.first].max
@@ -790,6 +887,8 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kIntersection: ['_EloInterval'],
   kFetch: [],
   kFetchObject: ['kFetch'],
+  kFetchAny: ['kFetch', 'kFetchObject'],
+  kToString: ['kString'],
   kDeepMerge: [],
   kPatch: [],
   kTypeOf: [],
@@ -807,6 +906,7 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kString: ['_elo_dur_to_iso'],
   kParseDate: ['_elo_dt_helpers'],
   kParseDatetime: ['_elo_dt_helpers'],
+  kParseDuration: ['_elo_duration', '_EloInterval'],
   _elo_dt_helpers: ['_import_datetime', '_elo_duration'],
   _EloInterval: ['_import_collections'],
   _elo_duration: ['_import_re'],
@@ -1000,6 +1100,10 @@ def _elo_end_of_year(dt):
     if callable(v): return 'Function'
     return 'Unknown'`,
   kFetch: `def kFetch(data, path):
+    # A path that is not a list of segments has nothing to walk; without this
+    # the loop raised TypeError from ordinary Elo source, which the security
+    # page promises cannot happen. See kFetchAny.
+    if not isinstance(path, list): return None
     current = data
     for segment in path:
         if current is None: return None
@@ -1013,6 +1117,17 @@ def _elo_end_of_year(dt):
     return current`,
   kFetchObject: `def kFetchObject(data, paths):
     return {key: kFetch(data, paths[key]) for key in paths}`,
+  // `fetch(d, p)` has four forms told apart by the type of `p`. With the type
+  // unknown, the shape of the value has to tell them apart instead.
+  kFetchAny: `def kFetchAny(data, path):
+    if isinstance(path, str): return kFetch(data, [path])
+    if isinstance(path, list): return kFetch(data, path)
+    if isinstance(path, dict): return kFetchObject(data, path)
+    return None`,
+  // `String(x)` converts; kString renders, and renders a string quoted. The
+  // typed `String:string` is the identity, so the dynamic path must be too.
+  kToString: `def kToString(v):
+    return v if isinstance(v, str) else kString(v)`,
   kPatch: `def kPatch(data, path, value):
     if len(path) == 0: return value
     seg = path[0]
@@ -1141,6 +1256,16 @@ def _elo_end_of_year(dt):
         parts = v.split('-')
         if len(parts) == 3: return _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
     raise Exception('Cannot parse date: ' + repr(v))`,
+  // `Duration:duration` is the identity, so `Duration:any` has to accept a
+  // Duration too — `EloDuration.from_iso` alone fed one to `re.match` and
+  // raised a host TypeError. kParseDate and kParseDatetime already did this;
+  // this is the third of three, and it was the one left out.
+  kParseDuration: `def kParseDuration(v):
+    if isinstance(v, EloDuration): return v
+    if isinstance(v, str): return EloDuration.from_iso(v)
+    # Duration(interval) is the interval's length on the typed path.
+    if isinstance(v, EloInterval): return EloDuration.from_timedelta(v.end - v.start)
+    raise Exception('Cannot parse duration: ' + repr(v))`,
   kParseDatetime: `def kParseDatetime(v):
     if isinstance(v, _dt.datetime): return v
     if isinstance(v, str):

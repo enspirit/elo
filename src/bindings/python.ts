@@ -363,6 +363,12 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     ctx.requireHelper('kFetchObject');
     return `kFetchObject(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
+  // With the path's type unknown, its runtime shape decides which form it is.
+  // Without this the arity fallback took the path form for all four.
+  pyLib.register('fetch', [Types.any, Types.any], (args, ctx) => {
+    ctx.requireHelper('kFetchAny');
+    return `kFetchAny(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
 
   // Patch
   pyLib.register('patch', [Types.any, Types.any, Types.any], (args, ctx) => {
@@ -445,9 +451,11 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('String', [Types.string], identity());
   pyLib.register('String', [Types.int], (args, ctx) => `str(${ctx.emit(args[0])})`);
   pyLib.register('String', [Types.float], (args, ctx) => `str(${ctx.emit(args[0])})`);
+  // Not kString: that renders, and renders a string *quoted*. Reached with the
+  // type unknown it has to convert, like `String:string` does. See kToString.
   pyLib.register('String', [Types.any], (args, ctx) => {
-    ctx.requireHelper('kString');
-    return `kString(${ctx.emit(args[0])})`;
+    ctx.requireHelper('kToString');
+    return `kToString(${ctx.emit(args[0])})`;
   });
   pyLib.register('Bool', [Types.any], (args, ctx) => {
     ctx.requireHelper('kBool');
@@ -468,7 +476,10 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     return `kParseDatetime(${ctx.emit(args[0])})`;
   });
   pyLib.register('Duration', [Types.duration], identity());
-  pyLib.register('Duration', [Types.any], (args, ctx) => `EloDuration.from_iso(${ctx.emit(args[0])})`);
+  pyLib.register('Duration', [Types.any], (args, ctx) => {
+    ctx.requireHelper('kParseDuration');
+    return `kParseDuration(${ctx.emit(args[0])})`;
+  });
 
   // Interval - construct from object with start/end properties
   pyLib.register('Interval', [Types.interval], identity());

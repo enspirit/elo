@@ -35,14 +35,20 @@
 (lambda _: kAssert(kEq(kParseDatetime("2025-01-15T10:30:00"), _elo_dt(2025, 1, 15, 10, 30, 0))))(None)
 (lambda _: kAssertFails(lambda : kParseDatetime("not-a-datetime")))(None)
 (lambda _: kAssert((EloDuration.from_iso("P1D") == EloDuration.from_iso("P1D"))))(None)
-(lambda _: kAssert((EloDuration.from_iso("P1D") == EloDuration.from_iso("P1D"))))(None)
-(lambda _: kAssert((EloDuration.from_iso("PT2H30M") == EloDuration.from_iso("PT2H30M"))))(None)
-(lambda _: kAssertFails(lambda : EloDuration.from_iso("not-a-duration")))(None)
+(lambda _: kAssert((kParseDuration("P1D") == EloDuration.from_iso("P1D"))))(None)
+(lambda _: kAssert((kParseDuration("PT2H30M") == EloDuration.from_iso("PT2H30M"))))(None)
+(lambda _: kAssertFails(lambda : kParseDuration("not-a-duration")))(None)
 (lambda _: kAssert("hello" == "hello"))(None)
 (lambda _: kAssert(str(123) == "123"))(None)
 (lambda _: kAssert(str(3.14) == "3.14"))(None)
-(lambda _: kAssert(kString(True) == "true"))(None)
-(lambda _: kAssert(kString(False) == "false"))(None)
-(lambda _: kAssert(kString([1, 2, 3]) == "[1, 2, 3]"))(None)
-(lambda _: kAssert(kString({"name": "Alice"}) == "{name: 'Alice'}"))(None)
+(lambda _: kAssert(kToString(True) == "true"))(None)
+(lambda _: kAssert(kToString(False) == "false"))(None)
+(lambda _: kAssert(kToString([1, 2, 3]) == "[1, 2, 3]"))(None)
+(lambda _: kAssert(kToString({"name": "Alice"}) == "{name: 'Alice'}"))(None)
 
+
+
+
+(lambda _: kAssert(kToString((lambda a: min(a) if a else None)(["hello"])) == "hello"))(None)
+(lambda _: kAssert(kToString((lambda a: min(a) if a else None)([""])) == ""))(None)
+(lambda _: kAssert(kToString((lambda a: min(a) if a else None)([123])) == "123"))(None)

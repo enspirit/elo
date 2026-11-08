@@ -50,10 +50,10 @@ import sys
 ALLOWED_NAMES = {
     # Prelude helpers
     'kAdd', 'kAssert', 'kAssertFails', 'kAt', 'kBool', 'kData', 'kDeepMerge',
-    'kDiv', 'kEq', 'kFetch', 'kFetchObject', 'kFirst', 'kIndexOf',
+    'kDiv', 'kEq', 'kFetch', 'kFetchAny', 'kFetchObject', 'kFirst', 'kIndexOf',
     'kIntersection', 'kLast', 'kMod', 'kMul', 'kNeg', 'kPad', 'kParseDate',
-    'kParseDatetime', 'kPatch', 'kPow', 'kRound', 'kRoundTo', 'kSplit',
-    'kStrMul', 'kString', 'kSub', 'kTypeOf',
+    'kParseDatetime', 'kParseDuration', 'kPatch', 'kPow', 'kRound', 'kRoundTo',
+    'kSplit', 'kStrMul', 'kString', 'kSub', 'kToString', 'kTypeOf',
     # Schema-parser helpers
     'pAny', 'pArray', 'pAssert', 'pBool', 'pData', 'pDate', 'pDatetime',
     'pDuration', 'pFloat', 'pInt', 'pNull', 'pSchema', 'pString', 'pSubtype',

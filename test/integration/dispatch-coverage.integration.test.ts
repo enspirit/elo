@@ -208,8 +208,14 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'Float:any': 'dynamic',
     'Int:any': 'dynamic',
     'Interval:any': 'dynamic',
-    'String:any': 'dynamic',
     'assert:any,string': 'dynamic',
+    // Registered on purpose rather than left to the arity fallback (see the
+    // comment in src/bindings/sql.ts), and genuinely unreachable: a path whose
+    // type the checker cannot name has to arrive through something like
+    // `min([...])`, and PostgreSQL's UNNEST flattens a nested array, so no SQL
+    // expression can produce an array-typed value of unknown Elo type. The
+    // other three targets reach their `fetch:any,any` through a lambda.
+    'fetch:any,any': 'dynamic',
     'pos:any': 'dynamic',
     // widening
     'Interval:interval': 'widening',

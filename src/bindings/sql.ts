@@ -761,6 +761,15 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
     });
     return `jsonb_build_object(${pairs.join(', ')})`;
   });
+  // PostgreSQL has no runtime shape dispatch to offer here, and the mapping
+  // form above needs the object *literal* at compile time, so an unknown path
+  // type can only be the path form. Registered explicitly rather than left to
+  // the arity fallback, which picked the same emitter by accident of
+  // declaration order. SQL has no lambdas, so the only way to reach this is a
+  // path whose type the checker cannot name; a mapping arriving that way is a
+  // cast error PostgreSQL reports at plan time, which is the honest answer.
+  sqlLib.register('fetch', [Types.any, Types.any], (args, ctx) =>
+    `(${ctx.emit(args[0])})::jsonb #> (${ctx.emit(args[1])})::text[]`);
   sqlLib.register('patch', [Types.any, Types.fn, Types.any], (args, ctx) => {
     const data = ctx.emit(args[0]);
     const path = ctx.emit(args[1]);
@@ -884,7 +893,9 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
   sqlLib.register('String', [Types.null], (args, ctx) => `(${ctx.emit(args[0])})::TEXT`);
   sqlLib.register('String', [Types.array], (args, ctx) => `elo_string(${ctx.emit(args[0])})`);
   sqlLib.register('String', [Types.object], (args, ctx) => `elo_string(to_jsonb(${ctx.emit(args[0])}))`);
-  sqlLib.register('String', [Types.any], (args, ctx) => `elo_string(to_jsonb(${ctx.emit(args[0])}))`);
+  // Not elo_string: that renders, and renders a string *quoted*. Reached with
+  // the type unknown it has to convert, like `String:string` does.
+  sqlLib.register('String', [Types.any], (args, ctx) => `elo_to_string(to_jsonb(${ctx.emit(args[0])}))`);
 
   // List manipulation functions
   // PostgreSQL doesn't have built-in array_reverse, use subquery with ordinality

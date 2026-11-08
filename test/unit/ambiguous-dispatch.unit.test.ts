@@ -49,20 +49,17 @@ const targets: Array<[string, StdLib<string>]> = [
  * for every runtime type; until then the emission is whatever was registered
  * first. The value says what the ambiguity is about.
  */
-const FETCH_KEY =
-  'a String key is wrapped into a one-element path, where an Array key is the ' +
-  'path itself and an Object key builds a record; a key of unknown type is ' +
-  'taken as a path and iterated';
-
 const AMBIGUOUS: Record<string, Record<string, string>> = {
-  javascript: {
-    'fetch/2': FETCH_KEY,
-  },
-  ruby: {
-    'fetch/2': FETCH_KEY,
-  },
+  javascript: {},
+  ruby: {},
   sql: {
-    'fetch/2': FETCH_KEY,
+    // `fetch/2` was here on all four targets. It is resolved everywhere now:
+    // the other three dispatch on the path's runtime shape (kFetchAny), and
+    // SQL — which has no runtime shape to dispatch on, and whose mapping form
+    // needs the object *literal* at compile time — registers the path form
+    // explicitly, so the choice is made on purpose rather than by declaration
+    // order. See the `fetch:any,any` comment in src/bindings/sql.ts.
+    //
     // PostgreSQL type-checks both arms of a CASE even when only one can run,
     // so these cannot dispatch on pg_typeof inside an expression. They need a
     // known type, and saying so is a language decision, not a patch.
@@ -71,9 +68,7 @@ const AMBIGUOUS: Record<string, Record<string, string>> = {
     'contains/2': 'POSITION for a string versus = ANY for an array',
     'reverse/1': 'REVERSE for a string versus an ordinality subquery for an array',
   },
-  python: {
-    'fetch/2': FETCH_KEY,
-  },
+  python: {},
 };
 
 /** An emit context that renders stand-in arguments by name. */

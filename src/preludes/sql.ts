@@ -261,6 +261,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- String() where the argument's type is not known statically.
+--
+-- elo_string *renders*: it quotes a string, so that '[1, 'a']' reads back as
+-- Elo. String() *converts*, and on a string that is the identity — which is
+-- what the typed String(String) does. Routing the unknown case through
+-- elo_string made String(min(['abc'])) answer '''abc''' where String('abc')
+-- answered 'abc'. Everything that is not a JSON string renders as before.
+CREATE OR REPLACE FUNCTION elo_to_string(v JSONB) RETURNS TEXT AS $$
+BEGIN
+  IF v IS NOT NULL AND jsonb_typeof(v) = 'string' THEN
+    RETURN v#>>'{}';
+  END IF;
+  RETURN elo_string(v);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
 -- split(string, separator). string_to_array answers the whole string for an
 -- empty separator, where the other three targets answer its characters, and it
 -- is the only way Elo has to walk a string. regexp_split_to_array does split

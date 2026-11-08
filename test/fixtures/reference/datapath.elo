@@ -12,3 +12,9 @@ assert(fetch({items: [1, 2, 3]}, {first: .items.0, last: .items.2}) == {first: 1
 assert(fetch({x: 12}, 'x') == 12)
 assert(fetch({x: 12}, ['x']) == 12)
 assert(fetch({user: {name: 'Bob'}}, ['user', 'name']) == 'Bob')
+
+# A path *value* that is not a path is a null, not a host crash: `{k: 42}` and
+# `{k: null}` raised TypeError on JavaScript, Ruby and Python. A path whose
+# whole *type* is wrong — fetch(d, null) — is refused by the checker instead,
+# so it cannot be asserted here; the dynamic twin covers it.
+assert(fetch({a: 1}, {k: null}) == {k: null})
