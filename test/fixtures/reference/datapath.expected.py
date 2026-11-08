@@ -12,3 +12,9 @@
 (lambda _: kAssert(kEq(kFetch({"x": 12}, ["x"]), 12)))(None)
 (lambda _: kAssert(kEq(kFetch({"x": 12}, ["x"]), 12)))(None)
 (lambda _: kAssert(kEq(kFetch({"user": {"name": "Bob"}}, ["user", "name"]), "Bob")))(None)
+
+
+
+
+
+(lambda _: kAssert(kEq(kFetchObject({"a": 1}, {"k": None}), {"k": None})))(None)

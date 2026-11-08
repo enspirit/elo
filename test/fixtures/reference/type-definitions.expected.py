@@ -69,10 +69,10 @@
 (lambda _: kAssert(kEq((_p_Config := pSchema([("enabled", pBool, False)], "closed", None), Config := lambda v: pUnwrap(_p_Config(v, '')), Config({"enabled": "true"}))[-1], {"enabled": True})))(None)
 (lambda _: kAssert(kEq((_p_Config := pSchema([("enabled", pBool, False)], "closed", None), Config := lambda v: pUnwrap(_p_Config(v, '')), Config({"enabled": "false"}))[-1], {"enabled": False})))(None)
 
-(lambda _: kAssert((_p_Event := pSchema([("date", pDate, False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15"}).get("date").year)[-1] == 2024))(None)
-(lambda _: kAssertFails(lambda : (_p_T := pDate, T := lambda v: pUnwrap(_p_T(v, '')), T("bad"))[-1]))(None)
+(lambda _: kAssert((_p_Event := pSchema([("date", pDateIn("UTC"), False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15"}).get("date").year)[-1] == 2024))(None)
+(lambda _: kAssertFails(lambda : (_p_T := pDateIn("UTC"), T := lambda v: pUnwrap(_p_T(v, '')), T("bad"))[-1]))(None)
 
-(lambda _: kAssert((_p_Event := pSchema([("date", pDatetime, False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15T10:30:00"}).get("date").year)[-1] == 2024))(None)
+(lambda _: kAssert((_p_Event := pSchema([("date", pDatetimeIn("UTC"), False)], "closed", None), Event := lambda v: pUnwrap(_p_Event(v, '')), Event({"date": "2024-01-15T10:30:00"}).get("date").year)[-1] == 2024))(None)
 
 (lambda _: kAssert(kEq((_p_T := pSchema([("a", pSchema([("b", pSchema([("c", pInt, False)], "closed", None), False)], "closed", None), False)], "closed", None), T := lambda v: pUnwrap(_p_T(v, '')), T({"a": {"b": {"c": "42"}}}))[-1], {"a": {"b": {"c": 42}}})))(None)
 

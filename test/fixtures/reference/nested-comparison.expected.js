@@ -35,4 +35,4 @@
 (function(_) { return (function() { if (!(1 == 1 == true == true)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { return (function() { if (!("a" == "a" == true)) throw new Error("Assertion failed"); return true; })(); })(null);
 (function(_) { function kIsNull(v) { return v === null || v === undefined; } return (function() { if (!(kIsNull(null) == true == true)) throw new Error("Assertion failed"); return true; })(); })(null);
-(function(_) { return (function() { if (!(DateTime.fromISO("2024-01-15").toMillis() === DateTime.fromISO("2024-01-15").toMillis() == true)) throw new Error("Assertion failed"); return true; })(); })(null);
+(function(_) { return (function() { if (!(DateTime.fromISO("2024-01-15", { zone: "utc" }).toMillis() === DateTime.fromISO("2024-01-15", { zone: "utc" }).toMillis() == true)) throw new Error("Assertion failed"); return true; })(); })(null);

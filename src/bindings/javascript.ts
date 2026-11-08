@@ -11,16 +11,33 @@ import { StdLib, identity, simpleBinaryOp, nullary, fnCall, helperCall, Function
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
 
 /**
+ * The zone every DateTime this target builds is pinned to.
+ *
+ * Elo's Date and Datetime are zone-free wall clocks. Luxon is the only one of
+ * the four runtimes with an ambient zone, so leaving it to decide made the
+ * same expression answer differently per host — see the comment on
+ * `dateLiteral` in `src/compilers/javascript.ts`.
+ */
+export const UTC_ZONE = '{ zone: "utc" }';
+
+/**
  * Helper for type selector using Finitio parser + pUnwrap.
  * Generates: pUnwrap(pParser(value, ''))
  * This throws on parse failure instead of returning null.
  */
+/**
+ * Parsers that need the declared zone, because they turn an instant arriving
+ * from outside into a wall clock (0259 D7). Everything else is zone-blind.
+ */
+const ZONED_PARSERS = new Set(['pDate', 'pDatetime']);
+
 function parserUnwrap(parserName: string): FunctionEmitter<string> {
   return (args, ctx) => {
     ctx.requireHelper(parserName);
     ctx.requireHelper('pUnwrap');
     const emittedArg = ctx.emit(args[0]);
-    return `pUnwrap(${parserName}(${emittedArg}, ''))`;
+    const zone = ZONED_PARSERS.has(parserName) ? `, ${JSON.stringify(ctx.timezone)}` : '';
+    return `pUnwrap(${parserName}(${emittedArg}, ''${zone}))`;
   };
 }
 
@@ -59,10 +76,28 @@ export function createJavaScriptBinding(): StdLib<string> {
   const jsLib = new StdLib<string>();
 
   // Temporal nullary functions
-  jsLib.register('today', [], nullary("DateTime.now().startOf('day')"));
-  jsLib.register('now', [], nullary('DateTime.now()'));
-  jsLib.register('bot', [], nullary('DateTime.fromISO("0001-01-01T00:00:00.000Z")'));
-  jsLib.register('eot', [], nullary('DateTime.fromISO("9999-12-31T23:59:59.999Z")'));
+  //
+  // 0259 D1: `NOW` and `TODAY` are wall clocks in the **declared** zone, not
+  // the host's. They used to keep the host's ambient zone while every literal
+  // dropped it, which is what made `hour(NOW)` read a different clock from
+  // `NOW - <literal>` — `hour` emits `.toUTC().hour`, right for a UTC-labelled
+  // literal and wrong for a host-zoned value. With `kNow` relabelling the
+  // wall clock as UTC like everything else, the accessor stops reading a
+  // second clock, and `ideation/0255` §3 and §5 close with it.
+  //
+  // D2: the zone is *passed* to the helper rather than baked into it, so it
+  // travels with the program rather than with the prelude. See
+  // `EmitContext.timezone`.
+  jsLib.register('today', [], (_args, ctx) => {
+    ctx.requireHelper('kToday');
+    return `kToday(${JSON.stringify(ctx.timezone)})`;
+  });
+  jsLib.register('now', [], (_args, ctx) => {
+    ctx.requireHelper('kNow');
+    return `kNow(${JSON.stringify(ctx.timezone)})`;
+  });
+  jsLib.register('bot', [], nullary(`DateTime.fromISO("0001-01-01T00:00:00.000Z", ${UTC_ZONE})`));
+  jsLib.register('eot', [], nullary(`DateTime.fromISO("9999-12-31T23:59:59.999Z", ${UTC_ZONE})`));
 
   // Period boundary functions
   const periodBoundaryMap: Record<string, string> = {
@@ -513,6 +548,9 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
   });
   jsLib.register('fetch', [Types.any, Types.array], helperCall('kFetch'));
   jsLib.register('fetch', [Types.any, Types.object], helperCall('kFetchObject'));
+  // With the path's type unknown, its runtime shape decides which form it is.
+  // Without this the arity fallback took the path form for all four.
+  jsLib.register('fetch', [Types.any, Types.any], helperCall('kFetchAny'));
   jsLib.register('patch', [Types.any, Types.fn, Types.any], helperCall('kPatch'));
 
   // Data merge functions
@@ -618,7 +656,9 @@ jsLib.register('isNotNull', [Types.any], (args, ctx) => {
   jsLib.register('String', [Types.null], (args, ctx) => `String(${ctx.emit(args[0])})`);
   jsLib.register('String', [Types.array], helperCall('kString'));
   jsLib.register('String', [Types.object], helperCall('kString'));
-  jsLib.register('String', [Types.any], helperCall('kString'));
+  // Not kString: that renders, and renders a string *quoted*. Reached with the
+  // type unknown it has to convert, like `String:string` does. See kToString.
+  jsLib.register('String', [Types.any], helperCall('kToString'));
 
   // List manipulation functions
   jsLib.register('reverse', [Types.array], (args, ctx) =>

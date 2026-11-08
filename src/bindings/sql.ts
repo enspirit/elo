@@ -8,7 +8,7 @@ import { IRExpr, IRArrayLiteral, inferType } from '../ir';
 import { Types, EloType, typeEquals } from '../types';
 import { StdLib, EmitContext, nullary, fnCall } from '../stdlib';
 import { parseExtractTemplate, buildExtractPattern } from '../extract';
-import { assertSafeIdentifier } from '../compilers/_validate';
+import { assertSafeIdentifier, sqlStringConstant } from '../compilers/_validate';
 
 /**
  * Map IR function names to SQL operators
@@ -337,12 +337,43 @@ function operandOf(
 /**
  * Create the SQL standard library binding
  */
+/**
+ * Force the zone-free `date_trunc(text, timestamp)` overload.
+ *
+ * PostgreSQL has `date_trunc(text, timestamp)` and
+ * `date_trunc(text, timestamptz)`, and a `date` argument resolves to the
+ * **timestamptz** one — so the result carried the session's zone and a
+ * zone-free Elo literal silently acquired one. Measured, before the cast:
+ *
+ *   inDays(startOfDay(D2026-03-11) - startOfDay(D2026-01-10))
+ *     TimeZone=UTC                  ->  60
+ *     TimeZone=America/Los_Angeles  ->  59.958…   (a DST transition between)
+ *
+ * which is the exact defect 0240 fixed everywhere else. `CAST(... AS
+ * timestamp)` rather than `::timestamp` because `::` binds tighter than any
+ * operator, so `a - b::timestamp` would cast only `b`.
+ *
+ * Applied to every period boundary, including the ones whose argument is
+ * already a timestamp, where it is a no-op: one rule is easier to keep right
+ * than a rule with an exception, and `elo_today` returns a DATE, so the
+ * Date-typed registrations need it too.
+ */
+function sqlTimestamp(expr: string): string {
+  return `CAST(${expr} AS timestamp)`;
+}
+
 export function createSQLBinding(): StdLib<string> {
   const sqlLib = new StdLib<string>();
 
   // Temporal nullary functions
-  sqlLib.register('today', [], nullary('CURRENT_DATE'));
-  sqlLib.register('now', [], nullary('CURRENT_TIMESTAMP'));
+  // 0259 D1/D2: the clock is read in the *declared* zone, passed to the one
+  // prelude function that converts it. CURRENT_DATE and CURRENT_TIMESTAMP read
+  // the *session's* zone, so the same program meant different things against
+  // two databases.
+  sqlLib.register('today', [], (_args, ctx) =>
+    `elo_today(${sqlStringConstant(ctx.timezone)})`);
+  sqlLib.register('now', [], (_args, ctx) =>
+    `elo_now(${sqlStringConstant(ctx.timezone)})`);
   sqlLib.register('bot', [], nullary("TIMESTAMP '0001-01-01 00:00:00'"));
   sqlLib.register('eot', [], nullary("TIMESTAMP '9999-12-31 23:59:59'"));
 
@@ -375,21 +406,18 @@ export function createSQLBinding(): StdLib<string> {
 
   for (const [fn, { truncate, end }] of Object.entries(periodBoundarySQL)) {
     sqlLib.register(fn, [Types.datetime], (args, ctx) => {
-      const arg = args[0];
-      let baseExpr: string;
-      if (arg.type === 'call' && arg.fn === 'now') {
-        baseExpr = fn.includes('_day') ? 'CURRENT_TIMESTAMP' : 'CURRENT_DATE';
-      } else {
-        baseExpr = ctx.emit(arg);
-      }
-      const truncated = `date_trunc('${truncate}', ${baseExpr})`;
+      // The `now` special case that used to live here substituted
+      // CURRENT_TIMESTAMP / CURRENT_DATE, which read the *session's* zone and
+      // so bypassed the declared one. `elo_now` already answers a zone-free
+      // timestamp, so the general emission is correct for `now` too.
+      const truncated = `date_trunc('${truncate}', ${sqlTimestamp(ctx.emit(args[0]))})`;
       return end ? `${truncated} ${end}` : truncated;
     });
   }
   for (const [fn, { truncate, end }] of Object.entries(camelCaseSQLMap)) {
     for (const t of [Types.date, Types.datetime]) {
       sqlLib.register(fn, [t], (args, ctx) => {
-        const truncated = `date_trunc('${truncate}', ${ctx.emit(args[0])})`;
+        const truncated = `date_trunc('${truncate}', ${sqlTimestamp(ctx.emit(args[0]))})`;
         return end ? `${truncated} ${end}` : truncated;
       });
     }
@@ -453,13 +481,16 @@ export function createSQLBinding(): StdLib<string> {
   sqlLib.register('pow', [Types.any, Types.any], fnCall('POWER'));
 
   // Temporal arithmetic
-  // Special case: today() + duration('P1D') -> CURRENT_DATE + INTERVAL '1 day' (for TOMORROW)
+  // Special case: today() + duration('P1D') -> TODAY + INTERVAL '1 day' (for TOMORROW)
   sqlLib.register('add', [Types.date, Types.duration], (args, ctx) => {
     const leftArg = args[0];
     const rightArg = args[1];
     if (leftArg.type === 'call' && leftArg.fn === 'today' &&
         rightArg.type === 'duration_literal' && rightArg.value === 'P1D') {
-      return "CURRENT_DATE + INTERVAL '1 day'";
+      // `ctx.emit(leftArg)`, not a literal CURRENT_DATE: TODAY is read in the
+      // declared zone (0259 D1), and hardcoding the session's clock here would
+      // have made TOMORROW disagree with TODAY + P1D.
+      return `${ctx.emit(leftArg)} + INTERVAL '1 day'`;
     }
     const left = ctx.emitWithParens(args[0], '+', 'left');
     const right = ctx.emitWithParens(args[1], '+', 'right');
@@ -468,13 +499,16 @@ export function createSQLBinding(): StdLib<string> {
 
   // Other temporal additions are covered by any,any registration
 
-  // Special case: today() - duration('P1D') -> CURRENT_DATE - INTERVAL '1 day' (for YESTERDAY)
+  // Special case: today() - duration('P1D') -> TODAY - INTERVAL '1 day' (for YESTERDAY)
   sqlLib.register('sub', [Types.date, Types.duration], (args, ctx) => {
     const leftArg = args[0];
     const rightArg = args[1];
     if (leftArg.type === 'call' && leftArg.fn === 'today' &&
         rightArg.type === 'duration_literal' && rightArg.value === 'P1D') {
-      return "CURRENT_DATE - INTERVAL '1 day'";
+      // `ctx.emit(leftArg)`, not a literal CURRENT_DATE: TODAY is read in the
+      // declared zone (0259 D1), and hardcoding the session's clock here would
+      // have made TOMORROW disagree with TODAY + P1D.
+      return `${ctx.emit(leftArg)} - INTERVAL '1 day'`;
     }
     const left = ctx.emitWithParens(args[0], '-', 'left');
     const right = ctx.emitWithParens(args[1], '-', 'right');
@@ -761,6 +795,15 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
     });
     return `jsonb_build_object(${pairs.join(', ')})`;
   });
+  // PostgreSQL has no runtime shape dispatch to offer here, and the mapping
+  // form above needs the object *literal* at compile time, so an unknown path
+  // type can only be the path form. Registered explicitly rather than left to
+  // the arity fallback, which picked the same emitter by accident of
+  // declaration order. SQL has no lambdas, so the only way to reach this is a
+  // path whose type the checker cannot name; a mapping arriving that way is a
+  // cast error PostgreSQL reports at plan time, which is the honest answer.
+  sqlLib.register('fetch', [Types.any, Types.any], (args, ctx) =>
+    `(${ctx.emit(args[0])})::jsonb #> (${ctx.emit(args[1])})::text[]`);
   sqlLib.register('patch', [Types.any, Types.fn, Types.any], (args, ctx) => {
     const data = ctx.emit(args[0]);
     const path = ctx.emit(args[1]);
@@ -814,13 +857,13 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
 
   // Date - identity for date, parse ISO for string
   sqlLib.register('Date', [Types.date], (args, ctx) => ctx.emit(args[0]));
-  sqlLib.register('Date', [Types.string], (args, ctx) => `elo_date(${ctx.emit(args[0])})`);
-  sqlLib.register('Date', [Types.any], (args, ctx) => `elo_date(${ctx.emit(args[0])})`);
+  sqlLib.register('Date', [Types.string], (args, ctx) => `elo_date(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
+  sqlLib.register('Date', [Types.any], (args, ctx) => `elo_date(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
 
   // Datetime - identity for datetime, parse ISO for string
   sqlLib.register('Datetime', [Types.datetime], (args, ctx) => ctx.emit(args[0]));
-  sqlLib.register('Datetime', [Types.string], (args, ctx) => `elo_datetime(${ctx.emit(args[0])})`);
-  sqlLib.register('Datetime', [Types.any], (args, ctx) => `elo_datetime(${ctx.emit(args[0])})`);
+  sqlLib.register('Datetime', [Types.string], (args, ctx) => `elo_datetime(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
+  sqlLib.register('Datetime', [Types.any], (args, ctx) => `elo_datetime(${ctx.emit(args[0])}, ${sqlStringConstant(ctx.timezone)})`);
 
   // Duration - identity for duration, parse ISO for string
   sqlLib.register('Duration', [Types.duration], (args, ctx) => ctx.emit(args[0]));
@@ -884,7 +927,9 @@ sqlLib.register('isNotNull', [Types.any], (args, ctx) => `${ctx.emit(args[0])} I
   sqlLib.register('String', [Types.null], (args, ctx) => `(${ctx.emit(args[0])})::TEXT`);
   sqlLib.register('String', [Types.array], (args, ctx) => `elo_string(${ctx.emit(args[0])})`);
   sqlLib.register('String', [Types.object], (args, ctx) => `elo_string(to_jsonb(${ctx.emit(args[0])}))`);
-  sqlLib.register('String', [Types.any], (args, ctx) => `elo_string(to_jsonb(${ctx.emit(args[0])}))`);
+  // Not elo_string: that renders, and renders a string *quoted*. Reached with
+  // the type unknown it has to convert, like `String:string` does.
+  sqlLib.register('String', [Types.any], (args, ctx) => `elo_to_string(to_jsonb(${ctx.emit(args[0])}))`);
 
   // List manipulation functions
   // PostgreSQL doesn't have built-in array_reverse, use subquery with ordinality

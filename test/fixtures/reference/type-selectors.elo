@@ -46,3 +46,9 @@ assert(String(false) == 'false')
 assert(String([1, 2, 3]) == '[1, 2, 3]')
 assert(String({name: 'Alice'}) == '{name: \'Alice\'}')
 
+# String(x) where nothing knows x's type must still *convert*, not inspect.
+# `min([x])` is typed `any`, so these take the dynamic path on all four targets
+# while staying literals the runner can evaluate without an input.
+assert(String(min(['hello'])) == 'hello')
+assert(String(min([''])) == '')
+assert(String(min([123])) == '123')

@@ -72,7 +72,11 @@ See also the Related work section below.
   - Strings: `'hello'`
   - Null: `null`
   - Dates: `D2024-01-15`
-  - DateTimes: `D2024-01-15T10:30:00Z`
+  - DateTimes: `D2024-01-15T10:30:00Z` — a date or a datetime is a *zone-free*
+    wall clock: it means the time it spells, and the host's timezone never
+    moves it. `NOW` and `TODAY` read the clock in a **declared** zone —
+    `eloc --timezone Europe/Brussels`, defaulting to `UTC` — so the same
+    program means the same thing on every host and on every target
   - Durations: `P1D`, `PT1H30M`, `P1Y2M3D` (ISO8601)
   - Objects: `{name: 'Alice', age: 30}`
   - Arrays: `[1, 2, 3]`, `['a', 'b']`, `[1, 'mixed', true, null]` (mixed and ragged-nested lists do not compile to SQL — see below)
@@ -200,6 +204,9 @@ Options:
 - `-p, --prelude` - Include necessary library imports/requires (not for `sql`)
 - `--prelude-only` - Output only the prelude (no expression needed)
 - `--lines` - Read the source as one expression per line, instead of as one program
+- `--timezone <IANA>` - The zone `NOW` and `TODAY` are read in, e.g.
+  `Europe/Brussels`. Defaults to `UTC`. Dates and datetimes carry no zone of
+  their own — see *One clock* below
 
 ### A file is one program
 
@@ -315,6 +322,53 @@ statements no host can run as an expression.
   the whole corpus through both
 - `-f, --file <path>` - Output to file instead of stdout
 - `-h, --help` - Show help message
+
+### One clock
+
+**Elo has no instants.** A `Date` or a `Datetime` is a wall clock: it means the
+time it spells, nothing can move it, and arithmetic on it is calendar
+arithmetic with no daylight saving. A day is always a day, so two dates always
+differ by a whole number of days.
+
+A timezone is used only at the edges, and it is **declared** rather than
+inherited from whatever machine happens to be running:
+
+```bash
+./bin/eloc -t sql --timezone Europe/Brussels -e "startOfDay(NOW)"
+# date_trunc('day', CAST(elo_now('Europe/Brussels') AS timestamp))
+```
+
+`NOW` and `TODAY` read the clock in that zone, identically on all four targets,
+defaulting to `UTC`. Nothing else in a program depends on a zone, so the same
+expression means the same thing compiled to Ruby on one server and to SQL on
+another.
+
+A timezone is used for exactly one job: **an instant arriving from outside is
+expressed in that zone.** It arrives either from the host's clock (`NOW`,
+`TODAY`) or in the data, and the two follow the same rule:
+
+```bash
+./bin/elo --timezone UTC             -e "hour(Datetime('2026-01-15T10:00:00+01:00'))"   # 9
+./bin/elo --timezone Europe/Brussels -e "hour(Datetime('2026-01-15T10:00:00+01:00'))"   # 10
+```
+
+That is worth reading twice, because it is the whole of the surprise. `10:00+01:00`
+is the instant `09:00Z`; asked for its hour *in UTC* the answer is 9, and asked
+for its hour *in Brussels* — which is `+01:00` in January — it is 10. A datum
+carrying **no** offset is already a wall clock in the declared zone, so nothing
+is done to it and `hour` answers 10 in both.
+
+Three consequences worth knowing before you meet them:
+
+- **`P1D` is always `PT24H`.** Every day is 24 hours and no wall clock ever
+  repeats or skips. An expert expects these to differ; here they do not.
+- **Elapsed real time across a DST transition is not expressible.** A shift
+  from `D2026-03-08T01:00:00` to `D2026-03-08T04:00:00` lasted two real hours
+  in Los Angeles; Elo answers three. That arithmetic belongs outside Elo, in a
+  library that knows the zone's rules.
+- **`+ P1M - P1M` is not the identity.** `D2026-01-31 + P1M` is `D2026-02-28` —
+  clamped to the last valid day, which is what you want — and clamping has no
+  inverse, so subtracting the month again gives `D2026-01-28`.
 
 ### Type checking
 
@@ -507,6 +561,7 @@ Options:
 - `-f, --input-format <fmt>` - Input data format: `json` (default) or `csv`
 - `-o, --output-format <fmt>` - Output format: `json` (default), `elo`, or `csv`
 - `--lines` - Evaluate each line as its own expression, instead of as one program
+- `--timezone <IANA>` - The zone `NOW` and `TODAY` are read in. Defaults to `UTC`
 - `-h, --help` - Show help message
 
 ## Using Elo in JavaScript/TypeScript

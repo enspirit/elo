@@ -33,8 +33,18 @@ export function createRubyBinding(): StdLib<string> {
   const rubyLib = new StdLib<string>();
 
   // Temporal nullary functions
-  rubyLib.register('today', [], nullary('Date.today'));
-  rubyLib.register('now', [], nullary('DateTime.now'));
+  // 0259 D1/D2: the clock is read in the *declared* zone, through the one
+  // helper that holds it. `DateTime.now` kept the host's offset where
+  // `Date.today` had none, so `startOfDay(NOW) == TODAY` was false at any
+  // offset but zero.
+  rubyLib.register('today', [], (_args, ctx) => {
+    ctx.requireHelper('k_today');
+    return `k_today("${ctx.timezone}")`;
+  });
+  rubyLib.register('now', [], (_args, ctx) => {
+    ctx.requireHelper('k_now');
+    return `k_now("${ctx.timezone}")`;
+  });
   rubyLib.register('bot', [], nullary('DateTime.new(1, 1, 1, 0, 0, 0)'));
   rubyLib.register('eot', [], nullary('DateTime.new(9999, 12, 31, 23, 59, 59)'));
 
@@ -66,14 +76,12 @@ export function createRubyBinding(): StdLib<string> {
   };
 
   for (const [fn, method] of Object.entries(periodBoundaryMap)) {
-    rubyLib.register(fn, [Types.datetime], (args, ctx) => {
-      const arg = args[0];
-      // For period boundaries, emit Date.today.method (not DateTime.now.method)
-      if (arg.type === 'call' && arg.fn === 'now') {
-        return `Date.today.${method}`;
-      }
-      return `${ctx.emit(arg)}.${method}`;
-    });
+    // The `now` special case that used to live here emitted
+    // `Date.today.${method}`, which read the *host's* zone and so bypassed the
+    // declared one — `start_of_day(NOW)` and `startOfDay(NOW)` would have
+    // disagreed. With `k_now` carrying no offset, the general emission is
+    // correct for `now` too.
+    rubyLib.register(fn, [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
   }
   for (const [fn, method] of Object.entries(camelCaseMap)) {
     rubyLib.register(fn, [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
@@ -87,7 +95,19 @@ export function createRubyBinding(): StdLib<string> {
 
   // Ruby uses native operators for all types due to operator overloading
   // Using any,any registration - type generalization handles all concrete type combinations
-  rubyLib.register('add', [Types.any, Types.any], simpleBinaryOp('+'));
+  // Addition is not native for every type either: ActiveSupport defines
+  // Date + Duration and not Duration + Date, so the unknown-type case goes
+  // through a dispatcher that swaps the operands the way the typed
+  // registrations below do. The numeric cases keep a bare `+`.
+  rubyLib.register('add', [Types.any, Types.any], helperCall('k_add'));
+  for (const leftType of [Types.int, Types.float]) {
+    for (const rightType of [Types.int, Types.float]) {
+      rubyLib.register('add', [leftType, rightType], simpleBinaryOp('+'));
+    }
+  }
+  rubyLib.register('add', [Types.string, Types.string], simpleBinaryOp('+'));
+  rubyLib.register('add', [Types.array, Types.array], simpleBinaryOp('+'));
+  rubyLib.register('add', [Types.duration, Types.duration], simpleBinaryOp('+'));
   // Subtraction is the one operator Ruby cannot do natively for every type:
   // Date/DateTime difference yields a Rational number of days, not a duration.
   // So the unknown-type case goes through a dispatcher, and the numeric cases
@@ -427,29 +447,29 @@ export function createRubyBinding(): StdLib<string> {
   rubyLib.register('isNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])}).nil?`);
 rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])}).nil?`);
 
-  // Data path navigation - core fetch helper (used by all fetch variants)
-  // Note: converts string segments to symbols for hash access (Ruby hashes use symbol keys)
-  const rubyFetchLambda = '->(d, p) { p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg.is_a?(String) ? seg.to_sym : seg] : nil) } }';
-
+  // Data path navigation. The walk lives in the `k_fetch*` prelude helpers,
+  // so the four forms share one implementation of it; see src/runtime.ts.
   rubyLib.register('fetch', [Types.any, Types.fn], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const path = ctx.emit(args[1]);
-    return `(${rubyFetchLambda}).call(${data}, ${path})`;
+    ctx.requireHelper('k_fetch');
+    return `k_fetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   rubyLib.register('fetch', [Types.any, Types.string], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const key = ctx.emit(args[1]);
-    return `(${rubyFetchLambda}).call(${data}, [${key}])`;
+    ctx.requireHelper('k_fetch');
+    return `k_fetch(${ctx.emit(args[0])}, [${ctx.emit(args[1])}])`;
   });
   rubyLib.register('fetch', [Types.any, Types.array], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const path = ctx.emit(args[1]);
-    return `(${rubyFetchLambda}).call(${data}, ${path})`;
+    ctx.requireHelper('k_fetch');
+    return `k_fetch(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   rubyLib.register('fetch', [Types.any, Types.object], (args, ctx) => {
-    const data = ctx.emit(args[0]);
-    const paths = ctx.emit(args[1]);
-    return `(->(d, ps) { f = ${rubyFetchLambda}; ps.transform_values { |p| f.call(d, p) } }).call(${data}, ${paths})`;
+    ctx.requireHelper('k_fetch_object');
+    return `k_fetch_object(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
+  // With the path's type unknown, its runtime shape decides which form it is.
+  // Without this the arity fallback took the path form for all four.
+  rubyLib.register('fetch', [Types.any, Types.any], (args, ctx) => {
+    ctx.requireHelper('k_fetch_any');
+    return `k_fetch_any(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
   rubyLib.register('patch', [Types.any, Types.fn, Types.any], (args, ctx) => {
     ctx.requireHelper('k_patch');
@@ -525,20 +545,30 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     const v = ctx.emit(args[0]);
     return `(->(s) { raise ".: expected Date (YYYY-MM-DD), got #{s.inspect}" unless s =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(s) }).call(${v})`;
   });
+  // `when DateTime, Time` has to come first, and that ordering is the whole
+  // fix: in Ruby `DateTime` is a *subclass* of `Date`, so a plain `when Date`
+  // arm matches a DateTime and used to hand it back untouched, time-of-day
+  // intact. `Date(NOW)` was the identity here while JavaScript, Python and SQL
+  // all truncated — a one-target divergence in the dynamic path.
   rubyLib.register('Date', [Types.any], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when Date; v when String; raise ".: expected Date (YYYY-MM-DD), got #{v.inspect}" unless v =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(v) else raise ".: expected Date, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when DateTime, Time; k_wall(v, "${ctx.timezone}").to_date when Date; v when String; raise ".: expected Date (YYYY-MM-DD), got #{v.inspect}" unless v =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(v) else raise ".: expected Date, got #{v.class}" end }).call(${v})`;
   });
 
   // Datetime - identity for datetime, parse ISO for string
   rubyLib.register('Datetime', [Types.datetime], identity());
+  // 0259 D7: an instant arriving from outside is expressed in the declared
+  // zone and carried with no offset. k_wall is the one place that knows how.
   rubyLib.register('Datetime', [Types.string], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(s) { DateTime.parse(s) rescue raise ".: expected Datetime, got invalid datetime #{s.inspect}" }).call(${v})`;
+    return `(->(s) { k_wall(s, "${ctx.timezone}") rescue raise ".: expected Datetime, got invalid datetime #{s.inspect}" }).call(${v})`;
   });
   rubyLib.register('Datetime', [Types.any], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when DateTime, Time; v when String; DateTime.parse(v) rescue raise ".: expected Datetime, got #{v.inspect}" else raise ".: expected Datetime, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when DateTime, Time; k_wall(v, "${ctx.timezone}") when String; k_wall(v, "${ctx.timezone}") rescue raise ".: expected Datetime, got #{v.inspect}" else raise ".: expected Datetime, got #{v.class}" end }).call(${v})`;
   });
 
   // Duration - identity for duration, parse ISO for string
@@ -547,9 +577,12 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     const v = ctx.emit(args[0]);
     return `(->(s) { ActiveSupport::Duration.parse(s) rescue raise ".: expected Duration (ISO 8601), got #{s.inspect}" }).call(${v})`;
   });
+  // A Range is how this target carries an Interval, and Duration(interval) is
+  // the interval's length on the typed path, so this must answer the same
+  // rather than refuse — it raised ".: expected Duration, got Range".
   rubyLib.register('Duration', [Types.any], (args, ctx) => {
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when ActiveSupport::Duration; v when String; ActiveSupport::Duration.parse(v) rescue raise ".: expected Duration (ISO 8601), got #{v.inspect}" else raise ".: expected Duration, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when ActiveSupport::Duration; v when Range; ActiveSupport::Duration.build(((v.last - v.first) * 86400).to_i) when String; ActiveSupport::Duration.parse(v) rescue raise ".: expected Duration (ISO 8601), got #{v.inspect}" else raise ".: expected Duration, got #{v.class}" end }).call(${v})`;
   });
 
   // Interval - construct from object with start/end properties
@@ -619,9 +652,11 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     ctx.requireHelper('k_string');
     return `k_string(${ctx.emit(args[0])})`;
   });
+  // Not k_string: that renders, and renders a string *quoted*. Reached with
+  // the type unknown it has to convert, like `String:string` does.
   rubyLib.register('String', [Types.any], (args, ctx) => {
-    ctx.requireHelper('k_string');
-    return `k_string(${ctx.emit(args[0])})`;
+    ctx.requireHelper('k_to_string');
+    return `k_to_string(${ctx.emit(args[0])})`;
   });
 
   // List manipulation functions

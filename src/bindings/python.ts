@@ -363,6 +363,12 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
     ctx.requireHelper('kFetchObject');
     return `kFetchObject(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
   });
+  // With the path's type unknown, its runtime shape decides which form it is.
+  // Without this the arity fallback took the path form for all four.
+  pyLib.register('fetch', [Types.any, Types.any], (args, ctx) => {
+    ctx.requireHelper('kFetchAny');
+    return `kFetchAny(${ctx.emit(args[0])}, ${ctx.emit(args[1])})`;
+  });
 
   // Patch
   pyLib.register('patch', [Types.any, Types.any, Types.any], (args, ctx) => {
@@ -371,11 +377,18 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   });
 
   // Temporal nullary functions
+  // 0259 D1/D2: the clock is read in the *declared* zone, passed to the one
+  // prelude helper that converts it. `_dt.datetime.now()` read the host's
+  // ambient zone. A Python string literal does not interpolate, and
+  // assertSafeTimezone has already excluded the quote and the backslash.
   pyLib.register('today', [], (_args, ctx) => {
-    ctx.requireHelper('_elo_dt_helpers');
-    return `_elo_dt(_dt.datetime.now().year, _dt.datetime.now().month, _dt.datetime.now().day)`;
+    ctx.requireHelper('_elo_today');
+    return `_elo_today("${ctx.timezone}")`;
   });
-  pyLib.register('now', [], (_args, _ctx) => `_dt.datetime.now()`);
+  pyLib.register('now', [], (_args, ctx) => {
+    ctx.requireHelper('_elo_now');
+    return `_elo_now("${ctx.timezone}")`;
+  });
   pyLib.register('bot', [], (_args, ctx) => {
     ctx.requireHelper('_elo_dt_helpers');
     return `_elo_dt(1, 1, 1)`;
@@ -445,9 +458,11 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('String', [Types.string], identity());
   pyLib.register('String', [Types.int], (args, ctx) => `str(${ctx.emit(args[0])})`);
   pyLib.register('String', [Types.float], (args, ctx) => `str(${ctx.emit(args[0])})`);
+  // Not kString: that renders, and renders a string *quoted*. Reached with the
+  // type unknown it has to convert, like `String:string` does. See kToString.
   pyLib.register('String', [Types.any], (args, ctx) => {
-    ctx.requireHelper('kString');
-    return `kString(${ctx.emit(args[0])})`;
+    ctx.requireHelper('kToString');
+    return `kToString(${ctx.emit(args[0])})`;
   });
   pyLib.register('Bool', [Types.any], (args, ctx) => {
     ctx.requireHelper('kBool');
@@ -460,15 +475,18 @@ pyLib.register('isNotNull', [Types.any], (args, ctx) => `(${ctx.emit(args[0])} i
   pyLib.register('Date', [Types.date], identity());
   pyLib.register('Date', [Types.any], (args, ctx) => {
     ctx.requireHelper('kParseDate');
-    return `kParseDate(${ctx.emit(args[0])})`;
+    return `kParseDate(${ctx.emit(args[0])}, "${ctx.timezone}")`;
   });
   pyLib.register('Datetime', [Types.datetime], identity());
   pyLib.register('Datetime', [Types.any], (args, ctx) => {
     ctx.requireHelper('kParseDatetime');
-    return `kParseDatetime(${ctx.emit(args[0])})`;
+    return `kParseDatetime(${ctx.emit(args[0])}, "${ctx.timezone}")`;
   });
   pyLib.register('Duration', [Types.duration], identity());
-  pyLib.register('Duration', [Types.any], (args, ctx) => `EloDuration.from_iso(${ctx.emit(args[0])})`);
+  pyLib.register('Duration', [Types.any], (args, ctx) => {
+    ctx.requireHelper('kParseDuration');
+    return `kParseDuration(${ctx.emit(args[0])})`;
+  });
 
   // Interval - construct from object with start/end properties
   pyLib.register('Interval', [Types.interval], identity());

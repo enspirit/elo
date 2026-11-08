@@ -82,7 +82,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'eq:bool,int': 'cross-type',
     'eq:bool,string': 'cross-type',
     'eq:date,datetime': 'cross-type',
-    'eq:datetime,date': 'cross-type',
     'eq:float,bool': 'cross-type',
     'eq:float,string': 'cross-type',
     'eq:int,bool': 'cross-type',
@@ -110,14 +109,12 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'String:null': 'widening',
     'assert:bool,string': 'widening',
     'ceil:int': 'widening',
-    'day:datetime': 'widening',
     'div:duration,float': 'widening',
     'floor:int': 'widening',
     'max:float,int': 'widening',
     'min:float,int': 'widening',
     'mod:float,float': 'widening',
     'mod:int,float': 'widening',
-    'month:datetime': 'widening',
     'mul:float,duration': 'widening',
     'mul:float,float': 'widening',
     'pos:float': 'widening',
@@ -143,7 +140,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'Interval:interval': 'widening',
     'String:null': 'widening',
     'ceil:int': 'widening',
-    'day:datetime': 'widening',
     'div:duration,float': 'widening',
     'endOfDay:date': 'widening',
     'endOfQuarter:date': 'widening',
@@ -154,7 +150,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'min:float,int': 'widening',
     'mod:float,float': 'widening',
     'mod:int,float': 'widening',
-    'month:datetime': 'widening',
     'mul:float,float': 'widening',
     'round:int': 'widening',
     'sub:float,int': 'widening',
@@ -174,7 +169,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     // cross-type
     'eq:int,float': 'cross-type',
     'gt:int,float': 'cross-type',
-    'gte:float,int': 'cross-type',
     'gte:int,float': 'cross-type',
     'lt:int,float': 'cross-type',
     'lte:float,int': 'cross-type',
@@ -185,7 +179,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'Interval:interval': 'widening',
     'assert:bool,string': 'widening',
     'ceil:int': 'widening',
-    'day:datetime': 'widening',
     'floor:int': 'widening',
     'gt:duration,duration': 'widening',
     'gte:duration,duration': 'widening',
@@ -197,7 +190,6 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
     'min:float,int': 'widening',
     'mod:float,float': 'widening',
     'mod:int,float': 'widening',
-    'month:datetime': 'widening',
     'mul:float,float': 'widening',
     'pos:float': 'widening',
     'pos:int': 'widening',
@@ -208,24 +200,26 @@ const UNREACHED: Record<string, Record<string, Reason>> = {
   sql: {
     // dynamic
     'Bool:any': 'dynamic',
-    'Date:any': 'dynamic',
     'Datetime:any': 'dynamic',
     'Duration:any': 'dynamic',
     'Float:any': 'dynamic',
     'Int:any': 'dynamic',
     'Interval:any': 'dynamic',
-    'String:any': 'dynamic',
     'assert:any,string': 'dynamic',
+    // Registered on purpose rather than left to the arity fallback (see the
+    // comment in src/bindings/sql.ts), and genuinely unreachable: a path whose
+    // type the checker cannot name has to arrive through something like
+    // `min([...])`, and PostgreSQL's UNNEST flattens a nested array, so no SQL
+    // expression can produce an array-typed value of unknown Elo type. The
+    // other three targets reach their `fetch:any,any` through a lambda.
+    'fetch:any,any': 'dynamic',
     'pos:any': 'dynamic',
     // widening
     'Interval:interval': 'widening',
     'String:null': 'widening',
     'ceil:int': 'widening',
-    'day:datetime': 'widening',
     'floor:int': 'widening',
-    'month:datetime': 'widening',
     'round:int': 'widening',
-    'year:datetime': 'widening',
   },
 };
 

@@ -50,23 +50,32 @@ import sys
 ALLOWED_NAMES = {
     # Prelude helpers
     'kAdd', 'kAssert', 'kAssertFails', 'kAt', 'kBool', 'kData', 'kDeepMerge',
-    'kDiv', 'kEq', 'kFetch', 'kFetchObject', 'kFirst', 'kIndexOf',
+    'kDiv', 'kEq', 'kFetch', 'kFetchAny', 'kFetchObject', 'kFirst', 'kIndexOf',
     'kIntersection', 'kLast', 'kMod', 'kMul', 'kNeg', 'kPad', 'kParseDate',
-    'kParseDatetime', 'kPatch', 'kPow', 'kRound', 'kRoundTo', 'kSplit',
-    'kStrMul', 'kString', 'kSub', 'kTypeOf',
+    'kParseDatetime', 'kParseDuration', 'kPatch', 'kPow', 'kRound', 'kRoundTo',
+    'kSplit', 'kStrMul', 'kString', 'kSub', 'kToString', 'kTypeOf',
     # Schema-parser helpers
     'pAny', 'pArray', 'pAssert', 'pBool', 'pData', 'pDate', 'pDatetime',
     'pDuration', 'pFloat', 'pInt', 'pNull', 'pSchema', 'pString', 'pSubtype',
     'pUnion', 'pUnwrap',
     # Temporal helpers and the classes the prelude defines
     'EloDuration', 'EloInterval', '_dt', '_elo_dt',
+    # 0259 D1: NOW and TODAY read the declared zone through these, rather than
+    # `_dt.datetime.now()` inline, so the conversion lives in one place and
+    # the zone is its argument.
+    '_elo_now', '_elo_today',
+    # 0259 D7, the other inbound boundary: an instant arriving in the data is
+    # expressed in the declared zone. The `*In` pair are curried parsers --
+    # pSchema takes parsers by reference under a (value, path) contract, so the
+    # zone is bound at the reference rather than threaded through pSchema.
+    'pDateIn', 'pDatetimeIn',
     '_elo_start_of_day', '_elo_end_of_day',
     '_elo_start_of_week', '_elo_end_of_week',
     '_elo_start_of_month', '_elo_end_of_month',
     '_elo_start_of_quarter', '_elo_end_of_quarter',
     '_elo_start_of_year', '_elo_end_of_year',
     # Modules the prelude imports
-    'functools', 'math', 're',
+    'functools', 'math', 're', 'ZoneInfo',
     # Builtins the emitters call. Note what is absent: eval, exec, compile,
     # __import__, open, getattr, setattr, globals, locals, vars, dir, input,
     # breakpoint, type, object, super, memoryview.

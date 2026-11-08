@@ -69,8 +69,34 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- 0259 D1. NOW and TODAY are wall clocks in the *declared* zone.
+--
+-- CURRENT_TIMESTAMP is a timestamptz in the session's zone, so the same
+-- program meant different things against two databases. AT TIME ZONE
+-- converts it to a zone-free timestamp, which is exactly how every other
+-- Elo datetime is carried on this target.
+--
+-- STABLE, not IMMUTABLE: the result depends on the clock. It is the
+-- transaction's clock, because CURRENT_TIMESTAMP is frozen at transaction
+-- start -- declared in 0259 D6 rather than changed, since clock_timestamp()
+-- is VOLATILE and would bar an Elo expression from an index or a generated
+-- column.
+--
+-- The zone is a parameter, never interpolated syntax. It arrives from the
+-- compiler as an argument so that it belongs to the program rather than to
+-- this prelude, which is installed once per database.
+CREATE OR REPLACE FUNCTION elo_now(tz TEXT) RETURNS TIMESTAMP AS $$
+  SELECT CURRENT_TIMESTAMP AT TIME ZONE tz;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION elo_today(tz TEXT) RETURNS DATE AS $$
+  SELECT (CURRENT_TIMESTAMP AT TIME ZONE tz)::DATE;
+$$ LANGUAGE sql STABLE;
+
 -- Type selector: Date - parse ISO date string, throws on failure
-CREATE OR REPLACE FUNCTION elo_date(v TEXT) RETURNS DATE AS $$
+-- A date-only string carries no offset, so there is nothing for the declared
+-- zone to do. The parameter is taken for symmetry with the ANYELEMENT form.
+CREATE OR REPLACE FUNCTION elo_date(v TEXT, tz TEXT) RETURNS DATE AS $$
 BEGIN
   IF v !~ '^\d{4}-\d{2}-\d{2}$' THEN
     RAISE EXCEPTION '.: expected Date (YYYY-MM-DD), got %', quote_literal(v);
@@ -79,32 +105,51 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Date (YYYY-MM-DD), got %', quote_literal(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
-CREATE OR REPLACE FUNCTION elo_date(v ANYELEMENT) RETURNS DATE AS $$
+CREATE OR REPLACE FUNCTION elo_date(v ANYELEMENT, tz TEXT) RETURNS DATE AS $$
 BEGIN
+  IF pg_typeof(v) = 'timestamp with time zone'::regtype THEN
+    RETURN (v::TIMESTAMPTZ AT TIME ZONE tz)::DATE;
+  END IF;
   RETURN v::DATE;
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Date, got %', pg_typeof(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Type selector: Datetime - parse ISO datetime string, throws on failure
-CREATE OR REPLACE FUNCTION elo_datetime(v TEXT) RETURNS TIMESTAMP AS $$
+-- 0259 D7. An instant arriving from outside is expressed in the declared zone.
+--
+-- A string carrying an offset is an instant: cast to TIMESTAMPTZ and read it in
+-- tz. A string carrying none is already a wall clock in tz, so a plain
+-- TIMESTAMP cast leaves it where it is -- going via TIMESTAMPTZ would apply the
+-- *session's* zone and move it.
+--
+-- STABLE, not IMMUTABLE: text::timestamptz may consult the session TimeZone.
+CREATE OR REPLACE FUNCTION elo_datetime(v TEXT, tz TEXT) RETURNS TIMESTAMP AS $$
 BEGIN
+  IF v ~ '(Z|[+-][0-9]{2}:?[0-9]{2})[[:space:]]*$' THEN
+    RETURN v::TIMESTAMPTZ AT TIME ZONE tz;
+  END IF;
   RETURN v::TIMESTAMP;
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Datetime, got %', quote_literal(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
-CREATE OR REPLACE FUNCTION elo_datetime(v ANYELEMENT) RETURNS TIMESTAMP AS $$
+-- A non-text value that already carries a zone (timestamptz) is an instant and
+-- is read in tz; anything else is cast as written.
+CREATE OR REPLACE FUNCTION elo_datetime(v ANYELEMENT, tz TEXT) RETURNS TIMESTAMP AS $$
 BEGIN
+  IF pg_typeof(v) = 'timestamp with time zone'::regtype THEN
+    RETURN v::TIMESTAMPTZ AT TIME ZONE tz;
+  END IF;
   RETURN v::TIMESTAMP;
 EXCEPTION WHEN OTHERS THEN
   RAISE EXCEPTION '.: expected Datetime, got %', pg_typeof(v);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Type selector: Duration - parse ISO duration string, throws on failure
 CREATE OR REPLACE FUNCTION elo_duration(v TEXT) RETURNS INTERVAL AS $$
@@ -258,6 +303,22 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 CREATE OR REPLACE FUNCTION elo_string(v ANYARRAY) RETURNS TEXT AS $$
 BEGIN
   RETURN elo_string(to_jsonb(v));
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- String() where the argument's type is not known statically.
+--
+-- elo_string *renders*: it quotes a string, so that '[1, 'a']' reads back as
+-- Elo. String() *converts*, and on a string that is the identity — which is
+-- what the typed String(String) does. Routing the unknown case through
+-- elo_string made String(min(['abc'])) answer '''abc''' where String('abc')
+-- answered 'abc'. Everything that is not a JSON string renders as before.
+CREATE OR REPLACE FUNCTION elo_to_string(v JSONB) RETURNS TEXT AS $$
+BEGIN
+  IF v IS NOT NULL AND jsonb_typeof(v) = 'string' THEN
+    RETURN v#>>'{}';
+  END IF;
+  RETURN elo_string(v);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 

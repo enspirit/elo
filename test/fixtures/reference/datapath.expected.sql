@@ -12,3 +12,9 @@ CASE WHEN jsonb_build_object('first', (jsonb_build_object('items', ARRAY[1, 2, 3
 CASE WHEN (jsonb_build_object('x', 12))::jsonb #> ARRAY['x']::text[] = to_jsonb(12::integer) THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (jsonb_build_object('x', 12))::jsonb #> (ARRAY['x'])::text[] = to_jsonb(12::integer) THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
 CASE WHEN (jsonb_build_object('user', jsonb_build_object('name', 'Bob')))::jsonb #> (ARRAY['user', 'name'])::text[] = to_jsonb('Bob'::text) THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END
+
+
+
+
+
+CASE WHEN jsonb_build_object('k', (jsonb_build_object('a', 1))::jsonb #> (NULL)::text[]) = jsonb_build_object('k', NULL) THEN TRUE ELSE (SELECT pg_terminate_backend(pg_backend_pid())) END

@@ -4,7 +4,8 @@ import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createPythonBinding, isNativeBinaryOp, PYTHON_OP_MAP } from '../bindings/python';
-import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertSafeIdentifier, assertSafeDatapathSegment, assertSafeTimezone } from './_validate';
+import { DEFAULT_TIMEZONE } from '../runtime';
 import { Emitter, emit, resolveHelpers } from './_emit';
 
 /**
@@ -26,6 +27,11 @@ export interface PythonCompileOptions {
   types?: TypeAnnotations;
   /** Dispatch every call as though no operand type were known. */
   forceDynamic?: boolean;
+  /**
+   * The zone `NOW` and `TODAY` are read in, as an IANA name. Defaults to `UTC`.
+   * 0259 D2: reaches the emission through the zone helper alone.
+   */
+  timezone?: string;
 }
 
 /**
@@ -103,8 +109,9 @@ export function compileToPythonWithMeta(expr: Expr, options?: PythonCompileOptio
   const actuallyUsesInput = usesInput(ir);
   // Helpers are provided by the prelude (--prelude-only), not embedded
   // per-expression, so the set is collected and not read back.
+  const zone = assertSafeTimezone(options?.timezone ?? DEFAULT_TIMEZONE);
   const requiredHelpers = new Set<string>();
-  const code = emit(ir, pyEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);
+  const code = emit(ir, pyEmitter, { stripGuards: options?.stripGuards || false, timezone: zone }, requiredHelpers);
 
   // Wrap as lambda: (lambda _: CODE)(None)
   const suffix = options?.execute ? '(None)' : '';
@@ -248,6 +255,14 @@ function emitTypeExprParser(
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
+        // A temporal field parser needs the declared zone (0259 D7); pSchema
+        // takes parsers by reference under a (value, path) contract, so the
+        // zone is bound by the curried form instead of threaded through it.
+        if (parserName === 'pDate' || parserName === 'pDatetime') {
+          const curried = `${parserName}In`;
+          ctx.requireHelper(curried);
+          return `${curried}("${ctx.timezone}")`;
+        }
         ctx.requireHelper(parserName);
         return parserName;
       }

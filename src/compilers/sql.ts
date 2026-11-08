@@ -4,7 +4,8 @@ import { transform } from '../transform';
 import { Types, TypeAnnotations } from '../types';
 import { Emitter, emit } from './_emit';
 import { createSQLBinding, isNativeBinaryOp, SQL_OP_MAP, PG_TYPE, pgTypeOf, jsonFieldPgType, jsonPath } from '../bindings/sql';
-import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { assertSafeIdentifier, assertSafeDatapathSegment, assertSafeTimezone, sqlStringConstant } from './_validate';
+import { DEFAULT_TIMEZONE } from '../runtime';
 
 /**
  * SQL compilation options
@@ -23,6 +24,11 @@ export interface SQLCompileOptions {
   types?: TypeAnnotations;
   /** Dispatch every call as though no operand type were known. */
   forceDynamic?: boolean;
+  /**
+   * The zone `NOW` and `TODAY` are read in, as an IANA name. Defaults to `UTC`.
+   * 0259 D2: reaches the emission through the zone helper alone.
+   */
+  timezone?: string;
 }
 
 /**
@@ -178,7 +184,8 @@ export function compileToSQLWithMeta(expr: Expr, options?: SQLCompileOptions): S
   const needsInput = usesInput(ir) || options?.asFunction;
   // SQL's prelude is installed in the database rather than emitted, so there
   // are no helpers to collect. See `isPreludePrependable`.
-  const code = emit(ir, sqlEmitter, { stripGuards: false }, new Set());
+  const zone = assertSafeTimezone(options?.timezone ?? DEFAULT_TIMEZONE);
+  const code = emit(ir, sqlEmitter, { stripGuards: false, timezone: zone }, new Set());
 
   return { code, usesInput: needsInput || false };
 }
@@ -191,20 +198,6 @@ export function compileToSQLWithMeta(expr: Expr, options?: SQLCompileOptions): S
  * where SQL's data model genuinely differs and the node is needed too:
  * `member_access`, `array_literal` and `alternative`. See `_emit.ts`.
  */
-/**
- * A PostgreSQL string constant for an arbitrary value. The single quote is
- * doubled and the backslash is doubled with an `E'...'` prefix, so the literal
- * cannot be escaped under either `standard_conforming_strings` setting. The
- * prefix is added only when it is needed, so a plain value keeps its bare
- * `'...'` form.
- */
-function sqlStringConstant(value: string): string {
-  const escaped = value
-    .replace(/\\/g, '\\\\').replace(/'/g, "''")
-    .replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/\r/g, '\\r');
-  const prefix = escaped !== value.replace(/'/g, "''") ? 'E' : '';
-  return `${prefix}'${escaped}'`;
-}
 
 const sqlEmitter: Emitter = {
   lib: sqlLib,

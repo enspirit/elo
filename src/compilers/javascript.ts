@@ -3,9 +3,9 @@ import { IRExpr, IRCall, usesInput } from '../ir';
 import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
-import { createJavaScriptBinding, isNativeBinaryOp } from '../bindings/javascript';
-import { JS_HELPERS, JS_HELPER_DEPS } from '../runtime';
-import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { createJavaScriptBinding, isNativeBinaryOp, UTC_ZONE } from '../bindings/javascript';
+import { JS_HELPERS, JS_HELPER_DEPS, DEFAULT_TIMEZONE } from '../runtime';
+import { assertSafeIdentifier, assertSafeDatapathSegment, assertSafeTimezone } from './_validate';
 import { Emitter, emit, resolveHelpers } from './_emit';
 
 /**
@@ -29,6 +29,14 @@ export interface JavaScriptCompileOptions {
   types?: TypeAnnotations;
   /** Dispatch every call as though no operand type were known. */
   forceDynamic?: boolean;
+  /**
+   * The zone `NOW` and `TODAY` are read in, as an IANA name. Defaults to
+   * `UTC`.
+   *
+   * 0259 D2: this is the *default* for a zone that will eventually arrive at
+   * runtime as `$.timezone`. It reaches the emission through `kZone` alone.
+   */
+  timezone?: string;
 }
 
 /**
@@ -69,7 +77,8 @@ export function compileToJavaScriptWithMeta(expr: Expr, options?: JavaScriptComp
   const ir = transform(expr, new Map(), new Set(), { types: options?.types, forceDynamic: options?.forceDynamic });
   const actuallyUsesInput = usesInput(ir);
   const requiredHelpers = new Set<string>();
-  const code = emit(ir, jsEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);
+  const zone = assertSafeTimezone(options?.timezone ?? DEFAULT_TIMEZONE);
+  const code = emit(ir, jsEmitter, { stripGuards: options?.stripGuards || false, timezone: zone }, requiredHelpers);
 
   const helperDefs = resolveHelpers(requiredHelpers, JS_HELPER_DEPS)
     .map(name => JS_HELPERS[name].replace(/\n\s*/g, ' '))
@@ -138,8 +147,19 @@ const jsEmitter: Emitter = {
   boolLiteral: (value) => value.toString(),
   nullLiteral: 'null',
   stringLiteral: (value) => JSON.stringify(value),
-  dateLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)})`,
-  datetimeLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)})`,
+  // A Date or a Datetime in Elo is a zone-free wall clock: the literal means
+  // the time it spells, and nothing about the host may move it. Ruby, Python
+  // and PostgreSQL have no ambient zone to apply; Luxon does, and `fromISO`
+  // without a zone converts into it — so two dates a whole number of days
+  // apart came out 59.958 days apart across a DST transition, and `day(...)`
+  // answered the day before. Every DateTime the emission *builds from text* is
+  // therefore pinned to UTC: here, in `bot`/`eot`, and in the coercion helpers
+  // (`kDate`, `kDatetime`, `pDate`, `pDatetime`). All of them, or the ambient
+  // zone comes back through whichever one was left out.
+  //
+  // `NOW` and `TODAY` are deliberately not in that list — see the binding.
+  dateLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)}, ${UTC_ZONE})`,
+  datetimeLiteral: (value) => `DateTime.fromISO(${JSON.stringify(value)}, ${UTC_ZONE})`,
   durationLiteral: (value) => `Duration.fromISO(${JSON.stringify(value)})`,
 
   // Wrapped in parens to avoid the ambiguity with a block.
@@ -260,6 +280,15 @@ function emitTypeExprParser(
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
+        // A temporal field parser needs the declared zone (0259 D7), and
+        // pSchema takes parsers by reference under a (value, path) contract —
+        // so the zone is bound by the curried form rather than threaded
+        // through pSchema, pArray and pUnion.
+        if (parserName === 'pDate' || parserName === 'pDatetime') {
+          const curried = `${parserName}In`;
+          ctx.requireHelper(curried);
+          return `${curried}(${JSON.stringify(ctx.timezone)})`;
+        }
         ctx.requireHelper(parserName);
         return parserName;
       }

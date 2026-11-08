@@ -14,20 +14,26 @@ function wrapRuby(code: string): string {
 // Ruby's `**` answers a Rational for a negative Integer exponent, which no
 // other target does, so every power goes through the helper. The helper also
 // refuses a result whose bit length would exceed the allocation cap.
-const POW = 'def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; ';
+const POW = 'def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; Rational === v ? v.to_f : v end; ';
 
 // Dynamic multiplication dispatches so a String operand reaches the *bounded*
 // repeat rather than Ruby's unbounded `String#*`; k_str_mul is its dependency.
-const K_MUL = 'def k_mul(l, r); return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer); return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer); l * r end; ';
+const K_MUL = 'def k_mul(l, r); return k_str_mul(l, r) if String === l && Integer === r; return k_str_mul(r, l) if String === r && Integer === l; l * r end; ';
 const K_STR_MUL = 'def k_str_mul(s, n); return \'\' if n <= 0; raise "String length limit (10000000) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings" if s.length * n > 10000000; s * n end; ';
 const MUL = `${K_MUL}${K_STR_MUL}`;
 
+// Likewise for addition: ActiveSupport defines Date + Duration and not
+// Duration + Date, so an unknown operand type dispatches rather than raising
+// "Date can't be coerced into Integer". JavaScript and Python have always
+// emitted kAdd here; Ruby used to emit a bare `+`.
+const K_ADD = 'def k_add(l, r); return r + l if ActiveSupport::Duration === l && (Date === r || Time === r); l + r end; ';
+
 // Emitted ahead of the expression when the division has to decide at runtime.
-const K_DIV = 'def k_div(l, r); return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer); l / r end; ';
+const K_DIV = 'def k_div(l, r); return l / r if ActiveSupport::Duration === l; return l.fdiv(r) if Integer === l && Integer === r; l / r end; ';
 
 // Likewise for subtraction: Ruby's Date/DateTime difference is a Rational
 // number of days, not a duration, so an unknown operand type has to dispatch.
-const K_SUB = 'def k_sub(l, r); if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time)); return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds end; l - r; end; ';
+const K_SUB = 'def k_sub(l, r); if (Date === l || Time === l) && (Date === r || Time === r); return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds end; l - r; end; ';
 
 function wrapRubyWithKDiv(code: string): string {
   return wrapRuby(`${K_DIV}${code}`);
@@ -295,7 +301,7 @@ describe('Ruby Compiler - Complex Expressions', () => {
       binary('+', memberAccess(variable('_'), 'a'), memberAccess(variable('_'), 'b')),
       memberAccess(variable('_'), 'c')
     );
-    assert.strictEqual(compileToRuby(ast), wrapRuby(`${MUL}k_mul(_[:a] + _[:b], _[:c])`));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_ADD}${MUL}k_mul(k_add(_[:a], _[:b]), _[:c])`));
   });
 
   it('should compile _.price * _.quantity - _.discount', () => {
@@ -333,7 +339,7 @@ describe('Ruby Compiler - Complex Expressions', () => {
     );
     assert.strictEqual(
       compileToRuby(ast),
-      wrapRuby(`${K_DIV}${MUL}${K_SUB}k_div(k_mul(_[:x] + 5, k_sub(_[:y], 3)), 2)`)
+      wrapRuby(`${K_ADD}${K_DIV}${MUL}${K_SUB}k_div(k_mul(k_add(_[:x], 5), k_sub(_[:y], 3)), 2)`)
     );
   });
 
@@ -381,7 +387,7 @@ describe('Ruby Compiler - Edge Cases', () => {
 
   it('should handle unary with binary', () => {
     const ast = binary('+', unary('-', memberAccess(variable('_'), 'x')), literal(10));
-    assert.strictEqual(compileToRuby(ast), wrapRuby('-_[:x] + 10'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_ADD}k_add(-_[:x], 10)`));
   });
 });
 

@@ -13,34 +13,21 @@
 # is exactly what `dispatch-coverage` lists — but it is not reachable from
 # source today, so it is the weaker of the two.
 #
-# Written up as .claude/tasks/todo/0248. Format: one fixture basename per line.
-
-# REAL — String(x) on the dynamic path returns the *display* form, so a string
-# comes back quoted: String('hello') is "hello" typed and "'hello'" dynamic.
-# The `any` implementation is kString, which is the inspect helper.
-type-selectors
-
-# REAL, and worse than wrong: fetch(d, p) with an object path raises a host
-# TypeError ("path is not iterable") instead of an Elo failure, because the
-# dynamic fetch assumes a path array and cannot tell the object form from it.
-# The security page promises bad input yields a typed Elo error rather than an
-# uncaught native exception.
-datapath
-
-# FORCED — reaches Interval(any) with an argument the typed path would have
-# given a shape to. Interval:any is on the dispatch-coverage unreached list for
-# all four targets, so this is the first time it has ever run.
-interval-arithmetic
-
-# FORCED — concat(Array, Array) is a type error on the typed path and succeeds
-# on the dynamic one, so "it compiles" does not mean the same thing on both.
-concat
-
-# FORCED — typeOf and duration arithmetic through the all-any path on Ruby.
-typeOf-arithmetic
-temporal-duration
-
-# PRE-EXISTING, not a divergence: these two fail identically on main, under
-# every axis. The startOf/endOf timezone bug, tracked separately.
-temporal-startof-endof
-dynamic-ambiguous-dispatch
+# Format: one fixture basename per line.
+#
+# **The list is empty.** Every entry 0248 inherited is closed:
+#
+#  * `type-selectors` and `datapath` were the two REAL ones — String(x)
+#    returning the display form, and fetch(d, p) raising a host TypeError on an
+#    object path. Both fixed, with `reference/string-conversion-dynamic.elo`
+#    and `reference/datapath-dynamic.elo` asserting the typed and dynamic
+#    forms agree.
+#  * `interval-arithmetic`, `concat`, `typeOf-arithmetic` and
+#    `temporal-duration` were listed as FORCED, and all four turned out to
+#    reproduce with a lambda once characterised. They are
+#    `reference/dynamic-arith-dispatch.elo` now.
+#  * `temporal-startof-endof` and `dynamic-ambiguous-dispatch` were the
+#    timezone bug, fixed by 0240.
+#
+# Keep it empty. A line added here is a bug that is being carried, so it needs
+# the REAL/FORCED verdict and a sentence saying what the two paths answer.

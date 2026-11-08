@@ -1,0 +1,63 @@
+# Arithmetic and selectors where the operand types are not known.
+#
+# A lambda parameter is typed `any`, so every line below takes the runtime
+# dispatcher while its twin at the bottom takes the typed emission. The two
+# must answer the same thing. Each of these was a real divergence, found by the
+# force-dynamic axis and then reproduced here with nothing but a lambda:
+#
+#   * JavaScript's kAdd had no case for two lists, so `[1, 2] + [3, 4]` fell
+#     through to the native `+` and answered the string "1,23,4".
+#   * Ruby's `add:any,any` was a bare `+`, and ActiveSupport defines
+#     Date + Duration but not Duration + Date, so `P1D + D2024-01-15` raised a
+#     host TypeError.
+#   * Ruby's k_div tested `is_a?(Integer)`, which an ActiveSupport::Duration
+#     answers true to, so `P2D / 2` answered the Float 86400.0.
+#   * `Duration:any` refused an Interval on all three targets, where
+#     `Duration:interval` is the interval's length.
+#
+# Lambdas do not compile to SQL, so this fixture has no SQL expectation.
+
+# List concatenation
+assert((let f = fn( a, b ~> a + b ) in f([1, 2], [3, 4])) == [1, 2, 3, 4])
+assert((let f = fn( a, b ~> a + b ) in f(['a'], ['b', 'c'])) == ['a', 'b', 'c'])
+assert((let f = fn( a, b ~> a + b ) in f([], [1])) == [1])
+assert(count(let f = fn( a, b ~> a + b ) in f([1, 2], [3, 4])) == 4)
+
+# String concatenation keeps working through the same dispatcher
+assert((let f = fn( a, b ~> a + b ) in f('ab', 'cd')) == 'abcd')
+assert((let f = fn( a, b ~> a + b ) in f(1, 2)) == 3)
+
+# A duration on the left of a date or datetime
+assert((let f = fn( a, b ~> a + b ) in f(P1D, D2024-01-15)) == D2024-01-16)
+assert((let f = fn( a, b ~> a + b ) in f(PT1H, D2024-01-15T10:00:00Z)) == D2024-01-15T11:00:00Z)
+assert((let f = fn( a, b ~> a + b ) in f(D2024-01-15, P1D)) == D2024-01-16)
+assert((let f = fn( a, b ~> a + b ) in f(P1D, P2D)) == P3D)
+
+# A divided or multiplied duration is still a duration
+assert(typeOf(let f = fn( a, b ~> a / b ) in f(P2D, 2)) == 'Duration')
+assert((let f = fn( a, b ~> a / b ) in f(P2D, 2)) == P1D)
+assert(typeOf(let f = fn( a, b ~> a * b ) in f(P1D, 2)) == 'Duration')
+assert((let f = fn( a, b ~> a * b ) in f(P1D, 2)) == P2D)
+assert((let f = fn( a, b ~> a / b ) in f(5, 2)) == 2.5)
+
+# Duration(interval) is the interval's length, typed or not
+assert((let f = fn( i ~> Duration(i) ) in f(Interval({start: D2024-01-01T10:00:00Z, end: D2024-01-01T12:00:00Z}))) == PT2H)
+assert((let f = fn( i ~> Duration(i) ) in f(Interval({start: D2024-01-01T00:00:00Z, end: D2024-01-02T00:00:00Z}))) == P1D)
+assert((let f = fn( d ~> Duration(d) ) in f(P1D)) == P1D)
+assert((let f = fn( s ~> Duration(s) ) in f('PT2H')) == PT2H)
+
+# The typed twins, which must keep agreeing
+assert([1, 2] + [3, 4] == [1, 2, 3, 4])
+assert(['a'] + ['b', 'c'] == ['a', 'b', 'c'])
+assert('ab' + 'cd' == 'abcd')
+assert(P1D + D2024-01-15 == D2024-01-16)
+assert(PT1H + D2024-01-15T10:00:00Z == D2024-01-15T11:00:00Z)
+assert(D2024-01-15 + P1D == D2024-01-16)
+assert(P1D + P2D == P3D)
+assert(typeOf(P2D / 2) == 'Duration')
+assert(P2D / 2 == P1D)
+assert(typeOf(P1D * 2) == 'Duration')
+assert(5 / 2 == 2.5)
+assert(Duration(Interval({start: D2024-01-01T10:00:00Z, end: D2024-01-01T12:00:00Z})) == PT2H)
+assert(Duration(P1D) == P1D)
+assert(Duration('PT2H') == PT2H)

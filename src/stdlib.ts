@@ -87,6 +87,23 @@ export interface EmitContext<T> {
    * prelude is installed in the database rather than emitted.
    */
   requireHelper: (name: string) => void;
+  /**
+   * The declared timezone, as an IANA name, already checked by
+   * `assertSafeTimezone` — so it needs no escaping in any target.
+   *
+   * 0259 D2: a binding that needs the zone **passes it to a helper**; it never
+   * writes the conversion itself. `NOW` emits `kNow("UTC")`, and when the zone
+   * becomes a runtime `$.timezone` read, the one expression that produces this
+   * argument changes and no binding does.
+   *
+   * Why an argument rather than a constant baked into the helper: Python's and
+   * SQL's helpers live in a prelude installed once, separately from any
+   * compile, so a zone held *inside* the helper would belong to the deployment
+   * rather than to the program — and a program compiled for one zone could run
+   * against a prelude built for another with nothing to detect it. As an
+   * argument the zone travels with the program on all four targets.
+   */
+  timezone: string;
 }
 
 /** The `requireHelper` of a target that has no helpers to collect. */

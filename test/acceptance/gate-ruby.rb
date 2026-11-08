@@ -62,7 +62,7 @@ ALLOWED_INTERPOLATION_METHODS = %w[inspect class].freeze
 
 # Every method the emitted code may call on a receiver, outside the helpers.
 #
-# 74, measured over the corpus. The security value is the absence: `send`,
+# 75, measured over the corpus. The security value is the absence: `send`,
 # `__send__`, `public_send`, `instance_eval`, `instance_exec`, `eval`,
 # `method`, `const_get`, `instance_variable_get`, `define_singleton_method`,
 # `binding`, `tap` and `then` are all excluded by not being on the list. A
@@ -77,17 +77,36 @@ ALLOWED_METHODS = %w[
   beginning_of_day beginning_of_month beginning_of_quarter beginning_of_week
   beginning_of_year end_of_day end_of_month end_of_quarter end_of_week
   end_of_year day days hour minute month now seconds to_datetime today year
+  # `to_date` truncates a DateTime to its calendar date. Added on purpose, with
+  # the fix for `Date(datetime)` being the identity on Ruby: `DateTime` is a
+  # subclass of `Date`, so the coercion's `when Date` arm matched a DateTime
+  # and returned it with its time-of-day intact. It is the exact counterpart of
+  # `to_datetime`, already on this list, and reaches no further than it does.
+  to_date
 ].freeze
 
 # Every bare call — a name with no receiver — the emitted code may make.
 #
-# 22, measured: the prelude helpers, plus `Integer()`, `lambda` and `method`.
+# 27, measured: the prelude helpers, plus `Integer()`, `lambda` and `method`.
 # What is absent is the whole Kernel surface: `system`, `exec`, `spawn`,
 # `require`, `load`, `eval`, `fork`, `open`, `gets`, `at_exit`, `send`.
+#
+# `k_now` and `k_today` were added with 0259 D1: NOW and TODAY are read in the
+# declared zone through a helper rather than from `DateTime.now`/`Date.today`
+# inline, so the conversion lives in one place and the zone is its argument.
+#
+# `k_wall` and the two `p_*_in` were added with 0259 D7, for the other inbound
+# boundary: an instant arriving in the data is expressed in the declared zone by
+# the same kind of helper. The `_in` pair are curried parsers — p_schema takes
+# parsers by reference under a (value, path) contract, so the zone is bound at
+# the reference instead of threaded through p_schema, p_array and p_union.
 ALLOWED_CALLS = %w[
   Integer lambda method
-  k_deep_merge k_div k_float k_intersection k_mod k_mul k_pad k_patch k_pow
-  k_round_to k_str_mul k_string k_sub
+  k_add k_deep_merge k_div k_fetch k_fetch_any k_fetch_object k_float
+  k_now k_today k_wall
+  p_date_in p_datetime_in
+  k_intersection k_mod k_mul k_pad k_patch k_pow k_round_to k_str_mul
+  k_string k_sub k_to_string
   p_array p_raise p_schema p_subtype p_union p_unwrap
 ].freeze
 

@@ -82,7 +82,7 @@ describe('CLI - Basic compilation', () => {
     // Through a helper: Ruby's `**` answers a Rational for a negative Integer
     // exponent, where every other target answers a Float.
     const result = eloc('-e "2 ^ 3" -t ruby');
-    assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
+    assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; Rational === v ? v.to_f : v end; k_pow(2, 3) }');
   });
 
   it('should handle power operator in SQL', () => {
@@ -94,32 +94,82 @@ describe('CLI - Basic compilation', () => {
 describe('CLI - Temporal expressions', () => {
   it('should compile TODAY to JavaScript', () => {
     const result = eloc('-e "TODAY" -t js');
-    assert.strictEqual(result, "(function(_) { return DateTime.now().startOf('day'); })");
+    assert.ok(result.includes('return kToday("UTC")'));
   });
 
   it('should compile TODAY to Ruby', () => {
     const result = eloc('-e "TODAY" -t ruby');
-    assert.strictEqual(result, '->(_) { Date.today }');
+    assert.ok(result.includes('k_today("UTC")'));
   });
 
   it('should compile TODAY to SQL', () => {
     const result = eloc('-e "TODAY" -t sql');
-    assert.strictEqual(result, 'CURRENT_DATE');
+    assert.strictEqual(result, "elo_today('UTC')");
   });
 
   it('should compile NOW to JavaScript', () => {
     const result = eloc('-e "NOW" -t js');
-    assert.strictEqual(result, '(function(_) { return DateTime.now(); })');
+    assert.ok(result.includes('return kNow("UTC")'));
   });
 
   it('should compile NOW to Ruby', () => {
     const result = eloc('-e "NOW" -t ruby');
-    assert.strictEqual(result, '->(_) { DateTime.now }');
+    assert.ok(result.includes('k_now("UTC")'));
   });
 
   it('should compile NOW to SQL', () => {
     const result = eloc('-e "NOW" -t sql');
-    assert.strictEqual(result, 'CURRENT_TIMESTAMP');
+    assert.strictEqual(result, "elo_now('UTC')");
+  });
+});
+
+/**
+ * 0259 D2. The declared zone is a compile-time default for a value that will
+ * later arrive at runtime as `$.timezone`, and these pin the two properties
+ * that make that a shortcut rather than a different design.
+ */
+describe('CLI - the declared timezone', () => {
+  const TARGETS: Array<[string, string]> = [
+    ['js', 'kNow("Europe/Brussels")'],
+    ['ruby', 'k_now("Europe/Brussels")'],
+    ['python', '_elo_now("Europe/Brussels")'],
+    ['sql', "elo_now('Europe/Brussels')"],
+  ];
+
+  for (const [target, expected] of TARGETS) {
+    it(`should pass --timezone through to the ${target} clock`, () => {
+      const result = eloc(`-e "NOW" -t ${target} --timezone Europe/Brussels`);
+      assert.ok(result.includes(expected), `expected ${expected} in: ${result}`);
+    });
+  }
+
+  // The property that keeps `$.timezone` from being a refactor: the zone
+  // reaches the emission in *one* place per use, as an argument to a helper,
+  // and no emitter spells the conversion itself. If this count ever rises, an
+  // emitter has started inlining the zone and the helper has stopped being the
+  // only thing that knows what a zone means.
+  it('should name the zone exactly once per clock reading', () => {
+    const result = eloc('-e "hour(NOW) + minute(NOW)" -t js --timezone Asia/Kathmandu');
+    const occurrences = result.split('Asia/Kathmandu').length - 1;
+    assert.strictEqual(occurrences, 2, `two clock readings, two zone arguments: ${result}`);
+  });
+
+  it('should default to UTC when no zone is declared', () => {
+    assert.strictEqual(eloc('-e "NOW" -t sql'), "elo_now('UTC')");
+  });
+
+  // assertSafeTimezone, whose whitelist is what lets all four targets embed
+  // the zone with no escaping. Only shell-safe values here; the quote and
+  // interpolation cases are asserted directly against assertSafeTimezone in
+  // test/unit/timezone.unit.test.ts, where no shell is in the way.
+  it('should refuse a zone that is not an IANA name', () => {
+    for (const bad of ['../etc', 'Europe Brussels', '1Europe/Brussels']) {
+      assert.throws(
+        () => eloc(`-e "NOW" -t sql --timezone "${bad}"`),
+        /Invalid timezone|Command failed/,
+        `should have refused ${JSON.stringify(bad)}`
+      );
+    }
   });
 });
 
@@ -128,13 +178,13 @@ describe('CLI - Prelude inclusion', () => {
     const result = eloc('-e "TODAY" -t ruby -p');
     assert.ok(result.includes("require 'date'"));
     assert.ok(result.includes("require 'active_support/all'"));
-    assert.ok(result.includes('->(_) { Date.today }'));
+    assert.ok(result.includes('k_today("UTC")'));
   });
 
   it('should include JavaScript prelude', () => {
     const result = eloc('-e "TODAY" -t js -p');
     assert.ok(result.includes("require('luxon')"));
-    assert.ok(result.includes("DateTime.now().startOf('day')"));
+    assert.ok(result.includes('kToday("UTC")'));
     // Note: elo helpers are now embedded in the expression as needed, not in prelude
   });
 
@@ -179,7 +229,7 @@ describe('CLI - File input', () => {
 
     try {
       const result = eloc(`${inputFile} -t ruby`);
-      assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
+      assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; Rational === v ? v.to_f : v end; k_pow(2, 3) }');
     } finally {
       unlinkSync(inputFile);
     }
@@ -567,7 +617,7 @@ describe('CLI - Long options', () => {
 
   it('should accept --target', () => {
     const result = eloc('-e "2 ^ 3" --target ruby');
-    assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; k_pow(2, 3) }');
+    assert.strictEqual(result, '->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; Rational === v ? v.to_f : v end; k_pow(2, 3) }');
   });
 
   it('should accept --prelude', () => {

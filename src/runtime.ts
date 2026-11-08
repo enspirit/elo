@@ -22,6 +22,15 @@
  * window — see the security page.
  */
 export const DEFAULT_MAX_STRING_LENGTH = 10_000_000;
+/**
+ * The zone `NOW` and `TODAY` are read in when none is declared.
+ *
+ * UTC, because it is the only answer that needs nothing from the environment.
+ * The host's ambient zone is specifically *not* the default: it made the same
+ * program mean different things on two servers.
+ */
+export const DEFAULT_TIMEZONE = 'UTC';
+
 export const MAX_STRING_LENGTH: number = (() => {
   // Guard `process`: this module is bundled into the browser (the playground
   // compiles Elo in-page), where `process` is undefined. A bare reference would
@@ -64,6 +73,8 @@ export interface EloFailure extends Error {
  * Dependencies between helpers. If helper A uses helper B, A depends on B.
  */
 export const JS_HELPER_DEPS: Record<string, string[]> = {
+  kNow: [],
+  kToday: ['kNow'],
   kRepeat: [],
   kMul: ['kRepeat'],
   kPad: [],
@@ -74,9 +85,11 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   kRoundTo: ['kRound'],
   kInt: ['pInt', 'pUnwrap', 'pOk', 'pFail'],
   kNeq: ['kEq'],
+  kToString: ['kString'],
   kMember: [],
   kFetch: ['kMember'],
   kFetchObject: ['kFetch', 'kMember'],
+  kFetchAny: ['kFetch', 'kFetchObject', 'kMember'],
   kPatch: ['kMember'],
   kDeepMerge: ['kMember'],
   // Parser helpers depend on pOk/pFail
@@ -86,8 +99,10 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
   pInt: ['pOk', 'pFail'],
   pBool: ['pOk', 'pFail'],
   pDatetime: ['pOk', 'pFail'],
+  pDatetimeIn: ['pDatetime', 'pOk', 'pFail'],
   pFloat: ['pOk', 'pFail'],
   pDate: ['pOk', 'pFail'],
+  pDateIn: ['pDate', 'pOk', 'pFail'],
   pDuration: ['pOk', 'pFail'],
   pData: ['pOk', 'pFail'],
   // pSet and kMember: a schema key named `__proto__` is data on both sides.
@@ -99,6 +114,18 @@ export const JS_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const JS_HELPERS: Record<string, string> = {
+  /* 0259 D1. NOW is the wall clock in the declared zone, labelled zone-free.
+     `setZone(tz)` converts the instant to that zone; the second `setZone`
+     with keepLocalTime relabels those wall-clock fields as UTC without moving
+     them, which is how every other Elo datetime is carried. Reading the
+     host's ambient clock instead is what made `hour(NOW)` and
+     `NOW - <literal>` disagree. */
+  kNow: `function kNow(tz) {
+  return DateTime.now().setZone(tz).setZone("utc", { keepLocalTime: true });
+}`,
+  kToday: `function kToday(tz) {
+  return kNow(tz).startOf('day');
+}`,
   kRepeat: `function kRepeat(s, n) {
   if (n <= 0) return "";
   if (s.length * n > ${MAX_STRING_LENGTH}) throw new Error("String length limit (${MAX_STRING_LENGTH}) exceeded; raise ELO_MAX_STRING_LENGTH to allow larger strings");
@@ -112,6 +139,12 @@ export const JS_HELPERS: Record<string, string> = {
   if (DateTime.isDateTime(l) && Duration.isDuration(r)) return l.plus(r);
   if (Duration.isDuration(l) && DateTime.isDateTime(r)) return r.plus(l);
   if (Duration.isDuration(l) && Duration.isDuration(r)) return l.plus(r);
+  /* Elo's + on two lists concatenates, as add:array,array does. JavaScript's
+     native + stringifies them instead, so [1, 2] + [3, 4] came out "1,23,4" —
+     a wrong value, silently, where the typed path and the other three targets
+     answer a list. The dispatcher has to carry every overload the typed path
+     has, not the subset someone remembered. */
+  if (Array.isArray(l) && Array.isArray(r)) return l.concat(r);
   return l + r;
 }`,
   kSub: `function kSub(l, r) {
@@ -216,6 +249,11 @@ export const JS_HELPERS: Record<string, string> = {
 }`,
   kFetch: `function kFetch(data, path) {
   var FORBIDDEN = ['constructor', '__proto__', 'prototype', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'];
+  /* A path that is not a list of segments has nothing to walk. Without this
+     the for-of raised "path is not iterable" — an uncaught host exception from
+     ordinary Elo source, which the security page promises cannot happen:
+     fetch({a: 1}, {k: 42}) reached here through kFetchObject with 42. */
+  if (!Array.isArray(path)) return null;
   let current = data;
   for (const segment of path) {
     if (current === null || current === undefined) return null;
@@ -241,6 +279,17 @@ export const JS_HELPERS: Record<string, string> = {
     else { result[key] = value; }
   }
   return result;
+}`,
+  /* `fetch(d, p)` has four forms and the *type* of `p` tells them apart. Where
+     the type is unknown — a lambda parameter, a member read — the shape of the
+     value has to, the way kMul asks whether its operand is a String. Before
+     this the arity fallback chose the path form for every one of them, so the
+     mapping form walked an object as if it were a list of segments. */
+  kFetchAny: `function kFetchAny(data, path) {
+  if (typeof path === 'string') return kFetch(data, [path]);
+  if (Array.isArray(path)) return kFetch(data, path);
+  if (path !== null && typeof path === 'object') return kFetchObject(data, path);
+  return null;
 }`,
   kPatch: `function kPatch(data, path, value) {
   var FORBIDDEN = ['constructor', '__proto__', 'prototype', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'];
@@ -297,18 +346,10 @@ export const JS_HELPERS: Record<string, string> = {
   if (typeof v === 'string') { if (v === 'true') return true; if (v === 'false') return false; }
   return null;
 }`,
-  kDate: `function kDate(v) {
-  if (v === null || v === undefined) return null;
-  if (DateTime.isDateTime(v)) return v.startOf('day');
-  if (typeof v === 'string') { const d = DateTime.fromISO(v); return d.isValid && /^\\d{4}-\\d{2}-\\d{2}$/.test(v) ? d.startOf('day') : null; }
-  return null;
-}`,
-  kDatetime: `function kDatetime(v) {
-  if (v === null || v === undefined) return null;
-  if (DateTime.isDateTime(v)) return v;
-  if (typeof v === 'string') { const d = DateTime.fromISO(v); return d.isValid ? d : null; }
-  return null;
-}`,
+  // A Date or Datetime this target produces is always in UTC, literal or
+  // coerced: Elo's temporal values are zone-free, and Luxon is the only one of
+  // the four runtimes that would otherwise read the host's zone into them.
+  // See `dateLiteral` in `src/compilers/javascript.ts`.
   kDuration: `function kDuration(v) {
   if (v === null || v === undefined) return null;
   if (Duration.isDuration(v)) return v;
@@ -333,6 +374,16 @@ export const JS_HELPERS: Record<string, string> = {
   if (Array.isArray(v)) return '[' + v.map(kString).join(', ') + ']';
   if (typeof v === 'object') return '{' + Object.keys(v).map(k => k + ': ' + kString(v[k])).join(', ') + '}';
   return String(v);
+}`,
+  /* `String(x)` is a *conversion*; kString is a *rendering*. They differ on
+     exactly one input — a string, which kString quotes so that `[1, 'a']`
+     reads back as Elo — and `String:any` used to be kString, so a string that
+     reached it through a lambda parameter came back as "'hello'". The typed
+     `String:string` is the identity; this is what makes the dynamic path agree
+     with it. The two helpers are both needed: a string *nested* in a list is
+     still rendered. */
+  kToString: `function kToString(v) {
+  return typeof v === 'string' ? v : kString(v);
 }`,
   kIntersection: `function kIntersection(a, b) {
   const s = DateTime.max(a.start, b.start);
@@ -377,23 +428,44 @@ export const JS_HELPERS: Record<string, string> = {
   if (v === 'false') return pOk(false, p);
   return pFail(p, 'expected Bool, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
-  pDatetime: `function pDatetime(v, p) {
-  if (DateTime.isDateTime(v)) return pOk(v, p);
-  if (typeof v === 'string') { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d, p); }
+  /* 0259 D7. An instant arriving from outside is expressed in the declared
+     zone, then relabelled zone-free — the same two steps as kNow, because it
+     is the same rule from a different source.
+
+     `fromISO(v, { zone: tz })` does the first step for both kinds of datum in
+     one call: a string carrying an offset is an instant and luxon converts it
+     into `tz`, while a string carrying none is read *as* a wall clock in `tz`
+     and so is left where it is. The second `setZone` relabels the fields as
+     UTC without moving them, which is how every Elo datetime is carried. */
+  pDatetime: `function pDatetime(v, p, tz) {
+  if (DateTime.isDateTime(v)) return pOk(v.setZone(tz).setZone("utc", { keepLocalTime: true }), p);
+  if (typeof v === 'string') { const d = DateTime.fromISO(v, { zone: tz }); if (d.isValid) return pOk(d.setZone("utc", { keepLocalTime: true }), p); }
   return pFail(p, 'expected Datetime, got ' + (v === null ? 'Null' : typeof v === 'string' ? 'invalid datetime ' + JSON.stringify(v) : typeof v));
+}`,
+  /* Curried, for a schema field: pSchema takes parsers by reference under a
+     (value, path) contract, so the zone is bound here rather than threaded
+     through pSchema, pArray and pUnion. */
+  pDatetimeIn: `function pDatetimeIn(tz) {
+  return (v, p) => pDatetime(v, p, tz);
 }`,
   pFloat: `function pFloat(v, p) {
   if (typeof v === 'number') return pOk(v, p);
   if (typeof v === 'string' && /^[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?$/.test(v.trim())) return pOk(parseFloat(v.trim()), p);
   return pFail(p, 'expected Float, got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
-  pDate: `function pDate(v, p) {
-  if (DateTime.isDateTime(v)) return pOk(v.startOf('day'), p);
-  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v); if (d.isValid) return pOk(d.startOf('day'), p); }
+  pDate: `function pDate(v, p, tz) {
+  if (DateTime.isDateTime(v)) return pOk(v.setZone(tz).setZone("utc", { keepLocalTime: true }).startOf('day'), p);
+  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) { const d = DateTime.fromISO(v, { zone: tz }); if (d.isValid) return pOk(d.setZone("utc", { keepLocalTime: true }).startOf('day'), p); }
   return pFail(p, 'expected Date (YYYY-MM-DD), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
+}`,
+  pDateIn: `function pDateIn(tz) {
+  return (v, p) => pDate(v, p, tz);
 }`,
   pDuration: `function pDuration(v, p) {
   if (Duration.isDuration(v)) return pOk(v, p);
+  /* Duration(interval) is the interval's length on the typed path, so the
+     unknown-type path has to answer the same rather than refuse. */
+  if (Interval.isInterval(v)) return pOk(v.end.diff(v.start), p);
   if (typeof v === 'string') { const d = Duration.fromISO(v); if (d.isValid) return pOk(d, p); }
   return pFail(p, 'expected Duration (ISO 8601), got ' + (v === null ? 'Null' : typeof v === 'string' ? JSON.stringify(v) : typeof v));
 }`,
@@ -492,6 +564,10 @@ export const JS_HELPERS: Record<string, string> = {
  * These are embedded in compiled Ruby output when type definitions are used.
  */
 export const RUBY_HELPER_DEPS: Record<string, string[]> = {
+  k_wall: [],
+  k_now: [],
+  k_today: ['k_now'],
+  k_add: [],
   k_sub: [],
   k_round_to: [],
   k_pow: [],
@@ -501,14 +577,20 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
   k_str_mul: [],
   k_pad: [],
   k_float: [],
+  k_fetch: [],
+  k_fetch_object: ['k_fetch'],
+  k_fetch_any: ['k_fetch', 'k_fetch_object'],
+  k_to_string: ['k_string'],
   p_any: ['p_ok'],
   p_null: ['p_ok', 'p_fail'],
   p_string: ['p_ok', 'p_fail'],
   p_int: ['p_ok', 'p_fail'],
   p_bool: ['p_ok', 'p_fail'],
-  p_datetime: ['p_ok', 'p_fail'],
+  p_datetime: ['p_ok', 'p_fail', 'k_wall'],
+  p_datetime_in: ['p_datetime', 'p_ok', 'p_fail', 'k_wall'],
   p_float: ['p_ok', 'p_fail', 'k_float'],
-  p_date: ['p_ok', 'p_fail'],
+  p_date: ['p_ok', 'p_fail', 'k_wall'],
+  p_date_in: ['p_date', 'p_ok', 'p_fail', 'k_wall'],
   p_duration: ['p_ok', 'p_fail'],
   p_data: ['p_ok', 'p_fail'],
   p_schema: ['p_ok', 'p_fail'],
@@ -520,6 +602,46 @@ export const RUBY_HELPER_DEPS: Record<string, string[]> = {
 };
 
 export const RUBY_HELPERS: Record<string, string> = {
+  /* 0259 D1. `change(offset: 0)` keeps the wall-clock fields and drops the
+     offset, which is how a zone-free Elo datetime is carried on Ruby. Written
+     as an expression over `ActiveSupport::TimeZone[...]` rather than by
+     assigning `Time.zone`, because a global assignment is both shared mutable
+     state and rejected by the Ruby grammar gate. The sub-second survives. */
+  /* 0259 D7. An instant arriving from outside is expressed in the declared
+     zone, then carried with no offset — the same rule k_now follows, from a
+     different source.
+
+     The offset has to be detected from the text, which luxon does for us on
+     JavaScript and Ruby does not: `DateTime.parse` labels an offsetless string
+     +00:00, so converting it would *move* a datum that was already a wall
+     clock in the declared zone. A string with no offset is therefore left
+     where it is; one with an offset is an instant and is converted. */
+  k_wall: `def k_wall(v, tz)
+  if v.is_a?(String)
+    d = DateTime.parse(v)
+    return d.change(offset: 0) unless v =~ /(?:Z|[+-]\\d{2}:?\\d{2})\\s*\\z/
+    v = d
+  end
+  v.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0)
+end`,
+  k_now: `def k_now(tz)
+  Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0)
+end`,
+  /* TODAY is a Date, as `Date.today` was, so `TODAY + P1D` keeps working. */
+  k_today: `def k_today(tz)
+  k_now(tz).to_date
+end`,
+  // A class test in a helper is written `Klass === v`, never `v.is_a?(Klass)`.
+  //
+  // `ActiveSupport::Duration#is_a?` delegates to the Duration's numeric value,
+  // so `P2D.is_a?(Integer)` is **true** — and so is `instance_of?(Integer)`,
+  // which goes through the same `method_missing`. `Integer === P2D` is false,
+  // because `Module#===` does the real class check. Every dispatcher below
+  // receives operands whose types nothing knows, so the difference is not
+  // academic: `k_div` took its Integer branch for `P2D / 2` and answered the
+  // Float 86400.0 where the typed path answers a Duration, and `k_mul` would
+  // have taken a Duration for the repeat count of a String.
+  //
   // What a String has to look like to be a Float. Kernel#Float is not that
   // question: it answers 1.0 for "1." on Ruby 3.4 and raises on 3.2, so the
   // same Elo program would mean two things depending on the host's Ruby. The
@@ -544,23 +666,23 @@ end`,
      Rational compares equal to the Float, so only typeOf and formatting show
      it — typeOf said 'Tuple', having no case for one. */
   k_pow: `def k_pow(l, r)
-  raise "Exponentiation result exceeds the size limit (${MAX_STRING_LENGTH} bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > ${MAX_STRING_LENGTH}
+  raise "Exponentiation result exceeds the size limit (${MAX_STRING_LENGTH} bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > ${MAX_STRING_LENGTH}
   v = l ** r
-  v.is_a?(Rational) ? v.to_f : v
+  Rational === v ? v.to_f : v
 end`,
   // Elo's `*` on a String is a length-bounded repeat; on the dynamic path the
   // operands are not statically typed, so route a String here rather than let
   // Ruby's unbounded `String#*` run. Everything else (numbers, durations) keeps
   // the native operator.
   k_mul: `def k_mul(l, r)
-  return k_str_mul(l, r) if l.is_a?(String) && r.is_a?(Integer)
-  return k_str_mul(r, l) if r.is_a?(String) && l.is_a?(Integer)
+  return k_str_mul(l, r) if String === l && Integer === r
+  return k_str_mul(r, l) if String === r && Integer === l
   l * r
 end`,
   // Elo's `%` is numeric modulo; Ruby's `String#%` is sprintf, so a String
   // operand on the dynamic path must be refused rather than formatted.
   k_mod: `def k_mod(l, r)
-  raise "Modulo requires numeric operands" unless l.is_a?(Numeric) && r.is_a?(Numeric)
+  raise "Modulo requires numeric operands" unless Numeric === l && Numeric === r
   l % r
 end`,
   k_round_to: `def k_round_to(x, n)
@@ -572,13 +694,28 @@ end`,
   // must too or the two disagree. Kept comment-free: helper bodies are inlined
   // onto one line, where a `#` would swallow the rest of the program.
   k_sub: `def k_sub(l, r)
-  if (l.is_a?(Date) || l.is_a?(Time)) && (r.is_a?(Date) || r.is_a?(Time))
+  if (Date === l || Time === l) && (Date === r || Time === r)
     return ((l.to_datetime - r.to_datetime) * 86400).to_i.seconds
   end
   l - r
 end`,
+  // Elo's `+` on a Duration and a Date reads the same either way round, but
+  // ActiveSupport only defines Date + Duration — `P1D + D2024-01-15` raised
+  // "Date can't be coerced into Integer". The typed registrations swap the
+  // operands for exactly this reason; `add:any,any` was a bare `+` and did
+  // not, which is the shape CLAUDE.md warns about: a native operator on an
+  // `any` operand reaching overloads Elo never asked for.
+  k_add: `def k_add(l, r)
+  return r + l if ActiveSupport::Duration === l && (Date === r || Time === r)
+  l + r
+end`,
+  // Durations are tested first and by class: see the note at the top. With
+  // `is_a?` and the Integer branch first, `P2D / 2` answered the Float
+  // 86400.0 where the typed path and the other three targets answer P1D, so
+  // typeOf said 'Float'. `Duration#/` already returns a Duration.
   k_div: `def k_div(l, r)
-  return l.fdiv(r) if l.is_a?(Integer) && r.is_a?(Integer)
+  return l / r if ActiveSupport::Duration === l
+  return l.fdiv(r) if Integer === l && Integer === r
   l / r
 end`,
   k_deep_merge: `def k_deep_merge(a, b)
@@ -607,6 +744,35 @@ end`,
     obj[seg] = k_patch(existing.nil? ? next_default : existing, rest, v)
     obj
   end
+end`,
+  // Data path navigation. One helper per form, and one that picks a form by
+  // the runtime shape of the path, because `fetch(d, p)` tells its four forms
+  // apart by the *type* of `p` and that type is not always known. These used
+  // to be lambdas inlined at each of the four registrations; a bound that
+  // lives in four copies is a bound three of them can lose.
+  //
+  // Ruby hashes built from Elo objects are symbol-keyed, so a string segment
+  // is converted; there is no prototype chain behind `Hash#[]`, so no
+  // meta-property a computed key could reach (see helper-region.unit.test.ts,
+  // "Why JavaScript only").
+  k_fetch: `def k_fetch(d, p)
+  return nil unless p.is_a?(Array)
+  p.reduce(d) { |cur, seg| break nil if cur.nil?; seg.is_a?(Integer) ? (cur.is_a?(Array) ? cur[seg] : nil) : (cur.is_a?(Hash) ? cur[seg.is_a?(String) ? seg.to_sym : seg] : nil) }
+end`,
+  k_fetch_object: `def k_fetch_object(d, ps)
+  return nil unless ps.is_a?(Hash)
+  ps.transform_values { |p| k_fetch(d, p) }
+end`,
+  k_fetch_any: `def k_fetch_any(d, p)
+  return k_fetch(d, [p]) if p.is_a?(String)
+  return k_fetch(d, p) if p.is_a?(Array)
+  return k_fetch_object(d, p) if p.is_a?(Hash)
+  nil
+end`,
+  // `String(x)` converts; k_string renders, and renders a string quoted. The
+  // typed `String:string` is the identity, so the dynamic path must be too.
+  k_to_string: `def k_to_string(v)
+  v.is_a?(String) ? v : k_string(v)
 end`,
   k_intersection: `def k_intersection(a, b)
   s = [a.first, b.first].max
@@ -709,21 +875,27 @@ end`,
   return p_ok(false, p) if v == 'false'
   p_fail(p, "expected Bool, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
 end`,
-  p_datetime: `def p_datetime(v, p)
-  return p_ok(v, p) if v.is_a?(DateTime) || v.is_a?(Time)
-  return p_ok(DateTime.parse(v), p) if v.is_a?(String) rescue nil
+  p_datetime: `def p_datetime(v, p, tz)
+  return p_ok(k_wall(v, tz), p) if v.is_a?(DateTime) || v.is_a?(Time)
+  return p_ok(k_wall(v, tz), p) if v.is_a?(String) rescue nil
   p_fail(p, "expected Datetime, got #{v.nil? ? 'Null' : v.is_a?(String) ? 'invalid datetime ' + v.inspect : v.class}")
+end`,
+  p_datetime_in: `def p_datetime_in(tz)
+  ->(v, p) { p_datetime(v, p, tz) }
 end`,
   p_float: `def p_float(v, p)
   return p_ok(v, p) if v.is_a?(Numeric)
   return p_ok(k_float(v), p) if v.is_a?(String) rescue nil
   p_fail(p, "expected Float, got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
 end`,
-  p_date: `def p_date(v, p)
-  return p_ok(v.to_date, p) if v.is_a?(DateTime) || v.is_a?(Time)
+  p_date: `def p_date(v, p, tz)
+  return p_ok(k_wall(v, tz).to_date, p) if v.is_a?(DateTime) || v.is_a?(Time)
   return p_ok(v, p) if v.is_a?(Date)
   return p_ok(Date.parse(v), p) if v.is_a?(String) && v.match?(/^\\d{4}-\\d{2}-\\d{2}$/) rescue nil
   p_fail(p, "expected Date (YYYY-MM-DD), got #{v.nil? ? 'Null' : v.is_a?(String) ? v.inspect : v.class}")
+end`,
+  p_date_in: `def p_date_in(tz)
+  ->(v, p) { p_date(v, p, tz) }
 end`,
   p_duration: `def p_duration(v, p)
   return p_ok(v, p) if v.is_a?(ActiveSupport::Duration)
@@ -786,6 +958,8 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kIntersection: ['_EloInterval'],
   kFetch: [],
   kFetchObject: ['kFetch'],
+  kFetchAny: ['kFetch', 'kFetchObject'],
+  kToString: ['kString'],
   kDeepMerge: [],
   kPatch: [],
   kTypeOf: [],
@@ -801,9 +975,13 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   kNeg: [],
   kBool: [],
   kString: ['_elo_dur_to_iso'],
-  kParseDate: ['_elo_dt_helpers'],
-  kParseDatetime: ['_elo_dt_helpers'],
+  kParseDate: ['_elo_dt_helpers', '_elo_wall', '_import_re'],
+  kParseDatetime: ['_elo_dt_helpers', '_elo_wall', '_import_re'],
+  kParseDuration: ['_elo_duration', '_EloInterval'],
   _elo_dt_helpers: ['_import_datetime', '_elo_duration'],
+  _elo_wall: ['_import_datetime', '_import_zoneinfo', '_elo_dt_helpers'],
+  _elo_now: ['_import_datetime', '_import_zoneinfo', '_elo_dt_helpers'],
+  _elo_today: ['_elo_now'],
   _EloInterval: ['_import_collections'],
   _elo_duration: ['_import_re'],
   // Parser helpers
@@ -813,8 +991,10 @@ export const PY_HELPER_DEPS: Record<string, string[]> = {
   pInt: ['pOk', 'pFail'],
   pFloat: ['pOk', 'pFail'],
   pBool: ['pOk', 'pFail'],
-  pDate: ['pOk', 'pFail', 'kParseDate'],
-  pDatetime: ['pOk', 'pFail', 'kParseDatetime'],
+  pDate: ['pOk', 'pFail', 'kParseDate', '_elo_wall'],
+  pDateIn: ['pDate', 'pOk', 'pFail', 'kParseDate', '_elo_wall'],
+  pDatetime: ['pOk', 'pFail', 'kParseDatetime', '_elo_wall'],
+  pDatetimeIn: ['pDatetime', 'pOk', 'pFail', 'kParseDatetime', '_elo_wall'],
   pDuration: ['pOk', 'pFail', '_elo_duration'],
   pData: ['pOk', 'pFail'],
   pSchema: ['pOk', 'pFail'],
@@ -838,6 +1018,7 @@ export const PY_HELPERS: Record<string, string> = {
   _import_datetime: `import datetime as _dt`,
   _import_re: `import re`,
   _import_collections: `from collections import namedtuple`,
+  _import_zoneinfo: `from zoneinfo import ZoneInfo`,
   _EloInterval: `EloInterval = namedtuple('EloInterval', ['start', 'end'])`,
   // A duration keeps its year and month components apart from its time
   // component, because they are not a number of milliseconds: a month is a
@@ -909,6 +1090,26 @@ export const PY_HELPERS: Record<string, string> = {
     def in_months(self): return self.to_ms() / (30.4375 * 86400000.0)
     def in_quarters(self): return self.to_ms() / (91.3125 * 86400000.0)
     def in_years(self): return self.to_ms() / (365.25 * 86400000.0)`,
+  /* 0259 D1. NOW is the wall clock in the declared zone, with the tzinfo
+     dropped so the value is naive like every other Elo datetime on Python.
+     `datetime.now()` read the host's ambient zone instead. The zone arrives
+     as an argument so it belongs to the program, not to this prelude -- which
+     is installed once, separately from any compile. */
+  /* 0259 D7. An instant arriving from outside is expressed in the declared
+     zone, then carried naive like every other Elo datetime on Python.
+     `tzinfo` is what says whether a datum is an instant or already a wall
+     clock, so unlike Ruby this needs no regex on the text. */
+  _elo_wall: `def _elo_wall(v, tz):
+    if v.tzinfo is not None:
+        v = v.astimezone(ZoneInfo(tz))
+    return _elo_dt(v.year, v.month, v.day, v.hour, v.minute, v.second, v.microsecond)`,
+  _elo_now: `def _elo_now(tz):
+    return _dt.datetime.now(ZoneInfo(tz)).replace(tzinfo=None)`,
+  /* TODAY is midnight of that wall clock's date, built through _elo_dt so it
+     is the same kind of value a date literal is. */
+  _elo_today: `def _elo_today(tz):
+    n = _elo_now(tz)
+    return _elo_dt(n.year, n.month, n.day)`,
   _elo_dt_helpers: `def _elo_shift_months(dt, n):
     if not n: return dt
     import calendar
@@ -925,8 +1126,8 @@ def _elo_dt_minus_dur(dt, dur):
 def _elo_dt_diff(a, b):
     diff = a - b
     return EloDuration(diff.total_seconds() * 1000)
-def _elo_dt(y, mo, d, h=0, mi=0, s=0):
-    return _dt.datetime(y, mo, d, h, mi, s)
+def _elo_dt(y, mo, d, h=0, mi=0, s=0, us=0):
+    return _dt.datetime(y, mo, d, h, mi, s, us)
 def _elo_start_of_day(dt):
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 def _elo_end_of_day(dt):
@@ -996,6 +1197,10 @@ def _elo_end_of_year(dt):
     if callable(v): return 'Function'
     return 'Unknown'`,
   kFetch: `def kFetch(data, path):
+    # A path that is not a list of segments has nothing to walk; without this
+    # the loop raised TypeError from ordinary Elo source, which the security
+    # page promises cannot happen. See kFetchAny.
+    if not isinstance(path, list): return None
     current = data
     for segment in path:
         if current is None: return None
@@ -1009,6 +1214,17 @@ def _elo_end_of_year(dt):
     return current`,
   kFetchObject: `def kFetchObject(data, paths):
     return {key: kFetch(data, paths[key]) for key in paths}`,
+  // `fetch(d, p)` has four forms told apart by the type of `p`. With the type
+  // unknown, the shape of the value has to tell them apart instead.
+  kFetchAny: `def kFetchAny(data, path):
+    if isinstance(path, str): return kFetch(data, [path])
+    if isinstance(path, list): return kFetch(data, path)
+    if isinstance(path, dict): return kFetchObject(data, path)
+    return None`,
+  // `String(x)` converts; kString renders, and renders a string quoted. The
+  // typed `String:string` is the identity, so the dynamic path must be too.
+  kToString: `def kToString(v):
+    return v if isinstance(v, str) else kString(v)`,
   kPatch: `def kPatch(data, path, value):
     if len(path) == 0: return value
     seg = path[0]
@@ -1131,23 +1347,49 @@ def _elo_end_of_year(dt):
         if v == 'false': return False
         raise Exception('Cannot convert to Bool: ' + repr(v))
     raise Exception('Cannot convert to Bool: ' + repr(v))`,
-  kParseDate: `def kParseDate(v):
-    if isinstance(v, _dt.datetime): return _elo_dt(v.year, v.month, v.day)
+  kParseDate: `def kParseDate(v, tz):
+    if isinstance(v, _dt.datetime):
+        w = _elo_wall(v, tz)
+        return _elo_dt(w.year, w.month, w.day)
     if isinstance(v, str):
         parts = v.split('-')
         if len(parts) == 3: return _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
     raise Exception('Cannot parse date: ' + repr(v))`,
-  kParseDatetime: `def kParseDatetime(v):
-    if isinstance(v, _dt.datetime): return v
+  // `Duration:duration` is the identity, so `Duration:any` has to accept a
+  // Duration too — `EloDuration.from_iso` alone fed one to `re.match` and
+  // raised a host TypeError. kParseDate and kParseDatetime already did this;
+  // this is the third of three, and it was the one left out.
+  kParseDuration: `def kParseDuration(v):
+    if isinstance(v, EloDuration): return v
+    if isinstance(v, str): return EloDuration.from_iso(v)
+    # Duration(interval) is the interval's length on the typed path.
+    if isinstance(v, EloInterval): return EloDuration.from_timedelta(v.end - v.start)
+    raise Exception('Cannot parse duration: ' + repr(v))`,
+  kParseDatetime: `def kParseDatetime(v, tz):
+    if isinstance(v, _dt.datetime): return _elo_wall(v, tz)
     if isinstance(v, str):
-        v2 = v.replace('Z', '')
+        s = v.strip()
+        m = re.search(r'(Z|[+-]\\d{2}:?\\d{2})$', s)
+        off = m.group(1) if m else None
+        v2 = s[:m.start()] if m else s
         if 'T' in v2:
             dp, tp = v2.split('T')
             dy, dm, dd = dp.split('-')
             tps = tp.split(':')
-            return _elo_dt(int(dy), int(dm), int(dd), int(tps[0]), int(tps[1]), int(tps[2]) if len(tps) > 2 else 0)
-        parts = v2.split('-')
-        if len(parts) == 3: return _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
+            whole, _sep, frac = (tps[2] if len(tps) > 2 else '0').partition('.')
+            d = _elo_dt(int(dy), int(dm), int(dd), int(tps[0]), int(tps[1]), int(whole), int((frac + '000000')[:6]) if frac else 0)
+        else:
+            parts = v2.split('-')
+            if len(parts) != 3: raise Exception('Cannot parse datetime: ' + repr(v))
+            d = _elo_dt(int(parts[0]), int(parts[1]), int(parts[2]))
+        if off is None: return d
+        if off == 'Z':
+            tzi = _dt.timezone.utc
+        else:
+            digits = off[1:].replace(':', '')
+            delta = _dt.timedelta(hours=int(digits[:2]), minutes=int(digits[2:4]))
+            tzi = _dt.timezone(-delta if off[0] == '-' else delta)
+        return _elo_wall(d.replace(tzinfo=tzi), tz)
     raise Exception('Cannot parse datetime: ' + repr(v))`,
   // Parser helpers - return Result: { "success": bool, "path": str, "message": str, "value": any, "cause": list }
   pOk: `def pOk(v, p):
@@ -1221,18 +1463,22 @@ def _elo_end_of_year(dt):
         try: return pOk(json.loads(v), p)
         except: return pFail(p, "invalid JSON: " + repr(v))
     return pOk(v, p)`,
-  pDate: `def pDate(v, p):
-    if isinstance(v, _dt.datetime): return pOk(kParseDate(v), p)
+  pDate: `def pDate(v, p, tz):
+    if isinstance(v, _dt.datetime): return pOk(kParseDate(v, tz), p)
     if isinstance(v, str):
-        try: return pOk(kParseDate(v), p)
+        try: return pOk(kParseDate(v, tz), p)
         except: pass
     return pFail(p, "expected Date (YYYY-MM-DD), got " + ("Null" if v is None else repr(v) if isinstance(v, str) else type(v).__name__))`,
-  pDatetime: `def pDatetime(v, p):
-    if isinstance(v, _dt.datetime): return pOk(v, p)
+  pDateIn: `def pDateIn(tz):
+    return lambda v, p: pDate(v, p, tz)`,
+  pDatetime: `def pDatetime(v, p, tz):
+    if isinstance(v, _dt.datetime): return pOk(_elo_wall(v, tz), p)
     if isinstance(v, str):
-        try: return pOk(kParseDatetime(v), p)
+        try: return pOk(kParseDatetime(v, tz), p)
         except: pass
     return pFail(p, "expected Datetime, got " + ("Null" if v is None else "invalid datetime " + repr(v) if isinstance(v, str) else type(v).__name__))`,
+  pDatetimeIn: `def pDatetimeIn(tz):
+    return lambda v, p: pDatetime(v, p, tz)`,
   pSchema: `def pSchema(props, extras_mode, extras_parser=None):
     known_keys = [p[0] for p in props]
     def parser(v, p):

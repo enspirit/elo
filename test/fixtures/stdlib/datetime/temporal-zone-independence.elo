@@ -1,0 +1,37 @@
+# A Date and a Datetime are zone-free: the literal means the wall clock it
+# spells, and every operation on it answers the same whatever timezone the
+# host happens to be in. Ruby, Python and PostgreSQL have no ambient zone to
+# get this wrong. JavaScript does, so these are the assertions that pin it.
+#
+# Run the suite under TZ=America/Los_Angeles and TZ=UTC; both must be green.
+
+# Two dates differ by a whole number of days, DST transition or not.
+# 2026-03-08 is when the clocks go forward in Los Angeles, 2026-11-01 back.
+assert(inDays(startOfDay(D2026-03-11) - startOfDay(D2026-01-10)) == 60)
+assert(inDays(D2026-03-11 - D2026-01-10) == 60)
+assert(inDays(D2026-11-02 - D2026-10-01) == 32)
+
+# 2026-03-29 is the forward transition in Brussels, 2026-10-25 the backward one
+assert(inDays(D2026-03-30 - D2026-03-28) == 2)
+assert(inDays(D2026-10-26 - D2026-10-24) == 2)
+
+# The components of a datetime are the ones its literal spells
+assert(year(D2026-01-01T00:30:00Z) == 2026)
+assert(month(D2026-01-01T00:30:00Z) == 1)
+assert(day(D2026-01-01T00:30:00Z) == 1)
+assert(hour(D2026-01-01T00:30:00Z) == 0)
+assert(day(D2026-12-31T23:30:00Z) == 31)
+assert(month(D2026-12-31T23:30:00Z) == 12)
+
+# A period boundary is a boundary of that wall clock, not of local midnight
+assert(startOfDay(D2026-01-01T00:30:00Z) == D2026-01-01T00:00:00Z)
+assert(startOfMonth(D2026-03-29T23:30:00Z) == D2026-03-01T00:00:00Z)
+assert(endOfDay(D2026-12-31T23:30:00Z) < D2027-01-01T00:00:00Z)
+
+# The dynamic twins: min([x]) is typed any, so each takes the runtime path
+assert(day(min([D2026-01-01T00:30:00Z])) == 1)
+assert(startOfDay(min([D2026-01-01T00:30:00Z])) == D2026-01-01T00:00:00Z)
+
+# And through the parsing selectors, whose receivers are strings
+assert(day(Datetime('2026-01-01T00:30:00Z')) == 1)
+assert(inDays(Date('2026-03-11') - Date('2026-01-10')) == 60)

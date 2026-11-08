@@ -1,7 +1,7 @@
 ->(_) { (raise "Assertion failed" unless 2 + 3 == 5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 2 + 3 * 4 == 14; true) }.call(nil);
-->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless k_pow(2, 3) == 8; true) }.call(nil);
-->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if l.is_a?(Integer) && r.is_a?(Integer) && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; v.is_a?(Rational) ? v.to_f : v end; (raise "Assertion failed" unless k_pow(2, 3) + 1 == 9; true) }.call(nil);
+->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; Rational === v ? v.to_f : v end; (raise "Assertion failed" unless k_pow(2, 3) == 8; true) }.call(nil);
+->(_) { def k_pow(l, r); raise "Exponentiation result exceeds the size limit (10000000 bits); raise ELO_MAX_STRING_LENGTH to allow larger results" if Integer === l && Integer === r && r > 1 && l.abs > 1 && r * Math.log2(l.abs) > 10000000; v = l ** r; Rational === v ? v.to_f : v end; (raise "Assertion failed" unless k_pow(2, 3) + 1 == 9; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless ((5 + 5) * (10 - 3)).fdiv(2) == 35; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless -5 + 10 == 5; true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless 10 % 3 + 8.fdiv(2) == 5; true) }.call(nil);

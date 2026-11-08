@@ -98,6 +98,7 @@ describe('StdLib', () => {
       return '?';
     };
     return {
+      timezone: 'UTC',
       emit,
       emitWithParens: (ir, _op, _side) => emit(ir),
       requireHelper: NO_HELPERS,
@@ -306,6 +307,7 @@ describe('simpleBinaryOp', () => {
   it('should create emitter for addition', () => {
     const emitter = simpleBinaryOp('+');
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       requireHelper: NO_HELPERS,
@@ -321,6 +323,7 @@ describe('simpleBinaryOp', () => {
     const args: IRExpr[] = [irInt(1), irInt(2)];
 
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       requireHelper: NO_HELPERS,
@@ -337,6 +340,7 @@ describe('binaryOp', () => {
   it('should create custom binary operator', () => {
     const emitter = binaryOp<string>('+', (left, right) => `ADD(${left}, ${right})`);
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       requireHelper: NO_HELPERS,
@@ -355,6 +359,7 @@ describe('binaryOp', () => {
 
     const emitter = binaryOp<string>('+', (left, right) => `${left} + ${right}`);
     const ctx = {
+      timezone: 'UTC',
       emit: () => 'direct',
       emitWithParens: (ir: IRExpr, op: string, side: 'left' | 'right') => {
         if (side === 'left') {
@@ -388,6 +393,7 @@ describe('unaryOp', () => {
     );
 
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { name: string }).name,
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
@@ -405,6 +411,7 @@ describe('unaryOp', () => {
     );
 
     const ctx = {
+      timezone: 'UTC',
       emit: () => '1 + 2',
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
@@ -420,6 +427,7 @@ describe('methodCall', () => {
   it('should create method call with one argument', () => {
     const emitter = methodCall('add');
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => {
         if (ir.type === 'variable') return ir.name;
         return 'duration';
@@ -438,6 +446,7 @@ describe('nullary', () => {
   it('should return constant value', () => {
     const emitter = nullary('CURRENT_DATE');
     const ctx = {
+      timezone: 'UTC',
       emit: () => '',
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
@@ -451,12 +460,14 @@ describe('nullary', () => {
     const numberEmitter = nullary(42);
 
     const stringCtx: EmitContext<string> = {
+      timezone: 'UTC',
       emit: () => '',
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
     };
 
     const numberCtx: EmitContext<number> = {
+      timezone: 'UTC',
       emit: () => 0,
       emitWithParens: () => 0,
       requireHelper: NO_HELPERS,
@@ -471,6 +482,7 @@ describe('unaryMethod', () => {
   it('should create method call without arguments', () => {
     const emitter = unaryMethod('beginning_of_day');
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { name: string }).name,
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
@@ -486,6 +498,7 @@ describe('fnCall', () => {
   it('should create function call with no arguments', () => {
     const emitter = fnCall('NOW');
     const ctx = {
+      timezone: 'UTC',
       emit: () => '',
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
@@ -497,6 +510,7 @@ describe('fnCall', () => {
   it('should create function call with one argument', () => {
     const emitter = fnCall('ABS');
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
@@ -510,6 +524,7 @@ describe('fnCall', () => {
   it('should create function call with multiple arguments', () => {
     const emitter = fnCall('POWER');
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,
@@ -523,6 +538,7 @@ describe('fnCall', () => {
   it('should work with Math.pow style function names', () => {
     const emitter = fnCall('Math.pow');
     const ctx = {
+      timezone: 'UTC',
       emit: (ir: IRExpr) => (ir as { value: number }).value.toString(),
       emitWithParens: () => '',
       requireHelper: NO_HELPERS,

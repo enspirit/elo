@@ -4,8 +4,8 @@ import { transform } from '../transform';
 import { TypeAnnotations } from '../types';
 import { EmitContext } from '../stdlib';
 import { createRubyBinding, isNativeBinaryOp, RUBY_OP_MAP } from '../bindings/ruby';
-import { RUBY_HELPERS, RUBY_HELPER_DEPS } from '../runtime';
-import { assertSafeIdentifier, assertSafeDatapathSegment } from './_validate';
+import { RUBY_HELPERS, RUBY_HELPER_DEPS, DEFAULT_TIMEZONE } from '../runtime';
+import { assertSafeIdentifier, assertSafeDatapathSegment, assertSafeTimezone } from './_validate';
 import { Emitter, emit, resolveHelpers } from './_emit';
 
 /**
@@ -29,6 +29,11 @@ export interface RubyCompileOptions {
   types?: TypeAnnotations;
   /** Dispatch every call as though no operand type were known. */
   forceDynamic?: boolean;
+  /**
+   * The zone `NOW` and `TODAY` are read in, as an IANA name. Defaults to `UTC`.
+   * 0259 D2: reaches the emission through the zone helper alone.
+   */
+  timezone?: string;
 }
 
 /**
@@ -110,10 +115,12 @@ export function compileToRubyWithMeta(expr: Expr, options?: RubyCompileOptions):
   const ir = transform(expr, new Map(), new Set(), { types: options?.types, forceDynamic: options?.forceDynamic });
   const actuallyUsesInput = usesInput(ir);
   const requiredHelpers = new Set<string>();
-  const code = emit(ir, rubyEmitter, { stripGuards: options?.stripGuards || false }, requiredHelpers);
+  const zone = assertSafeTimezone(options?.timezone ?? DEFAULT_TIMEZONE);
+  const code = emit(ir, rubyEmitter, { stripGuards: options?.stripGuards || false, timezone: zone }, requiredHelpers);
 
   const helperDefs = resolveHelpers(requiredHelpers, RUBY_HELPER_DEPS)
-    .map(name => RUBY_HELPERS[name].replace(/\n\s*/g, '; ').replace(/; end/, ' end'))
+    .map(name => RUBY_HELPERS[name].replace(/\n\s*/g, '; ').replace(/; end/, ' end')
+)
     .join('; ');
 
   // Always wrap as a lambda taking _ as input parameter
@@ -287,6 +294,14 @@ function emitTypeExprParser(
       };
       const parserName = parserMap[typeExpr.name];
       if (parserName) {
+        // A temporal field parser needs the declared zone (0259 D7); p_schema
+        // takes parsers by reference under a (value, path) contract, so the
+        // zone is bound by the curried form instead of threaded through it.
+        if (parserName === 'p_date' || parserName === 'p_datetime') {
+          const curried = `${parserName}_in`;
+          ctx.requireHelper(curried);
+          return `${curried}("${ctx.timezone}")`;
+        }
         ctx.requireHelper(parserName);
         return `method(:${parserName})`;
       }
