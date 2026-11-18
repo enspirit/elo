@@ -1,0 +1,251 @@
+/*
+ * elo-form — default look.
+ *
+ * HOW TO RESTYLE: set --elo-* custom properties — on anything around the
+ * form (:root, a wrapper), on the form itself, or on one field through its
+ * [data-elo-path]. Every rule below reads its colors, sizes and spacing from
+ * the token block that follows, and each token there is "your --elo-* value
+ * if you set one, else the default". doc/css.md lists the tokens and the
+ * class names.
+ *
+ * The --_elo-* names are private plumbing: override --elo-accent, never
+ * --_elo-accent.
+ *
+ * Default colors are mixed from the text color, so an unstyled form follows
+ * its page into light or dark without being told.
+ */
+/* Tokens are worked out on the form and again on every field, so a field can have its own. */
+.elo-form, .elo-form [data-elo-path] {
+  /* @group Color */
+  --_elo-text: var(--elo-text, currentColor); /* Labels and typed values. Derived colors below are mixed from it. */
+  --_elo-muted: var(--elo-muted, color-mix(in srgb, var(--_elo-text) 70%, transparent)); /* Hints, notes, the "optional" tag, duration unit names. */
+  --_elo-accent: var(--elo-accent, color-mix(in srgb, #3565f5 72%, var(--_elo-text))); /* Focus rings, links, "add" buttons, the chosen alternative, checkboxes. */
+  --_elo-accent-tint: var(--elo-accent-tint, color-mix(in srgb, var(--_elo-accent) 12%, transparent)); /* Fill of the chosen alternative, hovered "add" buttons and drop zone. */
+  --_elo-danger: var(--elo-danger, color-mix(in srgb, #e0352b 75%, var(--_elo-text))); /* Error messages and the border of whatever is invalid. */
+  --_elo-control-border: var(--elo-control-border, color-mix(in srgb, var(--_elo-text) 48%, transparent)); /* Border of inputs, selects, alternatives, units, drop zone. */
+  --_elo-control-bg: var(--elo-control-bg, transparent); /* Fill of inputs and selects. */
+  --_elo-control-text: var(--elo-control-text, inherit); /* Text typed into inputs and selects. */
+  --_elo-group-border: var(--elo-group-border, color-mix(in srgb, var(--_elo-text) 20%, transparent)); /* Border of groups, lists and icon buttons. */
+  --_elo-group-bg: var(--elo-group-bg, transparent); /* Fill of groups and lists. */
+  --_elo-affix-bg: var(--elo-affix-bg, color-mix(in srgb, var(--_elo-text) 7%, transparent)); /* Fill of the unit beside an input. */
+  --_elo-affix-text: var(--elo-affix-text, var(--_elo-muted)); /* Text of the unit beside an input. */
+
+  /* @group Shape */
+  --_elo-radius: var(--elo-radius, 6px); /* Corner radius of everything, unless set per part below. */
+  --_elo-control-radius: var(--elo-control-radius, var(--_elo-radius)); /* Corners of inputs, selects, buttons, drop zone. */
+  --_elo-group-radius: var(--elo-group-radius, var(--_elo-radius)); /* Corners of groups and lists. */
+  --_elo-choice-radius: var(--elo-choice-radius, 999px); /* Corners of the alternatives of a choice (pills by default). */
+  --_elo-border-width: var(--elo-border-width, 1px); /* Thickness of every border. */
+  --_elo-focus-ring: var(--elo-focus-ring, 2px solid var(--_elo-accent)); /* Outline of the focused control. */
+  --_elo-focus-offset: var(--elo-focus-offset, 1px); /* Distance between a control and its focus ring. */
+
+  /* @group Space */
+  --_elo-gap: var(--elo-gap, 1rem); /* Between one field and the next. */
+  --_elo-gap-inner: var(--elo-gap-inner, 0.3rem); /* Between a label, its control and its hint. */
+  --_elo-gap-items: var(--elo-gap-items, 0.6rem); /* Between list items, dictionary rows, and a choice and its content. */
+  --_elo-control-padding: var(--elo-control-padding, 0.45em 0.6em); /* Inside inputs and selects. */
+  --_elo-group-padding: var(--elo-group-padding, 0.7rem 0.9rem 0.9rem); /* Inside groups and lists. */
+
+  /* @group Size */
+  --_elo-control-width: var(--elo-control-width, 28em); /* Widest a text input gets. */
+  --_elo-control-width-number: var(--elo-control-width-number, 11em); /* Widest a number input gets, unit included. */
+  --_elo-control-width-date: var(--elo-control-width-date, 12em); /* Widest a date picker gets. */
+  --_elo-control-width-datetime: var(--elo-control-width-datetime, 17em); /* Widest a date-and-time picker gets. */
+  --_elo-control-width-textarea: var(--elo-control-width-textarea, 40em); /* Widest a multi-line text gets. */
+  --_elo-compact-min: var(--elo-compact-min, 8.5rem); /* Narrowest a field gets before a side-by-side list row wraps. */
+
+  /* @group Type */
+  --_elo-font: var(--elo-font, inherit); /* Font family of the whole form. */
+  --_elo-font-size: var(--elo-font-size, inherit); /* Base font size; the sizes below are relative to it. */
+  --_elo-line-height: var(--elo-line-height, 1.45); /* Line height of the whole form. */
+  --_elo-font-mono: var(--elo-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace); /* Font of pasted JSON. */
+  --_elo-label-size: var(--elo-label-size, 0.92em); /* Size of labels, alternatives and buttons. */
+  --_elo-label-weight: var(--elo-label-weight, 600); /* Weight of labels. */
+  --_elo-small-size: var(--elo-small-size, 0.86em); /* Size of hints, notes, errors and the "optional" tag. */
+}
+
+.elo-form {
+  display: grid;
+  gap: var(--_elo-gap);
+  min-width: 0;
+  font-family: var(--_elo-font);
+  font-size: var(--_elo-font-size);
+  line-height: var(--_elo-line-height);
+  color: var(--_elo-text);
+}
+
+.elo-form [hidden] { display: none !important; }
+.elo-form p { margin: 0; }
+
+/* -- fields --------------------------------------------------------------- */
+.elo-fields { display: grid; gap: var(--_elo-gap); min-width: 0; }
+.elo-field { display: grid; gap: var(--_elo-gap-inner); min-width: 0; justify-items: start; }
+.elo-field > * { max-width: 100%; }
+.elo-label { font-size: var(--_elo-label-size); font-weight: var(--_elo-label-weight); }
+.elo-optional { margin-left: 0.5em; font-size: var(--_elo-small-size); font-weight: 400; color: var(--_elo-muted); }
+.elo-hint, .elo-note, .elo-static { font-size: var(--_elo-small-size); color: var(--_elo-muted); }
+.elo-error { font-size: var(--_elo-small-size); font-weight: 500; color: var(--_elo-danger); }
+.elo-banner { padding: 0.6em 0.8em; border: var(--_elo-border-width) solid currentColor; border-radius: var(--_elo-group-radius); }
+
+.elo-input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--_elo-control-width);
+  padding: var(--_elo-control-padding);
+  font: inherit;
+  color: var(--_elo-control-text);
+  background: var(--_elo-control-bg);
+  border: var(--_elo-border-width) solid var(--_elo-control-border);
+  border-radius: var(--_elo-control-radius);
+}
+textarea.elo-input { max-width: var(--_elo-control-width-textarea); resize: vertical; }
+select.elo-input { width: auto; min-width: 10em; }
+.elo-input-number { max-width: var(--_elo-control-width-number); }
+.elo-input-date { max-width: var(--_elo-control-width-date); }
+.elo-input-datetime { max-width: var(--_elo-control-width-datetime); }
+.elo-input:focus-visible, .elo-checkbox:focus-visible, .elo-choice input:focus-visible,
+.elo-icon:focus-visible, .elo-add:focus-visible, .elo-link:focus-visible {
+  outline: var(--_elo-focus-ring);
+  outline-offset: var(--_elo-focus-offset);
+}
+.elo-invalid > .elo-input, .elo-invalid > .elo-affixed > .elo-input, .elo-invalid > .elo-affixed > .elo-affix,
+.elo-invalid > .elo-duration-parts .elo-input, .elo-invalid > .elo-json-box > .elo-drop {
+  border-color: var(--_elo-danger);
+}
+
+/* -- units: an input with its unit attached, before or after ---------------- */
+.elo-affixed { display: flex; width: 100%; max-width: var(--_elo-control-width); }
+.elo-affixed-narrow { max-width: var(--_elo-control-width-number); }
+.elo-affixed > .elo-input { flex: 1 1 auto; width: auto; min-width: 0; max-width: none; }
+.elo-affix {
+  display: flex; align-items: center; flex: none;
+  padding: 0 0.65em;
+  font-size: var(--_elo-label-size);
+  white-space: nowrap;
+  color: var(--_elo-affix-text);
+  background: var(--_elo-affix-bg);
+  border: var(--_elo-border-width) solid var(--_elo-control-border);
+  border-radius: var(--_elo-control-radius);
+  cursor: text;
+}
+.elo-affixed-after > .elo-input { border-start-end-radius: 0; border-end-end-radius: 0; }
+.elo-affixed-after > .elo-affix { border-inline-start-width: 0; border-start-start-radius: 0; border-end-start-radius: 0; }
+.elo-affixed-before > .elo-input { border-start-start-radius: 0; border-end-start-radius: 0; }
+.elo-affixed-before > .elo-affix { border-inline-end-width: 0; border-start-end-radius: 0; border-end-end-radius: 0; }
+
+/* A checkbox sits before its label. */
+.elo-inline { grid-template-columns: auto 1fr; align-items: center; column-gap: 0.55em; }
+.elo-inline > .elo-check-control { order: -1; display: inline-flex; }
+.elo-inline > .elo-hint, .elo-inline > .elo-note, .elo-inline > .elo-error { grid-column: 1 / -1; }
+.elo-checkbox { width: 1.15em; height: 1.15em; margin: 0; accent-color: var(--_elo-accent); }
+.elo-check { display: inline-flex; align-items: center; gap: 0.5em; cursor: pointer; }
+
+/* -- groups --------------------------------------------------------------- */
+.elo-group {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  margin: 0;
+  padding: var(--_elo-group-padding);
+  background: var(--_elo-group-bg);
+  border: var(--_elo-border-width) solid var(--_elo-group-border);
+  border-radius: var(--_elo-group-radius);
+}
+.elo-group > legend { padding: 0 0.4em; margin-left: -0.4em; }
+.elo-group.elo-bare { padding: 0; background: none; border: 0; }
+.elo-group.elo-invalid { border-color: var(--_elo-danger); }
+.elo-group.elo-kind-duration { gap: var(--_elo-gap-inner); padding: 0; background: none; border: 0; }
+.elo-group.elo-kind-duration > legend { margin-left: 0; padding: 0; }
+/* A few one-box fields sit side by side when they are a row of a list. */
+.elo-compact > .elo-fields { grid-template-columns: repeat(auto-fit, minmax(var(--_elo-compact-min), 1fr)); align-items: start; }
+
+/* -- lists and dictionaries ------------------------------------------------- */
+.elo-list-body, .elo-extras-body, .elo-union-body { display: grid; gap: var(--_elo-gap-items); min-width: 0; justify-items: start; }
+.elo-list-body > *, .elo-extras-body > *, .elo-union-body > * { max-width: 100%; }
+.elo-items, .elo-rows, .elo-choice-body { justify-self: stretch; min-width: 0; }
+.elo-items { display: grid; gap: var(--_elo-gap-items); margin: 0; padding: 0; list-style: none; }
+.elo-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: start; }
+.elo-item-actions { display: flex; gap: 2px; }
+.elo-rows { display: grid; gap: var(--_elo-gap-items); }
+.elo-rows:empty { display: none; }
+.elo-row { display: grid; grid-template-columns: minmax(5em, 11em) minmax(0, 1fr) auto; gap: 0.5rem; align-items: start; }
+
+.elo-icon {
+  width: 2.1em; height: 2.1em;
+  padding: 0;
+  font: inherit; line-height: 1;
+  color: var(--_elo-muted);
+  background: transparent;
+  border: var(--_elo-border-width) solid var(--_elo-group-border);
+  border-radius: var(--_elo-control-radius);
+  cursor: pointer;
+}
+.elo-icon:hover:not(:disabled) { color: inherit; border-color: var(--_elo-control-border); }
+.elo-icon:disabled { opacity: 0.35; cursor: default; }
+.elo-add {
+  padding: 0.4em 0.8em;
+  font: inherit; font-size: var(--_elo-label-size); font-weight: 500;
+  color: var(--_elo-accent);
+  background: transparent;
+  border: var(--_elo-border-width) dashed var(--_elo-control-border);
+  border-radius: var(--_elo-control-radius);
+  cursor: pointer;
+}
+.elo-add:hover { background: var(--_elo-accent-tint); }
+.elo-link {
+  padding: 0;
+  font: inherit; font-size: var(--_elo-small-size);
+  color: var(--_elo-accent);
+  text-decoration: underline;
+  background: none; border: 0;
+  cursor: pointer;
+}
+
+/* -- choices -------------------------------------------------------------- */
+.elo-choices { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.elo-choice {
+  display: inline-flex; align-items: center; gap: 0.4em;
+  padding: 0.25em 0.75em 0.25em 0.55em;
+  font-size: var(--_elo-label-size);
+  border: var(--_elo-border-width) solid var(--_elo-control-border);
+  border-radius: var(--_elo-choice-radius);
+  cursor: pointer;
+}
+.elo-choice input { margin: 0; accent-color: var(--_elo-accent); }
+.elo-choice:has(input:checked) { border-color: var(--_elo-accent); background: var(--_elo-accent-tint); }
+
+/* -- durations ------------------------------------------------------------ */
+.elo-duration-parts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.elo-duration-part { display: inline-flex; align-items: center; gap: 0.4em; font-size: var(--_elo-label-size); }
+.elo-duration-part > span { color: var(--_elo-muted); }
+.elo-duration-input { width: 4.2em; text-align: right; }
+
+/* -- JSON file ------------------------------------------------------------ */
+.elo-json-box { display: grid; gap: 0.35rem; justify-items: start; width: 100%; max-width: var(--_elo-control-width); }
+.elo-drop {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75em 0.9em;
+  font-size: var(--_elo-label-size);
+  border: var(--_elo-border-width) dashed var(--_elo-control-border);
+  border-radius: var(--_elo-control-radius);
+  cursor: pointer;
+}
+.elo-drop:hover, .elo-drop.elo-over { background: var(--_elo-accent-tint); }
+.elo-drop:focus-within { outline: var(--_elo-focus-ring); outline-offset: var(--_elo-focus-offset); }
+.elo-drop-more { color: var(--_elo-muted); }
+.elo-drop-main { font-weight: var(--_elo-label-weight); color: var(--_elo-accent); text-decoration: underline; }
+.elo-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.elo-json-state { display: flex; flex-wrap: wrap; gap: 0.75em; font-size: var(--_elo-small-size); }
+.elo-json-state:has(.elo-json-status:empty) { display: none; }
+.elo-json-paste { width: 100%; font-size: var(--_elo-small-size); color: var(--_elo-muted); }
+.elo-json-paste summary { cursor: pointer; }
+.elo-paste { margin-top: 0.35rem; max-width: none; font-family: var(--_elo-font-mono); font-size: 0.95em; }
+
+@media (max-width: 480px) {
+  .elo-item { grid-template-columns: minmax(0, 1fr); gap: 0.3rem; }
+  .elo-item-actions { justify-content: flex-end; }
+  .elo-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .elo-row > .elo-key { grid-column: 1 / -1; max-width: none; }
+}

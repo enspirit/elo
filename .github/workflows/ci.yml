@@ -76,3 +76,36 @@ jobs:
         PGUSER: elo
         PGPASSWORD: elo
         PGDATABASE: elo
+
+  # contrib/elo-form is its own package, built against the published @enspirit/elo
+  # it declares as a peer rather than against this checkout.
+  elo-form:
+    runs-on: ubuntu-latest
+    # Reads the checkout, and nothing else.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: contrib/elo-form
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'npm'
+        cache-dependency-path: contrib/elo-form/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Typecheck
+      run: npm run typecheck
+
+    - name: Run tests
+      run: npm test

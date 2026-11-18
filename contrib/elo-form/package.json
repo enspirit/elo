@@ -1,0 +1,76 @@
+{
+  "name": "@enspirit/elo-form",
+  "version": "0.2.0",
+  "description": "HTML forms generated from Elo type schemas, validated by Elo itself",
+  "type": "module",
+  "main": "dist/elo-form.js",
+  "module": "dist/elo-form.js",
+  "types": "dist/types/index.d.ts",
+  "style": "dist/elo-form.css",
+  "unpkg": "dist/elo-form.standalone.js",
+  "jsdelivr": "dist/elo-form.standalone.js",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/elo-form.js"
+    },
+    "./elo-form.css": "./dist/elo-form.css",
+    "./standalone": "./dist/elo-form.standalone.js",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "**/*.css",
+    "./dist/elo-form.standalone.js"
+  ],
+  "files": [
+    "dist",
+    "!dist/playground.html",
+    "src",
+    "doc",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.mjs && tsc --noEmit false --declaration --emitDeclarationOnly --rootDir src --outDir dist/types",
+    "typecheck": "tsc",
+    "test": "npm run build && TZ=Europe/Brussels node --test test/*.test.mjs",
+    "docs": "node build.mjs && node scripts/docs.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test"
+  },
+  "keywords": [
+    "elo",
+    "schema",
+    "form",
+    "forms",
+    "validation",
+    "html",
+    "json"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enspirit/elo.git",
+    "directory": "contrib/elo-form"
+  },
+  "homepage": "https://elo-lang.org",
+  "bugs": {
+    "url": "https://github.com/enspirit/elo/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@enspirit/elo": "~1.2.4",
+    "luxon": "^3.5.0"
+  },
+  "devDependencies": {
+    "@enspirit/elo": "^1.2.4",
+    "@types/luxon": "^3.7.6",
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "jsdom": "^31.0.1",
+    "luxon": "^3.7.2",
+    "typescript": "^7.0.2"
+  }
+}

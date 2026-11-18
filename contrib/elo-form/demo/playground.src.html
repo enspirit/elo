@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elo Form Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a workbench of three panes read left to right — schema in, form in the middle, data out. */
+:root {
+  --ink: #1b2130;
+  --paper: #eef0f5;
+  --panel: #ffffff;
+  --line: #d3d8e3;
+  --muted: #586174;
+  --accent: #2a4fd7;
+  --good: #1b7a48;
+  --bad: #b3261e;
+  --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e4e8f1; --paper: #11141b; --panel: #191d27; --line: #2e3545; --muted: #9aa4b8;
+    --accent: #9db4ff; --good: #6fd39b; --bad: #ff9389;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #e4e8f1; --paper: #11141b; --panel: #191d27; --line: #2e3545; --muted: #9aa4b8;
+  --accent: #9db4ff; --good: #6fd39b; --bad: #ff9389;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  font: 15px/1.5 var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+}
+h1, h2 { margin: 0; font-family: var(--font-display); font-weight: 600; text-wrap: balance; }
+h1 { font-size: 1.35rem; letter-spacing: 0.01em; }
+h2 { font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+p { margin: 0; }
+a { color: var(--accent); }
+button, textarea, input { font: inherit; }
+
+.top {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1.25rem;
+  padding: 0.9rem 1.25rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.top p { color: var(--muted); max-width: 65ch; }
+
+.bench { display: grid; gap: 1px; min-height: 0; background: var(--line); }
+.pane { display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; min-height: 0; padding: 1.1rem 1.25rem 1.5rem; background: var(--panel); }
+.pane-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
+@media (min-width: 760px) {
+  .bench { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr); }
+  .pane { overflow: auto; }
+  #pane-form { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (min-width: 1180px) {
+  .bench { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.9fr); grid-template-rows: minmax(0, 1fr); }
+  #pane-form { grid-column: auto; grid-row: auto; }
+}
+@media (max-width: 759px) {
+  html, body { height: auto; }
+  body { display: block; }
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.chip {
+  padding: 0.2rem 0.7rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.chip:hover { color: var(--ink); }
+.chip[aria-pressed="true"] { color: var(--panel); background: var(--accent); border-color: var(--accent); }
+
+#schema {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 12rem;
+  padding: 0.8rem 0.9rem;
+  font: 13px/1.6 var(--font-mono);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  resize: vertical;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+#options {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  font: 13px/1.6 var(--font-mono);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  resize: vertical;
+  tab-size: 2;
+}
+#options:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.aside code, .key code { font: 0.92em var(--font-mono); }
+
+.legend { display: grid; gap: 0.4rem; padding: 0.6rem 0.75rem; font-size: 0.86rem; color: var(--muted); background: var(--paper); border-radius: 6px; }
+.switch { display: inline-flex; align-items: center; gap: 0.5em; color: var(--ink); cursor: pointer; }
+.switch input { width: 1.05em; height: 1.05em; margin: 0; accent-color: var(--accent); }
+.key { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.45rem; }
+.tag, #form.sources [data-elo-from]::after {
+  padding: 0 0.4em;
+  font: 500 11px/1.7 var(--font-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+/* The tag after a label is the library's own data-elo-from attribute, made visible. */
+#form.sources [data-elo-from]::after { content: attr(data-elo-from); margin-left: 0.6em; vertical-align: 0.08em; }
+#form.sources .elo-label, #form.sources .elo-choice { overflow-wrap: anywhere; }
+#form.sources .elo-choice { border-radius: 14px; }
+/* Side-by-side fields need more room once their labels carry a tag. */
+#form.sources .elo-compact > .elo-fields { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.tag.opt, #form.sources [data-elo-from^="options"]::after { color: var(--panel); background: var(--accent); border-color: var(--accent); }
+
+#schema-error {
+  padding: 0.55rem 0.75rem;
+  font: 13px/1.5 var(--font-mono);
+  color: var(--bad);
+  border: 1px solid var(--bad);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+.aside { font-size: 0.86rem; color: var(--muted); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.5rem; }
+.btn {
+  display: inline-flex; align-items: center;
+  padding: 0.45rem 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { color: var(--panel); background: var(--accent); border-color: var(--accent); }
+.btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.btn:focus-visible, .btn:focus-within, .chip:focus-visible, #schema:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.verdict {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.15rem 0.7rem;
+  font-weight: 600; font-size: 0.86rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+.verdict::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: currentColor; }
+.verdict.good { color: var(--good); }
+.verdict.bad { color: var(--bad); }
+#problems { display: grid; gap: 0.35rem; margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
+#problems li { display: grid; grid-template-columns: minmax(4rem, max-content) minmax(0, 1fr); gap: 0.75rem; padding-left: 0.6rem; border-left: 3px solid var(--bad); }
+#problems code { font: 12.5px/1.6 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.out { display: grid; gap: 0.4rem; min-width: 0; }
+pre {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  font: 12.5px/1.6 var(--font-mono);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The generated form takes the page's tokens. */
+#form { --elo-accent: var(--accent); --elo-danger: var(--bad); --elo-control-bg: var(--panel); }
+@media (prefers-reduced-motion: no-preference) { .chip, .btn { transition: border-color 0.12s, color 0.12s, background 0.12s; } }
+/*__ELO_FORM_CSS__*/
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Elo form playground</h1>
+  <p>Write an <a href="https://elo-lang.org/reference#data-schemas">Elo type schema</a>. The form is generated from it, and every check is run by Elo itself.</p>
+</header>
+
+<main class="bench">
+  <section class="pane" id="pane-schema" aria-labelledby="h-schema">
+    <div class="pane-head">
+      <h2 id="h-schema">Schema</h2>
+      <div class="chips" id="examples" role="group" aria-label="Example schemas"></div>
+    </div>
+    <textarea id="schema" spellcheck="false" autocapitalize="off" autocomplete="off" aria-labelledby="h-schema"></textarea>
+    <p id="schema-error" role="alert" hidden></p>
+    <div class="pane-head">
+      <h2 id="h-options">Options</h2>
+      <span class="aside">the second argument of <code>eloForm</code>, as JSON</span>
+    </div>
+    <textarea id="options" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off" aria-labelledby="h-options"></textarea>
+    <p class="aside">Labels are taken from <code>labels</code> here when it names the field (by key, or by path such as <code>.lines.*.qty</code>), and from the schema otherwise. <code>units</code> puts a unit beside a field, named the same way or by type (<code>"Percent": "%"</code>). <code>title</code> and <code>messages</code> are here too.</p>
+  </section>
+
+  <section class="pane" id="pane-form" aria-labelledby="h-form">
+    <div class="pane-head">
+      <h2 id="h-form">Form</h2>
+      <span class="aside" id="form-for"></span>
+    </div>
+    <div class="legend">
+      <label class="switch"><input type="checkbox" id="sources" checked> Show where each label comes from</label>
+      <span class="key" id="legend-key"><span class="tag opt">options</span> set in the options <span class="tag">attribute · type</span> read from the schema <span class="tag">messages</span> built-in text</span>
+    </div>
+    <form id="host" novalidate>
+      <div id="form"></div>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="check">Check the form</button>
+        <button class="btn" type="button" id="empty">Empty it</button>
+        <label class="btn">Fill from a JSON file<input type="file" id="load" accept=".json,application/json"></label>
+      </div>
+    </form>
+  </section>
+
+  <section class="pane" id="pane-result" aria-labelledby="h-result">
+    <div class="pane-head">
+      <h2 id="h-result">Result</h2>
+      <span class="verdict" id="verdict" role="status"></span>
+    </div>
+    <ul id="problems"></ul>
+    <div class="out">
+      <div class="pane-head">
+        <h2 id="h-json">JSON the form produces</h2>
+        <button class="chip" type="button" id="copy">Copy</button>
+      </div>
+      <pre id="json" tabindex="0" aria-labelledby="h-json"></pre>
+    </div>
+    <div class="out">
+      <h2 id="h-value">What Elo reads from it</h2>
+      <pre id="value" tabindex="0" aria-labelledby="h-value"></pre>
+    </div>
+    <p class="aside">Built on @enspirit/elo __ELO_VERSION__.</p>
+  </section>
+</main>
+
+<script>/*__ELO_FORM_JS__*/</script>
+<script>
+(function () {
+  const { eloForm, toEloCode } = EloFormDemo;
+  const $ = (id) => document.getElementById(id);
+
+  const today = new Date();
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const inDays = (n) => iso(new Date(today.getTime() + n * 864e5));
+
+  const EXAMPLES = [
+    {
+      id: 'order', name: 'Order',
+      source: `# An order, as a shop would take it.
+Qty     = Int(q | q > 0)
+Line    = { product: String(p | not isEmpty(p)), qty: Qty, unitPrice: Float(p | p >= 0) }
+Lines   = [Line]
+Address = {
+  street: String,
+  city: String,
+  zip: String(z | length(z) >= 4 and length(z) <= 10)
+}
+Payment = { iban: String(i | length(i) >= 15) }
+        | { cardNumber: String, expires: Date(d | d >= TODAY) }
+
+Order = {
+  customer: String(c | length(c) > 0 and length(c) <= 60),
+  email :? String,
+  placedOn: Date,
+  priority: String(p | p == 'low' or p == 'normal' or p == 'urgent'),
+  lines: Lines(l | 'add at least one line': length(l) > 0),
+  shipTo: Address,
+  billTo :? Address,
+  payment: Payment,
+  giftWrap: Bool,
+  deliverWithin: Duration|Null,
+  notes :? String
+}`,
+      options: {
+        title: 'New order',
+        labels: { placedOn: 'Order date', qty: 'Quantity', '.shipTo.zip': 'Postcode', giftWrap: 'Gift-wrap it' },
+        units: { unitPrice: '€' },
+      },
+      value: {
+        customer: 'Marie Dupont', email: 'marie@example.org', placedOn: iso(today), priority: 'normal',
+        lines: [{ product: 'Notebook, A5 dotted', qty: 3, unitPrice: 4.5 }, { product: 'Fountain pen', qty: 1, unitPrice: 29 }],
+        shipTo: { street: '12 Rue de Fer', city: 'Namur', zip: '5000' },
+        payment: { cardNumber: '4000 0000 0000 0002', expires: inDays(400) },
+        giftWrap: true, deliverWithin: 'P3D',
+      },
+    },
+    {
+      id: 'event', name: 'Event',
+      source: `let Event = {
+  name: String,
+  date: Datetime,
+  capacity: Int(c | c > 0)
+} in _ |> Event`,
+      options: { units: { capacity: 'seats' } },
+      value: { name: 'Elo meetup', date: inDays(30) + 'T18:30:00', capacity: 40 },
+    },
+    {
+      id: 'every-type', name: 'Every type',
+      source: `# One of everything the type grammar can say.
+Percent = Float(p | p >= 0 and p <= 100)
+Tag     = String(t | length(t) <= 12)
+Point   = { x: Float, y: Float }
+
+Everything = {
+  text: String,
+  whole: Int,
+  decimal: Float,
+  yesNo: Bool,
+  day: Date,
+  moment: Datetime,
+  span: Duration,
+  nothing: Null,
+
+  optionalText :? String,
+  optionalYesNo :? Bool,
+  optionalPoint :? Point,
+  maybeWhole: Int|Null,
+
+  constrained: Percent,
+  labelled: Int(i | positive: i > 0, 'must be even': i % 2 == 0),
+  listed: String(s | contains(['north', 'south', 'east', 'west'], s)),
+
+  tags: [Tag],
+  points: [Point],
+  grid: [[Int]],
+
+  eitherNumber: Int|Float,
+  textOrNumber: Int|String,
+  oneOfThree: Point|[Point]|Date,
+
+  open: { name: String, ... },
+  dictionary: { ...: Int },
+  free: .,
+  data: Data
+}`,
+      options: {
+        labels: { yesNo: 'Yes or no?', '.points.*.x': 'Across', '.points.*.y': 'Up' },
+        units: { Percent: '%', decimal: 'kg', '.points.*.x': 'cm', '.points.*.y': 'cm', eitherNumber: { text: '$', label: 'dollars' } },
+        messages: { optional: 'may be left empty', kinds: { date: 'A day' } },
+      },
+      value: {
+        text: 'hello', whole: 7, decimal: 2.5, yesNo: true, day: iso(today), moment: iso(today) + 'T09:00:00', span: 'P1DT12H', nothing: null,
+        maybeWhole: null, constrained: 42.5, labelled: 4, listed: 'north',
+        tags: ['alpha', 'beta'], points: [{ x: 0, y: 1 }], grid: [[1, 2], [3]],
+        eitherNumber: 3, textOrNumber: 'A-17', oneOfThree: [{ x: 1, y: 1 }],
+        open: { name: 'kept', other: 'also kept' }, dictionary: { apples: 3, pears: 5 }, free: 'anything', data: { any: ['json', 1] },
+      },
+    },
+    {
+      id: 'free-form', name: 'Free-form',
+      source: `# Where a schema says nothing about shape, the form asks for
+# a simple value or a JSON file.
+Document = {
+  title: String,
+  metadata: Data,
+  ...: .
+}`,
+      options: { messages: { otherFields: 'Anything else', kinds: { null: 'Leave empty' } } },
+      value: { title: 'Quarterly report', metadata: { pages: 12, tags: ['finance'] }, reviewed: true, reviewer: 'J. Peeters' },
+    },
+  ];
+
+  let form = null;
+  let timer = 0;
+
+  /** Elo's notation for a value, one attribute or item per line. */
+  function pretty(v, pad) {
+    pad = pad || '';
+    const isPlain = v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
+    if (Array.isArray(v)) {
+      if (!v.length) return '[]';
+      return '[\n' + v.map((x) => pad + '  ' + pretty(x, pad + '  ')).join(',\n') + '\n' + pad + ']';
+    }
+    if (isPlain) {
+      const keys = Object.keys(v).filter((k) => v[k] !== undefined);
+      if (!keys.length) return '{}';
+      return '{\n' + keys.map((k) => pad + '  ' + k + ': ' + pretty(v[k], pad + '  ')).join(',\n') + '\n' + pad + '}';
+    }
+    return toEloCode(v);
+  }
+
+  function show() {
+    if (!form) return;
+    const r = form.result;
+    const verdict = $('verdict');
+    verdict.className = 'verdict ' + (r.valid ? 'good' : 'bad');
+    verdict.textContent = r.valid ? 'Elo accepts this' : r.problems.length + (r.problems.length === 1 ? ' thing to fix' : ' things to fix');
+    $('problems').replaceChildren(...r.problems.map((p) => {
+      const li = document.createElement('li');
+      const where = document.createElement('code');
+      where.textContent = p.path;
+      const what = document.createElement('span');
+      what.textContent = p.message;
+      li.append(where, what);
+      return li;
+    }));
+    $('json').textContent = JSON.stringify(r.raw, null, 2);
+    $('value').textContent = r.valid ? pretty(r.value) : 'Shown once the form has nothing left to fix.';
+  }
+
+  function build(source, value) {
+    try {
+      let options = {};
+      const text = $('options').value.trim();
+      if (text) {
+        try { options = JSON.parse(text); } catch (e) { throw new Error('The options are not valid JSON: ' + e.message); }
+        if (!options || typeof options !== 'object' || Array.isArray(options)) throw new Error('The options must be a JSON object, such as { "labels": { "qty": "Quantity" } }.');
+      }
+      const next = eloForm(source, Object.assign({}, options, { value, onChange: show }));
+      $('form').replaceChildren(next.element);
+      form = next;
+      $('schema-error').hidden = true;
+      $('form-for').textContent = form.schema.name ? 'for ' + form.schema.name : '';
+      show();
+    } catch (e) {
+      // Keep the last form that worked while the schema is being edited.
+      $('schema-error').textContent = String(e && e.message || e);
+      $('schema-error').hidden = false;
+    }
+  }
+
+  function open(example) {
+    for (const chip of $('examples').children) chip.setAttribute('aria-pressed', String(chip.dataset.id === example.id));
+    $('schema').value = example.source;
+    $('options').value = JSON.stringify(example.options, null, 2);
+    build(example.source, example.value);
+  }
+
+  for (const example of EXAMPLES) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.dataset.id = example.id;
+    chip.textContent = example.name;
+    chip.addEventListener('click', () => { location.hash = example.id; open(example); });
+    $('examples').append(chip);
+  }
+
+  const edited = () => {
+    for (const chip of $('examples').children) chip.setAttribute('aria-pressed', 'false');
+    clearTimeout(timer);
+    // What was entered so far is carried over to the new form where it still fits.
+    timer = setTimeout(() => build($('schema').value, form ? form.getRaw() : undefined), 300);
+  };
+  $('schema').addEventListener('input', edited);
+  $('options').addEventListener('input', edited);
+  const tagging = () => {
+    $('form').classList.toggle('sources', $('sources').checked);
+    $('legend-key').hidden = !$('sources').checked;
+  };
+  $('sources').addEventListener('change', tagging);
+  tagging();
+  $('host').addEventListener('submit', (e) => { e.preventDefault(); if (form) { form.validate({ focus: true }); show(); } });
+  $('empty').addEventListener('click', () => { if (form) form.reset(); });
+  $('load').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !form) return;
+    try { form.setValue(JSON.parse(await file.text())); form.validate(); show(); }
+    catch (err) { $('schema-error').textContent = file.name + ' is not valid JSON: ' + err.message; $('schema-error').hidden = false; }
+    e.target.value = '';
+  });
+  $('copy').addEventListener('click', async () => {
+    const button = $('copy');
+    try { await navigator.clipboard.writeText($('json').textContent); button.textContent = 'Copied'; }
+    catch (err) { button.textContent = 'Select the text to copy'; }
+    setTimeout(() => { button.textContent = 'Copy'; }, 1800);
+  });
+
+  const start = EXAMPLES.find((x) => x.id === location.hash.slice(1)) || EXAMPLES[0];
+  open(start);
+  window.addEventListener('hashchange', () => {
+    const next = EXAMPLES.find((x) => x.id === location.hash.slice(1));
+    if (next) open(next);
+  });
+})();
+</script>
+</body>
+</html>
