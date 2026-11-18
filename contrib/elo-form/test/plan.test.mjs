@@ -53,6 +53,14 @@ test('the render bundle carries neither Elo nor a date library, and evaluates no
   assert.doesNotMatch(bundle, /new Function|\beval\(|["']luxon["']|@enspirit\/elo"/);
 });
 
+test('the plan half can be required, and says what the imported one says', async () => {
+  const { createRequire } = await import('node:module');
+  const required = createRequire(import.meta.url)('../dist/elo-form.plan.cjs');
+  const source = 'Order = { qty: Int(q | q > 0) }';
+  assert.deepEqual(required.planForm(source), planForm(source));
+  assert.equal(required.compileChecks(source), compileChecks(source));
+});
+
 test('reading a schema runs nothing of it, unless asked to', () => {
   const source = 'Int(i | i > 2 * 5 and i < 100)';
   const atoms = (options) => planForm(source, options).root.rules[0].atoms;

@@ -15,6 +15,10 @@
       "default": "./dist/elo-form.js"
     },
     "./plan": {
+      "require": {
+        "types": "./dist/types/planner.d.cts",
+        "default": "./dist/elo-form.plan.cjs"
+      },
       "types": "./dist/types/planner.d.ts",
       "default": "./dist/elo-form.plan.js"
     },
@@ -40,7 +44,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node build.mjs && tsc --noEmit false --declaration --emitDeclarationOnly --rootDir src --outDir dist/types",
+    "build": "node build.mjs && tsc --noEmit false --declaration --emitDeclarationOnly --rootDir src --outDir dist/types && cp dist/types/planner.d.ts dist/types/planner.d.cts",
     "typecheck": "tsc",
     "test": "npm run build && TZ=Europe/Brussels node --test test/*.test.mjs",
     "docs": "node build.mjs && node scripts/docs.mjs",
