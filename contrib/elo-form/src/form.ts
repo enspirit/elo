@@ -248,8 +248,14 @@ export class EloForm {
    */
   async validated(opts: { focus?: boolean } = {}): Promise<Result> {
     this.validate();
-    while (this.checker.pending?.()) { await this.checker.settled!(); this.refresh(); }
+    await this.settled();
     return this.validate(opts);
+  }
+
+  /** The result once every check has answered, without showing anything more than is shown. */
+  async settled(): Promise<Result> {
+    while (this.checker.pending?.()) { await this.checker.settled!(); this.refresh(); }
+    return this.last;
   }
 
   private firstInvalid(w: Widget): Widget | undefined {

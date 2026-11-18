@@ -56,6 +56,13 @@ test('a form checked in a worker says, once answered, what one checked in the pa
   assert.equal(result.problems.length, 2);
 });
 
+test('waiting for the answers shows nothing by itself', async () => {
+  const { form } = await mountWorker(ORDER, { value: BAD });
+  assert.equal((await form.settled()).problems.length, 2);
+  // No field was visited and nothing was submitted: the problems are known, not shown.
+  assert.equal(form.element.querySelectorAll('.elo-invalid').length, 0);
+});
+
 test('the form is told when answers arrive, and typing asks again', async () => {
   let told = 0;
   const { form } = await mountWorker(ORDER, { value: BAD, onChange: () => { told++; } });

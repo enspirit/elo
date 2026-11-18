@@ -347,6 +347,7 @@ form made from a plan without `checks` has decided that somebody else checks.
 | `result` | The current [result](#result), without changing what is shown. |
 | `validate({ focus })` | Checks everything, **shows every problem**, returns the result. `focus: true` moves to the first field that needs attention. Call it from your submit handler. |
 | `validated({ focus })` | A promise of `validate()`, once every check has answered. What a submit handler awaits when the checks run [in a worker](server.md#in-a-worker). |
+| `settled()` | A promise of `result`, once every check has answered. Shows nothing more than is already shown. |
 | `setValue(json)` | Loads data, replacing what is there. |
 | `reset()` | Empties the form and hides the problems shown so far. |
 | `onChange(fn)` | Adds a listener; returns a function that removes it. |

@@ -74,8 +74,9 @@ export function serveChecks(scope: WorkerScope, load: (url: string) => Promise<a
 
 /** What the page needs of a `Worker`. */
 export interface WorkerLike {
-  onmessage: ((event: { data: any }) => void) | null;
-  onerror: ((event: unknown) => void) | null;
+  // Loose on purpose: a real `Worker` types these against its own events, and has to fit.
+  onmessage: ((event: any) => any) | null;
+  onerror: ((event: any) => any) | null;
   postMessage(message: unknown): void;
   terminate(): void;
 }
