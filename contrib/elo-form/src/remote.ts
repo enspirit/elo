@@ -17,7 +17,7 @@ type Ask =
 /** A refusal, `true` for accepted, or for `passes`: true, false, or null when it cannot be told. */
 type Answer = Extract<Check, { ok: false }> | boolean | null;
 
-type ToWorker = { load: string } | { n: number; inputs: unknown[]; asks: Ask[] };
+type ToWorker = { load: string; luxon?: string } | { n: number; inputs: unknown[]; asks: Ask[] };
 type ToPage =
   | { ready: { nodes: string[]; rules: string[] } }
   | { failed: string }
@@ -37,15 +37,21 @@ export interface WorkerScope {
  * Answer the page's questions from a module of checks. `load` fetches that module: in a worker,
  * `(url) => import(url)`.
  */
-export function serveChecks(scope: WorkerScope, load: (url: string) => Promise<{ default: CompiledChecks }>): void {
+export function serveChecks(scope: WorkerScope, load: (url: string) => Promise<any>): void {
   let checker: Checker | undefined;
   const say = (message: ToPage) => scope.postMessage(message);
   scope.onmessage = ({ data }: { data: ToWorker }) => {
     if ('load' in data) {
-      load(data.load).then((module) => {
-        checker = checkerFrom(module.default);
-        say({ ready: { nodes: Object.keys(module.default.nodes), rules: Object.keys(module.default.rules) } });
-      }, (e) => say({ failed: String(e?.message ?? e) }));
+      load(data.load).then(async (module) => {
+        let checks: CompiledChecks = module.default;
+        // Written as a factory, the checks are handed Luxon; written as a module, they imported it.
+        if (typeof checks === 'function') {
+          const { DateTime, Duration, Interval } = await load(data.luxon ?? 'luxon');
+          checks = (checks as (runtime: object) => CompiledChecks)({ DateTime, Duration, Interval });
+        }
+        checker = checkerFrom(checks);
+        say({ ready: { nodes: Object.keys(checks.nodes), rules: Object.keys(checks.rules) } });
+      }).catch((e) => say({ failed: String(e?.message ?? e) }));
       return;
     }
     if (!checker) return;
@@ -75,8 +81,13 @@ export interface WorkerLike {
 }
 
 export interface WorkerChecksOptions {
-  /** Where the module written by `compileChecks(…, { format: 'module' })` is served. */
+  /** Where the module written by `compileChecks` is served. */
   checks: string;
+  /**
+   * Where Luxon is served as a module, for checks written in the default `format: 'factory'`.
+   * Checks written with `format: 'module'` import it themselves and need nothing here.
+   */
+  luxon?: string;
   /**
    * How long one round of questions may take, in milliseconds, before the worker is terminated
    * and the form goes on unchecked (`enforced: false`). Default 2000.
@@ -213,6 +224,6 @@ export function workerChecks(worker: WorkerLike, options: WorkerChecksOptions): 
         fail(data.failed);
       } else receive(data);
     };
-    worker.postMessage({ load: options.checks } satisfies ToWorker);
+    worker.postMessage({ load: options.checks, luxon: options.luxon } satisfies ToWorker);
   });
 }

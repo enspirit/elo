@@ -111,7 +111,8 @@ button.onclick = async () => {
 };
 ```
 
-- The checks must be written with `format: 'module'`: the worker imports them, and they import Luxon.
+- The worker imports the checks. Written with `format: 'module'` they import Luxon themselves;
+  written as a factory (the default), say where Luxon is: `workerChecks(worker, { checks, luxon: '/vendor/luxon.js' })`.
 - **Answers come later.** The form asks, shows nothing wrong yet, and says it again when the
   worker answers: `onChange` listeners are called then too. Meanwhile `result.pending` is `true`
   and `result.valid` is `false`. `await form.validated()` is `validate()` once everything is

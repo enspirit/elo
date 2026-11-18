@@ -80,6 +80,20 @@ test('a worker that stops answering is terminated, and the form says nothing is 
   );
 });
 
+test('checks written as a factory are handed Luxon, from where the page says it is', async () => {
+  const luxon = await import('luxon');
+  const { compileChecks } = await import('../dist/elo-form.plan.js');
+  const factory = new Function(compileChecks(ORDER).replace(/^export default /m, 'return '))();
+  const asked = [];
+  const scope = { onmessage: null, postMessage(m) { setTimeout(() => page.onmessage({ data: structuredClone(m) })); } };
+  const page = { onmessage: null, onerror: null, postMessage(m) { setTimeout(() => scope.onmessage({ data: structuredClone(m) })); }, terminate() {} };
+  serveChecks(scope, async (url) => { asked.push(url); return url === '/checks.js' ? { default: factory } : luxon; });
+  const checks = await workerChecks(page, { checks: '/checks.js', luxon: '/vendor/luxon.js' });
+  const form = renderForm(JSON.parse(JSON.stringify(planForm(ORDER))), { checks, value: BAD });
+  assert.equal((await form.validated()).problems.length, 2);
+  assert.deepEqual(asked, ['/checks.js', '/vendor/luxon.js']);
+});
+
 test('checks that cannot be loaded are a rejection, and the worker is let go', async () => {
   const worker = pair(ORDER, { broken: true });
   await assert.rejects(workerChecks(worker, { checks: '/nowhere.js' }), /could not be loaded: 404/);

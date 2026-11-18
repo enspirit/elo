@@ -50,7 +50,7 @@ test('a plan is plain JSON, and holds nothing of the syntax it was read from', (
 test('the render bundle carries neither Elo nor a date library, and evaluates nothing', () => {
   const bundle = readFileSync(new URL('../dist/elo-form.render.js', import.meta.url), 'utf8');
   assert.doesNotMatch(bundle, /^import /m);
-  assert.doesNotMatch(bundle, /new Function|\beval\(|luxon|@enspirit\/elo"/);
+  assert.doesNotMatch(bundle, /new Function|\beval\(|["']luxon["']|@enspirit\/elo"/);
 });
 
 test('reading a schema runs nothing of it, unless asked to', () => {
