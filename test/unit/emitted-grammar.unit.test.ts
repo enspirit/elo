@@ -136,6 +136,20 @@ describe('The grammar gate catches what it is for', () => {
     }
   });
 
+  it("rejects a plain __proto__ key in extract()'s result object", () => {
+    // extract() accepts `__proto__` as a placeholder name. Its result object
+    // used to write the field as a plain key, which ran the prototype setter:
+    // a match silently swallowed the field, and the no-match branch returned
+    // a null-prototype object. The emitter now writes that key computed, as
+    // the object-literal emitter does.
+    const payload = '(function() { var _m = []; return {__proto__: _m[1]}; })()';
+    const violations = checkEmittedJavaScript(inProgram(payload));
+    assert.ok(
+      violations.some(v => v.rule === 'no-proto-key'),
+      `extract()'s old key was not caught: ${JSON.stringify(violations)}`
+    );
+  });
+
   it('accepts the defineProperty form the emitter actually uses', () => {
     const code = '(function(_) { return (function() { const o = {}; '
       + 'Object.defineProperty(o, "__proto__", { value: 1 }); return o; })(); })(null);';
