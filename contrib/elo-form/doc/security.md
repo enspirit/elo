@@ -66,45 +66,54 @@ sends it to your `report-uri` if you have one: one report per page load, which y
 
 From then on:
 
-- The form builds and works. It shows a notice (`messages.unchecked`), and every result has
-  `enforced: false`.
+- The form builds and works. A form made by `eloForm` shows a notice (`messages.unchecked`), and
+  every result has `enforced: false`.
 - **Still guaranteed**, because the widgets need no evaluation for it: the shape of the JSON,
   required fields, numbers and dates that can be read, and what constraints written with literals
   say: hints ("Must be greater than 0."), `maxlength`, drop-downs of the listed values.
 - **Not checked**: every constraint. `Int(q | q > 0)` accepts `-5`. `valid` then means "well
-  shaped", no longer "Elo accepts it". Bounds that have to be computed (`d >= TODAY`) still read
-  as hints but do not limit the date picker.
+  shaped", no longer "Elo accepts it". A bound that has to be computed (`d >= D2026-01-01 + P1D`)
+  is not read at all: it is shown as its Elo source and does not limit the picker. Literals, `TODAY`
+  and `NOW` need no computing and still do.
 
 ### Validating all the same
 
 **On the server**, always (see above). It answers with Elo's error, which carries a `path`
-(`.lines.0.qty`) to show the message next to the right field.
+(`.lines.0.qty`): hand it to `form.setProblems([{ path, message }])` and the message shows next to
+the right field.
 
-**In the browser, with a check compiled ahead of time.** What a policy forbids is turning text
-into code in the page. Elo can do that at build time instead, and the result is an ordinary
-script, served like the rest of your code:
+**In the browser, with the checks compiled ahead of time.** What a policy forbids is turning text
+into code in the page. `compileChecks(source)` does it where the schema is read instead — at build
+time, or on a server — and writes Elo's checks out as a JavaScript module, served like the rest of
+your code:
 
-```sh
-# order.elo: the schema, then the type applied to the input
-#   Qty   = Int(q | q > 0)
-#   Order = { customer: String, qty: Qty }
-#   _ |> Order
-{ echo "import { DateTime, Duration, Interval } from 'luxon';"
-  echo "export default $(npx eloc -t js order.elo)"; } > order.check.js
+```js
+import { planForm, compileChecks } from '@enspirit/elo-form/plan';       // build time, or a server
+writeFileSync('order.plan.json', JSON.stringify(planForm(source)));
+writeFileSync('order.checks.js', compileChecks(source));
 ```
 
 ```js
-import checkOrder from './order.check.js';
+import { renderForm } from '@enspirit/elo-form/render';                  // the page: no Elo, no eval
+import checksFor from './order.checks.js';
+import { DateTime, Duration, Interval } from 'luxon';
 
-const result = form.validate({ focus: true });
-if (!result.valid) return;
-if (!result.enforced) {
-  // The page could not run Elo's checks: run the ones compiled at build time.
-  try { checkOrder(result.raw); }
-  catch (e) { return show(e.message); }    // ".qty: constraint failed", with e.path and e.kind
-}
-send(result.raw);
+const form = renderForm(plan, { checks: checksFor({ DateTime, Duration, Interval }) });
+form.result.enforced;   // true: every constraint is checked, on its field, as it is typed
 ```
 
-The form and the compiled check must be built from the same schema text. The form itself does not
-show these errors on its fields: on such a page, that part is yours.
+[server.md](server.md) has the whole of it, including forms sent as HTML that work with no script.
+
+## Reading and compiling a schema you did not write, on a server
+
+`planForm` **reads**: with `evaluate` left off it parses the schema and executes nothing of it, so
+its cost is the parser's and a hostile schema has nothing to run. Cap the size of what you accept,
+and `maxNodes` caps what a small schema can expand into.
+
+`compileChecks` **compiles** and does not run either: its result is text. Running is what the page
+that loads the module does, on the main thread of whoever is filling the form in, with the page's
+own origin. What that code can do is Elo's promise (see above), not a boundary this library adds:
+if a schema's author and the form's reader are different people, decide whether that promise is
+enough for your page before serving them, or serve none and let the server refuse.
+
+`readPosted` runs nothing unless you give it `checks`.

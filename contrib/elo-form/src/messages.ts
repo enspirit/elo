@@ -4,7 +4,7 @@
  * Pass `messages` to `eloForm` to override any of them — a translation is a
  * copy of this object in another language.
  */
-import type { Kind, Phrases } from './schema.js';
+import type { Kind, Phrases } from './plan.js';
 
 export interface Messages {
   /** Tag after the label of a field that may be left empty. */

@@ -1,0 +1,58 @@
+/* The demo's own look. The form's is /lib/elo-form.css, untouched but for two tokens at the bottom. */
+:root {
+  --ink: #1b2130; --paper: #eef0f5; --panel: #ffffff; --line: #d3d8e3; --muted: #586174;
+  --accent: #2a4fd7; --good: #1b7a48; --bad: #b3261e; --warn: #8a5a00;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e4e8f1; --paper: #11141b; --panel: #191d27; --line: #2e3545; --muted: #9aa4b8;
+    --accent: #9db4ff; --good: #6fd39b; --bad: #ff9389; --warn: #f0c36a;
+    color-scheme: dark;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; font: 15px/1.55 var(--font-body); color: var(--ink); background: var(--paper); }
+nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.1rem; padding: 0.7rem 1.25rem; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+main { max-width: 74rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; display: grid; gap: 1.25rem; }
+h1, h2, h3 { margin: 0; font-weight: 600; text-wrap: balance; }
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.1rem; }
+h3 { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+p, ul, ol { margin: 0; }
+ul, ol { padding-left: 1.2rem; }
+li + li { margin-top: 0.3rem; }
+a { color: var(--accent); }
+code, pre { font-family: var(--font-mono); }
+code { font-size: 0.9em; }
+button { font: inherit; }
+.lede { max-width: 72ch; color: var(--muted); }
+.cols { display: grid; gap: 1.25rem; align-items: start; }
+@media (min-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.card { display: grid; gap: 0.85rem; padding: 1.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-width: 0; align-content: start; }
+pre {
+  margin: 0; padding: 0.7rem 0.85rem; font-size: 12.5px; line-height: 1.6; background: var(--paper);
+  border: 1px solid var(--line); border-radius: 6px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.btn { padding: 0.4rem 0.9rem; font-weight: 500; color: var(--panel); background: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.profile { padding: 0.75rem 0.9rem; border-left: 3px solid var(--line); background: var(--paper); border-radius: 0 6px 6px 0; font-size: 0.93rem; display: grid; gap: 0.4rem; }
+.profile.low { border-left-color: var(--good); }
+.profile.mid { border-left-color: var(--warn); }
+.profile.high { border-left-color: var(--bad); }
+.level { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.low .level { color: var(--good); } .mid .level { color: var(--warn); } .high .level { color: var(--bad); }
+.readout { font: 12.5px/1.6 var(--font-mono); overflow-wrap: anywhere; }
+.readout.good { color: var(--good); } .readout.bad { color: var(--bad); }
+.aside { font-size: 0.86rem; color: var(--muted); }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 56rem; }
+th, td { padding: 0.5rem 0.6rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; color: var(--muted); font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; }
+td.yes { color: var(--good); } td.no { color: var(--bad); } td.part { color: var(--warn); }
+
+/* The form takes the page's colors through its own tokens. */
+.elo-form { --elo-accent: var(--accent); --elo-danger: var(--bad); }

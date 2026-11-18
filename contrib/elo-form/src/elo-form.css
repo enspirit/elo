@@ -83,7 +83,7 @@
 .elo-field > * { max-width: 100%; }
 .elo-label { font-size: var(--_elo-label-size); font-weight: var(--_elo-label-weight); }
 .elo-optional { margin-left: 0.5em; font-size: var(--_elo-small-size); font-weight: 400; color: var(--_elo-muted); }
-.elo-hint, .elo-note, .elo-static { font-size: var(--_elo-small-size); color: var(--_elo-muted); }
+.elo-hint, .elo-help, .elo-note, .elo-static { font-size: var(--_elo-small-size); color: var(--_elo-muted); }
 .elo-error { font-size: var(--_elo-small-size); font-weight: 500; color: var(--_elo-danger); }
 .elo-banner { padding: 0.6em 0.8em; border: var(--_elo-border-width) solid currentColor; border-radius: var(--_elo-group-radius); }
 
@@ -136,7 +136,7 @@ select.elo-input { width: auto; min-width: 10em; }
 /* A checkbox sits before its label. */
 .elo-inline { grid-template-columns: auto 1fr; align-items: center; column-gap: 0.55em; }
 .elo-inline > .elo-check-control { order: -1; display: inline-flex; }
-.elo-inline > .elo-hint, .elo-inline > .elo-note, .elo-inline > .elo-error { grid-column: 1 / -1; }
+.elo-inline > .elo-hint, .elo-inline > .elo-help, .elo-inline > .elo-note, .elo-inline > .elo-error { grid-column: 1 / -1; }
 .elo-checkbox { width: 1.15em; height: 1.15em; margin: 0; accent-color: var(--_elo-accent); }
 .elo-check { display: inline-flex; align-items: center; gap: 0.5em; cursor: pointer; }
 

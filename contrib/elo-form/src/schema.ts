@@ -23,6 +23,8 @@ import {
 } from '@enspirit/elo';
 import type { TypeExpr, TypeBinding, Expr, LetBinding, ModuleLoader } from '@enspirit/elo';
 import { DateTime, Duration, Interval } from 'luxon';
+import { verdict } from './plan.js';
+import type { Atom, Check, Checker, Cmp, Kind, Plan, PlanNode, PlanRule, PlanScalar } from './plan.js';
 
 // ---------------------------------------------------------------------------
 // Scopes
@@ -80,11 +82,6 @@ export interface ResolveOptions {
   file?: string;
 }
 
-export type Kind =
-  | 'string' | 'int' | 'float' | 'bool' | 'null' | 'date' | 'datetime' | 'duration'
-  | 'any' | 'data' | 'tuple' | 'array' | 'union'
-  /** Not an Elo type: "ask for a JSON file", the fallback. */
-  | 'json';
 
 // Without a prototype: `constructor` and `toString` are not type names.
 const BUILTINS: Record<string, Kind> = Object.assign(Object.create(null), {
@@ -92,14 +89,6 @@ const BUILTINS: Record<string, Kind> = Object.assign(Object.create(null), {
   Boolean: 'bool', Date: 'date', Datetime: 'datetime', Duration: 'duration', Data: 'data',
 });
 
-/**
- * Fill a message's `{placeholders}` in. The values are text and stay text: neither `$&` nor a
- * `{placeholder}` inside one means anything.
- */
-export function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (all, name) =>
-    (Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : all));
-}
 
 /** One subtype constraint, with what it needs to be evaluated on its own. */
 export interface Rule {
@@ -176,7 +165,7 @@ export function resolveSchema(source: string, opts: ResolveOptions = {}): Schema
     const outer = scope;
     const group: Env = { defs: new Map(), limit: defs.length, outer: env };
     defs.forEach((def, i) => {
-      const before: Scope = i === 0 ? outer : [...outer, { types: defs, upto: i }];
+      const before: Scope = [...outer, { types: defs, upto: i }];
       const alias: Alias = { name: def.name, typeExpr: def.typeExpr, scope: before, env: { ...group, limit: i } };
       const same = group.defs.get(def.name);
       if (same) same.push({ alias, index: i }); else group.defs.set(def.name, [{ alias, index: i }]);
@@ -273,46 +262,11 @@ export function planSchema(schema: Schema): Model {
 /** How many alternatives nested unions are folded into one choice; past that they stay nested. */
 const MAX_ALTERNATIVES = 24;
 
-const isPlain = (m: Model, ...kinds: Kind[]) => kinds.includes(m.kind) && m.rules.length === 0;
-
-/**
- * Turn a union into the simplest thing that asks for the same values.
- *
- *  - `T|Null` is T, where leaving it empty means null.
- *  - `Int|Float` is one number box: a whole number is read as the Int.
- *  - `Int|String` is one text box: Elo reads "42" as the Int and the rest as text.
- *  - anything else stays a choice between alternatives.
- */
-export function simplify(m: Model): Model {
-  if (m.kind !== 'union') return m;
-  const alts = m.alts!.filter((a) => !isPlain(a, 'null'));
-  const nullable = alts.length < m.alts!.length || undefined;
-  const carry = { type: m.type, scope: m.scope, nullable, label: m.label };
-  if (alts.length === 0) return { ...m, kind: 'null', alts: undefined };
-  if (alts.length === 1) {
-    const only = simplify(alts[0]);
-    return {
-      ...only, ...carry, nullable: nullable || only.nullable, alias: m.alias ?? only.alias,
-      aliases: [...(m.aliases ?? []), ...(only.aliases ?? [])], rules: [...only.rules, ...m.rules],
-    };
-  }
-  if (alts.every((a) => isPlain(a, 'int', 'float'))) {
-    return { kind: alts.every((a) => a.kind === 'int') ? 'int' : 'float', ...carry, alias: m.alias, aliases: m.aliases, rules: m.rules };
-  }
-  // Only when String comes last: `String|Int` reads a typed 42 as text, so the Int needs its own box.
-  if (alts.every((a) => isPlain(a, 'int', 'float', 'string')) && alts.findIndex((a) => a.kind === 'string') === alts.length - 1) {
-    return { kind: 'string', textual: true, ...carry, alias: m.alias, aliases: m.aliases, rules: m.rules };
-  }
-  return { ...m, alts, nullable };
-}
 
 // ---------------------------------------------------------------------------
 // Validation, by Elo itself
 // ---------------------------------------------------------------------------
 
-export type Check =
-  | { ok: true; value: unknown }
-  | { ok: false; path: string; kind: string; label?: string; message: string };
 
 type Compiled = (input: unknown) => any;
 
@@ -325,11 +279,13 @@ export function canEvaluate(): boolean {
   return evalWorks;
 }
 
-function wrap(scope: Scope, body: Expr): Expr {
+export function wrap(scope: Scope, body: Expr): Expr {
   return scope.reduceRight<Expr>(
-    (inner, frame) => ('types' in frame
-      ? withTypeDefs(frame.upto === undefined ? frame.types : frame.types.slice(0, frame.upto), inner)
-      : withLetBindings(frame.lets, inner)),
+    (inner, frame) => {
+      if (!('types' in frame)) return withLetBindings(frame.lets, inner);
+      const seen = frame.upto === undefined ? frame.types : frame.types.slice(0, frame.upto);
+      return seen.length ? withTypeDefs(seen, inner) : inner;
+    },
     body,
   );
 }
@@ -360,63 +316,31 @@ export function check(model: Pick<Model, 'type' | 'scope'>, value: unknown, inpu
     run = compileUnder(model.scope ?? [], body);
     validators.set(model.type, run);
   }
-  try {
-    return { ok: true, value: run!(input)(value) };
-  } catch (e: any) {
-    const text = String(e?.message ?? e);
-    const path = typeof e?.path === 'string' && e.path ? e.path : '.';
-    // Elo prefixes its message with the path; the path is reported apart.
-    const message = text.startsWith(path + ': ') ? text.slice(path.length + 2) : text;
-    return { ok: false, path, kind: e?.kind ?? 'error', label: e?.label ?? undefined, message };
+  return verdict(() => run!(input)(value));
+}
+
+
+const singled = new WeakMap<Expr, TypeExpr>();
+
+/**
+ * Does a value pass one condition of a rule, taken alone?
+ *
+ * A rule fails as a whole; this is how the form finds which half of
+ * `length(s) <= 80 and not isEmpty(s)` to talk about.
+ */
+export function passes(rule: Rule, condition: Expr, value: unknown, input: unknown): boolean {
+  let type = singled.get(condition);
+  if (!type) {
+    type = { kind: 'subtype_constraint', baseType: rule.base, variable: rule.variable, constraints: [{ condition }] };
+    singled.set(condition, type);
   }
+  const r = check({ type, scope: rule.scope }, value, input);
+  return r.ok || r.kind !== 'constraint';
 }
 
 // ---------------------------------------------------------------------------
-// Reading constraints, to give hints
+// Model -> Plan: what is left once the syntax is read
 // ---------------------------------------------------------------------------
-//
-// Hints never decide anything: a constraint this code cannot read is still
-// enforced, by the validator above. They only make the form say up front what
-// the validator would say afterwards.
-
-export type Scalar = number | string | DateTime | Duration;
-
-export interface Facts {
-  min?: { value: Scalar; exclusive: boolean };
-  max?: { value: Scalar; exclusive: boolean };
-  minLength?: number;
-  maxLength?: number;
-  /** The only values that can pass, when a constraint lists them. */
-  options?: (string | number)[];
-}
-
-export interface RuleText {
-  rule: Rule;
-  /** "be greater than 0": reads after "Must". Absent when the rule is verbatim or unreadable. */
-  phrase?: string;
-  /** The rule's `and`-ed conditions with a phrase each, when every one of them could be read. */
-  parts?: { condition: Expr; phrase: string }[];
-  /** The author's own sentence: a label with spaces in it. */
-  verbatim?: string;
-  /** The condition as Elo source, when all else fails and it can be printed. */
-  source?: string;
-}
-
-export interface Reading { facts: Facts; texts: RuleText[] }
-
-export interface Phrases {
-  cmp: Record<'number' | 'date' | 'datetime' | 'duration' | 'text', Record<'>' | '>=' | '<' | '<=' | '==' | '!=', string>>;
-  length: Record<'string' | 'array', Record<'>' | '>=' | '<' | '<=' | '==' | '!=', string>>;
-  notEmpty: string;
-  oneOf: string;
-  /** For a constraint known only by its label: `{label}` is e.g. "positive". */
-  label: string;
-  and: string;
-  today: string;
-  now: string;
-  /** The language these phrases are written in, for the dates and durations inside them: `en`, `fr-BE`… */
-  locale: string;
-}
 
 function mentions(expr: unknown, name: string): boolean {
   if (Array.isArray(expr)) return expr.some((e) => mentions(e, name));
@@ -428,7 +352,7 @@ function mentions(expr: unknown, name: string): boolean {
   return false;
 }
 
-const FLIP: Record<string, string> = { '>': '<', '>=': '<=', '<': '>', '<=': '>=', '==': '==', '!=': '!=' };
+const FLIP: Record<string, Cmp> = { '>': '<', '>=': '<=', '<': '>', '<=': '>=', '==': '==', '!=': '!=' };
 
 /** Print a condition back as Elo, or give up (returns undefined) on anything unusual. */
 export function printExpr(e: Expr): string | undefined {
@@ -456,180 +380,178 @@ export function printExpr(e: Expr): string | undefined {
   try { return go(e); } catch { return undefined; }
 }
 
-const words = (label: string) =>
-  label.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
+/** The `and`-ed conditions of a constraint, in order. */
+export function conjuncts(e: Expr): Expr[] {
+  return e.type === 'binary' && e.operator === '&&' ? [...conjuncts(e.left), ...conjuncts(e.right)] : [e];
+}
+
+function durationScalar(d: Duration): PlanScalar | undefined {
+  if (!d.isValid) return undefined;
+  const parts: Record<string, number> = {};
+  for (const [unit, n] of Object.entries(d.toObject())) if (typeof n === 'number') parts[unit] = n;
+  return { t: 'duration', v: d.toISO() ?? '', ms: d.toMillis(), parts };
+}
 
 /**
- * What the constraints on a node say, in facts a widget can use and words a person can read.
+ * The constant a condition compares against, if it is one.
  *
- * `quantity` dresses a bound on the value itself for display — "100" as "100 %" — when the
- * field has a unit.
+ * Literals are read as written. Anything else that mentions neither the value nor the input
+ * (`D2026-01-01 + P1D`, `2 * 5`) is a constant too, but knowing its value takes running it:
+ * that happens only when `evaluate` allows.
  */
-export function readRules(model: Model, phrases: Phrases, quantity?: (number: string) => string): Reading {
-  const facts: Facts = {};
-  const family: keyof Phrases['cmp'] =
-    model.kind === 'date' ? 'date' : model.kind === 'datetime' ? 'datetime'
-      : model.kind === 'duration' ? 'duration' : model.kind === 'string' ? 'text' : 'number';
-
-  const constant = (rule: Rule, e: Expr): { value: Scalar; text: string } | undefined => {
-    if (mentions(e, rule.variable) || mentions(e, '_')) return undefined;
-    let value: unknown;
-    try {
-      if (e.type === 'literal' || e.type === 'string') value = e.value;
-      else if (canEvaluate()) value = compileUnder(rule.scope, e)(null);
-    } catch { return undefined; }
-    if (e.type === 'temporal_keyword' && e.keyword === 'TODAY') return { value: value as DateTime, text: phrases.today };
-    if (e.type === 'temporal_keyword' && e.keyword === 'NOW') return { value: value as DateTime, text: phrases.now };
-    if (typeof value === 'number' && Number.isFinite(value)) return { value, text: String(value) };
-    if (typeof value === 'string') return { value, text: `“${value}”` };
-    if (DateTime.isDateTime(value) && value.isValid) {
-      const dateOnly = model.kind === 'date' || +value === +value.startOf('day');
-      // In the language of the sentence it goes into, not the one the browser happens to be set to.
-      return { value, text: value.setLocale(phrases.locale).toLocaleString(dateOnly ? DateTime.DATE_MED : DateTime.DATETIME_MED) };
-    }
-    if (Duration.isDuration(value) && value.isValid) return { value, text: value.reconfigure({ locale: phrases.locale }).toHuman() };
-    return undefined;
-  };
-
-  const isVar = (rule: Rule, e: Expr) => e.type === 'variable' && e.name === rule.variable;
-  const isLength = (rule: Rule, e: Expr) =>
-    e.type === 'function_call' && (e.name === 'length' || e.name === 'count') && e.args.length === 1 && isVar(rule, e.args[0]);
-
-  /** One conjunct -> a phrase, recording what it implies. Undefined when unreadable. */
-  const atom = (rule: Rule, e: Expr): string | undefined => {
-    if (e.type === 'binary' && e.operator in FLIP) {
-      let { left, right } = e;
-      let op = e.operator as keyof typeof FLIP;
-      if (!isVar(rule, left) && !isLength(rule, left)) { [left, right] = [right, left]; op = FLIP[op]; }
-      const c = constant(rule, right);
-      if (!c) return undefined;
-      if (isVar(rule, left)) {
-        const fam = typeof c.value === 'string' ? 'text' : family;
-        if (fam === 'text' && op !== '==' && op !== '!=') return undefined;
-        if (op === '>' || op === '>=') facts.min = tighter(facts.min, { value: c.value, exclusive: op === '>' }, 1);
-        if (op === '<' || op === '<=') facts.max = tighter(facts.max, { value: c.value, exclusive: op === '<' }, -1);
-        if (op === '==' && (typeof c.value === 'string' || typeof c.value === 'number')) facts.options = meet(facts.options, [c.value]);
-        const shown = quantity && typeof c.value === 'number' ? quantity(c.text) : c.text;
-        return fill(phrases.cmp[fam][op as '>'], { x: shown });
-      }
-      if (isLength(rule, left) && typeof c.value === 'number' && (model.kind === 'string' || model.kind === 'array')) {
-        const n = c.value;
-        if (op === '>') facts.minLength = Math.max(facts.minLength ?? 0, Math.floor(n) + 1);
-        if (op === '>=') facts.minLength = Math.max(facts.minLength ?? 0, Math.ceil(n));
-        if (op === '<') facts.maxLength = Math.min(facts.maxLength ?? Infinity, Math.ceil(n) - 1);
-        if (op === '<=') facts.maxLength = Math.min(facts.maxLength ?? Infinity, Math.floor(n));
-        if (op === '==') { facts.minLength = n; facts.maxLength = n; }
-        if (model.kind === 'string' && n === 0 && (op === '>' || op === '!=')) return phrases.notEmpty;
-        return fill(phrases.length[model.kind][op as '>'], { n, s: n === 1 ? '' : 's' });
-      }
-      return undefined;
-    }
-    // not isEmpty(s), not isBlank(s)
-    if (e.type === 'unary' && e.operator === '!' && e.operand.type === 'function_call'
-      && (e.operand.name === 'isEmpty' || e.operand.name === 'isBlank')
-      && e.operand.args.length === 1 && isVar(rule, e.operand.args[0])) {
-      facts.minLength = Math.max(facts.minLength ?? 0, 1);
-      return phrases.notEmpty;
-    }
-    // s == 'a' or s == 'b', contains(['a', 'b'], s)
-    const listed = enumerated(rule, e);
-    if (listed) {
-      facts.options = meet(facts.options, listed.values);
-      return fill(phrases.oneOf, { list: listed.texts.join(', ') });
-    }
-    return undefined;
-  };
-
-  const enumerated = (rule: Rule, e: Expr): { values: (string | number)[]; texts: string[] } | undefined => {
-    const members: Expr[] = [];
-    if (e.type === 'function_call' && e.name === 'contains' && e.args.length === 2
-      && e.args[0].type === 'array' && isVar(rule, e.args[1])) {
-      members.push(...e.args[0].elements);
-    } else {
-      const walk = (x: Expr): boolean => {
-        if (x.type === 'binary' && x.operator === '||') return walk(x.left) && walk(x.right);
-        if (x.type === 'binary' && x.operator === '==') {
-          if (isVar(rule, x.left)) { members.push(x.right); return true; }
-          if (isVar(rule, x.right)) { members.push(x.left); return true; }
-        }
-        return false;
-      };
-      if (!(e.type === 'binary' && e.operator === '||') || !walk(e)) return undefined;
-    }
-    const values: (string | number)[] = [];
-    const texts: string[] = [];
-    for (const m of members) {
-      const c = constant(rule, m);
-      if (!c || (typeof c.value !== 'string' && typeof c.value !== 'number')) return undefined;
-      values.push(c.value);
-      texts.push(typeof c.value === 'string' ? c.value : c.text);
-    }
-    return values.length ? { values, texts } : undefined;
-  };
-
-  const conjuncts = (e: Expr): Expr[] =>
-    e.type === 'binary' && e.operator === '&&' ? [...conjuncts(e.left), ...conjuncts(e.right)] : [e];
-
-  const texts = model.rules.map((rule): RuleText => {
-    // Read every conjunct even when the label speaks for the rule: the facts still help the widget.
-    const conditions = conjuncts(rule.condition);
-    const parts = conditions.map((c) => atom(rule, c));
-    if (rule.label && /\s/.test(rule.label)) return { rule, verbatim: rule.label };
-    if (parts.every((p) => p !== undefined)) {
-      return {
-        rule,
-        phrase: joinPhrases(parts as string[], phrases.and),
-        parts: conditions.map((condition, i) => ({ condition, phrase: parts[i] as string })),
-      };
-    }
-    if (rule.label) return { rule, phrase: fill(phrases.label, { label: words(rule.label) }) };
-    return { rule, source: printExpr(rule.condition) };
-  });
-
-  return { facts, texts };
+function constant(rule: Rule, e: Expr, evaluate: boolean): PlanScalar | undefined {
+  if (mentions(e, rule.variable) || mentions(e, '_')) return undefined;
+  if (e.type === 'temporal_keyword' && (e.keyword === 'TODAY' || e.keyword === 'NOW')) return { t: 'time', keyword: e.keyword };
+  if (e.type === 'literal' && typeof e.value === 'number') return Number.isFinite(e.value) ? { t: 'number', v: e.value } : undefined;
+  if (e.type === 'string') return { t: 'text', v: e.value };
+  if (e.type === 'date' || e.type === 'datetime') return { t: 'time', v: String(e.value) };
+  if (e.type === 'duration') return durationScalar(Duration.fromISO(String(e.value)));
+  if (!evaluate) return undefined;
+  let value: unknown;
+  try { value = compileUnder(rule.scope, e)(null); } catch { return undefined; }
+  if (typeof value === 'number' && Number.isFinite(value)) return { t: 'number', v: value };
+  if (typeof value === 'string') return { t: 'text', v: value };
+  if (DateTime.isDateTime(value) && value.isValid) return { t: 'time', v: value.toISO() ?? undefined };
+  if (Duration.isDuration(value)) return durationScalar(value);
+  return undefined;
 }
 
-function order(v: Scalar): number | string {
-  return typeof v === 'number' || typeof v === 'string' ? v : +v;
-}
+/** One condition of a rule, as far as a form can use it. Null when it says nothing a form can read. */
+function readAtom(rule: Rule, e: Expr, evaluate: boolean): Atom | null {
+  const isVar = (x: Expr) => x.type === 'variable' && x.name === rule.variable;
+  const isLength = (x: Expr) =>
+    x.type === 'function_call' && (x.name === 'length' || x.name === 'count') && x.args.length === 1 && isVar(x.args[0]);
 
-function tighter<B extends { value: Scalar; exclusive: boolean }>(a: B | undefined, b: B, sign: 1 | -1): B {
-  if (!a || typeof order(a.value) !== typeof order(b.value)) return a ?? b;
-  const x = order(a.value), y = order(b.value);
-  if (x === y) return a.exclusive ? a : b;
-  return (x > y ? sign === 1 : sign === -1) ? a : b;
-}
-
-function meet<T>(a: T[] | undefined, b: T[]): T[] {
-  const unique = [...new Set(b)];
-  return a ? a.filter((v) => unique.includes(v)) : unique;
-}
-
-/** "be at least 1" + "be at most 10" -> "be at least 1 and at most 10". */
-export function joinPhrases(parts: string[], and: string): string {
-  const unique = [...new Set(parts)];
-  return unique
-    .map((p, i) => {
-      const verb = unique[0].split(' ')[0] + ' ';
-      return i > 0 && p.startsWith(verb) ? p.slice(verb.length) : p;
-    })
-    .join(and);
-}
-
-const singled = new WeakMap<Expr, TypeExpr>();
-
-/**
- * Does a value pass one condition of a rule, taken alone?
- *
- * A rule fails as a whole; this is how the form finds which half of
- * `length(s) <= 80 and not isEmpty(s)` to talk about.
- */
-export function passes(rule: Rule, condition: Expr, value: unknown, input: unknown): boolean {
-  let type = singled.get(condition);
-  if (!type) {
-    type = { kind: 'subtype_constraint', baseType: rule.base, variable: rule.variable, constraints: [{ condition }] };
-    singled.set(condition, type);
+  if (e.type === 'binary' && e.operator in FLIP) {
+    let { left, right } = e;
+    let op = e.operator as Cmp;
+    if (!isVar(left) && !isLength(left)) { [left, right] = [right, left]; op = FLIP[op]; }
+    const x = constant(rule, right, evaluate);
+    if (x) {
+      if (isVar(left)) return { a: 'cmp', op, x };
+      if (isLength(left) && x.t === 'number') return { a: 'length', op, n: x.v };
+      return null;
+    }
   }
-  const r = check({ type, scope: rule.scope }, value, input);
-  return r.ok || r.kind !== 'constraint';
+  // not isEmpty(s), not isBlank(s)
+  if (e.type === 'unary' && e.operator === '!' && e.operand.type === 'function_call'
+    && (e.operand.name === 'isEmpty' || e.operand.name === 'isBlank')
+    && e.operand.args.length === 1 && isVar(e.operand.args[0])) {
+    return { a: 'filled' };
+  }
+  // s == 'a' or s == 'b', contains(['a', 'b'], s)
+  const members: Expr[] = [];
+  if (e.type === 'function_call' && e.name === 'contains' && e.args.length === 2
+    && e.args[0].type === 'array' && isVar(e.args[1])) {
+    members.push(...e.args[0].elements);
+  } else {
+    const walk = (x: Expr): boolean => {
+      if (x.type === 'binary' && x.operator === '||') return walk(x.left) && walk(x.right);
+      if (x.type === 'binary' && x.operator === '==') {
+        if (isVar(x.left)) { members.push(x.right); return true; }
+        if (isVar(x.right)) { members.push(x.left); return true; }
+      }
+      return false;
+    };
+    if (!(e.type === 'binary' && e.operator === '||') || !walk(e)) return null;
+  }
+  const values: (string | number)[] = [];
+  for (const m of members) {
+    const c = constant(rule, m, evaluate);
+    if (!c || (c.t !== 'text' && c.t !== 'number')) return null;
+    values.push(c.v);
+  }
+  return values.length ? { a: 'oneOf', values } : null;
+}
+
+/** Which model and which rule each id of a plan stands for: what checks are made from. */
+export interface PlanIndex {
+  nodes: Map<number, Model>;
+  rules: Map<number, Rule>;
+}
+
+export interface PlanOptions {
+  /**
+   * Work out constants that are not literals (`D2026-01-01 + P1D`) by running them. Off, only
+   * literals, `TODAY` and `NOW` are read, and nothing of the schema is ever executed.
+   */
+  evaluate?: boolean;
+  /**
+   * How many nodes a plan may hold before the rest is asked for as JSON files. A plan is a tree:
+   * a type used in two places is written out twice.
+   */
+  maxNodes?: number;
+  /** Keep a type used in several places as one shared object. Smaller in memory; not for JSON. */
+  share?: boolean;
+}
+
+/** Turn a model into a plan, and remember what each id stands for. */
+export function toPlan(schema: Schema, model: Model, opts: PlanOptions = {}): { plan: Plan; index: PlanIndex } {
+  const evaluate = opts.evaluate ?? false;
+  const index: PlanIndex = { nodes: new Map(), rules: new Map() };
+  const nodeIds = new Map<Model, number>();
+  const ruleIds = new Map<Rule, PlanRule>();
+  const shared = new Map<Model, PlanNode>();
+  let ids = 0;
+  let left = opts.maxNodes ?? Infinity;
+
+  const ruleOf = (rule: Rule): PlanRule => {
+    let planned = ruleIds.get(rule);
+    if (!planned) {
+      planned = { id: ++ids, atoms: conjuncts(rule.condition).map((c) => readAtom(rule, c, evaluate)) };
+      if (rule.label !== undefined) planned.label = rule.label;
+      const source = printExpr(rule.condition);
+      if (source !== undefined) planned.source = source;
+      ruleIds.set(rule, planned);
+      index.rules.set(planned.id, rule);
+    }
+    return planned;
+  };
+
+  const go = (m: Model): PlanNode => {
+    const known = opts.share ? shared.get(m) : undefined;
+    if (known) return known;
+    const node: PlanNode = { kind: m.kind, rules: m.rules.map(ruleOf) };
+    if (m.type) {
+      let id = nodeIds.get(m);
+      if (id === undefined) { id = ++ids; nodeIds.set(m, id); index.nodes.set(id, m); }
+      node.id = id;
+    }
+    if (m.alias !== undefined) node.alias = m.alias;
+    if (m.aliases) node.aliases = m.aliases;
+    if (m.nullable) node.nullable = true;
+    if (m.textual) node.textual = true;
+    if (m.label !== undefined) node.label = m.label;
+    if (opts.share) shared.set(m, node);
+    const composite = m.kind === 'tuple' || m.kind === 'array' || m.kind === 'union';
+    if (composite && --left < 0) { node.kind = 'json'; return node; }
+    if (m.props) node.props = m.props.map((p) => ({ key: p.key, optional: p.optional, node: go(p.model) }));
+    if (m.extras !== undefined) node.extras = typeof m.extras === 'object' ? go(m.extras) : m.extras;
+    if (m.element) node.element = go(m.element);
+    if (m.alts) node.alts = m.alts.map(go);
+    return node;
+  };
+
+  const plan: Plan = { version: 1, root: go(model) };
+  if (schema.name !== undefined) plan.name = schema.name;
+  return { plan, index };
+}
+
+/** Checks compiled in the page, one at a time, as they are first needed. Needs `new Function`. */
+export function eloChecker(index: PlanIndex): Checker {
+  const enforced = canEvaluate();
+  return {
+    enforced,
+    has: (id) => enforced && id !== undefined && index.nodes.has(id),
+    check: (id, value, input) => {
+      const model = index.nodes.get(id);
+      return model ? check(model, value, input) : { ok: true, value };
+    },
+    passes: (id, part, value, input) => {
+      const rule = index.rules.get(id);
+      if (!rule || !enforced) return undefined;
+      const condition = part === undefined ? rule.condition : conjuncts(rule.condition)[part];
+      return condition ? passes(rule, condition, value, input) : undefined;
+    },
+  };
 }

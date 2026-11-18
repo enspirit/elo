@@ -8,7 +8,7 @@
 //     loading cannot be a guess).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mount, elo, plain, $$ } from './setup.mjs';
+import { mount, mountPlanned, elo, plain, $$ } from './setup.mjs';
 
 function rng(seed) {
   let a = seed >>> 0;
@@ -140,6 +140,11 @@ function run(label, { constraints, count }) {
         const expected = verdict(v);
         form.setValue(v);
         const got = form.validate();
+        // The same form built the other way — planned as JSON, checked by a compiled module — says the same.
+        if (seed % 5 === 0) {
+          const planned = mountPlanned(source, { type: 'Root' }, { value: v }).validate();
+          assert.deepEqual([planned.valid, planned.raw, planned.problems], [got.valid, got.raw, got.problems], context(`planned form disagrees on ${JSON.stringify(v)}`));
+        }
         const detail = () => context(`value: ${JSON.stringify(v)}\nraw:   ${JSON.stringify(got.raw)}\nproblems: ${JSON.stringify(got.problems)}\nelo: ${expected.error?.message}`);
         // Refused data may be loaded differently from how it was written when a union has to guess
         // which alternative was meant, so refusals are only compared where there is no union.

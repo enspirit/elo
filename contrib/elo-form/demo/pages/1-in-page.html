@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1. All in the page · elo-form</title>
+<link rel="stylesheet" href="/lib/elo-form.css">
+<link rel="stylesheet" href="/pages/demo.css">
+</head>
+<body>
+<!--NAV-->
+<main>
+  <h1>1. All in the page</h1>
+  <p class="lede">The page carries Elo. It fetches the schema as text, reads it, builds the form, and compiles each check with <code>new Function</code> the first time it is needed. The server does nothing but hand the schema over.</p>
+  <div class="cols">
+    <section class="card">
+      <h3>What to copy</h3>
+      <ul>
+        <li>The page's script: <a href="/pages/1-in-page.js">1-in-page.js</a>, ten lines.</li>
+        <li>From the server: nothing but serving the schema. And a policy with <code>'unsafe-eval'</code>.</li>
+      </ul>
+      <div class="profile high">
+        <p class="level">Security profile: only for schemas you wrote</p>
+        <ul>
+          <li><strong>The policy has to allow <code>'unsafe-eval'</code>.</strong> That is not only about this form: it takes a protection away from the whole page, for any other script that ends up in it.</li>
+          <li><strong>Elo's compiler runs on the schema in the reader's browser</strong>, and so does what it compiles. What that code can reach is Elo's sandbox, and nothing else stands between a schema and the page.</li>
+          <li>A schema can take time: checks run on the main thread at every keystroke, and nothing bounds them.</li>
+          <li>Under a policy without <code>'unsafe-eval'</code> the form still builds, and says that nothing is checked.</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h3>Live</h3>
+      <div id="slot"></div>
+      <p class="readout" id="out" role="status">The script has not run.</p>
+    </section>
+  </div>
+  <div class="cols">
+    <section class="card">
+      <h3>This page's policy, as the server sent it</h3>
+      <pre><!--POLICY--></pre>
+    </section>
+    <section class="card">
+      <h3>The schema (<a href="/source/order.elo">demo/order.elo</a>)</h3>
+      <pre><!--SCHEMA--></pre>
+    </section>
+  </div>
+</main>
+<script src="/lib/elo-form.standalone.js"></script>
+<script type="module" src="/pages/1-in-page.js"></script>
+</body></html>

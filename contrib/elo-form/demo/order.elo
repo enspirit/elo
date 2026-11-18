@@ -1,0 +1,14 @@
+Qty   = Int(q | q > 0)
+Size  = String(s | s == 'S' or s == 'M' or s == 'L')
+Email = String(e | 'must look like an email address, such as ada@example.org':
+  let parts = split(e, '@') in
+    length(parts) == 2 and not isEmpty(first(parts)) and not contains(e, ' ')
+    and contains(last(parts), '.') and not startsWith(last(parts), '.') and not endsWith(e, '.'))
+Order = {
+  customer: String(s | 'please say who it is for': not isEmpty(s)),
+  email :? Email,
+  size: Size,
+  qty: Qty,
+  due: Date(d | d >= TODAY),
+  express: Bool
+}

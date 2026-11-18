@@ -140,6 +140,7 @@ div.elo-field.elo-kind-float [data-elo-path=".price"]     (.elo-invalid when it 
 │  ├─ span.elo-label-text [data-elo-from]                 "Price"
 │  └─ span.elo-optional                                    "optional"   (only if it may be left empty)
 ├─ input.elo-input.elo-input-number                        the control (see below)
+├─ p.elo-help                                              the `help` option's sentence, when there is one
 ├─ p.elo-hint                                              what the constraints ask; hidden while an error shows
 ├─ p.elo-note   [hidden]                                   information, e.g. which alternative Elo will pick
 └─ p.elo-error  [hidden]                                   the problem, when there is one

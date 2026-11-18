@@ -24,7 +24,35 @@ saveButton.onclick = () => {
 
 Without a bundler, `dist/elo-form.standalone.js` defines a global `EloForm` with Elo and Luxon inside:
 `EloForm.eloForm(source)`. It is what `unpkg.com/@enspirit/elo-form` serves. In this repository,
-`npm run build` also makes `dist/playground.html`, a page to try schemas in.
+`npm run build` also makes `dist/playground.html`, a page to try schemas in, and `npm run demo`
+serves the five ways of integrating a form at http://localhost:4173: each one live, over real
+requests, under its own Content-Security-Policy, with what it means for security. Its server is
+one file, [demo/server.mjs](demo/server.mjs), written to be copied from.
+
+## Without Elo in the page
+
+`eloForm` reads the schema, builds the form and compiles Elo's checks, all in the browser. The
+three are also available apart, for a page that should carry neither Elo nor `'unsafe-eval'`, or
+no script at all:
+
+```js
+// Where the schema is read: a build step, or a server.
+import { planForm, compileChecks } from '@enspirit/elo-form/plan';
+const plan = planForm(source);                // the form, as plain JSON; nothing of the schema is run
+const checksJs = compileChecks(source);       // Elo's checks, as the text of a JavaScript module
+
+// A server, with no page: the form as HTML that posts by itself, and what it posted read back.
+import { renderHtml, readPosted } from '@enspirit/elo-form/render';
+const html = renderHtml(plan, { names: true, value });
+const { raw } = readPosted(plan, new URL(request.url).searchParams, { names: true });
+
+// The page: imports nothing, evaluates nothing.
+import { hydrateForm } from '@enspirit/elo-form/render';
+const form = hydrateForm(document.querySelector('#slot'), plan, { names: true, value, checks });
+form.setProblems([{ path: '.qty', message: 'Out of stock.' }]);   // what the server said, on its field
+```
+
+[doc/server.md](doc/server.md) is the reference.
 
 ## What every type becomes
 
@@ -121,6 +149,7 @@ Full reference, written so that a person or an agent can act on it directly:
 - [doc/options.md](doc/options.md): every option, paths, labels, units, the form object
 - [doc/messages.md](doc/messages.md): every built-in text and how constraint sentences are built
 - [doc/css.md](doc/css.md): the tokens, where to set them, the DOM structure and class names, recipes
+- [doc/server.md](doc/server.md): plans, forms as HTML, compiled checks, reading a post
 - [doc/security.md](doc/security.md): what a schema you did not write can do, and Content-Security-Policy
 
 ## Limits worth knowing
@@ -132,10 +161,12 @@ Full reference, written so that a person or an agent can act on it directly:
 - **Durations** are whole, non-negative amounts per unit (seconds may have decimals), which is the one
   spelling all Elo targets read.
 - **Loading data Elo refuses** into a union is a best guess at the alternative that was meant.
-- **A strict Content-Security-Policy** without `'unsafe-eval'` stops Elo's compiled checks from running,
-  as it does for Elo's own `compile()`. The form then still builds and produces well-shaped JSON, shows
-  a notice, and reports `enforced: false`: constraints are not checked. [doc/security.md](doc/security.md)
-  says what still holds and how to validate all the same.
+- **A strict Content-Security-Policy** without `'unsafe-eval'` stops `eloForm` from compiling Elo's
+  checks in the page, as it does for Elo's own `compile()`. The form then still builds and produces
+  well-shaped JSON, shows a notice, and reports `enforced: false`. Checks compiled ahead of time
+  (`compileChecks`) run under such a policy: [doc/server.md](doc/server.md).
+- **A form with no script** posts its plain fields only. Lists, choices, durations and JSON files need
+  the page to take over.
 - **The browser's verdict is a courtesy.** Whatever receives the data runs `raw |> Type` again.
 - Built and tested against `@enspirit/elo` 1.2.4, and declared as a peer for 1.2.x only: it reads Elo's
   AST (`parseTypeExpr`, the type nodes), which may change from one minor version to the next.
@@ -148,10 +179,13 @@ type is `.` or `Data` (`{} |> { a: . }` succeeds). The form mirrors that: such a
 
 ```sh
 npm install
-npm run build       # dist/: ES module, standalone script, CSS, playground.html, types
-npm test            # behaviour, 3000 random schemas checked against Elo's own verdicts, hostile input, CSP, docs
+npm run build       # dist/: ES modules (whole, plan, render), standalone script, CSS, playground.html, types
+npm run demo        # the integration modes, served: demo/server.mjs and demo/pages/
+npm test            # behaviour, 3000 random schemas checked against Elo's own verdicts, hostile input, CSP, the demo server, docs
 npm run docs        # refresh the generated tables in doc/ after changing the CSS tokens or messages
 ```
 
-`src/schema.ts` reads schemas and runs Elo; `src/widgets.ts` is the type-to-widget mapping (`make()` at
-the bottom is the whole table above); `src/form.ts` ties them together.
+`src/schema.ts` reads schemas with Elo and turns them into a plan (`src/plan.ts`, plain JSON);
+`src/widgets.ts` is the type-to-widget mapping (`make()` at the bottom is the whole table above);
+`src/form.ts` ties them together; `src/checks.ts` writes Elo's checks out as a module; `src/dom.ts`
+is what lets the same widgets write HTML where there is no page.

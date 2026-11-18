@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Integration modes · elo-form</title>
+<link rel="stylesheet" href="/lib/elo-form.css">
+<link rel="stylesheet" href="/pages/demo.css">
+</head>
+<body>
+<!--NAV-->
+<main>
+  <h1>elo-form: five ways to put a form in a page</h1>
+  <p class="lede">The same schema, the same form, delivered five ways. They differ in what the browser has to load, what a Content-Security-Policy has to allow, and above all in <strong>where the schema's code runs</strong>: the question that matters when the person who wrote the schema is not the person filling the form in.</p>
+  <p class="lede">Every page here is served by <a href="/source/server.mjs">demo/server.mjs</a>, a single file with no dependency beyond elo-form's own, written to be copied from. Each page sends real requests (open the network panel) and carries its own policy as a response header. The schema is <a href="/source/order.elo">demo/order.elo</a>: edit it and reload.</p>
+
+  <section class="card">
+    <h2>At a glance</h2>
+    <div class="scroll">
+    <table>
+      <thead><tr>
+        <th>Mode</th><th>The browser loads</th><th>Policy must allow</th><th>The schema's code runs</th><th>Constraints checked</th><th>Without JavaScript</th><th>Fits</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><a href="/1-in-page">1. All in the page</a></td><td>The library with Elo and Luxon inside</td><td class="no"><code>'unsafe-eval'</code></td><td class="no">In the page: parsed, compiled and run there</td><td>As typed, in the page</td><td class="no">Nothing</td><td>A schema you wrote; tools; playgrounds</td></tr>
+        <tr><td><a href="/2-plan">2. Plan, server checks</a></td><td>The render half, and a plan</td><td class="yes">Scripts from you, nothing else</td><td class="yes">Never in the browser</td><td>When sent, by the server</td><td class="no">Nothing</td><td>Schemas from strangers</td></tr>
+        <tr><td><a href="/3-checks">3. Plan and compiled checks</a></td><td>The render half, a plan, a module of checks, Luxon</td><td class="yes">Scripts from you, nothing else</td><td class="part">In the page, as a script compiled on the server</td><td>As typed, in the page; again by the server</td><td class="no">Nothing</td><td>Schemas you trust, under a strict policy</td></tr>
+        <tr><td><a href="/4-html">4. HTML only</a></td><td>HTML and a stylesheet</td><td class="yes">No script at all</td><td class="yes">Never in the browser</td><td>When sent, by the server</td><td class="part">Plain fields post; lists and choices do not</td><td>The floor under modes 2 and 3</td></tr>
+        <tr><td><a href="/5-hydrate">5. HTML, then taken over</a></td><td>Mode 4, then mode 2 or 3 when the script arrives</td><td class="yes">As mode 2 or 3</td><td>As mode 2 or 3</td><td>As mode 2 or 3</td><td class="part">As mode 4</td><td>A public page that must work for everybody</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="aside">In every mode the labels, hints and error texts come from the schema: whoever wrote it decides what the form <em>says</em>. And in every mode the browser's verdict is a courtesy: the server runs <code>raw |&gt; Type</code> again on whatever it receives (<code>check()</code> in the server).</p>
+  </section>
+
+  <section class="card">
+    <h2>What the server does, in four functions</h2>
+    <ol>
+      <li><code>plan()</code>: reads the schema into the form as JSON. It parses; nothing of the schema is run. <a href="/order/plan.json">/order/plan.json</a></li>
+      <li><code>checksModule()</code>: compiles Elo's checks into a JavaScript module for a page to load. <a href="/order/checks.js">/order/checks.js</a></li>
+      <li><code>check(raw)</code>: the verdict that counts, <code>raw |&gt; Order</code>. <code>POST /order/check</code></li>
+      <li><code>htmlForm(posted)</code>: writes the form as HTML, and reads it back when it is sent. <a href="/4-html">/4-html</a></li>
+    </ol>
+  </section>
+  <div class="cols">
+    <section class="card">
+      <h3>This page's policy, as the server sent it</h3>
+      <pre><!--POLICY--></pre>
+    </section>
+    <section class="card">
+      <h3>The schema (<a href="/source/order.elo">demo/order.elo</a>)</h3>
+      <pre><!--SCHEMA--></pre>
+    </section>
+  </div>
+</main>
+</body></html>

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { mount, type, control, $, $$ } from './setup.mjs';
+import { mount, type, control, $, $$, planForm, compileChecks, renderForm } from './setup.mjs';
 
 const SOURCE = `
   Qty   = Int(q | q > 0)
@@ -18,6 +18,12 @@ writeFileSync(new URL('order.elo', out), `${SOURCE}\n_ |> Order\n`);
 const compiled = execFileSync(process.execPath, ['node_modules/@enspirit/elo/bin/eloc', '-t', 'js', new URL('order.elo', out).pathname], { encoding: 'utf8' });
 writeFileSync(new URL('order.check.mjs', out), `import { DateTime, Duration, Interval } from 'luxon';\nexport default ${compiled}`);
 const { default: checkOrder } = await import(new URL('order.check.mjs', out));
+
+// And the library's own way: the checks of the whole form, written as a module while nothing forbade it.
+writeFileSync(new URL('order.checks.mjs', out), compileChecks(SOURCE, { type: 'Order' }));
+writeFileSync(new URL('order.plan.json', out), JSON.stringify(planForm(SOURCE, { type: 'Order' })));
+const { default: orderChecks } = await import(new URL('order.checks.mjs', out));
+const luxon = await import('luxon');
 
 // From here on the page forbids evaluating strings, as a browser would under such a policy.
 const RealFunction = Function;
@@ -50,9 +56,9 @@ test('constraints are not enforced: valid no longer means that Elo accepts', () 
   const result = form.validate();
   assert.equal(result.valid, true);
   assert.equal(result.enforced, false);
-  // What a bound is worth is not known either: the hint still reads, the picker is not limited.
+  // `TODAY` needs no evaluating to be known: the hint reads and the picker is limited all the same.
   assert.equal(texts(form, '.elo-hint')[3], 'Must be today or later.');
-  assert.equal(control(form, 'Due').getAttribute('min'), null);
+  assert.match(control(form, 'Due').getAttribute('min'), /^\d{4}-\d{2}-\d{2}$/);
 });
 
 test('a validator compiled ahead of time gives Elo\'s verdict on what the form holds', () => {
@@ -60,4 +66,22 @@ test('a validator compiled ahead of time gives Elo\'s verdict on what the form h
   assert.throws(() => checkOrder(form.getRaw()), (e) => e.path === '.qty' && e.kind === 'constraint' && /^\.qty: /.test(e.message));
   type(control(form, 'Qty'), '5');
   assert.equal(checkOrder(form.getRaw()).qty, 5);
+});
+
+test('checks compiled ahead of time are enforced, field by field, with nothing evaluated in the page', async () => {
+  const { readFileSync } = await import('node:fs');
+  const plan = JSON.parse(readFileSync(new URL('order.plan.json', out), 'utf8'));
+  const form = renderForm(plan, { checks: orderChecks(luxon), value: { customer: 'Ada', size: 'M', qty: -5, due: '2001-01-01' } });
+  document.body.replaceChildren(form.element);
+  const result = form.validate();
+  assert.equal(result.enforced, true);
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.problems.map((p) => [p.path, p.message]), [
+    ['.qty', 'Must be greater than 0.'], ['.due', 'Must be today or later.'],
+  ]);
+  assert.equal($(form, '.elo-banner.elo-note'), null);
+  type(control(form, 'Qty'), '5');
+  type(control(form, 'Due'), '2999-01-01');
+  assert.equal(form.result.valid, true);
+  assert.equal(form.result.value.qty, 5);
 });

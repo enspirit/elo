@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4. HTML only · elo-form</title>
+<link rel="stylesheet" href="/lib/elo-form.css">
+<link rel="stylesheet" href="/pages/demo.css">
+</head>
+<body>
+<!--NAV-->
+<main>
+  <h1>4. HTML only</h1>
+  <p class="lede">The server writes the form as HTML. Each plain field carries a <code>name</code>, so the <code>&lt;form&gt;</code> below posts with no script at all: this page has none, and its policy allows none. Sending it is a <code>GET</code> to this same address; the server reads the fields back the way the form itself would, checks them, and answers with the form again, the problem written on its field.</p>
+  <div class="cols">
+    <section class="card">
+      <h3>What to copy</h3>
+      <ul>
+        <li>From <a href="/source/server.mjs">the server</a>: <code>htmlForm()</code>, which is <code>renderHtml</code> to write and <code>readPosted</code> to read back, with the same options both times.</li>
+        <li>From the page: a <code>&lt;form method="get"&gt;</code> around what the server wrote, and a button. View this page's source.</li>
+      </ul>
+      <div class="profile low">
+        <p class="level">Security profile: nothing runs in the browser at all</p>
+        <ul>
+          <li><strong>The page forbids every script</strong>, its own included.</li>
+          <li>As in mode 2, the schema reaches the reader only as text, and runs only on your server.</li>
+          <li><strong>Field names come from the schema.</strong> Inside a form that also posts things of yours — a token, a hidden id — a schema with an attribute of the same name would post under it. Give <code>names</code> a function that prefixes them.</li>
+          <li>What it cannot do: lists, choices between alternatives, durations and JSON files need a script to be filled in. Their buttons are there and do nothing.</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h3>Live</h3>
+      <form method="get" action="/4-html">
+        <!--FORM-->
+        <p><button class="btn">Send</button></p>
+      </form>
+      <p class="readout" role="status"><!--STATUS--></p>
+      <p class="aside">Look at the address bar after sending: the data is in it, under the names the form gave its fields.</p>
+    </section>
+  </div>
+  <div class="cols">
+    <section class="card">
+      <h3>This page's policy, as the server sent it</h3>
+      <pre><!--POLICY--></pre>
+    </section>
+    <section class="card">
+      <h3>The schema (<a href="/source/order.elo">demo/order.elo</a>)</h3>
+      <pre><!--SCHEMA--></pre>
+    </section>
+  </div>
+</main>
+</body></html>

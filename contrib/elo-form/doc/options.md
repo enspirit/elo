@@ -42,6 +42,8 @@ names, as Elo reports them: `.lines.0.qty`.
 | [`value`](#value) | JSON | none | Data to start from |
 | [`title`](#title) | string | none | Heading; frames the form |
 | [`labels`](#labels) | object or function | `{}` | Field labels |
+| [`help`](#help) | object or function | `{}` | A sentence of help under a field |
+| [`placeholders`](#placeholders) | object or function | `{}` | What an empty box shows |
 | [`units`](#units) | object or function | `{}` | Units beside number and text boxes |
 | [`messages`](#messages) | object | English | Every built-in text |
 | [`guessFromNames`](#guessfromnames) | boolean | `true` | Input type from the attribute's name |
@@ -52,6 +54,15 @@ names, as Elo reports them: `.lines.0.qty`.
 | [`name`](#name) | string | none | Hidden input mirroring the data |
 | [`onChange`](#onchange) | function | none | Called after every change |
 | [`loader`](#loader-and-file), [`file`](#loader-and-file) | function, string | none | Resolve `import … from` |
+| [`checks`](#checks) | object | none | Elo's checks, compiled ahead of time |
+| [`problems`](#problems) | array | none | Problems found elsewhere, shown on their fields |
+| [`names`](#names) | boolean or function | none | `name` attributes, for a form that posts with no script |
+| [`id`](#id) | string | `elo1`, `elo2`… | Prefix of every element id |
+| [`notice`](#notice) | boolean | `true` in `eloForm` | Say when constraints are not checked here |
+
+`type`, `loader` and `file` are about reading a schema: they belong to `eloForm`, `planForm` and
+`compileChecks`. Everything else is about the form, and is also what `renderForm`, `renderHtml`,
+`hydrateForm` and `readPosted` take. [server.md](server.md) is about those.
 
 ## Which type
 
@@ -138,6 +149,21 @@ What `labels` does **not** name:
 Every label element carries where its text came from in a `data-elo-from` attribute
 (`options.labels.qty`, `options.labels[".shipTo.zip"]`, `attribute placedOn`, `type Line`,
 `messages.kinds.date`, `options.title`).
+
+### `help`
+
+A sentence shown under a field, above its hint. Looked up like `labels`: by schema path, then by
+attribute name; or a function `(path, key) => string | undefined`. It is part of the control's
+accessible description.
+
+```js
+help: { '.due': 'When it has to be there.', qty: 'Whole boxes only.' }
+```
+
+### `placeholders`
+
+What an empty text or number box shows. Same lookup as `help`. Not applied to checkboxes,
+drop-downs or pickers.
 
 ### `units`
 
@@ -266,6 +292,49 @@ Once this many widgets have been built, the remaining tuples, lists and choices 
 as JSON files, so a pathological schema cannot build a million inputs. Default `1500`. List
 items and alternatives are built when they are added or chosen and count then.
 
+## Checking and posting
+
+### `checks`
+
+Elo's checks for this form, compiled ahead of time: what the module written by `compileChecks`
+exports (see [server.md](server.md#checks)). With them a form made by `renderForm` or
+`hydrateForm` enforces every constraint without evaluating anything in the page; without them
+such a form enforces none, and `result.enforced` is `false`. Given to `eloForm`, they replace the
+checks it would compile itself.
+
+### `problems`
+
+`{ path, message, kind?, label? }[]`: problems found elsewhere — by the server the data was sent
+to — shown on the field at each `path` (a data path, `.lines.0.qty`) from the start. An error
+thrown by Elo has exactly these four keys: pass it as caught, and a failed constraint
+(`kind: 'constraint'`) is said the way the field's own hint says it — "Must be greater than 0." —
+where Elo's message is only "constraint failed". Same as calling
+`form.setProblems(problems)` afterwards. In `renderHtml` this is how a refused form is sent back.
+
+### `names`
+
+Gives each plain field a `name`, so that the form posts inside an HTML `<form>` with no script.
+`true` names a field after its place in the data, without the leading dot: `customer.name`. A
+function `(path) => string | undefined` decides, and is the only way to name a form that is a
+single value (path `.`).
+
+Named: text, numbers, yes / no, dates, datetimes, and drop-downs of those, wherever their place in
+the data is fixed. Not named, and so not posted without a script: anything inside a list, a choice
+or free-named fields, durations, and JSON files. An unticked checkbox posts `false` (a hidden
+input before it), a ticked one `false` then `true`: the last value is the one that counts.
+`readPosted` reads such a post back ([server.md](server.md#reading-a-post)).
+
+### `id`
+
+Prefix of every element id in the form. Default `elo1`, `elo2`… in a page, counting forms, and
+`elo` in `renderHtml`. Give one when two forms made apart must not collide.
+
+### `notice`
+
+Show `messages.unchecked` above the form when constraints are not checked here. `eloForm` turns it
+on, because a page that carries Elo expects its rules to run; the others leave it off, because a
+form made from a plan without `checks` has decided that somebody else checks.
+
 ## The form object
 
 | Member | |
@@ -277,7 +346,9 @@ items and alternatives are built when they are added or chosen and count then.
 | `setValue(json)` | Loads data, replacing what is there. |
 | `reset()` | Empties the form and hides the problems shown so far. |
 | `onChange(fn)` | Adds a listener; returns a function that removes it. |
-| `schema`, `model` | The parsed schema and the tree the widgets were built from, for tooling. |
+| `setProblems(problems)` | Shows problems found elsewhere on their fields, each until its field is next edited. Returns those with no field to go on. `[]` clears them. They do not change `result`. |
+| `plan` | The [plan](server.md#the-plan) the widgets were built from. |
+| `schema` | The parsed schema. Only on a form made by `eloForm`. |
 
 Problems are shown on a field once the person has been in it, and everywhere after `validate()`.
 
@@ -289,7 +360,7 @@ Problems are shown on a field once the person has been in it, and everywhere aft
   raw: unknown,        // the data as JSON: send this
   value?: unknown,     // what Elo's JavaScript target reads from it (Luxon DateTime / Duration); only when valid
   problems: { path: string, message: string }[],   // data paths: '.lines.0.qty'
-  enforced: boolean,   // false if the page's CSP forbids running Elo's checks (see security.md)
+  enforced: boolean,   // false when nothing checks constraints here (see security.md and server.md)
 }
 ```
 

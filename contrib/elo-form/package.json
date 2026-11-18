@@ -1,7 +1,7 @@
 {
   "name": "@enspirit/elo-form",
-  "version": "0.2.0",
-  "description": "HTML forms generated from Elo type schemas, validated by Elo itself",
+  "version": "0.3.0",
+  "description": "HTML forms generated from Elo type schemas, validated by Elo itself: in the page, or planned and compiled ahead of time",
   "type": "module",
   "main": "dist/elo-form.js",
   "module": "dist/elo-form.js",
@@ -13,6 +13,14 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "default": "./dist/elo-form.js"
+    },
+    "./plan": {
+      "types": "./dist/types/planner.d.ts",
+      "default": "./dist/elo-form.plan.js"
+    },
+    "./render": {
+      "types": "./dist/types/render.d.ts",
+      "default": "./dist/elo-form.render.js"
     },
     "./elo-form.css": "./dist/elo-form.css",
     "./standalone": "./dist/elo-form.standalone.js",
@@ -36,7 +44,8 @@
     "test": "npm run build && TZ=Europe/Brussels node --test test/*.test.mjs",
     "docs": "node build.mjs && node scripts/docs.mjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm test"
+    "prepublishOnly": "npm run typecheck && npm test",
+    "demo": "npm run build && node demo/server.mjs"
   },
   "keywords": [
     "elo",

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5. HTML, then taken over · elo-form</title>
+<link rel="stylesheet" href="/lib/elo-form.css">
+<link rel="stylesheet" href="/pages/demo.css">
+</head>
+<body>
+<!--NAV-->
+<main>
+  <h1>5. HTML first, then taken over</h1>
+  <p class="lede">Mode 4 is the floor; this is the same page for a browser that runs scripts. The HTML arrives and works. When the script arrives it builds the live form from the same plan and options, keeps whatever was typed in the meantime, and takes the place of the HTML. From then on it is mode 2 — or mode 3, if it is handed checks. Turn JavaScript off and reload: the page still works, as mode 4.</p>
+  <div class="cols">
+    <section class="card">
+      <h3>What to copy</h3>
+      <ul>
+        <li>The page's script: <a href="/pages/5-hydrate.js">5-hydrate.js</a>.</li>
+        <li>From <a href="/source/server.mjs">the server</a>: everything of mode 4, plus what the form holds as a JSON block in the page, for the script to start from.</li>
+        <li>This page <a href="/5-hydrate">without checks</a> (it becomes mode 2) and <a href="/5-hydrate-checked">with checks</a> (mode 3). The server decides which, per schema.</li>
+      </ul>
+      <div class="profile low">
+        <p class="level">Security profile: that of the mode it becomes</p>
+        <ul>
+          <li>Without checks it is mode 2: nothing of the schema runs in the browser. With checks it is mode 3.</li>
+          <li>The two can be decided per schema: checks for the ones you wrote, none for the ones you did not. The page is the same.</li>
+          <li>The plan and the options must be the ones the HTML was written with; nothing checks that for you.</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h3>Live</h3>
+      <form method="get" id="order" data-checks="<!--CHECKS-->">
+        <!--FORM-->
+        <p><button class="btn">Send</button></p>
+      </form>
+      <p class="readout" id="out" role="status"><!--STATUS--></p>
+    </section>
+  </div>
+  <div class="cols">
+    <section class="card">
+      <h3>This page's policy, as the server sent it</h3>
+      <pre><!--POLICY--></pre>
+    </section>
+    <section class="card">
+      <h3>The schema (<a href="/source/order.elo">demo/order.elo</a>)</h3>
+      <pre><!--SCHEMA--></pre>
+    </section>
+  </div>
+</main>
+<script type="application/json" id="value"><!--VALUE--></script>
+<script type="module" src="/pages/5-hydrate.js"></script>
+</body></html>

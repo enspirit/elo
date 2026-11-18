@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3. Compiled checks · elo-form</title>
+<link rel="stylesheet" href="/lib/elo-form.css">
+<link rel="stylesheet" href="/pages/demo.css">
+</head>
+<body>
+<!--NAV-->
+<main>
+  <h1>3. Plan, and checks compiled on the server</h1>
+  <p class="lede">What a strict policy forbids is turning text into code <em>in the page</em>. So the server does the compiling and serves Elo's checks as a JavaScript module, which the page imports like any other script. The form is then as live as in mode 1 — every constraint, on its field, as it is typed — with no compiler in the browser and no <code>'unsafe-eval'</code>.</p>
+  <div class="cols">
+    <section class="card">
+      <h3>What to copy</h3>
+      <ul>
+        <li>The page's script: <a href="/pages/3-checks.js">3-checks.js</a>.</li>
+        <li>From <a href="/source/server.mjs">the server</a>: <code>checksModule()</code> behind <a href="/order/checks.js">/order/checks.js</a>, Luxon served at <code>/vendor/luxon.js</code>, and <code>check()</code> all the same: a reader can change anything in their own browser.</li>
+      </ul>
+      <div class="profile mid">
+        <p class="level">Security profile: strict policy, but the schema's code is in your page</p>
+        <ul>
+          <li><strong>The compiler is gone from the browser; the compiled code is not.</strong> The module holds the schema's constraints as JavaScript and runs with your page's origin, on its main thread. What it can reach is, as in mode 1, what Elo's compiled output can reach.</li>
+          <li>So this is for schemas you wrote or reviewed. For a stranger's schema, serve no checks (mode 2), or decide that Elo's sandbox is the boundary you want, and say so.</li>
+          <li>The policy stays strict: the module is a script from your own origin. Nothing is evaluated from a string.</li>
+          <li>The compiler runs on the schema on your server instead. Compiling does not run the schema; cap the size of what you accept.</li>
+          <li>Elo's output needs Luxon when it runs, so Luxon is in the page.</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h3>Live</h3>
+      <div id="slot"></div>
+      <div class="row"><button class="btn" id="send" type="button">Send</button><span class="readout" id="out" role="status">The script has not run.</span></div>
+      <p class="aside">The problems are there before anything is sent. Sending is refused in the page while there are some; once there are none, the server is asked all the same.</p>
+    </section>
+  </div>
+  <div class="cols">
+    <section class="card">
+      <h3>This page's policy, as the server sent it</h3>
+      <pre><!--POLICY--></pre>
+    </section>
+    <section class="card">
+      <h3>The schema (<a href="/source/order.elo">demo/order.elo</a>)</h3>
+      <pre><!--SCHEMA--></pre>
+    </section>
+  </div>
+</main>
+<script type="module" src="/pages/3-checks.js"></script>
+</body></html>

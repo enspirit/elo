@@ -9,6 +9,23 @@ for (const k of ['window', 'document', 'HTMLElement', 'HTMLSelectElement', 'HTML
 }
 
 export const { eloForm, resolveSchema, planSchema, simplify } = await import('../dist/elo-form.js');
+// The two halves, each from its own bundle: what a server and a page would each load.
+export const { planForm, compileChecks } = await import('../dist/elo-form.plan.js');
+export const { renderForm, renderHtml, hydrateForm, readPosted } = await import('../dist/elo-form.render.js');
+
+/** What a page gets from the module `compileChecks` writes, without a file in between. */
+export function loadChecks(source, options) {
+  const text = compileChecks(source, options);
+  return new Function(text.replace(/^export default /m, 'return '))()({ DateTime, Duration, Interval });
+}
+
+/** The form a page would build from what a server planned and compiled: JSON in, checks loaded. */
+export function mountPlanned(source, options = {}, formOptions = {}) {
+  const plan = JSON.parse(JSON.stringify(planForm(source, options)));
+  const form = renderForm(plan, { checks: loadChecks(source, options), ...formOptions });
+  document.body.replaceChildren(form.element);
+  return form;
+}
 
 /** Build a form and put it in the document. */
 export function mount(source, options) {

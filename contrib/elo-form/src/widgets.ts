@@ -6,10 +6,12 @@
  * rest. A widget never decides whether its value is valid against the schema:
  * it only reports what cannot even be read ("that is not a number").
  */
-import { DateTime, Duration } from 'luxon';
-import { check, fill, joinPhrases, passes, readRules, simplify } from './schema.js';
-import type { Check, Kind, Model, Reading, RuleText } from './schema.js';
+import {
+  DURATION_UNITS, fill, isoOf, isoTime, joinPhrases, localDate, localWall, parseDuration, parseTime, readRules, simplify,
+} from './plan.js';
+import type { Bound, Check, Checker, DurationUnit, Kind, PlanNode as Model, Reading, RuleText } from './plan.js';
 import type { Messages } from './messages.js';
+import { h, isTag } from './dom.js';
 
 // ---------------------------------------------------------------------------
 // Shared plumbing
@@ -39,7 +41,19 @@ export interface WidgetOptions {
    * ("unitPrice"), by type name ("Percent"), or computed. Display only: the data is unchanged.
    */
   units?: Record<string, UnitSpec | null> | ((path: string, key: string | undefined, types: string[]) => UnitSpec | null | undefined);
+  /** A sentence of help under a field: by schema path, by key, or computed. */
+  help?: Texts;
+  /** What an empty text or number box shows: by schema path, by key, or computed. */
+  placeholders?: Texts;
+  /**
+   * Give each plain field a `name`, so that an HTML form posts it with no script at all: `true`
+   * names a field after its place in the data (`customer.name`), a function decides.
+   */
+  names?: boolean | ((path: string) => string | undefined);
 }
+
+/** Texts for fields: by schema path (".lines.*.qty"), by key ("qty"), or computed. */
+export type Texts = Record<string, string> | ((path: string, key: string | undefined) => string | undefined);
 
 /** A unit: just its text ("cm"), or the text with where it goes and how to read it aloud. */
 export type UnitSpec = string | { text: string; position?: 'before' | 'after'; label?: string };
@@ -54,6 +68,8 @@ export interface Context {
   /** How many more widgets may be built before composite nodes fall back to a JSON file. */
   budget: number;
   byId: Map<string, Widget>;
+  /** Who says whether a value is accepted. */
+  checker: Checker;
   /** A widget changed by something other than typing: a button, a file, a toggle. */
   notify(w: Widget): void;
 }
@@ -80,20 +96,6 @@ export interface Slot {
 }
 
 type Kid = Node | string | null | undefined | false;
-
-export function h<K extends keyof HTMLElementTagNameMap>(
-  tag: K, attrs: Record<string, unknown> = {}, ...kids: Kid[]
-): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v === undefined || v === null || v === false) continue;
-    if (k === 'class') el.className = String(v);
-    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v as EventListener);
-    else el.setAttribute(k, v === true ? '' : String(v));
-  }
-  for (const kid of kids) if (kid || kid === '') el.append(kid);
-  return el;
-}
 
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
@@ -131,6 +133,16 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 function own<T>(record: Record<string, T>, name: string): T | undefined {
   return Object.prototype.hasOwnProperty.call(record, name) ? record[name] : undefined;
 }
+
+/** A text given for a field: by its place in the schema first, then by its attribute name. */
+function textFor(texts: Texts | undefined, path: string, key: string | undefined): string | undefined {
+  if (typeof texts === 'function') return texts(path, key) || undefined;
+  if (!texts) return undefined;
+  return own(texts, path) ?? (key !== undefined ? own(texts, key) : undefined) ?? undefined;
+}
+
+/** The kinds a plain HTML form can post by itself: one control, one value. */
+const POSTED: Kind[] = ['string', 'int', 'float', 'bool', 'date', 'datetime'];
 
 // ---------------------------------------------------------------------------
 // Units
@@ -248,7 +260,10 @@ export abstract class Widget {
   protected noteEl?: HTMLElement;
   protected hintEl?: HTMLElement;
   protected unitEl?: HTMLElement;
+  protected helpEl?: HTMLElement;
   protected control?: HTMLElement;
+  /** A problem reported from outside the form — by a server, say — until this value is next edited. */
+  reported: string | null = null;
 
   constructor(readonly ctx: Context, readonly model: Model, readonly slot: Slot) {
     this.id = `${ctx.uid}-${++ctx.seq}`;
@@ -282,7 +297,7 @@ export abstract class Widget {
   /** True when blank cannot stand for a value, so a required field must be filled in. */
   requiresInput(): boolean { return false; }
   /** True when the schema says more about this node than its widget already guarantees. */
-  needsCheck(): boolean { return this.model.rules.length > 0; }
+  needsCheck(): boolean { return this.model.rules.length > 0 && this.ctx.checker.has(this.model.id); }
   /** Called once the node is known to be valid. */
   afterCheck(_input: unknown): void { /* nothing by default */ }
   missingMessage(): string { return this.ctx.msgs.required; }
@@ -330,17 +345,33 @@ export abstract class Widget {
     this.ctx.byId.delete(this.id);
   }
 
+  /**
+   * The name a plain HTML form posts this value under, when it has one: a single control whose
+   * place in the data is fixed. Nothing inside a list, a choice or free-named fields has.
+   */
+  postName(): string | undefined {
+    const { names } = this.ctx.opts;
+    if (!names || !POSTED.includes(this.model.kind)) return undefined;
+    let path = '';
+    for (let w: Widget = this; w.parent; w = w.parent) {
+      if (typeof w.slot.seg !== 'string' || !(w.parent instanceof TupleWidget)) return undefined;
+      path = `.${w.slot.seg}${path}`;
+    }
+    if (typeof names === 'function') return names(path || '.') || undefined;
+    return path ? path.slice(1) : undefined;
+  }
 
   /** Turn a refusal from Elo into words for the person filling the form in. */
   explain(r: Extract<Check, { ok: false }>, value?: unknown, input?: unknown): string {
     const m = this.ctx.msgs;
     if (r.path === '.' && r.kind === 'constraint') {
       // Elo names the failed constraint by its label only; among those it could be, keep the ones this value fails.
+      const { checker } = this.ctx;
       const pool = this.reading.texts
         .filter((t) => (r.label !== undefined ? t.rule.label === r.label : !t.rule.label))
-        .filter((t, _i, all) => all.length === 1 || !passes(t.rule, t.rule.condition, value, input));
+        .filter((t, _i, all) => all.length === 1 || checker.passes(t.rule.id, undefined, value, input) !== true);
       const said = pool.map((t) => {
-        const failed = t.parts?.filter((p) => !passes(t.rule, p.condition, value, input));
+        const failed = t.parts?.filter((p) => checker.passes(t.rule.id, p.part, value, input) === false);
         if (failed?.length) return fill(m.must, { phrase: joinPhrases(failed.map((p) => p.phrase), m.phrases.and) });
         return sentenceOf(t, m);
       });
@@ -358,6 +389,8 @@ export abstract class Widget {
     this.errorEl = h('p', { class: 'elo-error', id: `${this.id}-e`, hidden: true, 'aria-live': 'polite' });
     this.noteEl = h('p', { class: 'elo-note', id: `${this.id}-n`, hidden: true, 'aria-live': 'polite' });
     if (hint) this.hintEl = h('p', { class: 'elo-hint', id: `${this.id}-h` }, hint);
+    const help = textFor(this.ctx.opts.help, this.slot.schemaPath ?? '.', this.slot.key);
+    if (help) this.helpEl = h('p', { class: 'elo-help', id: `${this.id}-p` }, help);
     return [this.hintEl, this.noteEl, this.errorEl];
   }
 
@@ -382,7 +415,12 @@ export abstract class Widget {
     this.control = control;
     control.id = this.id;
     const tail = this.tail(extraHint);
-    control.setAttribute('aria-describedby', `${this.unitEl ? `${this.id}-u ` : ''}${this.id}-h ${this.id}-n ${this.id}-e`);
+    control.setAttribute('aria-describedby', `${this.unitEl ? `${this.id}-u ` : ''}${this.helpEl ? `${this.id}-p ` : ''}${this.id}-h ${this.id}-n ${this.id}-e`);
+    const typed = isTag(control, 'textarea') || (isTag(control, 'input') && control.getAttribute('type') !== 'checkbox');
+    const placeholder = typed ? textFor(this.ctx.opts.placeholders, this.slot.schemaPath ?? '.', this.slot.key) : undefined;
+    if (placeholder) control.setAttribute('placeholder', placeholder);
+    const name = this.postName();
+    if (name) { control.setAttribute('name', name); control.setAttribute('data-elo-name', name); }
     let label: Kid = null;
     if (this.slot.bare) {
       this.ariaTarget = control;
@@ -390,7 +428,7 @@ export abstract class Widget {
     } else {
       label = h('label', { class: 'elo-label', for: this.id }, ...this.labelKids());
     }
-    return h('div', { class: `elo-field elo-kind-${this.model.kind}`, 'data-elo-id': this.id, 'data-elo-path': this.slot.schemaPath }, label, body, ...tail);
+    return h('div', { class: `elo-field elo-kind-${this.model.kind}`, 'data-elo-id': this.id, 'data-elo-path': this.slot.schemaPath }, label, body, this.helpEl, ...tail);
   }
 
   /** A titled box around several controls. `lead` goes before the title (a presence toggle). */
@@ -398,7 +436,7 @@ export abstract class Widget {
     const tail = this.tail(extraHint);
     const cls = `elo-group elo-kind-${this.model.kind}`;
     if (this.slot.bare && !lead) {
-      const el = h('div', { class: `${cls} elo-bare`, role: 'group', 'aria-label': this.slot.label, 'data-elo-id': this.id, 'data-elo-path': this.slot.schemaPath }, tail[0], body, tail[1], tail[2]);
+      const el = h('div', { class: `${cls} elo-bare`, role: 'group', 'aria-label': this.slot.label, 'data-elo-id': this.id, 'data-elo-path': this.slot.schemaPath }, this.helpEl, tail[0], body, tail[1], tail[2]);
       this.ariaTarget = el;
       return el;
     }
@@ -406,7 +444,7 @@ export abstract class Widget {
       ? h('label', { class: 'elo-check' }, lead, ...this.labelKids())
       : h('span', {}, ...this.labelKids());
     return h('fieldset', { class: cls, 'data-elo-id': this.id, 'data-elo-path': this.slot.schemaPath },
-      h('legend', { class: 'elo-label' }, title), tail[0], body, tail[1], tail[2]);
+      h('legend', { class: 'elo-label' }, title), this.helpEl, tail[0], body, tail[1], tail[2]);
   }
 }
 
@@ -431,7 +469,7 @@ function selectOf(options: (string | number)[], msgs: Messages): HTMLSelectEleme
 }
 
 function setSelect(select: HTMLSelectElement, value: string): void {
-  if (value !== '' && ![...select.options].some((o) => o.value === value)) {
+  if (value !== '' && !Array.from(select.options).some((o) => o.value === value)) {
     // A value the schema does not list: keep it visible so validation can say so, rather than dropping it.
     select.append(h('option', { value }, value));
   }
@@ -466,11 +504,11 @@ class TextWidget extends Widget {
 
   isBlank() { return this.input.value === ''; }
   /** A drop-down left on "Choose…" holds none of the values it lists: that needs no evaluating to know. */
-  requiresInput() { return this.input instanceof HTMLSelectElement && !this.reading.facts.options?.includes(''); }
+  requiresInput() { return isTag(this.input, 'select') && !this.reading.facts.options?.includes(''); }
   raw() { return this.input.value; }
   set(v: unknown) {
     const text = scalarText(v);
-    if (this.input instanceof HTMLSelectElement) setSelect(this.input, text);
+    if (isTag(this.input, 'select')) setSelect(this.input as HTMLSelectElement, text);
     else this.input.value = text;
   }
 }
@@ -492,7 +530,7 @@ class NumberWidget extends Widget {
       this.input = selectOf(numeric, ctx.msgs);
     } else {
       // The numeric keypads have no minus key on some phones: only use them when no negative can be valid.
-      const positive = typeof min?.value === 'number' && min.value >= 0;
+      const positive = min?.of === 'number' && (min.value as number) >= 0;
       this.input = h('input', {
         class: 'elo-input elo-input-number', type: 'text', autocomplete: 'off',
         inputmode: positive ? (this.int ? 'numeric' : 'decimal') : 'text',
@@ -519,7 +557,7 @@ class NumberWidget extends Widget {
   }
   set(v: unknown) {
     const text = scalarText(v);
-    if (this.input instanceof HTMLSelectElement) setSelect(this.input, text);
+    if (isTag(this.input, 'select')) setSelect(this.input as HTMLSelectElement, text);
     else this.input.value = text;
   }
 }
@@ -541,7 +579,10 @@ class BoolWidget extends Widget {
       this.box = h('input', { type: 'checkbox', class: 'elo-checkbox' });
       // A checkbox is labelled by the text beside it, so it keeps a visible label even where others go bare.
       this.slot.bare = false;
-      const wrapper = h('span', { class: 'elo-check-control' }, this.box);
+      // A browser posts nothing for an unticked box: the hidden `false` before it is what says so.
+      const name = this.postName();
+      if (name) this.box.setAttribute('value', 'true');
+      const wrapper = h('span', { class: 'elo-check-control' }, name && h('input', { type: 'hidden', name, value: 'false' }), this.box);
       this.el = this.field(wrapper, this.box);
       this.el.classList.add('elo-inline');
     }
@@ -558,9 +599,10 @@ class BoolWidget extends Widget {
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function dateBound(b: { value: unknown; exclusive: boolean } | undefined, step: number): DateTime | undefined {
-  if (!b || !DateTime.isDateTime(b.value)) return undefined;
-  return b.exclusive ? b.value.plus({ days: step }) : b.value;
+/** A bound as the day a date picker stops at. */
+function dateBound(b: Bound | undefined, step: number): string | undefined {
+  if (!b || b.of !== 'time') return undefined;
+  return localDate(b.value as number, b.exclusive ? step : 0);
 }
 
 class DateWidget extends Widget {
@@ -571,7 +613,7 @@ class DateWidget extends Widget {
     const { min, max } = this.reading.facts;
     this.input = h('input', {
       class: 'elo-input elo-input-date', type: 'date',
-      min: dateBound(min, 1)?.toISODate(), max: dateBound(max, -1)?.toISODate(),
+      min: dateBound(min, 1), max: dateBound(max, -1),
     });
     this.el = this.field(this.input, this.input);
   }
@@ -584,9 +626,11 @@ class DateWidget extends Widget {
   }
   raw() { return this.input.value || undefined; }
   set(v: unknown) {
-    if (DateTime.isDateTime(v)) this.input.value = v.toISODate() ?? '';
-    else if (v instanceof Date) this.input.value = DateTime.fromJSDate(v).toISODate() ?? '';
-    else this.input.value = typeof v === 'string' ? v.slice(0, 10) : '';
+    if (typeof v === 'string') { this.input.value = v.slice(0, 10); return; }
+    // A date object, from a date library or the language itself: the day it shows where it was made.
+    const iso = isoOf(v);
+    const at = iso === undefined ? undefined : parseTime(iso);
+    this.input.value = at ? (v instanceof Date ? localDate(at.ms) : iso!.slice(0, 10)) : '';
   }
 }
 
@@ -596,37 +640,45 @@ class DatetimeWidget extends Widget {
   constructor(ctx: Context, model: Model, slot: Slot) {
     super(ctx, model, slot);
     const { min, max } = this.reading.facts;
-    const wall = (b: typeof min) => (b && DateTime.isDateTime(b.value) ? b.value.toLocal().toFormat("yyyy-MM-dd'T'HH:mm") : undefined);
+    const wall = (b: typeof min) => (b && b.of === 'time' ? localWall(b.value as number) : undefined);
     this.input = h('input', { class: 'elo-input elo-input-datetime', type: 'datetime-local', min: wall(min), max: wall(max) });
     this.el = this.field(this.input, this.input);
   }
 
   private half() { return !!this.input.validity?.badInput; }
-  private parsed() { return DateTime.fromISO(this.input.value); }
+  private parsed() { return parseTime(this.input.value); }
   isBlank() { return this.input.value === '' && !this.half(); }
   requiresInput() { return true; }
   localError() {
-    return this.half() || (this.input.value !== '' && !this.parsed().isValid) ? this.ctx.msgs.notDatetime : null;
+    return this.half() || (this.input.value !== '' && !this.parsed()) ? this.ctx.msgs.notDatetime : null;
   }
   raw() {
     if (this.input.value === '') return undefined;
     const d = this.parsed();
-    if (!d.isValid) return this.input.value;
+    if (!d) return this.input.value;
     const mode = this.ctx.opts.datetimeOffset;
-    if (mode === 'none') return d.toFormat("yyyy-MM-dd'T'HH:mm:ss");
-    return (mode === 'utc' ? d.toUTC() : d).toISO({ suppressMilliseconds: true });
+    if (mode === 'none') {
+      const two = (n: number) => String(n).padStart(2, '0');
+      const { year, month, day, hour, minute, second } = d.wall;
+      return `${String(year).padStart(4, '0')}-${two(month)}-${two(day)}T${two(hour)}:${two(minute)}:${two(second)}`;
+    }
+    return isoTime(d.ms, mode === 'utc');
   }
   set(v: unknown) {
-    let d: DateTime | undefined;
-    if (DateTime.isDateTime(v)) d = v;
-    else if (v instanceof Date) d = DateTime.fromJSDate(v);
-    else if (typeof v === 'string') d = DateTime.fromISO(v, { setZone: this.ctx.opts.datetimeOffset === 'none' });
-    if (!d || !d.isValid) { this.input.value = ''; return; }
+    const iso = isoOf(v);
+    const at = iso === undefined ? undefined : parseTime(iso);
+    if (!at) { this.input.value = ''; return; }
     // The picker shows wall-clock time: the viewer's own, unless offsets are not in play at all.
-    if (this.ctx.opts.datetimeOffset !== 'none') d = d.toLocal();
-    const seconds = d.second !== 0;
+    if (this.ctx.opts.datetimeOffset === 'none') {
+      const two = (n: number) => String(n).padStart(2, '0');
+      const { year, month, day, hour, minute, second } = at.wall;
+      if (second !== 0) this.input.step = '1';
+      this.input.value = `${String(year).padStart(4, '0')}-${two(month)}-${two(day)}T${two(hour)}:${two(minute)}${second !== 0 ? `:${two(second)}` : ''}`;
+      return;
+    }
+    const seconds = new Date(at.ms).getSeconds() !== 0;
     if (seconds) this.input.step = '1';
-    this.input.value = d.toFormat(seconds ? "yyyy-MM-dd'T'HH:mm:ss" : "yyyy-MM-dd'T'HH:mm");
+    this.input.value = localWall(at.ms, seconds);
   }
 }
 
@@ -634,7 +686,6 @@ const UNITS = [
   ['years', 'Y', false], ['months', 'M', false], ['weeks', 'W', false], ['days', 'D', true],
   ['hours', 'H', true], ['minutes', 'M', true], ['seconds', 'S', false],
 ] as const;
-type DurationUnit = (typeof UNITS)[number][0];
 
 class DurationWidget extends Widget {
   private inputs = new Map<DurationUnit, HTMLInputElement>();
@@ -691,17 +742,11 @@ class DurationWidget extends Widget {
   }
   set(v: unknown) {
     for (const input of this.inputs.values()) input.value = '';
-    const d = Duration.isDuration(v) ? v : typeof v === 'string' ? Duration.fromISO(v) : undefined;
-    if (d && d.isValid) {
-      const o = d.toObject() as Record<string, number | undefined>;
-      const seconds = (o.seconds ?? 0) + (o.milliseconds ?? 0) / 1000;
-      const months = (o.months ?? 0) + (o.quarters ?? 0) * 3;
-      const parts: Record<DurationUnit, number> = {
-        years: o.years ?? 0, months, weeks: o.weeks ?? 0, days: o.days ?? 0,
-        hours: o.hours ?? 0, minutes: o.minutes ?? 0, seconds,
-      };
+    const iso = isoOf(v);
+    const o = iso === undefined ? undefined : parseDuration(iso);
+    if (o) {
       let any = false;
-      for (const [unit] of UNITS) if (parts[unit]) { this.inputs.get(unit)!.value = String(parts[unit]); any = true; }
+      for (const unit of DURATION_UNITS) if (o[unit]) { this.inputs.get(unit)!.value = String(o[unit]); any = true; }
       if (!any) this.inputs.get('days')!.value = '0';
     }
     this.expand(this.expanded);
@@ -824,7 +869,7 @@ export class JsonWidget extends Widget {
   missingMessage() { return this.ctx.msgs.jsonRequired; }
   localError() { return this.err; }
   /** When this stands in for a typed node, the whole upload is checked against that type. */
-  needsCheck() { return !!this.model.type; }
+  needsCheck() { return this.ctx.checker.has(this.model.id); }
   raw() { return this.val; }
   set(v: unknown) {
     this.forget();
@@ -870,7 +915,7 @@ class TupleWidget extends Widget {
     const { ctx, model, slot } = this;
     for (const p of model.props!) {
       const named = labelFor(ctx, joinPath(slot.schemaPath ?? '.', p.key), p.key);
-      const child = make(ctx, p.model, {
+      const child = make(ctx, p.node, {
         label: named.label, from: named.from, optional: p.optional,
         depth: slot.depth + 1, key: p.key, parent: this, seg: p.key,
       });
@@ -884,7 +929,7 @@ class TupleWidget extends Widget {
     }
     if (!this.fields.length && !this.extras) this.body.append(h('p', { class: 'elo-static' }, ctx.msgs.noDetails));
     // A few one-box fields sit side by side when they are a row of a list.
-    const short = model.props!.every((p) => SINGLE.includes(simplify(p.model).kind) || simplify(p.model).kind === 'bool');
+    const short = model.props!.every((p) => SINGLE.includes(simplify(p.node).kind) || simplify(p.node).kind === 'bool');
     if (short && !this.extras && this.fields.length <= 4 && typeof slot.seg === 'function') this.el.classList.add('elo-compact');
   }
 
@@ -1123,7 +1168,9 @@ class UnionWidget extends Widget {
     });
     const choices = h('div', { class: 'elo-choices' });
     const radio = (i: number, text: string, from: string) => {
-      const input = h('input', { type: 'radio', name: this.id, value: String(i), onchange: () => this.pick(i) });
+      // Which alternative is chosen is the form's business, not data: where fields are posted by
+      // name, the radios belong to no form at all, and so are never posted.
+      const input = h('input', { type: 'radio', name: this.id, value: String(i), form: ctx.opts.names ? `${ctx.uid}-none` : undefined, onchange: () => this.pick(i) });
       choices.append(h('label', { class: 'elo-choice' }, input, h('span', { 'data-elo-from': from }, text)));
       return input;
     };
@@ -1158,7 +1205,8 @@ class UnionWidget extends Widget {
     // No data means "none" where there is such a choice — never a value the form made up.
     if (v === undefined || (v === null && this.noneRadio)) { this.pick(this.noneRadio ? -1 : this.start); return; }
     // The alternative Elo itself would take, else the first of the right shape.
-    let i = this.alts.findIndex((a) => (a.type ? check(a, v, v).ok : false));
+    const { checker } = this.ctx;
+    let i = this.alts.findIndex((a) => checker.has(a.id) && checker.check(a.id!, v, v).ok);
     if (i < 0) i = this.alts.findIndex((a) => fits(a, v));
     if (i < 0) i = this.start;
     this.pick(i);
@@ -1171,7 +1219,8 @@ class UnionWidget extends Widget {
     if (this.active > 0) {
       const v = this.value();
       for (let j = 0; j < this.active; j++) {
-        if (this.alts[j].type && check(this.alts[j], v, input).ok) {
+        const { checker } = this.ctx;
+        if (checker.has(this.alts[j].id) && checker.check(this.alts[j].id!, v, input).ok) {
           note = fill(this.ctx.msgs.readAs, { label: this.labels[j] });
           break;
         }

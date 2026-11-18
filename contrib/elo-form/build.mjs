@@ -6,6 +6,9 @@ mkdirSync('dist', { recursive: true });
 const common = { entryPoints: ['src/index.ts'], bundle: true, target: 'es2020', logLevel: 'warning' };
 
 await build({ ...common, format: 'esm', outfile: 'dist/elo-form.js', external: ['@enspirit/elo', 'luxon'] });
+// The two halves on their own: reading a schema (Elo, no page) and building a form (a plan, no Elo).
+await build({ ...common, entryPoints: ['src/planner.ts'], format: 'esm', outfile: 'dist/elo-form.plan.js', external: ['@enspirit/elo', 'luxon'] });
+await build({ ...common, entryPoints: ['src/render.ts'], format: 'esm', outfile: 'dist/elo-form.render.js' });
 await build({ ...common, format: 'iife', globalName: 'EloForm', outfile: 'dist/elo-form.standalone.js', minify: true });
 copyFileSync('src/elo-form.css', 'dist/elo-form.css');
 

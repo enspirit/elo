@@ -20,7 +20,7 @@ test('the generated tables in doc/ are up to date', () => {
 test('every option is documented', () => {
   const doc = read('doc/options.md');
   const sources = [
-    ['src/form.ts', 'EloFormOptions'], ['src/widgets.ts', 'WidgetOptions'], ['src/schema.ts', 'ResolveOptions'],
+    ['src/form.ts', 'FormOptions'], ['src/widgets.ts', 'WidgetOptions'], ['src/schema.ts', 'ResolveOptions'],
   ];
   const names = [];
   for (const [file, name] of sources) {

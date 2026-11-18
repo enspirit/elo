@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2. Plan, server checks · elo-form</title>
+<link rel="stylesheet" href="/lib/elo-form.css">
+<link rel="stylesheet" href="/pages/demo.css">
+</head>
+<body>
+<!--NAV-->
+<main>
+  <h1>2. Plan in the page, checks on the server</h1>
+  <p class="lede">The server reads the schema into a <strong>plan</strong>: plain JSON, with each constraint reduced to what a form can say about it. The page builds the form from that. It carries neither Elo nor Luxon and evaluates nothing. Hints, drop-downs and picker bounds are all there; whether a value is <em>accepted</em> is asked of the server, whose answer is shown on the field it is about.</p>
+  <div class="cols">
+    <section class="card">
+      <h3>What to copy</h3>
+      <ul>
+        <li>The page's script: <a href="/pages/2-plan.js">2-plan.js</a>.</li>
+        <li>From <a href="/source/server.mjs">the server</a>: <code>plan()</code> behind <a href="/order/plan.json">/order/plan.json</a>, and <code>check()</code> behind <code>POST /order/check</code>, which answers 422 with Elo's error as it was thrown.</li>
+      </ul>
+      <div class="profile low">
+        <p class="level">Security profile: the one for schemas from strangers</p>
+        <ul>
+          <li><strong>Nothing of the schema ever runs in the browser.</strong> A plan is data, and the form shows it as text: no markup, no address, no script can come out of it.</li>
+          <li><strong>Reading the schema runs nothing either</strong>: <code>planForm</code> parses. The one place the schema executes is where you already run it to answer.</li>
+          <li>The policy can be as strict as you like.</li>
+          <li>What is left to a hostile schema: saying anything in a label, asking for an <code>email</code> or a <code>password</code> so that the browser offers to fill it in (<code>guessFromNames: false</code>), and being large (<code>maxNodes</code>).</li>
+          <li>The cost is a round trip before a constraint is reported.</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h3>Live</h3>
+      <div id="slot"></div>
+      <div class="row"><button class="btn" id="send" type="button">Send</button><span class="readout" id="out" role="status">The script has not run.</span></div>
+      <p class="aside">Send it as it is: the server refuses the quantity, and its refusal lands on the field. Fix that, send again: it refuses the date. The form itself never said a word, because it checks nothing here.</p>
+    </section>
+  </div>
+  <div class="cols">
+    <section class="card">
+      <h3>This page's policy, as the server sent it</h3>
+      <pre><!--POLICY--></pre>
+    </section>
+    <section class="card">
+      <h3>The schema (<a href="/source/order.elo">demo/order.elo</a>)</h3>
+      <pre><!--SCHEMA--></pre>
+    </section>
+  </div>
+</main>
+<script type="module" src="/pages/2-plan.js"></script>
+</body></html>
