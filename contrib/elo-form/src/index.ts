@@ -35,5 +35,7 @@ export type { Schema, Model, ResolveOptions } from './schema.js';
 export { planForm, compileChecks } from './planner.js';
 export type { PlanFormOptions, ChecksOptions } from './planner.js';
 export { checkerFrom, simplify } from './plan.js';
+export { workerChecks } from './remote.js';
+export type { WorkerChecksOptions, WorkerLike } from './remote.js';
 export type { Plan, PlanNode, PlanRule, Atom, PlanScalar, Kind, Checker, CompiledChecks } from './plan.js';
 export type { FallbackInfo, WidgetOptions, UnitSpec, Texts } from './widgets.js';

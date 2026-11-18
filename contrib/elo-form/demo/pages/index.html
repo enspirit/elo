@@ -10,8 +10,8 @@
 <body>
 <!--NAV-->
 <main>
-  <h1>elo-form: five ways to put a form in a page</h1>
-  <p class="lede">The same schema, the same form, delivered five ways. They differ in what the browser has to load, what a Content-Security-Policy has to allow, and above all in <strong>where the schema's code runs</strong>: the question that matters when the person who wrote the schema is not the person filling the form in.</p>
+  <h1>elo-form: six ways to put a form in a page</h1>
+  <p class="lede">The same schema, the same form, delivered six ways. They differ in what the browser has to load, what a Content-Security-Policy has to allow, and above all in <strong>where the schema's code runs</strong>: the question that matters when the person who wrote the schema is not the person filling the form in.</p>
   <p class="lede">Every page here is served by <a href="/source/server.mjs">demo/server.mjs</a>, a single file with no dependency beyond elo-form's own, written to be copied from. Each page sends real requests (open the network panel) and carries its own policy as a response header. The schema is <a href="/source/order.elo">demo/order.elo</a>: edit it and reload.</p>
 
   <section class="card">
@@ -25,8 +25,9 @@
         <tr><td><a href="/1-in-page">1. All in the page</a></td><td>The library with Elo and Luxon inside</td><td class="no"><code>'unsafe-eval'</code></td><td class="no">In the page: parsed, compiled and run there</td><td>As typed, in the page</td><td class="no">Nothing</td><td>A schema you wrote; tools; playgrounds</td></tr>
         <tr><td><a href="/2-plan">2. Plan, server checks</a></td><td>The render half, and a plan</td><td class="yes">Scripts from you, nothing else</td><td class="yes">Never in the browser</td><td>When sent, by the server</td><td class="no">Nothing</td><td>Schemas from strangers</td></tr>
         <tr><td><a href="/3-checks">3. Plan and compiled checks</a></td><td>The render half, a plan, a module of checks, Luxon</td><td class="yes">Scripts from you, nothing else</td><td class="part">In the page, as a script compiled on the server</td><td>As typed, in the page; again by the server</td><td class="no">Nothing</td><td>Schemas you trust, under a strict policy</td></tr>
-        <tr><td><a href="/4-html">4. HTML only</a></td><td>HTML and a stylesheet</td><td class="yes">No script at all</td><td class="yes">Never in the browser</td><td>When sent, by the server</td><td class="part">Plain fields post; lists and choices do not</td><td>The floor under modes 2 and 3</td></tr>
-        <tr><td><a href="/5-hydrate">5. HTML, then taken over</a></td><td>Mode 4, then mode 2 or 3 when the script arrives</td><td class="yes">As mode 2 or 3</td><td>As mode 2 or 3</td><td>As mode 2 or 3</td><td class="part">As mode 4</td><td>A public page that must work for everybody</td></tr>
+        <tr><td><a href="/4-html">4. HTML only</a></td><td>HTML and a stylesheet</td><td class="yes">No script at all</td><td class="yes">Never in the browser</td><td>When sent, by the server</td><td class="part">Plain fields post; lists and choices do not</td><td>The floor under modes 2, 3 and 6</td></tr>
+        <tr><td><a href="/5-hydrate">5. HTML, then taken over</a></td><td>Mode 4, then mode 2, 3 or 6 when the script arrives</td><td class="yes">As mode 2, 3 or 6</td><td>As mode 2, 3 or 6</td><td>As mode 2, 3 or 6</td><td class="part">As mode 4</td><td>A public page that must work for everybody</td></tr>
+        <tr><td><a href="/6-worker">6. Plan, and checks in a worker</a></td><td>The render half, a plan; a worker holding the checks and Luxon</td><td class="yes">Scripts and workers from you, nothing else</td><td class="yes">In a worker: no page, and no network under its own policy</td><td>As typed, a moment later; again by the server</td><td class="no">Nothing</td><td>Schemas from strangers, checked as typed</td></tr>
       </tbody>
     </table>
     </div>
@@ -41,6 +42,7 @@
       <li><code>check(raw)</code>: the verdict that counts, <code>raw |&gt; Order</code>. <code>POST /order/check</code></li>
       <li><code>htmlForm(posted)</code>: writes the form as HTML, and reads it back when it is sent. <a href="/4-html">/4-html</a></li>
     </ol>
+    <p class="aside">For mode 6 it also serves the worker's script, <a href="/lib/elo-form.worker.js">/lib/elo-form.worker.js</a>, with a policy header of its own: the one line that keeps the schema's code off the network.</p>
   </section>
   <div class="cols">
     <section class="card">

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6. Checks in a worker · elo-form</title>
+<link rel="stylesheet" href="/lib/elo-form.css">
+<link rel="stylesheet" href="/pages/demo.css">
+</head>
+<body>
+<!--NAV-->
+<main>
+  <h1>6. Plan, and compiled checks in a worker</h1>
+  <p class="lede">Mode 3 puts the schema's compiled constraints in your page. Here the same module is loaded by a <strong>worker</strong> instead: the page builds the form from the plan, asks the worker about each value, and shows the answers when they arrive. The form is as live as in modes 1 and 3; the schema's code never runs where the page is.</p>
+  <div class="cols">
+    <section class="card">
+      <h3>What to copy</h3>
+      <ul>
+        <li>The page's script: <a href="/pages/6-worker.js">6-worker.js</a>. A submit handler awaits <code>form.validated()</code>, since answers come later.</li>
+        <li>From <a href="/source/server.mjs">the server</a>: <code>checksModule()</code> as in mode 3, the worker's script at <code>/lib/elo-form.worker.js</code> <em>with its own policy header</em>, and <code>check()</code> all the same.</li>
+      </ul>
+      <div class="profile low">
+        <p class="level">Security profile: strict policy, and the schema's code is kept away from the page</p>
+        <ul>
+          <li><strong>No document, no cookies, no page variables.</strong> A worker has none of them. All it exchanges with the page is JSON: values in, verdicts out.</li>
+          <li><strong>No network, if you say so.</strong> A worker obeys the policy its own script was served with, not the page's. This one is served with <code>default-src 'none'; script-src 'self'</code>: it can import the checks and Luxon from your origin, and cannot fetch anything.</li>
+          <li><strong>It cannot hang the page.</strong> A round of questions unanswered after two seconds terminates the worker; the form goes on with <code>enforced: false</code> and the server decides, as in mode 2.</li>
+          <li>What is left: the worker shares your origin, so its storage (IndexedDB, caches) is reachable from it. Keep nothing there that matters, or serve the form's page from an origin of its own.</li>
+          <li>The server's verdict is still the one that counts.</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h3>Live</h3>
+      <div id="slot"></div>
+      <div class="row"><button class="btn" id="send" type="button">Send</button><span class="readout" id="out" role="status">The script has not run.</span></div>
+      <p class="aside">The problems are there before anything is sent. Sending is refused in the page while there are some; once there are none, the server is asked all the same.</p>
+    </section>
+  </div>
+  <div class="cols">
+    <section class="card">
+      <h3>This page's policy, as the server sent it</h3>
+      <pre><!--POLICY--></pre>
+    </section>
+    <section class="card">
+      <h3>The worker's policy</h3>
+      <pre><!--WORKERPOLICY--></pre>
+      <h3>The schema (<a href="/source/order.elo">demo/order.elo</a>)</h3>
+      <pre><!--SCHEMA--></pre>
+    </section>
+  </div>
+</main>
+<script type="module" src="/pages/6-worker.js"></script>
+</body></html>

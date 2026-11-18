@@ -93,6 +93,40 @@ A script loaded from a file is not `eval`: this works under a policy without `'u
 Checks may be loaded after the form is on screen: build it without, and replace it with
 `hydrateForm(form.element, plan, { ...options, checks, value: form.getRaw() })` when they arrive.
 
+### In a worker
+
+The module of checks is the schema's constraints as JavaScript. Loaded by the page, it runs with
+the page. For a schema you did not write, let a worker load it instead:
+
+```js
+import { renderForm, workerChecks } from '@enspirit/elo-form/render';
+
+const worker = new Worker('/lib/elo-form.worker.js', { type: 'module' });   // '@enspirit/elo-form/worker'
+const checks = await workerChecks(worker, { checks: '/order/checks.js' }).catch(() => undefined);
+const form = renderForm(plan, { checks });
+
+button.onclick = async () => {
+  const { valid } = await form.validated({ focus: true });
+  if (valid) send(form.getRaw());
+};
+```
+
+- The worker imports the checks. Written with `format: 'module'` they import Luxon themselves;
+  written as a factory (the default), say where Luxon is: `workerChecks(worker, { checks, luxon: '/vendor/luxon.js' })`.
+- **Answers come later.** The form asks, shows nothing wrong yet, and says it again when the
+  worker answers: `onChange` listeners are called then too. Meanwhile `result.pending` is `true`
+  and `result.valid` is `false`. `await form.validated()` is `validate()` once everything is
+  answered. `result.value` is never set: what Elo made of the data stays in the worker.
+- **Serve the worker's script with a policy of its own**: `Content-Security-Policy: default-src
+  'none'; script-src 'self'`. A worker obeys the headers its script came with, not the page's.
+  With these it can import the checks and Luxon from your origin, and fetch nothing. The page's
+  policy needs `worker-src 'self'`.
+- `timeout` (default 2000 ms): a round of questions not answered by then terminates the worker.
+  The form goes on with `result.enforced` false, and the server decides. `loadTimeout` (default
+  10000 ms) bounds loading the checks; `workerChecks` rejects when they cannot be loaded.
+- A form that has no value yet for a choice between alternatives (`A|B`) picks the alternative by
+  shape when data is loaded into it, since Elo's answer is not there yet.
+
 ## Writing the form as HTML
 
 ```js

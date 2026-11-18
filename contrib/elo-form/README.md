@@ -25,7 +25,7 @@ saveButton.onclick = () => {
 Without a bundler, `dist/elo-form.standalone.js` defines a global `EloForm` with Elo and Luxon inside:
 `EloForm.eloForm(source)`. It is what `unpkg.com/@enspirit/elo-form` serves. In this repository,
 `npm run build` also makes `dist/playground.html`, a page to try schemas in, and `npm run demo`
-serves the five ways of integrating a form at http://localhost:4173: each one live, over real
+serves the six ways of integrating a form at http://localhost:4173: each one live, over real
 requests, under its own Content-Security-Policy, with what it means for security. Its server is
 one file, [demo/server.mjs](demo/server.mjs), written to be copied from.
 

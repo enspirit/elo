@@ -8,7 +8,7 @@ and class name here is checked against the code by `npm test`.
 | [options.md](options.md) | Call `eloForm(source, options)`: every option, paths, labels, **units**, the form object and its result |
 | [messages.md](messages.md) | Change or translate any built-in text |
 | [server.md](server.md) | Split the work: a plan as JSON, the form as HTML, Elo's checks as a module, for a page with no Elo and no `eval` |
-| `npm run demo`, then http://localhost:4173 | See the five integration modes live, each with its policy and its security profile; [../demo/server.mjs](../demo/server.mjs) and `demo/pages/*.js` are the code to copy |
+| `npm run demo`, then http://localhost:4173 | See the six integration modes live, each with its policy and its security profile; [../demo/server.mjs](../demo/server.mjs) and `demo/pages/*.js` are the code to copy |
 | [security.md](security.md) | Take a schema you did not write, or run under a Content-Security-Policy |
 | [css.md](css.md) | Restyle: the `--elo-*` tokens, where to set them, the DOM structure and class names, recipes |
 | [../README.md](../README.md) | What the library does, which widget each Elo type becomes, known limits |

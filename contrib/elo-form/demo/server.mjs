@@ -84,6 +84,8 @@ const POLICIES = {
   '1-in-page': `${BASE}; script-src 'self' 'unsafe-eval'`,
   '2-plan': `${BASE}; script-src 'self'`,
   '3-checks': `${BASE}; script-src 'self'`,
+  // The checks run in a worker, which is started from this origin and from nowhere else.
+  '6-worker': `${BASE}; script-src 'self'; worker-src 'self'`,
   // No script-src at all: `default-src 'none'` forbids every script.
   '4-html': BASE,
   '5-hydrate': `${BASE}; script-src 'self'`,
@@ -93,6 +95,13 @@ const POLICIES = {
 // ---------------------------------------------------------------------------
 // HTTP
 // ---------------------------------------------------------------------------
+
+/**
+ * The worker's own policy. A worker answers to the headers its script came with, not to the
+ * page's: this one may import scripts from here (the checks, Luxon) and reach nothing else —
+ * no fetch, no socket. That is what makes a worker more than a second thread.
+ */
+const WORKER_POLICY = "default-src 'none'; script-src 'self'";
 
 const escape = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /** JSON inside a <script type="application/json">: `<` must not be able to close the element. */
@@ -104,23 +113,26 @@ function page(name, fill = {}) {
   const body = read(`pages/${name.replace(/-checked$/, '')}.html`)
     .replace('<!--NAV-->', () => read('pages/nav.html'))
     .replace('<!--POLICY-->', () => escape(policy.split('; ').join(';\n')))
+    .replace('<!--WORKERPOLICY-->', () => escape(WORKER_POLICY.split('; ').join(';\n')))
     .replace('<!--SCHEMA-->', () => escape(schema()))
     .replace(/<!--([A-Z]+)-->/g, (_, key) => fill[key] ?? '');
   return { status: 200, type: 'text/html; charset=utf-8', body, policy };
 }
 
-const file = (path, type) => ({ status: 200, type, body: readFileSync(here(path)) });
+const file = (path, type, policy) => ({ status: 200, type, body: readFileSync(here(path)), policy });
 const json = (value, status = 200) => ({ status, type: 'application/json', body: JSON.stringify(value) });
 
 const STATIC = {
   '/lib/elo-form.css': ['../dist/elo-form.css', 'text/css'],
   '/lib/elo-form.render.js': ['../dist/elo-form.render.js', 'text/javascript'],
+  '/lib/elo-form.worker.js': ['../dist/elo-form.worker.js', 'text/javascript', WORKER_POLICY],
   '/lib/elo-form.standalone.js': ['../dist/elo-form.standalone.js', 'text/javascript'],
   '/vendor/luxon.js': ['../node_modules/luxon/build/es6/luxon.mjs', 'text/javascript'],
   '/pages/demo.css': ['pages/demo.css', 'text/css'],
   '/pages/1-in-page.js': ['pages/1-in-page.js', 'text/javascript'],
   '/pages/2-plan.js': ['pages/2-plan.js', 'text/javascript'],
   '/pages/3-checks.js': ['pages/3-checks.js', 'text/javascript'],
+  '/pages/6-worker.js': ['pages/6-worker.js', 'text/javascript'],
   '/pages/5-hydrate.js': ['pages/5-hydrate.js', 'text/javascript'],
   // The demo's own source, to read in the browser.
   '/source/server.mjs': ['server.mjs', 'text/plain; charset=utf-8'],
@@ -155,7 +167,7 @@ async function route(request) {
   }
 
   if (pathname === '/') return page('index');
-  if (pathname === '/1-in-page' || pathname === '/2-plan' || pathname === '/3-checks') return page(pathname.slice(1));
+  if (pathname === '/1-in-page' || pathname === '/2-plan' || pathname === '/3-checks' || pathname === '/6-worker') return page(pathname.slice(1));
 
   // The two pages whose form is written here, as HTML. Sending the form is a GET to the same address.
   if (pathname === '/4-html' || pathname === '/5-hydrate' || pathname === '/5-hydrate-checked') {

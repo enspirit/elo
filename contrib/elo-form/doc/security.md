@@ -32,7 +32,7 @@ it can still do:
 | --- | --- | --- |
 | Say anything | Labels, hints and error texts come from field names and constraint labels | Show whose form this is, outside the form |
 | Ask for anything | A field named `email` or `phone` gets the matching input type and `autocomplete`, so the browser offers to fill it in | `guessFromNames: false` |
-| Take time | Elo does not bound how long an expression runs, and checks run on the page's main thread at every change | Cap the size of the schema text you accept; Elo's own advice is to run untrusted code under a time limit, which a page cannot do |
+| Take time | Elo does not bound how long an expression runs, and checks run on the page's main thread at every change | Cap the size of the schema text you accept, and run the checks [in a worker](server.md#in-a-worker), which is terminated when it stops answering |
 | Fail to build | A schema can be wrong, or refused by Elo | Catch what `eloForm()` throws |
 | Read files, if you let it | `import … from` goes through the `loader` you pass | Pass no `loader` for a schema you did not write |
 
@@ -101,6 +101,12 @@ import { DateTime, Duration, Interval } from 'luxon';
 const form = renderForm(plan, { checks: checksFor({ DateTime, Duration, Interval }) });
 form.result.enforced;   // true: every constraint is checked, on its field, as it is typed
 ```
+
+**In a worker, for a schema you did not write.** The compiled module is still that schema's code,
+and a page that imports it runs it as its own. `workerChecks` has a worker import it instead: no
+document, no cookies, nothing shared with the page but JSON — and, served with
+`default-src 'none'; script-src 'self'`, no network. What a same-origin worker can still reach is
+the origin's storage (IndexedDB, caches). See [server.md](server.md#in-a-worker).
 
 [server.md](server.md) has the whole of it, including forms sent as HTML that work with no script.
 
