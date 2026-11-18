@@ -22,6 +22,7 @@
       "types": "./dist/types/render.d.ts",
       "default": "./dist/elo-form.render.js"
     },
+    "./worker": "./dist/elo-form.worker.js",
     "./elo-form.css": "./dist/elo-form.css",
     "./standalone": "./dist/elo-form.standalone.js",
     "./package.json": "./package.json"

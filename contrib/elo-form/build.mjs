@@ -9,6 +9,8 @@ await build({ ...common, format: 'esm', outfile: 'dist/elo-form.js', external: [
 // The two halves on their own: reading a schema (Elo, no page) and building a form (a plan, no Elo).
 await build({ ...common, entryPoints: ['src/planner.ts'], format: 'esm', outfile: 'dist/elo-form.plan.js', external: ['@enspirit/elo', 'luxon'] });
 await build({ ...common, entryPoints: ['src/render.ts'], format: 'esm', outfile: 'dist/elo-form.render.js' });
+// The worker a page starts to run compiled checks away from itself.
+await build({ ...common, entryPoints: ['src/worker.ts'], format: 'esm', outfile: 'dist/elo-form.worker.js', minify: true });
 await build({ ...common, format: 'iife', globalName: 'EloForm', outfile: 'dist/elo-form.standalone.js', minify: true });
 copyFileSync('src/elo-form.css', 'dist/elo-form.css');
 

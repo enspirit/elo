@@ -145,7 +145,8 @@ export function simplify(m: PlanNode): PlanNode {
 // ---------------------------------------------------------------------------
 
 export type Check =
-  | { ok: true; value: unknown }
+  /** `pending`: not answered yet — taken as accepted for now, and asked again once it is. */
+  | { ok: true; value: unknown; pending?: true }
   | { ok: false; path: string; kind: string; label?: string; message: string };
 
 /**
@@ -164,6 +165,12 @@ export interface Checker {
    * Undefined when that cannot be told.
    */
   passes(rule: number, part: number | undefined, value: unknown, input: unknown): boolean | undefined;
+  /** For checks that answer later (a worker): is anything asked still unanswered? */
+  pending?(): boolean;
+  /** Be told each time answers arrive. Returns a function that stops it. */
+  subscribe?(fn: () => void): () => void;
+  /** Resolves once nothing is unanswered. */
+  settled?(): Promise<void>;
 }
 
 /** No checks at all: what a page has when validation happens elsewhere. */

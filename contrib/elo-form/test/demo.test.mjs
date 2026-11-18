@@ -16,7 +16,7 @@ const shown = (html) => [...html.matchAll(/<p class="elo-error" id="[^"]*" aria-
 
 test('every page answers, each with the policy its mode needs and no more', async () => {
   const policies = {};
-  for (const path of ['/', '/1-in-page', '/2-plan', '/3-checks', '/4-html', '/5-hydrate', '/5-hydrate-checked']) {
+  for (const path of ['/', '/1-in-page', '/2-plan', '/3-checks', '/4-html', '/5-hydrate', '/5-hydrate-checked', '/6-worker']) {
     const response = await get(path);
     assert.equal(response.status, 200, path);
     const html = await response.text();
@@ -28,7 +28,7 @@ test('every page answers, each with the policy its mode needs and no more', asyn
     assert.doesNotMatch(html, /<!--[A-Z]+-->/, `${path} has a placeholder left in it`);
   }
   assert.match(policies['/1-in-page'], /script-src 'self' 'unsafe-eval'/);
-  for (const path of ['/2-plan', '/3-checks', '/5-hydrate']) {
+  for (const path of ['/2-plan', '/3-checks', '/5-hydrate', '/6-worker']) {
     assert.match(policies[path], /script-src 'self'(;|$)/, path);
     assert.doesNotMatch(policies[path], /unsafe/, path);
   }
@@ -36,19 +36,25 @@ test('every page answers, each with the policy its mode needs and no more', asyn
 });
 
 test('every file a page asks for is served', async () => {
-  for (const name of ['index', '1-in-page', '2-plan', '3-checks', '4-html', '5-hydrate', 'nav']) {
+  for (const name of ['index', '1-in-page', '2-plan', '3-checks', '4-html', '5-hydrate', '6-worker', 'nav']) {
     const html = readFileSync(new URL(`../demo/pages/${name}.html`, import.meta.url), 'utf8');
     for (const [, path] of html.matchAll(/(?:href|src)="(\/[^"]*)"/g)) {
       assert.equal((await get(path)).status, 200, `${name}.html asks for ${path}`);
     }
   }
-  for (const name of ['1-in-page', '2-plan', '3-checks', '5-hydrate']) {
+  for (const name of ['1-in-page', '2-plan', '3-checks', '5-hydrate', '6-worker']) {
     const js = readFileSync(new URL(`../demo/pages/${name}.js`, import.meta.url), 'utf8');
-    for (const [, path] of js.matchAll(/(?:from |import\(|fetch\()'(\/[^']*)'/g)) {
+    for (const [, path] of js.matchAll(/(?:from |import\(|fetch\(|new Worker\(|checks: )'(\/[^']*)'/g)) {
       const response = await fetch(base + path, path === '/order/check' ? { method: 'POST', body: '{}' } : {});
       assert.notEqual(response.status, 404, `${name}.js asks for ${path}`);
     }
   }
+});
+
+test('the worker comes with a policy of its own: scripts from here, and no network', async () => {
+  const response = await get('/lib/elo-form.worker.js');
+  assert.equal(response.headers.get('content-security-policy'), "default-src 'none'; script-src 'self'");
+  assert.match((await get('/6-worker')).headers.get('content-security-policy'), /worker-src 'self'/);
 });
 
 test('the plan and the checks are what a page can use, and agree with each other', async () => {

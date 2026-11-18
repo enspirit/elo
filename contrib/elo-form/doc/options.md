@@ -302,6 +302,9 @@ exports (see [server.md](server.md#checks)). With them a form made by `renderFor
 such a form enforces none, and `result.enforced` is `false`. Given to `eloForm`, they replace the
 checks it would compile itself.
 
+Also takes what `workerChecks` resolves to, for checks that run
+[in a worker](server.md#in-a-worker) rather than in the page.
+
 ### `problems`
 
 `{ path, message, kind?, label? }[]`: problems found elsewhere — by the server the data was sent
@@ -343,6 +346,7 @@ form made from a plan without `checks` has decided that somebody else checks.
 | `getRaw()` | The data as plain JSON, right now. Required values not yet given are simply absent. |
 | `result` | The current [result](#result), without changing what is shown. |
 | `validate({ focus })` | Checks everything, **shows every problem**, returns the result. `focus: true` moves to the first field that needs attention. Call it from your submit handler. |
+| `validated({ focus })` | A promise of `validate()`, once every check has answered. What a submit handler awaits when the checks run [in a worker](server.md#in-a-worker). |
 | `setValue(json)` | Loads data, replacing what is there. |
 | `reset()` | Empties the form and hides the problems shown so far. |
 | `onChange(fn)` | Adds a listener; returns a function that removes it. |
@@ -361,6 +365,7 @@ Problems are shown on a field once the person has been in it, and everywhere aft
   value?: unknown,     // what Elo's JavaScript target reads from it (Luxon DateTime / Duration); only when valid
   problems: { path: string, message: string }[],   // data paths: '.lines.0.qty'
   enforced: boolean,   // false when nothing checks constraints here (see security.md and server.md)
+  pending: boolean,    // true while checks in a worker have not all answered; valid is false until then
 }
 ```
 

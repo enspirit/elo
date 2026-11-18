@@ -1206,7 +1206,8 @@ class UnionWidget extends Widget {
     if (v === undefined || (v === null && this.noneRadio)) { this.pick(this.noneRadio ? -1 : this.start); return; }
     // The alternative Elo itself would take, else the first of the right shape.
     const { checker } = this.ctx;
-    let i = this.alts.findIndex((a) => checker.has(a.id) && checker.check(a.id!, v, v).ok);
+    const taken = (id: number) => { const r = checker.check(id, v, v); return r.ok && !r.pending; };
+    let i = this.alts.findIndex((a) => checker.has(a.id) && taken(a.id!));
     if (i < 0) i = this.alts.findIndex((a) => fits(a, v));
     if (i < 0) i = this.start;
     this.pick(i);
@@ -1220,7 +1221,8 @@ class UnionWidget extends Widget {
       const v = this.value();
       for (let j = 0; j < this.active; j++) {
         const { checker } = this.ctx;
-        if (checker.has(this.alts[j].id) && checker.check(this.alts[j].id!, v, input).ok) {
+        const r = checker.has(this.alts[j].id) ? checker.check(this.alts[j].id!, v, input) : undefined;
+        if (r?.ok && !r.pending) {
           note = fill(this.ctx.msgs.readAs, { label: this.labels[j] });
           break;
         }

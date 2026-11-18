@@ -27,9 +27,10 @@ export interface FormOptions extends Partial<WidgetOptions> {
   /**
    * Elo's checks for this plan, compiled ahead of time: what the module written by
    * `compileChecks` exports. Without them the form asks for well-shaped data and enforces no
-   * constraint: something else has to.
+   * constraint: something else has to. Or a `Checker` of your own — what `workerChecks` resolves
+   * to, for checks that run in a worker rather than in the page.
    */
-  checks?: CompiledChecks;
+  checks?: CompiledChecks | Checker;
   /** Problems found elsewhere — by the server that received the data — to show on their fields. */
   problems?: Reported[];
   /** Prefix of every element id in the form. Give one where two renderings must agree, or be repeatable. */
@@ -64,7 +65,14 @@ export interface Result {
   problems: Problem[];
   /** False where nothing checks constraints here: shapes are right, the rest is for whoever receives the data. */
   enforced: boolean;
+  /**
+   * True while checks that run elsewhere (a worker) have not all answered. `valid` is false
+   * until they have: `await form.validated()` is the result to act on.
+   */
+  pending: boolean;
 }
+
+const isChecker = (c: CompiledChecks | Checker): c is Checker => typeof (c as Checker).has === 'function';
 
 let forms = 0;
 
@@ -86,7 +94,7 @@ export class EloForm {
   constructor(plan: Plan, options: FormOptions = {}, checker?: Checker) {
     if (!plan || plan.version !== 1 || !plan.root) throw new Error('Not a form plan: expected what planForm() returns.');
     this.plan = plan;
-    this.checker = checker ?? (options.checks ? checkerFrom(options.checks) : noChecks);
+    this.checker = checker ?? (options.checks ? (isChecker(options.checks) ? options.checks : checkerFrom(options.checks)) : noChecks);
     const msgs = mergeMessages(defaultMessages, options.messages);
     this.ctx = {
       opts: {
@@ -143,6 +151,8 @@ export class EloForm {
     });
 
     if (options.onChange) this.listeners.add(options.onChange);
+    // Answers that arrive later change what the form has to say: say it again.
+    this.checker.subscribe?.(() => this.changed());
     if (options.value !== undefined) this.root.set(options.value);
     if (options.problems) this.report(options.problems);
     this.refresh();
@@ -207,7 +217,8 @@ export class EloForm {
     this.banner.textContent = stray ? fill(this.ctx.msgs.formError, { detail: stray }) : '';
     this.banner.hidden = !stray;
     if (this.hidden) this.hidden.value = JSON.stringify(raw);
-    this.last = { valid, raw, value, problems, enforced: this.checker.enforced };
+    const pending = this.checker.pending?.() ?? false;
+    this.last = { valid: valid && !pending, raw, value, problems, enforced: this.checker.enforced, pending };
     return this.last;
   }
 
@@ -229,6 +240,16 @@ export class EloForm {
     const result = this.refresh();
     if (!result.valid && opts.focus) this.firstInvalid(this.root)?.focus();
     return result;
+  }
+
+  /**
+   * `validate`, once every check has answered: what a submit button awaits when the checks run
+   * in a worker. With checks that answer at once it is `validate` in a promise.
+   */
+  async validated(opts: { focus?: boolean } = {}): Promise<Result> {
+    this.validate();
+    while (this.checker.pending?.()) { await this.checker.settled!(); this.refresh(); }
+    return this.validate(opts);
   }
 
   private firstInvalid(w: Widget): Widget | undefined {
