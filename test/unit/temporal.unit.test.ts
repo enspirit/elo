@@ -6,8 +6,24 @@ import { dateLiteral, dateTimeLiteral, durationLiteral } from '../../src/ast';
 /**
  * Helper to wrap code as a JS function taking _ as input
  */
-function wrapJS(code: string): string {
-  return `(function(_) { return ${code}; })`;
+/**
+ * The clock helpers, as the four targets spell them (0259 D1/D2).
+ *
+ * Shared by the keyword and period-boundary suites below, because every
+ * expectation that mentions NOW or TODAY now carries the helper that reads the
+ * declared zone. The zone is an *argument*, which is the half of D2 these
+ * tests pin: it travels with the program, so `$.timezone` later replaces the
+ * argument and not the helper.
+ */
+const JS_NOW = 'function kNow(tz) { return DateTime.now().setZone(tz).setZone("utc", { keepLocalTime: true }); }';
+const JS_TODAY = "function kToday(tz) { return kNow(tz).startOf('day'); }";
+const K_NOW = 'def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end';
+const K_TODAY = 'def k_today(tz); k_now(tz).to_date end';
+
+function wrapJS(code: string, raw = false): string {
+  // `raw` for an emission that carries its own helper definitions and its own
+  // `return` — the clock helpers (0259) are the first such case.
+  return raw ? `(function(_) { ${code}; })` : `(function(_) { return ${code}; })`;
 }
 
 /**
@@ -299,66 +315,71 @@ describe('Temporal - Temporal Keywords', () => {
     }
   });
 
+  // 0259 D1/D2. These four pin the whole of the clock emission: NOW reads the
+  // *declared* zone through kNow, and the zone is an argument rather than a
+  // constant inside the helper, so it travels with the program. The default is
+  // UTC, which is why no test here passes a zone.
   it('should compile NOW to JavaScript', () => {
     const ast = parse('NOW');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS('DateTime.now()'));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC")`, true));
   });
 
   it('should compile TODAY to JavaScript', () => {
     const ast = parse('TODAY');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('day')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} ${JS_TODAY} return kToday("UTC")`, true));
   });
 
   it('should compile TOMORROW to JavaScript', () => {
     const ast = parse('TOMORROW');
     // IR transforms TOMORROW to today() + P1D, emitted as luxon method chain
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('day').plus(Duration.fromISO(\"P1D\"))"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} ${JS_TODAY} return kToday("UTC").plus(Duration.fromISO("P1D"))`, true));
   });
 
   it('should compile YESTERDAY to JavaScript', () => {
     const ast = parse('YESTERDAY');
     // IR transforms YESTERDAY to today() - P1D, emitted as luxon method chain
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('day').minus(Duration.fromISO(\"P1D\"))"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} ${JS_TODAY} return kToday("UTC").minus(Duration.fromISO("P1D"))`, true));
   });
 
   it('should compile NOW to Ruby', () => {
     const ast = parse('NOW');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('DateTime.now'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC")`));
   });
 
   it('should compile TODAY to Ruby', () => {
     const ast = parse('TODAY');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; ${K_TODAY}; k_today("UTC")`));
   });
 
   it('should compile TOMORROW to Ruby', () => {
     const ast = parse('TOMORROW');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today + 1'));
+    // The `+ 1` special case for TOMORROW survives: k_today answers a Date.
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; ${K_TODAY}; k_today("UTC") + 1`));
   });
 
   it('should compile YESTERDAY to Ruby', () => {
     const ast = parse('YESTERDAY');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today - 1'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; ${K_TODAY}; k_today("UTC") - 1`));
   });
 
   it('should compile NOW to SQL', () => {
     const ast = parse('NOW');
-    assert.strictEqual(compileToSQL(ast), 'CURRENT_TIMESTAMP');
+    assert.strictEqual(compileToSQL(ast), `elo_now('UTC')`);
   });
 
   it('should compile TODAY to SQL', () => {
     const ast = parse('TODAY');
-    assert.strictEqual(compileToSQL(ast), 'CURRENT_DATE');
+    assert.strictEqual(compileToSQL(ast), `elo_today('UTC')`);
   });
 
   it('should compile TOMORROW to SQL', () => {
     const ast = parse('TOMORROW');
-    assert.strictEqual(compileToSQL(ast), 'CURRENT_DATE + INTERVAL \'1 day\'');
+    assert.strictEqual(compileToSQL(ast), `elo_today('UTC') + INTERVAL '1 day'`);
   });
 
   it('should compile YESTERDAY to SQL', () => {
     const ast = parse('YESTERDAY');
-    assert.strictEqual(compileToSQL(ast), 'CURRENT_DATE - INTERVAL \'1 day\'');
+    assert.strictEqual(compileToSQL(ast), `elo_today('UTC') - INTERVAL '1 day'`);
   });
 
   it('should use temporal keywords in expressions', () => {
@@ -391,32 +412,32 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile SOD to JavaScript', () => {
     const ast = parse('SOD');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('day')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").startOf('day')`, true));
   });
 
   it('should compile EOD to JavaScript', () => {
     const ast = parse('EOD');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().endOf('day')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").endOf('day')`, true));
   });
 
   it('should compile SOD to Ruby', () => {
     const ast = parse('SOD');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.beginning_of_day'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").beginning_of_day`));
   });
 
   it('should compile EOD to Ruby', () => {
     const ast = parse('EOD');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.end_of_day'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").end_of_day`));
   });
 
   it('should compile SOD to SQL', () => {
     const ast = parse('SOD');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('day', CURRENT_TIMESTAMP)");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('day', CAST(elo_now('UTC') AS timestamp))`);
   });
 
   it('should compile EOD to SQL', () => {
     const ast = parse('EOD');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('day', CURRENT_TIMESTAMP) + INTERVAL '1 day' - INTERVAL '1 second'");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('day', CAST(elo_now('UTC') AS timestamp)) + INTERVAL '1 day' - INTERVAL '1 second'`);
   });
 
   // Week boundaries (SOW/EOW)
@@ -438,32 +459,32 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile SOW to JavaScript', () => {
     const ast = parse('SOW');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('week')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").startOf('week')`, true));
   });
 
   it('should compile EOW to JavaScript', () => {
     const ast = parse('EOW');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().endOf('week')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").endOf('week')`, true));
   });
 
   it('should compile SOW to Ruby', () => {
     const ast = parse('SOW');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.beginning_of_week'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").beginning_of_week`));
   });
 
   it('should compile EOW to Ruby', () => {
     const ast = parse('EOW');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.end_of_week'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").end_of_week`));
   });
 
   it('should compile SOW to SQL', () => {
     const ast = parse('SOW');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('week', CURRENT_DATE)");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('week', CAST(elo_now('UTC') AS timestamp))`);
   });
 
   it('should compile EOW to SQL', () => {
     const ast = parse('EOW');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('week', CURRENT_DATE) + INTERVAL '7 days' - INTERVAL '1 second'");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('week', CAST(elo_now('UTC') AS timestamp)) + INTERVAL '7 days' - INTERVAL '1 second'`);
   });
 
   // Month boundaries (SOM/EOM)
@@ -485,32 +506,32 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile SOM to JavaScript', () => {
     const ast = parse('SOM');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('month')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").startOf('month')`, true));
   });
 
   it('should compile EOM to JavaScript', () => {
     const ast = parse('EOM');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().endOf('month')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").endOf('month')`, true));
   });
 
   it('should compile SOM to Ruby', () => {
     const ast = parse('SOM');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.beginning_of_month'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").beginning_of_month`));
   });
 
   it('should compile EOM to Ruby', () => {
     const ast = parse('EOM');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.end_of_month'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").end_of_month`));
   });
 
   it('should compile SOM to SQL', () => {
     const ast = parse('SOM');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('month', CURRENT_DATE)");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('month', CAST(elo_now('UTC') AS timestamp))`);
   });
 
   it('should compile EOM to SQL', () => {
     const ast = parse('EOM');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 second'");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('month', CAST(elo_now('UTC') AS timestamp)) + INTERVAL '1 month' - INTERVAL '1 second'`);
   });
 
   // Quarter boundaries (SOQ/EOQ)
@@ -532,32 +553,32 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile SOQ to JavaScript', () => {
     const ast = parse('SOQ');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('quarter')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").startOf('quarter')`, true));
   });
 
   it('should compile EOQ to JavaScript', () => {
     const ast = parse('EOQ');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().endOf('quarter')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").endOf('quarter')`, true));
   });
 
   it('should compile SOQ to Ruby', () => {
     const ast = parse('SOQ');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.beginning_of_quarter'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").beginning_of_quarter`));
   });
 
   it('should compile EOQ to Ruby', () => {
     const ast = parse('EOQ');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.end_of_quarter'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").end_of_quarter`));
   });
 
   it('should compile SOQ to SQL', () => {
     const ast = parse('SOQ');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('quarter', CURRENT_DATE)");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('quarter', CAST(elo_now('UTC') AS timestamp))`);
   });
 
   it('should compile EOQ to SQL', () => {
     const ast = parse('EOQ');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('quarter', CURRENT_DATE) + INTERVAL '3 months' - INTERVAL '1 second'");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('quarter', CAST(elo_now('UTC') AS timestamp)) + INTERVAL '3 months' - INTERVAL '1 second'`);
   });
 
   // Year boundaries (SOY/EOY)
@@ -579,32 +600,32 @@ describe('Temporal - Period Boundary Keywords', () => {
 
   it('should compile SOY to JavaScript', () => {
     const ast = parse('SOY');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().startOf('year')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").startOf('year')`, true));
   });
 
   it('should compile EOY to JavaScript', () => {
     const ast = parse('EOY');
-    assert.strictEqual(compileToJavaScript(ast), wrapJS("DateTime.now().endOf('year')"));
+    assert.strictEqual(compileToJavaScript(ast), wrapJS(`${JS_NOW} return kNow("UTC").endOf('year')`, true));
   });
 
   it('should compile SOY to Ruby', () => {
     const ast = parse('SOY');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.beginning_of_year'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").beginning_of_year`));
   });
 
   it('should compile EOY to Ruby', () => {
     const ast = parse('EOY');
-    assert.strictEqual(compileToRuby(ast), wrapRuby('Date.today.end_of_year'));
+    assert.strictEqual(compileToRuby(ast), wrapRuby(`${K_NOW}; k_now("UTC").end_of_year`));
   });
 
   it('should compile SOY to SQL', () => {
     const ast = parse('SOY');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('year', CURRENT_DATE)");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('year', CAST(elo_now('UTC') AS timestamp))`);
   });
 
   it('should compile EOY to SQL', () => {
     const ast = parse('EOY');
-    assert.strictEqual(compileToSQL(ast), "date_trunc('year', CURRENT_DATE) + INTERVAL '1 year' - INTERVAL '1 second'");
+    assert.strictEqual(compileToSQL(ast), `date_trunc('year', CAST(elo_now('UTC') AS timestamp)) + INTERVAL '1 year' - INTERVAL '1 second'`);
   });
 
   // Expression tests

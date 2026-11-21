@@ -131,6 +131,12 @@ export interface Emitter {
 export interface WalkOptions {
   /** Drop `guard`/`check` assertions, for `--strip-guards`. */
   stripGuards: boolean;
+  /**
+   * The declared timezone, an IANA name already through
+   * `assertSafeTimezone`. Reaches the bindings as `ctx.timezone`; see
+   * `EmitContext`.
+   */
+  timezone: string;
 }
 
 /**
@@ -163,6 +169,7 @@ function emitNode(
   const recurse = (child: IRExpr) => emit(child, emitter, options, requiredHelpers);
 
   const ctx: EmitContext<string> = {
+    timezone: options.timezone,
     emit: recurse,
     emitWithParens: (child, parentOp, side) => {
       const emitted = recurse(child);

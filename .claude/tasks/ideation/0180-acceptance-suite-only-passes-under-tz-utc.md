@@ -1,5 +1,13 @@
 # The acceptance suite only passes when the machine's timezone is UTC
 
+> **Answered by `todo/0259-the-temporal-model.md`, step 1.** "The real question
+> first" below asks whether a period boundary is an instant in the machine's
+> zone or in UTC; the answer is neither — it is a wall clock in a **declared**
+> zone, defaulting to UTC. `0240` already pinned the literals, which is why
+> the symptom in this file no longer reproduces; `NOW`/`TODAY` are the half
+> that remains, and `0259` adds the zone axis to the runners rather than
+> exporting `TZ=UTC` to hide it.
+
 > Found while running the suite for 0176, on a machine in CET.
 
 ## Symptom

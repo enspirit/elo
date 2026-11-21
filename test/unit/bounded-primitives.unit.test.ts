@@ -255,6 +255,7 @@ function emitSignature(lib: StdLib<string>, key: string): { code: string; helper
   const helpers: string[] = [];
   const args = typeNames.map(stubArg);
   const ctx: EmitContext<string> = {
+    timezone: 'UTC',
     emit: () => 'v',
     emitWithParens: () => 'v',
     requireHelper: h => helpers.push(h),

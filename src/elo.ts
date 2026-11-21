@@ -32,6 +32,8 @@ interface Options {
    * program, printing one result per line.
    */
   lines?: boolean;
+  /** The IANA zone NOW and TODAY are read in. Defaults to UTC (0259 D2). */
+  timezone?: string;
 }
 
 function parseArgs(args: string[]): Options {
@@ -73,6 +75,9 @@ function parseArgs(args: string[]): Options {
         }
         break;
 
+      case '--timezone':
+        options.timezone = args[++i];
+        break;
       case '--lines':
         options.lines = true;
         break;
@@ -124,6 +129,8 @@ Options:
   -o, --output-format <fmt> Output format: json (default), elo, or csv
   --lines                   Evaluate each line as its own expression, instead
                             of the whole source as one program
+  --timezone <IANA>         The zone NOW and TODAY are read in, e.g.
+                            Europe/Brussels. Defaults to UTC.
   -v, --version             Show version number
   -h, --help                Show this help message
 
@@ -221,12 +228,13 @@ function evaluate(
   source: string,
   inputValue: unknown,
   scope?: LoadedProgram,
-  where: { file?: string; firstLine?: number } = {}
+  where: { file?: string; firstLine?: number } = {},
+  timezone?: string
 ): unknown {
   // Positions are recorded so that a refusal says which line of which file it
   // is about, which is the only thing an author can act on.
   const ast = scopeProgram(scope, parse(source, { locations: true, ...where }));
-  const result = compileToJavaScriptWithMeta(ast);
+  const result = compileToJavaScriptWithMeta(ast, { timezone });
 
   // Create function with luxon DateTime, Duration, and Interval in scope
   // The compiled code is always a function that takes _ as input
@@ -322,7 +330,7 @@ function main() {
       const result = evaluate(source, inputValue, scope, {
         file: fileOf(options),
         firstLine: options.lines ? i + 1 : 1,
-      });
+      }, options.timezone);
       outputs.push(outputAdapter.serialize(result));
     } catch (error) {
       // Every compile-time refusal carries its own line and column; a runtime

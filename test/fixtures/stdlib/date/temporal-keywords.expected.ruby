@@ -1,15 +1,15 @@
-->(_) { (raise "Assertion failed" unless DateTime.now > DateTime.parse("2020-01-01T00:00:00Z"); true) }.call(nil);
-->(_) { (raise "Assertion failed" unless Date.today >= Date.parse("2020-01-01"); true) }.call(nil);
-->(_) { (raise "Assertion failed" unless Date.today + 1 > Date.today; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless Date.today - 1 < Date.today; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless Date.today + 1 > Date.today - 1; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless DateTime.now > DateTime.parse("2024-01-01T00:00:00Z"); true) }.call(nil);
-->(_) { (raise "Assertion failed" unless Date.today > Date.parse("2024-01-01"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; (raise "Assertion failed" unless k_now("UTC") > DateTime.parse("2020-01-01T00:00:00Z"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless k_today("UTC") >= Date.parse("2020-01-01"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless k_today("UTC") + 1 > k_today("UTC"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless k_today("UTC") - 1 < k_today("UTC"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless k_today("UTC") + 1 > k_today("UTC") - 1; true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; (raise "Assertion failed" unless k_now("UTC") > DateTime.parse("2024-01-01T00:00:00Z"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless k_today("UTC") > Date.parse("2024-01-01"); true) }.call(nil);
 
 ->(_) { (raise "Assertion failed" unless DateTime.new(1, 1, 1, 0, 0, 0) < DateTime.parse("0002-01-01T00:00:00Z"); true) }.call(nil);
 ->(_) { (raise "Assertion failed" unless DateTime.new(9999, 12, 31, 23, 59, 59) > DateTime.parse("9998-12-31T00:00:00Z"); true) }.call(nil);
-->(_) { (raise "Assertion failed" unless DateTime.new(1, 1, 1, 0, 0, 0) < Date.today; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless DateTime.new(9999, 12, 31, 23, 59, 59) > Date.today; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless DateTime.new(1, 1, 1, 0, 0, 0) < DateTime.now; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless DateTime.new(9999, 12, 31, 23, 59, 59) > DateTime.now; true) }.call(nil);
-->(_) { (raise "Assertion failed" unless Date.today >= DateTime.new(1, 1, 1, 0, 0, 0) && Date.today < DateTime.new(9999, 12, 31, 23, 59, 59); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless DateTime.new(1, 1, 1, 0, 0, 0) < k_today("UTC"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless DateTime.new(9999, 12, 31, 23, 59, 59) > k_today("UTC"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; (raise "Assertion failed" unless DateTime.new(1, 1, 1, 0, 0, 0) < k_now("UTC"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; (raise "Assertion failed" unless DateTime.new(9999, 12, 31, 23, 59, 59) > k_now("UTC"); true) }.call(nil);
+->(_) { def k_now(tz); Time.now.in_time_zone(ActiveSupport::TimeZone[tz]).to_datetime.change(offset: 0) end; def k_today(tz); k_now(tz).to_date end; (raise "Assertion failed" unless k_today("UTC") >= DateTime.new(1, 1, 1, 0, 0, 0) && k_today("UTC") < DateTime.new(9999, 12, 31, 23, 59, 59); true) }.call(nil);

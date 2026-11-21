@@ -1,5 +1,13 @@
 # Five temporal divergences the zone fixture walked into
 
+> **Three of the five are now decided, in
+> `todo/0259-the-temporal-model.md`.** §3 (Ruby's `NOW` carries the host
+> offset) and §5 (`TODAY` is not today's literal on JS) are both closed by
+> `D1` + step 1 — one declared zone for `NOW`/`TODAY` on four targets. §4 (an
+> offset-bearing literal means two instants) is closed by `D4`: the lexer
+> refuses a zone designator, which is the "third answer" this file argued for.
+> §1 still belongs to `ideation/0153`, and §2 is still an open fix.
+
 > Numbered 0250 when written, which collided with `done/0250-a-table-for-the-
 > bounded-primitives.md`. The commit that closed 0240 refers to it as 0250.
 

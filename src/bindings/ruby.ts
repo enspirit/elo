@@ -33,8 +33,18 @@ export function createRubyBinding(): StdLib<string> {
   const rubyLib = new StdLib<string>();
 
   // Temporal nullary functions
-  rubyLib.register('today', [], nullary('Date.today'));
-  rubyLib.register('now', [], nullary('DateTime.now'));
+  // 0259 D1/D2: the clock is read in the *declared* zone, through the one
+  // helper that holds it. `DateTime.now` kept the host's offset where
+  // `Date.today` had none, so `startOfDay(NOW) == TODAY` was false at any
+  // offset but zero.
+  rubyLib.register('today', [], (_args, ctx) => {
+    ctx.requireHelper('k_today');
+    return `k_today("${ctx.timezone}")`;
+  });
+  rubyLib.register('now', [], (_args, ctx) => {
+    ctx.requireHelper('k_now');
+    return `k_now("${ctx.timezone}")`;
+  });
   rubyLib.register('bot', [], nullary('DateTime.new(1, 1, 1, 0, 0, 0)'));
   rubyLib.register('eot', [], nullary('DateTime.new(9999, 12, 31, 23, 59, 59)'));
 
@@ -66,14 +76,12 @@ export function createRubyBinding(): StdLib<string> {
   };
 
   for (const [fn, method] of Object.entries(periodBoundaryMap)) {
-    rubyLib.register(fn, [Types.datetime], (args, ctx) => {
-      const arg = args[0];
-      // For period boundaries, emit Date.today.method (not DateTime.now.method)
-      if (arg.type === 'call' && arg.fn === 'now') {
-        return `Date.today.${method}`;
-      }
-      return `${ctx.emit(arg)}.${method}`;
-    });
+    // The `now` special case that used to live here emitted
+    // `Date.today.${method}`, which read the *host's* zone and so bypassed the
+    // declared one — `start_of_day(NOW)` and `startOfDay(NOW)` would have
+    // disagreed. With `k_now` carrying no offset, the general emission is
+    // correct for `now` too.
+    rubyLib.register(fn, [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
   }
   for (const [fn, method] of Object.entries(camelCaseMap)) {
     rubyLib.register(fn, [Types.datetime], (args, ctx) => `${ctx.emit(args[0])}.${method}`);
@@ -537,20 +545,30 @@ rubyLib.register('isNotNull', [Types.any], (args, ctx) => `!(${ctx.emit(args[0])
     const v = ctx.emit(args[0]);
     return `(->(s) { raise ".: expected Date (YYYY-MM-DD), got #{s.inspect}" unless s =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(s) }).call(${v})`;
   });
+  // `when DateTime, Time` has to come first, and that ordering is the whole
+  // fix: in Ruby `DateTime` is a *subclass* of `Date`, so a plain `when Date`
+  // arm matches a DateTime and used to hand it back untouched, time-of-day
+  // intact. `Date(NOW)` was the identity here while JavaScript, Python and SQL
+  // all truncated — a one-target divergence in the dynamic path.
   rubyLib.register('Date', [Types.any], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when Date; v when String; raise ".: expected Date (YYYY-MM-DD), got #{v.inspect}" unless v =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(v) else raise ".: expected Date, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when DateTime, Time; k_wall(v, "${ctx.timezone}").to_date when Date; v when String; raise ".: expected Date (YYYY-MM-DD), got #{v.inspect}" unless v =~ /^\\d{4}-\\d{2}-\\d{2}$/; Date.parse(v) else raise ".: expected Date, got #{v.class}" end }).call(${v})`;
   });
 
   // Datetime - identity for datetime, parse ISO for string
   rubyLib.register('Datetime', [Types.datetime], identity());
+  // 0259 D7: an instant arriving from outside is expressed in the declared
+  // zone and carried with no offset. k_wall is the one place that knows how.
   rubyLib.register('Datetime', [Types.string], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(s) { DateTime.parse(s) rescue raise ".: expected Datetime, got invalid datetime #{s.inspect}" }).call(${v})`;
+    return `(->(s) { k_wall(s, "${ctx.timezone}") rescue raise ".: expected Datetime, got invalid datetime #{s.inspect}" }).call(${v})`;
   });
   rubyLib.register('Datetime', [Types.any], (args, ctx) => {
+    ctx.requireHelper('k_wall');
     const v = ctx.emit(args[0]);
-    return `(->(v) { case v when DateTime, Time; v when String; DateTime.parse(v) rescue raise ".: expected Datetime, got #{v.inspect}" else raise ".: expected Datetime, got #{v.class}" end }).call(${v})`;
+    return `(->(v) { case v when DateTime, Time; k_wall(v, "${ctx.timezone}") when String; k_wall(v, "${ctx.timezone}") rescue raise ".: expected Datetime, got #{v.inspect}" else raise ".: expected Datetime, got #{v.class}" end }).call(${v})`;
   });
 
   // Duration - identity for duration, parse ISO for string

@@ -75,7 +75,7 @@ const AMBIGUOUS: Record<string, Record<string, string>> = {
 function standInContext(): EmitContext<string> {
   const emit = (ir: IRExpr): string =>
     ir.type === 'variable' ? ir.name : `<${ir.type}>`;
-  return { emit, emitWithParens: emit, requireHelper: () => {} };
+  return { timezone: 'UTC', emit, emitWithParens: emit, requireHelper: () => {} };
 }
 
 /** Emit one candidate signature with stand-in arguments. */

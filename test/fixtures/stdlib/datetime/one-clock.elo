@@ -1,0 +1,24 @@
+# Elo has one clock: NOW, TODAY and a literal are wall clocks in the same zone.
+#
+# Every assertion here is independent of the host's timezone by construction --
+# no line names a date or a zone -- so the fixture is the specification for
+# 0259 D1. It has to hold under every TZ the suite runs, not only UTC.
+#
+# `let t = NOW` is load-bearing: it takes one clock reading, so an assertion
+# cannot flake when two readings straddle an hour or a midnight boundary.
+
+# NOW and TODAY are the same calendar day.
+assert(let t = NOW in startOfDay(t) == TODAY)
+assert(let t = NOW in Date(t) == TODAY)
+assert(day(NOW) == day(TODAY))
+assert(month(NOW) == month(TODAY))
+assert(year(NOW) == year(TODAY))
+
+# The hour of NOW is the time elapsed since NOW's own day began, so `hour` and
+# `-` must read the same clock.
+assert(let t = NOW in inHours(t - startOfDay(t)) >= hour(t))
+assert(let t = NOW in inHours(t - startOfDay(t)) < hour(t) + 1)
+
+# The same, one unit down: minute(NOW) agrees with the elapsed minutes.
+assert(let t = NOW in inMinutes(t - startOfDay(t)) >= hour(t) * 60 + minute(t))
+assert(let t = NOW in inMinutes(t - startOfDay(t)) < hour(t) * 60 + minute(t) + 1)

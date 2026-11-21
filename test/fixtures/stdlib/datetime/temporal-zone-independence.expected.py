@@ -33,5 +33,5 @@
 (lambda _: kAssert(kEq(_elo_start_of_day((lambda a: min(a) if a else None)([_elo_dt(2026, 1, 1, 0, 30, 0)])), _elo_dt(2026, 1, 1, 0, 0, 0))))(None)
 
 
-(lambda _: kAssert(kParseDatetime("2026-01-01T00:30:00Z").day == 1))(None)
-(lambda _: kAssert(kSub(kParseDate("2026-03-11"), kParseDate("2026-01-10")).in_days() == 60))(None)
+(lambda _: kAssert(kParseDatetime("2026-01-01T00:30:00Z", "UTC").day == 1))(None)
+(lambda _: kAssert(kSub(kParseDate("2026-03-11", "UTC"), kParseDate("2026-01-10", "UTC")).in_days() == 60))(None)
